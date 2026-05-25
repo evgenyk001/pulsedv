@@ -4,24 +4,19 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/pulsedv/frontend/',  // 👈 ПОЛНЫЙ ПУТЬ
+  base: '/',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
-  build: {
-    outDir: 'dist',
-    assetsDir: 'assets',
-    rollupOptions: {
-      output: {
-        entryFileNames: 'assets/[name].js',
-        chunkFileNames: 'assets/[name].js',
-        assetFileNames: 'assets/[name].[ext]'
-      }
-    }
-  },
   server: {
     port: 3000,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
   },
 })
