@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatPrice } from '@/lib/utils'
 import { Trash2, GitCompare } from 'lucide-react'
-import { Link } from 'react-router-dom'
 import { EmptyState } from '@/components/UI/EmptyState'
 
 export default function ComparisonPage() {
@@ -26,7 +25,7 @@ export default function ComparisonPage() {
           description="Добавьте объекты из маркета, нажав кнопку сравнения"
           icon={<GitCompare className="w-12 h-12" />}
           actionLabel="Перейти в маркет"
-          onAction={() => window.location.href = '/market'}
+          onAction={() => (window.location.href = '/market')}
         />
       </div>
     )
@@ -36,14 +35,22 @@ export default function ComparisonPage() {
 
   const getValue = (listing: any, feature: string) => {
     switch (feature) {
-      case 'Цена': return formatPrice(listing.price)
-      case 'Комнат': return listing.rooms
-      case 'Площадь (м²)': return listing.area
-      case 'Этаж': return listing.floor
-      case 'Адрес': return listing.address
-      case 'Комиссия': return listing.commission || '—'
-      case 'Сопровождение': return listing.hasService === 'yes' ? 'Есть' : 'Нет'
-      default: return ''
+      case 'Цена':
+        return formatPrice(listing.price)
+      case 'Комнат':
+        return listing.rooms
+      case 'Площадь (м²)':
+        return listing.area
+      case 'Этаж':
+        return listing.floor
+      case 'Адрес':
+        return listing.address
+      case 'Комиссия':
+        return listing.commission || '—'
+      case 'Сопровождение':
+        return listing.hasService === 'yes' ? 'Есть' : 'Нет'
+      default:
+        return ''
     }
   }
 
@@ -51,7 +58,10 @@ export default function ComparisonPage() {
     <div className="max-w-7xl mx-auto px-6 pt-24 pb-16">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Сравнение объектов</h1>
-        <button onClick={clearCompare} className="text-sm text-primary-600 hover:underline flex items-center gap-1">
+        <button
+          onClick={clearCompare}
+          className="text-sm text-primary-600 hover:underline flex items-center gap-1"
+        >
           <Trash2 className="w-4 h-4" /> Очистить всё
         </button>
       </div>
@@ -64,7 +74,10 @@ export default function ComparisonPage() {
                 <th key={l.id} className="p-4 text-left min-w-[200px]">
                   <div className="flex justify-between items-center">
                     <span>{l.title}</span>
-                    <button onClick={() => removeFromCompare(l.id)} className="text-gray-400 hover:text-red-600 transition">
+                    <button
+                      onClick={() => removeFromCompare(l.id)}
+                      className="text-gray-400 hover:text-red-600 transition"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
