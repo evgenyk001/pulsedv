@@ -70,7 +70,7 @@ export default function ComparisonPage() {
                   </div>
                 </th>
               ))}
-            </td>
+            </tr>
           </thead>
           <tbody>
             {features.map((feature) => (
