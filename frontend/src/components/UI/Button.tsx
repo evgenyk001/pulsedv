@@ -1,6 +1,6 @@
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
-import { motion, type MotionProps } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { forwardRef } from 'react'
 
 const buttonVariants = cva(
@@ -23,12 +23,17 @@ const buttonVariants = cva(
   }
 )
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants>, MotionProps {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   children: React.ReactNode
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({ className, variant, size, children, ...props }, ref) => (
-  <motion.button ref={ref} whileTap={{ scale: 0.96 }} className={cn(buttonVariants({ variant, size }), className)} {...props}>
+  <motion.button
+    ref={ref}
+    whileTap={{ scale: 0.96 }}
+    className={cn(buttonVariants({ variant, size }), className)}
+    {...props}
+  >
     {children}
   </motion.button>
 ))
