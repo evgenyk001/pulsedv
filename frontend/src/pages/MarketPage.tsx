@@ -25,8 +25,16 @@ export default function MarketPage() {
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } = useInfiniteQuery({
     queryKey: ['listings', filters],
     queryFn: async ({ pageParam = 1 }) => {
-      const params = new URLSearchParams({ page: pageParam, ...filters })
-      const { data } = await api.get(`/listings?${params}`)
+      const params = new URLSearchParams()
+      params.append('page', pageParam.toString())
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice.toString())
+      if (filters.minPrice) params.append('minPrice', filters.minPrice.toString())
+      if (filters.rooms) params.append('rooms', filters.rooms.toString())
+      if (filters.district) params.append('district', filters.district)
+      if (filters.areaMin) params.append('areaMin', filters.areaMin.toString())
+      if (filters.areaMax) params.append('areaMax', filters.areaMax.toString())
+      
+      const { data } = await api.get(`/listings?${params.toString()}`)
       return data
     },
     getNextPageParam: (lastPage) => lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined,
