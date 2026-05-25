@@ -77,4 +77,13 @@ export default function ComparisonPage() {
               <tr key={feature} className="border-b dark:border-gray-800">
                 <td className="p-4 font-medium bg-gray-50 dark:bg-gray-800/50">{feature}</td>
                 {compareListings.map((l: any) => (
-                 
+                  <td key={l.id} className="p-4">{getValue(l, feature)}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
