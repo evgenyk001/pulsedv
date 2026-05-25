@@ -4,7 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/pulsedv/frontend/',
+  base: './',  // 👈 это важно для GitHub Pages
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
