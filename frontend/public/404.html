@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulse.DV</title>
+  <script>
+    // Перенаправление на index.html с сохранением URL
+    const path = window.location.pathname;
+    const newPath = path.replace(/\/pulsedv\/frontend/, '') || '/';
+    window.location.href = `/pulsedv/frontend/index.html?path=${encodeURIComponent(newPath)}`;
+  </script>
+</head>
+<body></body>
+</html>
