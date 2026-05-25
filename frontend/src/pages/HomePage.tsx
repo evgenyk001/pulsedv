@@ -52,11 +52,13 @@ export default function HomePage() {
         { y: 100, opacity: 0 },
         { y: 0, opacity: 1, duration: 1, scrollTrigger: { trigger: heroRef.current, start: 'top 80%' } }
       )
-      gsap.fromTo(
-        featuresRef.current?.children,
-        { y: 50, opacity: 0 },
-        { y: 0, opacity: 1, stagger: 0.2, duration: 0.8, scrollTrigger: { trigger: featuresRef.current, start: 'top 70%' } }
-      )
+      if (featuresRef.current) {
+        gsap.fromTo(
+          featuresRef.current.children,
+          { y: 50, opacity: 0 },
+          { y: 0, opacity: 1, stagger: 0.2, duration: 0.8, scrollTrigger: { trigger: featuresRef.current, start: 'top 70%' } }
+        )
+      }
       gsap.fromTo(
         listingsRef.current,
         { y: 50, opacity: 0 },
