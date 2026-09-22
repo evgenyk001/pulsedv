@@ -1,90 +1,38 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   BarChart3,
   Building2,
+  Calculator,
   Check,
-  ChevronLeft,
   Heart,
   Instagram,
   MapPin,
   Search,
   Send,
-  Sparkles,
-  X
+  Sparkles
 } from "lucide-react";
 
-type Lead = {
-  city: string;
-  budget: string;
-  downPayment: string;
-  purchase: string;
-  rooms: string;
-  name: string;
-  phone: string;
-};
-
-const EMPTY_LEAD: Lead = {
-  city: "",
-  budget: "",
-  downPayment: "",
-  purchase: "",
-  rooms: "",
-  name: "",
-  phone: ""
-};
-
-const steps = [
-  {
-    key: "city",
-    title: "Где ищем квартиру?",
-    subtitle: "Выберите город — это займёт несколько секунд.",
-    options: ["Владивосток", "Уссурийск", "Артём", "Всё Приморье"]
-  },
-  {
-    key: "budget",
-    title: "Какой бюджет рассматриваете?",
-    subtitle: "Можно выбрать приблизительный диапазон.",
-    options: ["до 7 млн ₽", "7–10 млн ₽", "10–15 млн ₽", "от 15 млн ₽"]
-  },
-  {
-    key: "downPayment",
-    title: "Первоначальный взнос",
-    subtitle: "Укажите ориентир — точный расчёт сделаем позже.",
-    options: ["до 1 млн ₽", "1–2 млн ₽", "2–4 млн ₽", "от 4 млн ₽"]
-  },
-  {
-    key: "purchase",
-    title: "Как планируете покупать?",
-    subtitle: "Это поможет сразу отобрать подходящие сценарии.",
-    options: ["Ипотека", "Наличные", "Пока не решил(а)"]
-  },
-  {
-    key: "rooms",
-    title: "Сколько комнат нужно?",
-    subtitle: "Выберите то, что рассматриваете сейчас.",
-    options: ["Студия", "1-комнатная", "2-комнатная", "3+ комнаты"]
-  }
-] as const;
+const PULSE_URL = import.meta.env.VITE_PULSE_TG_URL || "";
 
 function PulseMark() {
   return (
-    <div className="brand" aria-label="PULSE.DV">
+    <a className="brand" href="#top" aria-label="PULSE.DV — наверх">
       <svg className="brand-mark" viewBox="0 0 44 44" aria-hidden="true">
-        <rect x="2" y="17" width="8" height="23" rx="2.4" />
-        <rect x="13" y="8" width="8" height="32" rx="2.4" />
-        <rect x="24" y="2" width="8" height="38" rx="2.4" />
-        <rect x="35" y="13" width="7" height="27" rx="2.4" />
+        <rect x="2" y="17" width="8" height="23" rx="2.5" />
+        <rect x="13" y="8" width="8" height="32" rx="2.5" />
+        <rect x="24" y="2" width="8" height="38" rx="2.5" />
+        <rect x="35" y="13" width="7" height="27" rx="2.5" />
       </svg>
       <span>
         <strong>PULSE.DV</strong>
         <small>Новостройки Приморья</small>
       </span>
-    </div>
+    </a>
   );
 }
 
-function QrPlaceholder() {
+function QrMock() {
   const cells = useMemo(() => {
     const pattern = [
       "11111110101",
@@ -105,54 +53,61 @@ function QrPlaceholder() {
   }, []);
 
   return (
-    <div className="qr-wrap" aria-label="QR для открытия PULSE будет подключён к Mini App">
+    <div className="qr-group" aria-label="QR будет связан с Telegram Mini App">
       <div className="qr">
         {cells.map((cell) => (
           <span
-            key={cell.x + "-" + cell.y}
+            key={`${cell.x}-${cell.y}`}
             className={cell.on ? "qr-cell on" : "qr-cell"}
           />
         ))}
       </div>
-      <span className="qr-caption">Открыть<br />на телефоне</span>
+      <div>
+        <b>Откройте на телефоне</b>
+        <span>QR подключим к Mini App</span>
+      </div>
     </div>
   );
 }
 
-function MiniHome() {
+function PhoneHome() {
   return (
-    <div className="mini-screen">
-      <div className="mini-status"><span>9:41</span><span>•••</span></div>
-      <div className="mini-top">
-        <div className="mini-brand"><span className="mini-logo">▥</span><b>PULSE.DV</b></div>
-        <span className="mini-avatar">◦</span>
+    <div className="phone-screen">
+      <div className="phone-status"><span>9:41</span><span>● ● ●</span></div>
+      <div className="phone-head">
+        <span className="phone-brand"><i>▥</i><b>PULSE.DV</b></span>
+        <span className="phone-user">○</span>
       </div>
-      <div className="mini-search"><Search size={14} /> ЖК, район или застройщик</div>
-      <div className="mini-hero">
-        <div className="mini-photo bridge-art" />
-        <div className="mini-hero-copy">
+      <div className="app-search"><Search size={13} /> ЖК, район или застройщик</div>
+
+      <div className="app-hero-card">
+        <div className="app-hero-bg" />
+        <div className="app-hero-copy">
           <small>Новостройки Приморья</small>
-          <b>Квартира, которую хочется показывать друзьям</b>
-          <span>Владивосток · Артём · Уссурийск</span>
+          <strong>Квартира, которую хочется показывать друзьям</strong>
+          <span>Владивосток · Уссурийск · Артём</span>
         </div>
-        <button>Смотреть проекты <ArrowRight size={12} /></button>
+        <button type="button">Смотреть проекты <ArrowRight size={11} /></button>
       </div>
-      <div className="mini-actions">
+
+      <div className="app-actions">
         <span><Building2 />Каталог</span>
         <span><MapPin />На карте</span>
-        <span><BarChart3 />Ипотека</span>
+        <span><Calculator />Ипотека</span>
         <span><Sparkles />PULSE Select</span>
       </div>
-      <div className="mini-recommend">
+
+      <div className="app-selection">
         <small>ВЫБОР PULSE.DV</small>
-        <b>Стоит посмотреть</b>
-        <div className="mini-project-row">
-          <div className="mini-project-img" />
+        <div className="app-selection-head"><b>Стоит посмотреть</b><span>Все →</span></div>
+        <div className="mini-listing">
+          <i />
           <div><b>ЖК «Босфор»</b><span>от 7,8 млн ₽</span></div>
-          <Heart size={14} />
+          <Heart size={13} />
         </div>
       </div>
-      <div className="mini-nav">
+
+      <div className="app-nav">
         <span className="active">⌂<small>Главная</small></span>
         <span>▥<small>Каталог</small></span>
         <span>✦<small>Подбор</small></span>
@@ -162,27 +117,29 @@ function MiniHome() {
   );
 }
 
-function MiniCatalog() {
+function PhoneCatalog() {
   return (
-    <div className="mini-screen catalog-screen">
-      <div className="mini-status"><span>9:41</span><span>•••</span></div>
-      <small className="eyebrow">КАТАЛОГ PULSE.DV</small>
+    <div className="phone-screen catalog">
+      <div className="phone-status"><span>9:41</span><span>● ● ●</span></div>
+      <small className="catalog-label">КАТАЛОГ PULSE.DV</small>
       <h3>Новостройки</h3>
       <p>Подбирайте спокойно — по району, бюджету и сроку сдачи.</p>
-      <div className="segmented"><b>≡&nbsp; Список</b><span>⌖&nbsp; Карта</span></div>
-      <div className="mini-search"><Search size={14} /> ЖК, район, застройщик</div>
-      <div className="catalog-chips"><b>Все</b><span>Владивосток</span><span>Уссурийск</span></div>
-      <div className="property-card">
-        <div className="property-picture one" />
-        <div className="property-copy"><small>ВИД НА МОРЕ</small><b>ЖК Солнечный</b><span>Владивосток · Патрокл</span><strong>от 6,2 млн ₽</strong></div>
-        <Heart size={14} />
+      <div className="catalog-switch"><b>≡&nbsp; Список</b><span>⌖&nbsp; Карта</span></div>
+      <div className="app-search"><Search size={13} /> ЖК, район, застройщик</div>
+      <div className="chips"><b>Все</b><span>Владивосток</span><span>Уссурийск</span></div>
+
+      <div className="property">
+        <i className="pic pic-one" />
+        <div><small>ВИД НА МОРЕ</small><b>ЖК Солнечный</b><span>Владивосток · Патрокл</span><strong>от 6,2 млн ₽</strong></div>
+        <Heart size={13} />
       </div>
-      <div className="property-card">
-        <div className="property-picture two" />
-        <div className="property-copy"><small>СТАРТ ПРОДАЖ</small><b>ЖК Приморский</b><span>Владивосток · Центр</span><strong>от 7,8 млн ₽</strong></div>
-        <Heart size={14} />
+      <div className="property">
+        <i className="pic pic-two" />
+        <div><small>СТАРТ ПРОДАЖ</small><b>ЖК Приморский</b><span>Владивосток · Центр</span><strong>от 7,8 млн ₽</strong></div>
+        <Heart size={13} />
       </div>
-      <div className="mini-nav">
+
+      <div className="app-nav">
         <span>⌂<small>Главная</small></span>
         <span className="active">▥<small>Каталог</small></span>
         <span>✦<small>Подбор</small></span>
@@ -192,94 +149,67 @@ function MiniCatalog() {
   );
 }
 
-function LeadModal({ onClose }: { onClose: () => void }) {
-  const [step, setStep] = useState(0);
-  const [lead, setLead] = useState<Lead>(EMPTY_LEAD);
-  const [done, setDone] = useState(false);
-  const current = steps[step];
-
-  useEffect(() => {
-    document.body.classList.add("modal-open");
-    return () => document.body.classList.remove("modal-open");
-  }, []);
-
-  const select = (value: string) => {
-    setLead((prev) => ({ ...prev, [current.key]: value }));
-    window.setTimeout(() => {
-      if (step < steps.length - 1) setStep((s) => s + 1);
-      else setStep(steps.length);
-    }, 120);
-  };
-
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    localStorage.setItem("pulse-lead-draft", JSON.stringify({ ...lead, createdAt: new Date().toISOString() }));
-    setDone(true);
-  };
-
+function ProductStage() {
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Подбор квартиры">
-      <button className="modal-close" onClick={onClose} aria-label="Закрыть"><X /></button>
-      <div className="lead-card">
-        {!done && (
-          <div className="lead-progress">
-            <span style={{ width: `${Math.min(((step + 1) / (steps.length + 1)) * 100, 100)}%` }} />
-          </div>
-        )}
+    <div className="product-stage" aria-label="Превью приложения PULSE.DV">
+      <div className="stage-orbit" />
+      <div className="hand-note note-top">Ближе<br />к вашему завтра</div>
 
-        {done ? (
-          <div className="success">
-            <span className="success-icon"><Check /></span>
-            <small>PULSE.DV</small>
-            <h2>Готово. Заявка сохранена.</h2>
-            <p>На следующем этапе подключим отправку в PULSE Control Center. Пока данные сохранены на этом устройстве как тестовый лид.</p>
-            <button className="primary" onClick={onClose}>Вернуться на сайт</button>
-          </div>
-        ) : step < steps.length ? (
-          <>
-            <div className="lead-head">
-              <span>Шаг {step + 1} из {steps.length + 1}</span>
-              <h2>{current.title}</h2>
-              <p>{current.subtitle}</p>
-            </div>
-            <div className="option-grid">
-              {current.options.map((option) => {
-                const active = lead[current.key] === option;
-                return (
-                  <button key={option} className={active ? "option active" : "option"} onClick={() => select(option)}>
-                    <span>{option}</span>{active ? <Check size={18} /> : <ArrowRight size={18} />}
-                  </button>
-                );
-              })}
-            </div>
-            {step > 0 && (
-              <button className="back-button" onClick={() => setStep((s) => s - 1)}><ChevronLeft size={18} /> Назад</button>
-            )}
-          </>
-        ) : (
-          <form onSubmit={submit}>
-            <div className="lead-head">
-              <span>Последний шаг</span>
-              <h2>Куда отправить подборку?</h2>
-              <p>Оставьте контакт. Мы используем его только для связи по подбору недвижимости.</p>
-            </div>
-            <label>Имя<input required value={lead.name} onChange={(e) => setLead({ ...lead, name: e.target.value })} placeholder="Евгений" /></label>
-            <label>Телефон<input required inputMode="tel" value={lead.phone} onChange={(e) => setLead({ ...lead, phone: e.target.value })} placeholder="+7 999 000-00-00" /></label>
-            <button className="primary wide" type="submit">Получить подборку <ArrowRight size={18} /></button>
-            <button className="back-button" type="button" onClick={() => setStep(steps.length - 1)}><ChevronLeft size={18} /> Назад</button>
-          </form>
-        )}
+      <div className="phone phone-a"><PhoneHome /></div>
+      <div className="phone phone-b"><PhoneCatalog /></div>
+
+      <div className="float-card map-float">
+        <div className="map-title"><span className="red-pin">●</span><b>12 новостроек</b></div>
+        <span>на карте</span>
+        <div className="map-mini"><i /><i /><i /></div>
       </div>
+
+      <div className="float-card room-float">
+        <div className="room-photo" />
+        <b>2-комнатная, 58 м²</b>
+        <span>12,4 млн ₽</span>
+      </div>
+
+      <div className="hand-note note-bottom">Приморье<br />в твоём ритме</div>
     </div>
   );
 }
 
+function Reveal({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={className} data-reveal>{children}</div>;
+}
+
 export default function App() {
-  const [leadOpen, setLeadOpen] = useState(false);
+  const [notice, setNotice] = useState(false);
+
+  const openPulse = () => {
+    if (PULSE_URL) {
+      window.open(PULSE_URL, "_blank", "noopener,noreferrer");
+      return;
+    }
+    setNotice(true);
+    document.querySelector("#open-pulse")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    window.setTimeout(() => setNotice(false), 3600);
+  };
 
   useEffect(() => {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.14 }
+    );
+
+    document.querySelectorAll("[data-reveal]").forEach((node) => observer.observe(node));
+
+    if (reduce) return () => observer.disconnect();
 
     const onMove = (event: PointerEvent) => {
       const x = (event.clientX / window.innerWidth - 0.5) * 2;
@@ -289,85 +219,172 @@ export default function App() {
     };
 
     window.addEventListener("pointermove", onMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onMove);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      observer.disconnect();
+    };
   }, []);
 
   return (
-    <main className="site-shell">
-      <div className="ambient" aria-hidden="true">
-        <span className="ambient-red" />
-        <span className="ambient-blue" />
-        <svg className="bridge-lines" viewBox="0 0 900 540">
-          <path d="M60 420 C210 360 315 350 452 380 C595 410 710 335 860 280" />
-          <path d="M462 380 L520 165 L590 380" />
-          <path d="M520 165 L520 82" />
-          <path d="M520 170 L455 370 M520 170 L580 372 M520 170 L410 382 M520 170 L630 365" />
-          <path d="M60 445 C245 410 330 402 460 425 C615 450 720 390 865 335" />
-        </svg>
-      </div>
-
-      <header className="topbar">
+    <main id="top" className="page">
+      <header className="header">
         <PulseMark />
-        <div className="top-actions">
-          <a className="social-mini" href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={18} /></a>
-          <a className="social-mini" href="https://t.me" target="_blank" rel="noreferrer" aria-label="Telegram"><Send size={18} /></a>
-          <button className="top-cta" onClick={() => setLeadOpen(true)}>Подобрать квартиру <ArrowRight size={17} /></button>
-        </div>
+        <nav className="nav" aria-label="Навигация">
+          <a href="#why">Возможности</a>
+          <a href="#how">Как это работает</a>
+          <a href="#open-pulse">Приложение</a>
+        </nav>
+        <button className="header-cta" type="button" onClick={openPulse}>
+          <Send size={17} /> Открыть PULSE
+        </button>
       </header>
 
-      <section className="hero">
-        <div className="hero-copy">
-          <div className="hero-kicker">ВСЕ НОВОСТРОЙКИ ПРИМОРЬЯ</div>
+      <section className="hero shell">
+        <Reveal className="hero-copy">
+          <div className="kicker">ВСЕ НОВОСТРОЙКИ ПРИМОРЬЯ</div>
           <h1>Новостройки<br />Приморья —<br /><em>в одном приложении.</em></h1>
-          <p>Сравнивайте ЖК и квартиры, сохраняйте варианты и получайте подборку под ваш бюджет — спокойно и без лишнего шума.</p>
+          <p>Сравнивайте ЖК и квартиры, сохраняйте варианты и выбирайте самостоятельно — без десятков сайтов и лишнего шума.</p>
 
-          <div className="hero-actions">
-            <button className="primary hero-primary" onClick={() => setLeadOpen(true)}>Подобрать квартиру <ArrowRight /></button>
-            <QrPlaceholder />
+          <div className="hero-cta-row">
+            <button className="primary hero-button" type="button" onClick={openPulse}>
+              <Send size={20} /> Открыть PULSE <ArrowRight size={21} />
+            </button>
+            <QrMock />
           </div>
 
-          <div className="feature-row">
+          <div className="hero-benefits">
             <div><Building2 /><span>Актуальные<br />новостройки</span></div>
             <div><Heart /><span>Ваши<br />избранные</span></div>
             <div><BarChart3 /><span>Удобное<br />сравнение</span></div>
           </div>
+        </Reveal>
 
-          <div className="social-row">
-            <a href="https://instagram.com" target="_blank" rel="noreferrer"><Instagram size={18} /> Мы в Instagram</a>
-            <span />
-            <a href="https://t.me" target="_blank" rel="noreferrer"><Send size={18} /> Мы в Telegram</a>
-          </div>
-        </div>
+        <Reveal className="hero-visual"><ProductStage /></Reveal>
+      </section>
 
-        <div className="product-stage" aria-label="Превью приложения PULSE.DV">
-          <div className="hand-note note-top">Ближе<br />к вашему завтра</div>
-          <div className="red-orbit" />
-          <div className="phone phone-front"><MiniHome /></div>
-          <div className="phone phone-back"><MiniCatalog /></div>
+      <div className="city-line shell" data-reveal>
+        <span>Владивосток</span><i />
+        <span>Уссурийск</span><i />
+        <span>Артём</span><i />
+        <span>Приморский край</span>
+      </div>
 
-          <div className="float-card map-card">
-            <div className="float-card-head"><span className="pulse-dot" /> 12 новостроек</div>
-            <small>на карте</small>
-            <div className="map-art"><span /><span /><span /></div>
-          </div>
+      <section id="why" className="why section shell">
+        <Reveal className="section-heading">
+          <span className="section-kicker">PULSE.DV</span>
+          <h2>Не ещё один сайт<br />с объявлениями.</h2>
+          <p>Сайт знакомит с PULSE. Вся настоящая работа — внутри приложения.</p>
+        </Reveal>
 
-          <div className="float-card apartment-card">
-            <div className="apartment-art" />
-            <small>2-комнатная, 58 м²</small>
-            <b>12,4 млн ₽</b>
-          </div>
+        <div className="feature-grid">
+          <Reveal className="feature-card feature-large">
+            <div className="feature-copy">
+              <span className="feature-icon"><Sparkles /></span>
+              <small>PULSE SELECT</small>
+              <h3>Подбор под вашу ситуацию</h3>
+              <p>Бюджет, первоначальный взнос, способ покупки и пожелания — PULSE помогает быстрее сузить выбор.</p>
+              <div className="check-row"><Check size={15} /> Без перегруженных анкет</div>
+            </div>
+            <div className="select-demo">
+              <div className="select-head"><span>1 из 5</span><b>Для каких целей<br />вы выбираете квартиру?</b></div>
+              <button className="selected">⌂&nbsp;&nbsp; Для жизни <Check size={15} /></button>
+              <button>↗&nbsp;&nbsp; Для инвестиций</button>
+              <button>♡&nbsp;&nbsp; Для семьи</button>
+            </div>
+          </Reveal>
 
-          <div className="hand-note note-bottom">Приморье<br />в твоём ритме</div>
+          <Reveal className="feature-card">
+            <div className="feature-copy">
+              <span className="feature-icon"><Building2 /></span>
+              <small>ВСЁ В ОДНОМ МЕСТЕ</small>
+              <h3>ЖК и квартиры без хаоса</h3>
+              <p>Смотрите проекты, планировки и цены в одном понятном интерфейсе.</p>
+            </div>
+            <div className="stack-demo">
+              <div className="stack-card back"><span>ЖК Приморский</span></div>
+              <div className="stack-card front"><i /><div><small>Вид на море</small><b>ЖК Солнечный</b><strong>от 6,2 млн ₽</strong></div><Heart size={15} /></div>
+            </div>
+          </Reveal>
+
+          <Reveal className="feature-card">
+            <div className="feature-copy">
+              <span className="feature-icon"><BarChart3 /></span>
+              <small>СРАВНИВАЙТЕ СПОКОЙНО</small>
+              <h3>Сохранить. Сравнить. Решить.</h3>
+              <p>Избранное и сравнение помогают не держать все варианты в голове.</p>
+            </div>
+            <div className="compare-demo">
+              <div><small>ЖК A</small><b>8,4 млн ₽</b><span>52 м²</span></div>
+              <div><small>ЖК B</small><b>9,1 млн ₽</b><span>58 м²</span></div>
+              <div className="compare-line"><span>Цена</span><i /></div>
+              <div className="compare-line"><span>Площадь</span><i /></div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
-      <footer className="footline">
-        <span>PULSE.DV</span>
-        <i />
-        <span>Больше, чем квадратные метры</span>
+      <section id="how" className="how section">
+        <div className="shell">
+          <Reveal className="how-heading">
+            <span className="section-kicker">КАК ЭТО РАБОТАЕТ</span>
+            <h2>От интереса до<br />короткого списка — просто.</h2>
+          </Reveal>
+
+          <div className="steps">
+            <Reveal className="step">
+              <span>01</span>
+              <div className="step-icon"><Send /></div>
+              <h3>Откройте PULSE</h3>
+              <p>Переходите в Telegram Mini App — без отдельной установки.</p>
+            </Reveal>
+            <Reveal className="step">
+              <span>02</span>
+              <div className="step-icon"><Sparkles /></div>
+              <h3>Задайте параметры</h3>
+              <p>Укажите бюджет, способ покупки и то, что важно именно вам.</p>
+            </Reveal>
+            <Reveal className="step">
+              <span>03</span>
+              <div className="step-icon"><Heart /></div>
+              <h3>Сравните варианты</h3>
+              <p>Сохраняйте интересные квартиры и возвращайтесь к ним когда удобно.</p>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      <section id="open-pulse" className="final section shell">
+        <Reveal className="final-card">
+          <div className="final-copy">
+            <span className="section-kicker">PULSE.DV</span>
+            <h2>Ваш следующий адрес<br />может начаться здесь.</h2>
+            <p>Новостройки Приморья, подбор и сравнение — в одном приложении.</p>
+            <button className="primary" type="button" onClick={openPulse}>
+              <Send size={19} /> Открыть PULSE <ArrowRight size={20} />
+            </button>
+          </div>
+          <div className="final-art">
+            <div className="final-phone"><PhoneHome /></div>
+            <div className="final-note">Ближе<br />к вашему дому</div>
+          </div>
+        </Reveal>
+      </section>
+
+      <footer className="footer shell">
+        <PulseMark />
+        <div className="footer-tagline">PULSE.DV — Больше, чем квадратные метры</div>
+        <div className="footer-socials">
+          <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram size={18} /></a>
+          <a href="https://t.me" target="_blank" rel="noreferrer" aria-label="Telegram"><Send size={18} /></a>
+        </div>
       </footer>
 
-      {leadOpen && <LeadModal onClose={() => setLeadOpen(false)} />}
+      {notice && (
+        <div className="toast" role="status">
+          <span><Check size={17} /></span>
+          Ссылку на Mini App подключим сразу после переноса из Floot.
+        </div>
+      )}
     </main>
   );
 }
