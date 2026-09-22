@@ -1,4 +1,4 @@
-name: Deploy PULSE.DV site
+name: Build PULSE.DV funnel preview
 
 on:
   push:
@@ -9,20 +9,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: "pulse-pages"
+  group: "pulse-funnel-preview"
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-publish:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/web
 
     steps:
       - name: Checkout
@@ -33,28 +28,19 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install
+        working-directory: apps/web
         run: npm install
 
       - name: Typecheck and build
+        working-directory: apps/web
         run: npm run build
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Publish preview branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: apps/web/dist
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./apps/web/dist
+          publish_branch: site-funnel-preview
+          force_orphan: true
+          enable_jekyll: false
