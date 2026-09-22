@@ -1,0 +1,14 @@
+{
+  "name": "pulse-dv",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace @pulse/web run dev",
+    "build:web": "npm --workspace @pulse/web run build",
+    "preview:web": "npm --workspace @pulse/web run preview"
+  }
+}
