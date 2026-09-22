@@ -2,7 +2,7 @@ name: Deploy PULSE.DV site
 
 on:
   push:
-    branches: ["main"]
+    branches: ["site-funnel-v1"]
     paths:
       - "apps/web/**"
       - ".github/workflows/pulse-site-pages.yml"
