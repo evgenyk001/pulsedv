@@ -13,12 +13,7 @@ const PULSE_BOT_URL = "https://t.me/pulsedvbot";
 function Logo() {
   return (
     <div className="logo" aria-label="PULSE.DV">
-      <svg viewBox="0 0 48 48" aria-hidden="true">
-        <rect x="3" y="20" width="8" height="23" rx="2.5" />
-        <rect x="15" y="10" width="8" height="33" rx="2.5" />
-        <rect x="27" y="3" width="8" height="40" rx="2.5" />
-        <rect x="39" y="15" width="6" height="28" rx="2.5" />
-      </svg>
+      <img src="./brand-mark.svg" alt="" aria-hidden="true" />
       <span><b>PULSE.DV</b><small>Новостройки Приморья</small></span>
     </div>
   );
