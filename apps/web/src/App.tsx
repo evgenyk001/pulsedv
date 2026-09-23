@@ -1,31 +1,17 @@
-import { useMemo } from "react";
 import {
   ArrowRight,
   BarChart3,
   Building2,
-  Calculator,
-  Check,
-  GitCompareArrows,
   Heart,
-  Home,
   MapPin,
-  MessageCircle,
-  Search,
   Send,
+  ShieldCheck,
+  Sparkles,
   Smartphone,
-  Sparkles
+  WalletCards
 } from "lucide-react";
 
 const PULSE_BOT_URL = "https://t.me/pulsedvbot";
-
-const taskLinks = [
-  { href: "#find", label: "Найти квартиру", icon: Search },
-  { href: "#compare", label: "Сравнить варианты", icon: GitCompareArrows },
-  { href: "#mortgage", label: "Понять ипотеку", icon: Calculator },
-  { href: "#select", label: "Получить подбор", icon: Sparkles },
-  { href: "#expert", label: "Спросить специалиста", icon: MessageCircle },
-  { href: "#app", label: "Открыть приложение", icon: Smartphone }
-];
 
 function Logo() {
   return (
@@ -39,38 +25,23 @@ function Logo() {
   );
 }
 
-function QrPlaceholder() {
-  const cells = useMemo(() => {
-    const map = [
-      "11111110111","10000010101","10111011101","10111010001",
-      "10111010111","10000010001","11111110111","00101101001",
-      "11110111101","10010100111","11111110101"
-    ];
-    return map.flatMap((row, y) =>
-      [...row].map((value, x) => ({ x, y, on: value === "1" }))
-    );
-  }, []);
-
-  return (
-    <a className="qr-block" href={PULSE_BOT_URL} target="_blank" rel="noreferrer">
-      <div className="qr" aria-hidden="true">
-        {cells.map((cell) => (
-          <i className={cell.on ? "on" : ""} key={cell.x + "-" + cell.y} />
-        ))}
-      </div>
-      <span>Откройте<br />на телефоне</span>
-    </a>
-  );
-}
-
-function CTA({ children = "Открыть PULSE" }: { children?: string }) {
+function CTA({ label = "Открыть PULSE" }: { label?: string }) {
   return (
     <a className="primary" href={PULSE_BOT_URL} target="_blank" rel="noreferrer">
-      <span>{children}</span>
+      <span>{label}</span>
       <ArrowRight size={20} />
     </a>
   );
 }
+
+const productPoints = [
+  { icon: Building2, title: "Новостройки", text: "Проекты Приморья в одном понятном интерфейсе." },
+  { icon: MapPin, title: "Карта", text: "Смотрите расположение и выбирайте удобный район." },
+  { icon: Heart, title: "Избранное", text: "Сохраняйте варианты, к которым хочется вернуться." },
+  { icon: BarChart3, title: "Сравнение", text: "Сопоставляйте квартиры без десятков открытых вкладок." },
+  { icon: WalletCards, title: "Ипотека", text: "Понимайте сценарий покупки ещё до встречи с банком." },
+  { icon: Sparkles, title: "PULSE Select", text: "Получайте подборку под свой бюджет и задачу." }
+];
 
 export default function App() {
   return (
@@ -87,9 +58,7 @@ export default function App() {
 
       <header className="header">
         <Logo />
-        <a className="header-cta" href={PULSE_BOT_URL} target="_blank" rel="noreferrer">
-          Открыть PULSE <ArrowRight size={18} />
-        </a>
+        <CTA />
       </header>
 
       <section className="hero">
@@ -101,19 +70,18 @@ export default function App() {
             <em>в одном приложении.</em>
           </h1>
           <p>
-            Сравнивайте ЖК и квартиры, сохраняйте варианты и выбирайте
-            подходящее в одном понятном сервисе.
+            PULSE.DV помогает спокойно выбирать квартиру: смотреть проекты,
+            сохранять понравившееся и понимать свой сценарий покупки.
           </p>
-
-          <div className="cta-row">
+          <div className="hero-cta-row">
             <CTA />
-            <QrPlaceholder />
+            <span className="hero-note">Владивосток · Артём · Уссурийск</span>
           </div>
 
-          <div className="hero-points">
-            <span><Building2 size={20} /> Новостройки</span>
-            <span><Heart size={20} /> Избранное</span>
-            <span><BarChart3 size={20} /> Сравнение</span>
+          <div className="hero-proof">
+            <span><Building2 size={19} /> Новостройки</span>
+            <span><Heart size={19} /> Избранное</span>
+            <span><Sparkles size={19} /> PULSE Select</span>
           </div>
         </div>
 
@@ -121,155 +89,134 @@ export default function App() {
           <div className="hand-note top-note">Ближе<br />к вашему завтра</div>
           <div className="visual-orbit" aria-hidden="true" />
           <img src="./hero-visual.svg" alt="Приложение PULSE.DV на двух смартфонах" />
-          <div className="hand-note side-note">Живите там,<br />где вдохновляет</div>
+          <div className="hand-note side-note">Приморье<br />в твоём ритме</div>
         </div>
       </section>
 
-      <nav className="task-nav" aria-label="Что можно сделать в PULSE.DV">
-        {taskLinks.map(({ href, label, icon: Icon }) => (
-          <a href={href} key={href}>
-            <Icon size={20} />
-            <span>{label}</span>
-            <ArrowRight size={16} />
-          </a>
-        ))}
-      </nav>
-
-      <section className="statement section-wrap">
-        <p className="section-kicker">PULSE.DV</p>
+      <section className="intro section-wrap">
+        <span className="section-kicker">PULSE.DV</span>
         <h2>
-          Приложение и команда,<br />
-          которые помогают <em>выбрать квартиру</em><br />
-          без хаоса из сотен объявлений.
+          Не ещё один сайт с объявлениями.<br />
+          <em>Новый способ выбирать новостройку.</em>
         </h2>
+        <p>
+          Мы собрали привычный путь поиска квартиры в одном мобильном продукте —
+          без перегруженных таблиц, бесконечных звонков и десятков вкладок.
+        </p>
       </section>
 
-      <section className="story-block section-wrap" id="find">
-        <div className="section-copy">
-          <span className="step-number">01</span>
-          <h3>Найти подходящие новостройки</h3>
+      <section className="product-film section-wrap">
+        <div className="film-copy">
+          <span className="section-kicker">ПРОДУКТ</span>
+          <h3>Всё важное — в одном месте.</h3>
           <p>
-            Сначала — не конкретный дом, а ваша задача: район, бюджет,
-            срок сдачи, планировка и формат покупки.
+            PULSE создан так, чтобы выбор недвижимости ощущался так же просто,
+            как привычное мобильное приложение.
           </p>
-          <a className="text-link" href={PULSE_BOT_URL} target="_blank" rel="noreferrer">
-            Начать подбор <ArrowRight size={18} />
-          </a>
         </div>
-        <div className="showcase search-showcase">
-          <div className="search-shell"><Search size={18} /> ЖК, район или застройщик</div>
-          <div className="project-grid">
-            <article><div className="fake-photo p1" /><b>Вид на море</b><span>Владивосток · Патрокл</span><strong>от 6,2 млн ₽</strong></article>
-            <article><div className="fake-photo p2" /><b>Ближе к центру</b><span>Владивосток</span><strong>от 7,8 млн ₽</strong></article>
-            <article><div className="fake-photo p3" /><b>Для семьи</b><span>Уссурийск</span><strong>от 5,9 млн ₽</strong></article>
+
+        <div className="film-stage">
+          <div className="film-glow" />
+          <img src="./hero-visual.svg" alt="Интерфейс PULSE.DV" />
+          <span className="floating-tag tag-one"><Heart size={17} /> Сохраняйте понравившееся</span>
+          <span className="floating-tag tag-two"><MapPin size={17} /> Смотрите на карте</span>
+          <span className="floating-tag tag-three"><Sparkles size={17} /> Получайте подбор</span>
+        </div>
+      </section>
+
+      <section className="features section-wrap">
+        <div className="features-head">
+          <span className="section-kicker">ВНУТРИ PULSE</span>
+          <h3>Функции, которые помогают выбрать.</h3>
+        </div>
+        <div className="feature-grid">
+          {productPoints.map(({ icon: Icon, title, text }) => (
+            <article className="feature-card" key={title}>
+              <span className="feature-icon"><Icon size={23} /></span>
+              <h4>{title}</h4>
+              <p>{text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="dark-story">
+        <div className="dark-inner section-wrap">
+          <div className="dark-copy">
+            <span className="section-kicker">СПОКОЙНЕЕ. ПОНЯТНЕЕ. БЛИЖЕ.</span>
+            <h2>
+              Вы выбираете не квадратные метры.<br />
+              <em>Вы выбираете следующую главу жизни.</em>
+            </h2>
+            <p>
+              Поэтому PULSE показывает не только объект, но и контекст:
+              где он находится, как выглядит, сколько стоит и как может выглядеть путь к покупке.
+            </p>
+          </div>
+          <div className="dark-cards">
+            <article>
+              <span>01</span>
+              <b>Смотрите</b>
+              <p>Проекты, квартиры и расположение.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <b>Сохраняйте</b>
+              <p>Всё, что хочется сравнить позже.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <b>Выбирайте</b>
+              <p>С опорой на свои цели и бюджет.</p>
+            </article>
           </div>
         </div>
       </section>
 
-      <section className="story-block reverse section-wrap" id="compare">
-        <div className="section-copy">
-          <span className="step-number">02</span>
-          <h3>Сравнить то, что действительно важно</h3>
+      <section className="trust section-wrap">
+        <div className="trust-copy">
+          <span className="section-kicker">НЕ ТОЛЬКО ТЕХНОЛОГИЯ</span>
+          <h3>За приложением стоит команда PULSE.DV.</h3>
           <p>
-            Цена, площадь, срок сдачи, первоначальный взнос и ориентировочный
-            платёж — в одном экране, без переключения между десятью вкладками.
+            Когда нужен живой специалист, мы подключаемся: объясняем,
+            показываем, сопровождаем и помогаем пройти путь дальше.
           </p>
         </div>
-        <div className="showcase compare-card">
-          <div className="compare-head"><span>Сравнение</span><b>2 квартиры</b></div>
-          <div className="compare-columns">
-            <div><div className="compare-photo cp1" /><b>54,6 м²</b><span>9,85 млн ₽</span></div>
-            <div><div className="compare-photo cp2" /><b>58,1 м²</b><span>10,4 млн ₽</span></div>
-          </div>
-          <div className="compare-lines">
-            <span><i>Срок сдачи</i><b>IV кв. 2027</b><b>II кв. 2028</b></span>
-            <span><i>Отделка</i><b>White box</b><b>Чистовая</b></span>
-            <span><i>До центра</i><b>18 мин</b><b>12 мин</b></span>
-          </div>
-        </div>
-      </section>
-
-      <section className="story-block section-wrap" id="mortgage">
-        <div className="section-copy">
-          <span className="step-number">03</span>
-          <h3>Понять ипотеку до разговора с банком</h3>
-          <p>
-            Выберите программу, измените первоначальный взнос или срок —
-            PULSE пересчитает сценарий и покажет ориентировочный платёж.
-          </p>
-          <small>Расчёт предварительный и не является решением банка.</small>
-        </div>
-        <div className="showcase mortgage-card">
-          <div className="mortgage-top"><span>Семейная ипотека</span><b>от 6%</b></div>
-          <div className="mortgage-price">9 850 000 ₽</div>
-          <div className="slider-row"><span>Первоначальный взнос</span><b>2 500 000 ₽</b></div>
-          <div className="fake-slider"><i /></div>
-          <div className="mortgage-output">
-            <span><small>Платёж в месяц</small><b>≈ 44 800 ₽</b></span>
-            <span><small>Срок</small><b>30 лет</b></span>
-          </div>
-        </div>
-      </section>
-
-      <section className="story-block reverse section-wrap" id="select">
-        <div className="section-copy">
-          <span className="step-number">04</span>
-          <h3>PULSE Select — подбор под вашу ситуацию</h3>
-          <p>
-            Отвечаете на несколько простых вопросов. Сервис сужает выбор,
-            а специалист подключается уже к понятной задаче.
-          </p>
-          <CTA children="Пройти подбор" />
-        </div>
-        <div className="showcase select-card">
-          <div className="select-step active"><Check size={17} /><span>Город</span><b>Владивосток</b></div>
-          <div className="select-step active"><Check size={17} /><span>Бюджет</span><b>до 10 млн ₽</b></div>
-          <div className="select-step active"><Check size={17} /><span>Покупка</span><b>Ипотека</b></div>
-          <div className="select-step"><Sparkles size={17} /><span>Результат</span><b>Подбираем варианты</b></div>
-        </div>
-      </section>
-
-      <section className="story-block section-wrap" id="expert">
-        <div className="section-copy">
-          <span className="step-number">05</span>
-          <h3>Если нужен человек — он рядом</h3>
-          <p>
-            PULSE не заменяет специалиста там, где важен опыт. Мы подключаемся
-            к переговорам, показам и оформлению, когда это действительно нужно.
-          </p>
-        </div>
-        <div className="showcase expert-card">
-          <div className="expert-avatar">P</div>
+        <div className="trust-card">
+          <span className="trust-icon"><ShieldCheck size={28} /></span>
           <div>
-            <small>Специалист PULSE.DV</small>
-            <h4>Разберём вашу ситуацию</h4>
-            <p>Объясним варианты простыми словами и поможем пройти путь дальше.</p>
+            <small>PULSE.DV</small>
+            <b>Недвижимость понятным языком.</b>
+            <p>Приложение помогает выбрать. Команда помогает принять решение спокойно.</p>
           </div>
-          <a href={PULSE_BOT_URL} target="_blank" rel="noreferrer"><MessageCircle size={18} /> Написать</a>
         </div>
       </section>
 
-      <section className="app-section section-wrap" id="app">
-        <div className="app-copy">
-          <p className="section-kicker">ОДИН СЕРВИС</p>
-          <h2>Сохраняйте выбор<br />и возвращайтесь к нему<br /><em>когда удобно.</em></h2>
-          <p>Главная, каталог, карта, подбор, избранное и расчёты — внутри PULSE.</p>
-          <div className="cta-row">
-            <CTA />
-            <QrPlaceholder />
-          </div>
+      <section className="app-final section-wrap">
+        <div className="app-final-copy">
+          <span className="section-kicker">PULSE НА ТЕЛЕФОНЕ</span>
+          <h2>
+            Ваш выбор всегда<br />
+            <em>под рукой.</em>
+          </h2>
+          <p>
+            Откройте PULSE в Telegram и посмотрите, как выглядит новый способ искать новостройки Приморья.
+          </p>
+          <CTA label="Открыть приложение" />
         </div>
-        <div className="app-visual">
-          <img src="./hero-visual.svg" alt="Интерфейс приложения PULSE.DV" />
+        <div className="app-final-visual">
+          <div className="app-halo" />
+          <img src="./hero-visual.svg" alt="PULSE.DV на смартфонах" />
         </div>
       </section>
 
       <section className="final-cta section-wrap">
         <div>
           <span className="section-kicker">PULSE.DV</span>
-          <h2>Начните не с объявления.<br />Начните с того, что подходит вам.</h2>
+          <h2>Больше, чем квадратные метры.</h2>
+          <p>Новостройки Приморья — в одном красивом и понятном приложении.</p>
         </div>
-        <CTA children="Подобрать квартиру" />
+        <CTA label="Открыть PULSE" />
       </section>
 
       <footer className="footer">
