@@ -1,0 +1,103 @@
+<svg width="900" height="720" viewBox="0 0 900 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="phone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2B2F36"/><stop offset=".45" stop-color="#07090C"/><stop offset="1" stop-color="#444A55"/></linearGradient>
+  <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#A6C3DA"/><stop offset=".52" stop-color="#DDE8F0"/><stop offset="1" stop-color="#7BA0B9"/></linearGradient>
+  <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#95B7CA"/><stop offset="1" stop-color="#DCE8EF"/></linearGradient>
+  <filter id="shadow" x="-40%" y="-40%" width="180%" height="200%"><feDropShadow dx="0" dy="26" stdDeviation="22" flood-color="#24364B" flood-opacity=".23"/></filter>
+  <filter id="soft" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="20"/></filter>
+</defs>
+
+<ellipse cx="493" cy="350" rx="360" ry="256" fill="#D9E9F4" fill-opacity=".34" filter="url(#soft)"/>
+<path d="M82 430C240 390 352 388 485 414C618 439 730 384 842 326" stroke="#7596AF" stroke-opacity=".27" stroke-width="4" stroke-linecap="round"/>
+<path d="M90 457C248 423 356 422 489 446C620 470 730 420 846 365" stroke="#98AFC2" stroke-opacity=".23" stroke-width="3" stroke-linecap="round"/>
+<path d="M505 415L556 168L617 416M556 168V88M556 174L492 407M556 174L608 407M556 174L452 416M556 174L653 398" stroke="#6C879C" stroke-opacity=".31" stroke-width="3" stroke-linecap="round"/>
+<path d="M128 234C330 141 511 172 735 333C797 378 838 433 855 489" stroke="#F52234" stroke-opacity=".28" stroke-width="4" stroke-linecap="round"/>
+
+<g transform="translate(170 58) rotate(-5 210 300)" filter="url(#shadow)">
+  <rect x="25" y="10" width="352" height="652" rx="60" fill="url(#phone)"/>
+  <rect x="34" y="20" width="334" height="634" rx="50" fill="#F7F8FA"/>
+  <rect x="140" y="29" width="122" height="29" rx="15" fill="#090B0E"/>
+  <text x="62" y="64" fill="#151922" font-family="Arial" font-weight="700" font-size="15">9:41</text>
+  <rect x="55" y="82" width="34" height="34" rx="10" fill="#F52234"/>
+  <rect x="64" y="96" width="4" height="12" rx="1.2" fill="white"/><rect x="71" y="91" width="4" height="17" rx="1.2" fill="white"/><rect x="78" y="87" width="4" height="21" rx="1.2" fill="white"/>
+  <text x="99" y="99" fill="#151922" font-family="Arial" font-weight="700" font-size="17">PULSE.DV</text>
+  <text x="99" y="114" fill="#9AA0AA" font-family="Arial" font-size="9">Новостройки Приморья</text>
+  <rect x="55" y="132" width="294" height="42" rx="14" fill="white" stroke="#ECEEF2"/>
+  <text x="72" y="158" fill="#A1A6AF" font-family="Arial" font-size="11">ЖК, район или застройщик</text>
+
+  <rect x="55" y="188" width="294" height="215" rx="26" fill="#263846"/>
+  <rect x="55" y="188" width="294" height="215" rx="26" fill="url(#sky)" opacity=".82"/>
+  <path d="M55 337C116 310 178 304 234 323C278 338 309 327 349 299V403H55V337Z" fill="#29475A" opacity=".88"/>
+  <path d="M174 334L218 220L265 334M218 220V189M218 225L175 329M218 225L262 329" stroke="#E8F0F5" stroke-opacity=".8" stroke-width="2"/>
+  <text x="76" y="247" fill="white" font-family="Arial" font-weight="700" font-size="10">НОВОСТРОЙКИ ПРИМОРЬЯ</text>
+  <text x="76" y="282" fill="white" font-family="Arial" font-weight="700" font-size="23">Квартира, которую</text>
+  <text x="76" y="310" fill="white" font-family="Arial" font-weight="700" font-size="23">хочется показывать</text>
+  <text x="76" y="338" fill="white" font-family="Arial" font-weight="700" font-size="23">друзьям</text>
+  <text x="76" y="360" fill="#E4EBF0" font-family="Arial" font-size="10">Владивосток · Уссурийск · Артём</text>
+  <rect x="76" y="373" width="132" height="23" rx="11.5" fill="white"/>
+  <text x="91" y="389" fill="#171A20" font-family="Arial" font-weight="700" font-size="8">Смотреть проекты →</text>
+
+  <g font-family="Arial" font-size="8" fill="#343842">
+    <rect x="55" y="417" width="142" height="58" rx="17" fill="white"/><text x="92" y="449">Каталог</text>
+    <rect x="207" y="417" width="142" height="58" rx="17" fill="white"/><text x="247" y="449">На карте</text>
+    <rect x="55" y="485" width="142" height="58" rx="17" fill="white"/><text x="91" y="517">Ипотека</text>
+    <rect x="207" y="485" width="142" height="58" rx="17" fill="white"/><text x="239" y="517">PULSE Select</text>
+  </g>
+  <text x="58" y="575" fill="#A4A8B0" font-family="Arial" font-size="8">ВЫБОР PULSE.DV</text>
+  <text x="58" y="596" fill="#171A20" font-family="Arial" font-weight="700" font-size="16">Стоит посмотреть</text>
+  <rect x="55" y="609" width="294" height="33" rx="13" fill="white"/>
+  <rect x="64" y="615" width="38" height="21" rx="7" fill="#9AB3C4"/>
+  <text x="114" y="624" fill="#1D2027" font-family="Arial" font-weight="700" font-size="8">ЖК «Босфор»</text>
+  <text x="114" y="636" fill="#777D86" font-family="Arial" font-size="7">от 7,8 млн ₽</text>
+</g>
+
+<g transform="translate(493 125) rotate(5 150 270)" filter="url(#shadow)">
+  <rect x="15" y="8" width="300" height="570" rx="54" fill="url(#phone)"/>
+  <rect x="24" y="18" width="282" height="552" rx="45" fill="#F8F9FB"/>
+  <rect x="108" y="27" width="112" height="26" rx="13" fill="#090B0E"/>
+  <text x="48" y="62" fill="#151922" font-family="Arial" font-weight="700" font-size="13">9:41</text>
+  <text x="48" y="104" fill="#9AA0AA" font-family="Arial" font-size="8">КАТАЛОГ PULSE.DV</text>
+  <text x="48" y="136" fill="#171A20" font-family="Arial" font-weight="700" font-size="24">Новостройки</text>
+  <text x="48" y="154" fill="#858B95" font-family="Arial" font-size="9">Подбирайте спокойно — по району и бюджету</text>
+  <rect x="48" y="171" width="234" height="34" rx="12" fill="#EDEFF3"/>
+  <rect x="52" y="175" width="112" height="26" rx="9" fill="white"/>
+  <text x="86" y="192" fill="#171A20" font-family="Arial" font-weight="700" font-size="8">≡  Список</text>
+  <text x="205" y="192" fill="#7E848D" font-family="Arial" font-size="8">⌖  Карта</text>
+  <rect x="48" y="218" width="234" height="36" rx="13" fill="white" stroke="#ECEEF2"/>
+  <text x="63" y="241" fill="#A1A6AF" font-family="Arial" font-size="9">ЖК, район, застройщик</text>
+
+  <rect x="48" y="274" width="234" height="114" rx="21" fill="white"/>
+  <rect x="58" y="284" width="82" height="94" rx="15" fill="url(#sea)"/>
+  <path d="M63 350L78 309L94 350M78 309V295M78 311L64 347M78 311L92 347" stroke="white" stroke-opacity=".8"/>
+  <text x="153" y="301" fill="#F52234" font-family="Arial" font-weight="700" font-size="7">ВИД НА МОРЕ</text>
+  <text x="153" y="323" fill="#171A20" font-family="Arial" font-weight="700" font-size="12">ЖК Солнечный</text>
+  <text x="153" y="339" fill="#8A9098" font-family="Arial" font-size="8">Владивосток · Патрокл</text>
+  <text x="153" y="365" fill="#171A20" font-family="Arial" font-weight="700" font-size="12">от 6,2 млн ₽</text>
+
+  <rect x="48" y="401" width="234" height="114" rx="21" fill="white"/>
+  <rect x="58" y="411" width="82" height="94" rx="15" fill="#CAB3A2"/>
+  <rect x="68" y="431" width="18" height="58" rx="4" fill="#E9E0D8"/><rect x="93" y="422" width="22" height="67" rx="4" fill="#9C806C"/>
+  <text x="153" y="428" fill="#F52234" font-family="Arial" font-weight="700" font-size="7">СТАРТ ПРОДАЖ</text>
+  <text x="153" y="450" fill="#171A20" font-family="Arial" font-weight="700" font-size="12">ЖК Приморский</text>
+  <text x="153" y="466" fill="#8A9098" font-family="Arial" font-size="8">Владивосток · Центр</text>
+  <text x="153" y="492" fill="#171A20" font-family="Arial" font-weight="700" font-size="12">от 7,8 млн ₽</text>
+</g>
+
+<g filter="url(#shadow)">
+  <rect x="70" y="520" width="184" height="132" rx="24" fill="white" fill-opacity=".94"/>
+  <text x="91" y="546" fill="#171A20" font-family="Arial" font-weight="700" font-size="11">12 новостроек</text>
+  <text x="91" y="561" fill="#969BA4" font-family="Arial" font-size="8">на карте</text>
+  <rect x="91" y="577" width="142" height="55" rx="14" fill="#DCE8EF"/>
+  <path d="M91 613L140 588L182 605L233 584" stroke="white" stroke-width="4" opacity=".8"/>
+  <circle cx="145" cy="603" r="9" fill="#F52234" stroke="white" stroke-width="4"/>
+  <circle cx="197" cy="594" r="9" fill="#F52234" stroke="white" stroke-width="4"/>
+</g>
+
+<g filter="url(#shadow)">
+  <rect x="686" y="470" width="165" height="150" rx="24" fill="white" fill-opacity=".95"/>
+  <rect x="699" y="483" width="139" height="87" rx="16" fill="#E9E1DB"/>
+  <path d="M700 526H838M768 483V570" stroke="white" stroke-width="2" opacity=".7"/>
+  <text x="700" y="593" fill="#171A20" font-family="Arial" font-weight="700" font-size="10">2-комнатная, 58 м²</text>
+  <text x="700" y="608" fill="#171A20" font-family="Arial" font-weight="700" font-size="11">12,4 млн ₽</text>
+</g>
+</svg>
