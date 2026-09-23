@@ -53,6 +53,16 @@ function QrPlaceholder() {
   );
 }
 
+function Features({ mobile = false }: { mobile?: boolean }) {
+  return (
+    <div className={mobile ? "feature-row mobile-feature-row" : "feature-row"}>
+      <div><Building2 /><span>Актуальные<br />новостройки</span></div>
+      <div><Heart /><span>Ваши<br />избранные</span></div>
+      <div><BarChart3 /><span>Удобное<br />сравнение</span></div>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <main className="page">
@@ -74,7 +84,7 @@ export default function App() {
         <div className="copy">
           <div className="eyebrow">НОВОСТРОЙКИ ПРИМОРЬЯ</div>
           <h1>Новостройки<br />Приморья —<br /><em>в одном приложении.</em></h1>
-          <p>Сравнивайте ЖК и квартиры, изучайте цены, сохраняйте варианты и выбирайте самостоятельно.</p>
+          <p>Все новостройки Приморья, сравнение и избранное — в одном понятном сервисе.</p>
 
           <div className="cta-row">
             <a className="primary hero-cta" href={PULSE_BOT_URL} target="_blank" rel="noreferrer">
@@ -83,16 +93,13 @@ export default function App() {
             <QrPlaceholder />
           </div>
 
-          <div className="feature-row">
-            <div><Building2 /><span>Актуальные<br />новостройки</span></div>
-            <div><Heart /><span>Ваши<br />избранные</span></div>
-            <div><BarChart3 /><span>Удобное<br />сравнение</span></div>
-          </div>
-
-          <div className="social-row">
-            <a href="https://instagram.com" target="_blank" rel="noreferrer"><Instagram size={19} /> Мы в Instagram</a>
-            <i />
-            <a href={PULSE_BOT_URL} target="_blank" rel="noreferrer"><Send size={19} /> Мы в Telegram</a>
+          <div className="desktop-meta">
+            <Features />
+            <div className="social-row">
+              <a href="https://instagram.com" target="_blank" rel="noreferrer"><Instagram size={19} /> Мы в Instagram</a>
+              <i />
+              <a href={PULSE_BOT_URL} target="_blank" rel="noreferrer"><Send size={19} /> Мы в Telegram</a>
+            </div>
           </div>
         </div>
 
@@ -100,6 +107,10 @@ export default function App() {
           <div className="hand-note top-note">Ближе<br />к вашему завтра</div>
           <img src="./hero-visual.svg" alt="Приложение PULSE.DV на двух смартфонах" />
           <div className="hand-note side-note">Живите там,<br />где вдохновляет</div>
+        </div>
+
+        <div className="mobile-meta">
+          <Features mobile />
         </div>
       </section>
 
