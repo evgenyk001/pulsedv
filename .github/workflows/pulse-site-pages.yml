@@ -24,7 +24,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Mini App dependencies
+        working-directory: apps/mini-app
+        run: npm install --no-audit --no-fund
+      - name: Typecheck Mini App
+        working-directory: apps/mini-app
+        run: npm run check
+      - name: Build Mini App
+        working-directory: apps/mini-app
+        run: npm run build
+      - name: Check landing JavaScript
+        run: node --check dist/script.js
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -44,25 +68,12 @@ jobs:
         run: npm run build
       - name: Check landing JavaScript
         run: node --check dist/script.js
-      - name: Upload Pages artifact
-        if: github.event_name != 'pull_request'
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
-
-  deploy:
-    if: github.event_name != 'pull_request'
-    needs: build
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
