@@ -54,6 +54,9 @@ export default function CatalogPage(){
   const [delivery,setDelivery]=useState(params.get("delivery")||"Любой");
   const [rooms,setRooms]=useState(params.get("rooms")||"Все");
   const [sea,setSea]=useState(params.get("sea")==="1");
+  const pulseMode=params.get("pulse")==="1";
+  const pulsePriorityKey=params.get("priorities")||"";
+  const pulsePriorities=pulsePriorityKey.split(",").filter(Boolean);
   const initialSort=params.get("sort") as SortMode|null;
   const [sort,setSort]=useState<SortMode>(initialSort&&sortLabels[initialSort]?initialSort:"popular");
   const view=params.get("view")==="map"?"map":"list";
@@ -100,13 +103,26 @@ export default function CatalogPage(){
         return label.startsWith(rooms)||label.includes(rooms+"-");
       });
       const featureText=[...item.tags,...item.features.map(feature=>feature.label)].join(" ").toLowerCase();
-      const matchesSea=!sea||featureText.includes("мор")||featureText.includes("панорам");
+      const matchesSea=pulseMode||!sea||featureText.includes("мор")||featureText.includes("панорам");
       return matchesQuery&&matchesCity&&matchesPrice&&matchesDelivery&&matchesRooms&&matchesSea;
     });
     if(sort==="priceAsc")return [...filtered].sort((a,b)=>a.priceFrom-b.priceFrom);
     if(sort==="priceDesc")return [...filtered].sort((a,b)=>b.priceFrom-a.priceFrom);
+    if(pulseMode&&pulsePriorities.length){
+      const score=(item:(typeof filtered)[number])=>{
+        const text=[item.district,...item.tags,...item.features.map(feature=>feature.label)].join(" ").toLowerCase();
+        return pulsePriorities.reduce((total,priority)=>{
+          if(priority==="sea"&&(text.includes("мор")||text.includes("панорам")))return total+1;
+          if(priority==="quiet"&&(text.includes("тиш")||text.includes("тих")||text.includes("спокой")))return total+1;
+          if(priority==="center"&&(text.includes("центр")||text.includes("централь")))return total+1;
+          if(priority==="parking"&&(text.includes("парков")||text.includes("паркин")))return total+1;
+          return total;
+        },0);
+      };
+      return [...filtered].sort((a,b)=>score(b)-score(a)||a.sortOrder-b.sortOrder);
+    }
     return [...filtered].sort((a,b)=>a.sortOrder-b.sortOrder);
-  },[properties,query,city,priceRange,delivery,rooms,sea,sort]);
+  },[properties,query,city,priceRange,delivery,rooms,sea,sort,pulseMode,pulsePriorityKey]);
 
   const onQuery=(value:string)=>{
     setQuery(value);
@@ -177,7 +193,7 @@ export default function CatalogPage(){
     setSea(false);
     setQuery("");
     const next=new URLSearchParams(params);
-    next.delete("city");next.delete("min");next.delete("max");next.delete("delivery");next.delete("rooms");next.delete("sea");next.delete("mortgage");next.delete("q");
+    next.delete("city");next.delete("min");next.delete("max");next.delete("delivery");next.delete("rooms");next.delete("sea");next.delete("mortgage");next.delete("pulse");next.delete("priorities");next.delete("q");
     setParams(next,{replace:true});
   };
 
