@@ -1,12 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { getPriceBounds } from "../endpoints/price_bounds_GET.schema";
-
-export const PRICE_BOUNDS_QUERY_KEY=["price-bounds"] as const;
-
+import { MOCK_PROPERTIES } from "./mockData";
 export function usePriceBounds(){
-  return useQuery({
-    queryKey:PRICE_BOUNDS_QUERY_KEY,
-    queryFn:getPriceBounds,
-    staleTime:60_000,
-  });
+  return useQuery({queryKey:["price-bounds"],queryFn:async()=>{
+    const prices=MOCK_PROPERTIES.flatMap(p=>p.floorplans.map(x=>x.priceFrom).filter((x):x is number=>x!=null)).map(x=>x*1_000_000);
+    return {minPriceRub:Math.min(...prices),maxPriceRub:Math.max(...prices),stepRub:100_000};
+  },staleTime:Infinity});
 }
