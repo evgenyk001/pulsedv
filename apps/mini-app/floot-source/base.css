@@ -1,0 +1,141 @@
+:root {
+  /* Overlay layers */
+  --z-overlay: 400;
+
+  --z-spotlight: 1000; /* Tutorial spotlights/guided help */
+
+  /* System layers */
+  --z-critical: 2000; /* Critical system notifications */
+
+  /* spacing */
+  --spacing-1: 0.25rem;
+  --spacing-2: 0.5rem;
+  --spacing-3: 0.75rem;
+  --spacing-4: 1rem;
+  --spacing-6: 1.5rem;
+  --spacing-8: 2rem;
+  --spacing-12: 3rem;
+  --spacing-16: 4rem;
+  --spacing-20: 5rem;
+}
+
+:root {
+  --background: #F3F5F8;
+  --foreground: #111827;
+  --surface: rgba(255, 255, 255, 0.76);
+  --surface-foreground: #111827;
+  --sidebar: rgba(248, 250, 252, 0.9);
+  --sidebar-foreground: #111827;
+  --card: rgba(255, 255, 255, 0.82);
+  --card-foreground: #111827;
+  --popup: rgba(255, 255, 255, 0.94);
+  --popup-foreground: #111827;
+  --primary: #F20D1D;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E9EDF2;
+  --secondary-foreground: #283241;
+  --accent: #ECF3FF;
+  --accent-foreground: #2F5F9D;
+  --muted: #EDF1F5;
+  --muted-foreground: #717B8A;
+  --success: #2E9D78;
+  --success-foreground: #FFFFFF;
+  --error: #C8454B;
+  --error-foreground: #FFFFFF;
+  --warning: #C98B32;
+  --warning-foreground: #FFFFFF;
+  --info: #4E7FB8;
+  --info-foreground: #FFFFFF;
+  --info-hover: #416E9F;
+  --info-active: #345D88;
+  --border: rgba(92, 107, 128, 0.16);
+  --font-family-base: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+  --font-family-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
+  --font-family-monospace: "SFMono-Regular", ui-monospace, Menlo, Monaco, monospace;
+  --font-family-cursive: "Snell Roundhand", cursive;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.035), 0 7px 20px rgba(47, 59, 78, 0.052);
+  --shadow-md: 0 2px 5px rgba(47,59,78,.035), 0 13px 34px rgba(47, 59, 78, 0.085), inset 0 1px 0 rgba(255,255,255,0.78);
+  --shadow-lg: 0 3px 8px rgba(47,59,78,.045), 0 22px 58px rgba(47, 59, 78, 0.13), inset 0 1px 0 rgba(255,255,255,0.88);
+  --shadow-focus: 0 0 0 4px rgba(242, 13, 29, 0.14);
+  --radius-sm: 0.75rem;
+  --radius: 1rem;
+  --radius-md: 1.125rem;
+  --radius-lg: 1.5rem;
+  --radius-full: 999px;
+  --animation-duration-fast: 140ms;
+  --animation-duration-normal: 220ms;
+  --animation-duration-slow: 320ms;
+  --chart-color-1: #F20D1D;
+  --chart-color-2: #4E7FB8;
+  --chart-color-3: #2E9D78;
+  --chart-color-4: #C98B32;
+  --chart-color-5: #7A6FA6;
+  --glass-stroke: rgba(255,255,255,0.72);
+  --glass-highlight: rgba(255,255,255,0.88);
+  --glass-blur: 24px;
+  --brand-soft: rgba(242, 13, 29, 0.10);
+  --blue-soft: rgba(78, 127, 184, 0.11);
+  --content-max: 480px;
+  --app-card: rgba(255,255,255,0.70);
+  --app-card-strong: rgba(255,255,255,0.84);
+  --app-card-border: rgba(255,255,255,0.90);
+  --app-card-shadow: 0 1px 2px rgba(35,47,63,.028), 0 10px 30px rgba(47,59,78,.062), inset 0 1px 0 rgba(255,255,255,.86);
+  --app-card-shadow-strong: 0 2px 5px rgba(35,47,63,.035), 0 17px 42px rgba(47,59,78,.092), inset 0 1px 0 rgba(255,255,255,.92);
+  --app-radius-card: 28px;
+  --app-radius-control: 20px;
+  --app-section-gap: 26px;
+  --app-page-gap: 22px;
+  --motion-spring: cubic-bezier(.18,.88,.22,1);
+  --motion-soft: cubic-bezier(.2,.8,.2,1);
+  --motion-press: cubic-bezier(.3,.7,.4,1);
+}
+
+.dark {
+  --background: #11141A;
+  --foreground: #F5F7FA;
+  --surface: rgba(30, 35, 44, 0.78);
+  --surface-foreground: #F5F7FA;
+  --sidebar: rgba(25, 29, 37, 0.9);
+  --sidebar-foreground: #F5F7FA;
+  --card: rgba(31, 36, 45, 0.84);
+  --card-foreground: #F5F7FA;
+  --popup: rgba(35, 40, 49, 0.96);
+  --popup-foreground: #F5F7FA;
+  --primary: #FF5A64;
+  --primary-foreground: #FFFFFF;
+  --secondary: #2A303A;
+  --secondary-foreground: #E7EBF0;
+  --accent: #203149;
+  --accent-foreground: #C9DEF8;
+  --muted: #252B34;
+  --muted-foreground: #A0A9B5;
+  --success: #49AF8A;
+  --success-foreground: #08130F;
+  --error: #E26469;
+  --error-foreground: #FFFFFF;
+  --warning: #D9A14F;
+  --warning-foreground: #171009;
+  --info: #78A2D1;
+  --info-foreground: #0B1420;
+  --info-hover: #89AFD9;
+  --info-active: #9CBCE0;
+  --border: rgba(255,255,255,0.10);
+  --shadow: 0 8px 28px rgba(0,0,0,0.18);
+  --shadow-md: 0 14px 40px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.05);
+  --shadow-lg: 0 20px 60px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+  --shadow-focus: 0 0 0 4px rgba(226, 100, 105, 0.16);
+  --glass-stroke: rgba(255,255,255,0.11);
+  --glass-highlight: rgba(255,255,255,0.12);
+  --brand-soft: rgba(226, 100, 105, 0.14);
+  --blue-soft: rgba(120, 162, 209, 0.14);
+  --app-card: rgba(31,36,45,0.70);
+  --app-card-strong: rgba(35,40,49,0.84);
+  --app-card-border: rgba(255,255,255,0.10);
+  --app-card-shadow: 0 10px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.04);
+  --app-card-shadow-strong: 0 16px 42px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,255,255,0.06);
+  --chart-color-1: #E26469;
+  --chart-color-2: #78A2D1;
+  --chart-color-3: #49AF8A;
+  --chart-color-4: #D9A14F;
+  --chart-color-5: #9B8CC2;
+}
