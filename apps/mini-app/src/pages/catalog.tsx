@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, SlidersHorizontal, List, MapPinned, ArrowUpDown, Check, ChevronRight } from "lucide-react";
+import { Search, SlidersHorizontal, List, MapPinned, ArrowUpDown, Check, ChevronRight, MapPin } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "../components/Sheet";
 import { Slider } from "../components/Slider";
 import { PropertyCard } from "../components/PropertyCard";
@@ -9,6 +9,7 @@ import { useProperties } from "../helpers/useProperties";
 import { usePriceBounds } from "../helpers/usePriceBounds";
 import { PropertyMap } from "../components/PropertyMap";
 import { Input } from "../components/Input";
+import { SegmentedControl } from "../components/SegmentedControl";
 import styles from "./catalog.module.css";
 
 const FALLBACK_MIN=4_000_000;
@@ -74,8 +75,6 @@ export default function CatalogPage(){
     priceInitialized.current=true;
   },[bounds,initialMin,initialMax]);
 
-  React.useEffect(()=>setViewProgress(view==="map"?1:0),[view]);
-
   React.useEffect(()=>{
     if(initialSort&&sortLabels[initialSort])return;
     const stored=localStorage.getItem("pulse_catalog_sort") as SortMode|null;
@@ -116,13 +115,6 @@ export default function CatalogPage(){
     setParams(next,{replace:true});
   };
 
-  const selectCity=(value:string)=>{
-    setCity(value);
-    const next=new URLSearchParams(params);
-    value==="Все"?next.delete("city"):next.set("city",value);
-    setParams(next,{replace:true});
-  };
-
   const setView=(nextView:"list"|"map")=>{
     const next=new URLSearchParams(params);
     if(nextView==="map")next.set("view","map");else next.delete("view");
@@ -135,37 +127,6 @@ export default function CatalogPage(){
     const next=new URLSearchParams(params);
     nextSort==="popular"?next.delete("sort"):next.set("sort",nextSort);
     setParams(next,{replace:true});
-  };
-
-  const switchProgressFromPointer=(clientX:number)=>{
-    const rect=switchRef.current?.getBoundingClientRect();
-    if(!rect)return viewProgress;
-    return clamp((clientX-rect.left-rect.width*.25)/(rect.width*.5),0,1);
-  };
-
-  const beginViewDrag=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(event.button!==0)return;
-    dragRef.current.active=true;
-    dragRef.current.moved=false;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setViewProgress(switchProgressFromPointer(event.clientX));
-  };
-
-  const moveViewDrag=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(!dragRef.current.active)return;
-    event.preventDefault();
-    dragRef.current.moved=true;
-    setViewProgress(switchProgressFromPointer(event.clientX));
-  };
-
-  const finishViewDrag=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(!dragRef.current.active)return;
-    if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);
-    const nextView=switchProgressFromPointer(event.clientX)>=.5?"map":"list";
-    dragRef.current.active=false;
-    setViewProgress(nextView==="map"?1:0);
-    setView(nextView);
-    window.setTimeout(()=>{dragRef.current.moved=false},80);
   };
 
   const setPriceFromSlider=(values:number[])=>{
@@ -223,21 +184,15 @@ export default function CatalogPage(){
   return <div className={styles.page}>
     <PageHeader eyebrow="Каталог PULSE.DV" title="Новостройки" subtitle="Подбирайте спокойно — по району, бюджету и сроку сдачи."/>
 
-    <div
-      ref={switchRef}
-      className={styles.viewSwitch}
-      role="tablist"
-      aria-label="Режим каталога"
-      style={{"--view-progress":viewProgress} as React.CSSProperties}
-      onPointerDown={beginViewDrag}
-      onPointerMove={moveViewDrag}
-      onPointerUp={finishViewDrag}
-      onPointerCancel={finishViewDrag}
-    >
-      <span className={styles.viewPill} aria-hidden="true"/>
-      <button className={view==="list"?styles.viewActive:""} onClick={()=>{if(!dragRef.current.moved)setView("list")}}><List size={16}/>Список</button>
-      <button className={view==="map"?styles.viewActive:""} onClick={()=>{if(!dragRef.current.moved)setView("map")}}><MapPinned size={16}/>Карта</button>
-    </div>
+    <SegmentedControl
+      value={view}
+      onChange={setView}
+      ariaLabel="Режим каталога"
+      options={[
+        {value:"list",label:<><List size={16}/>Список</>},
+        {value:"map",label:<><MapPinned size={16}/>Карта</>},
+      ]}
+    />
 
     <div className={styles.search}>
       <Search size={18}/>
@@ -255,6 +210,8 @@ export default function CatalogPage(){
             <div className={styles.filterSlider}><Slider min={minBound} max={maxBound} step={priceStep} value={priceRange} onValueChange={setPriceFromSlider}/><div><span>{shortRub(minBound)}</span><span>{shortRub(maxBound)}</span></div></div>
             <label className={styles.filterTitle}><span>Срок сдачи</span></label>
             <div className={styles.sheetChips}>{["Любой","2026","2027"].map(v=><button onClick={()=>setDelivery(v)} key={v} className={delivery===v?styles.sheetActive:""}>{delivery===v&&<Check size={14}/>} {v}</button>)}</div>
+            <label className={styles.filterTitle}><span>Город</span></label>
+            <div className={styles.sheetChips}>{["Все","Владивосток","Уссурийск","Артём"].map(v=><button onClick={()=>setCity(v)} key={v} className={city===v?styles.sheetActive:""}>{city===v&&<Check size={14}/>} {v}</button>)}</div>
             <label className={styles.filterTitle}><span>Комнатность</span></label>
             <div className={styles.sheetChips}>{["Все","Студия","1","2","3+"].map(v=><button onClick={()=>setRooms(v)} key={v} className={rooms===v?styles.sheetActive:""}>{rooms===v&&<Check size={14}/>} {v}</button>)}</div>
             <label className={styles.filterTitle}><span>Особенности</span></label>
@@ -265,10 +222,8 @@ export default function CatalogPage(){
       </Sheet>
     </div>
 
-    <div className={styles.cityRow}>{["Все","Владивосток","Уссурийск","Артём"].map(name=><button key={name} onClick={()=>selectCity(name)} className={city===name?styles.activeChip:""}>{name}</button>)}</div>
-
     {view==="list"&&<div className={styles.meta}>
-      <span>{visible.length} {visible.length===1?"проект":visible.length>1&&visible.length<5?"проекта":"проектов"}</span>
+      <span className={styles.metaSummary}>{city!=="Все"&&<MapPin size={13}/>} {visible.length} {visible.length===1?"проект":visible.length>1&&visible.length<5?"проекта":"проектов"}{city!=="Все"?" · "+city:""}</span>
       <Sheet>
         <SheetTrigger asChild><button><ArrowUpDown size={14}/>{sortLabels[sort]}</button></SheetTrigger>
         <SheetContent side="bottom" className={styles.sortSheet}>
