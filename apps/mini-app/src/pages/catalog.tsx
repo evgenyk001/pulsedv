@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, SlidersHorizontal, List, MapPinned, ArrowUpDown, Check, ChevronRight } from "lucide-react";
+import { Search, SlidersHorizontal, List, MapPinned, ArrowUpDown, Check, ChevronRight, MapPin } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "../components/Sheet";
 import { Slider } from "../components/Slider";
 import { PropertyCard } from "../components/PropertyCard";
@@ -9,6 +9,7 @@ import { useProperties } from "../helpers/useProperties";
 import { usePriceBounds } from "../helpers/usePriceBounds";
 import { PropertyMap } from "../components/PropertyMap";
 import { Input } from "../components/Input";
+import { SegmentedControl } from "../components/SegmentedControl";
 import styles from "./catalog.module.css";
 
 const FALLBACK_MIN=4_000_000;
@@ -53,6 +54,9 @@ export default function CatalogPage(){
   const [delivery,setDelivery]=useState(params.get("delivery")||"Любой");
   const [rooms,setRooms]=useState(params.get("rooms")||"Все");
   const [sea,setSea]=useState(params.get("sea")==="1");
+  const pulseMode=params.get("pulse")==="1";
+  const pulsePriorityKey=params.get("priorities")||"";
+  const pulsePriorities=pulsePriorityKey.split(",").filter(Boolean);
   const initialSort=params.get("sort") as SortMode|null;
   const [sort,setSort]=useState<SortMode>(initialSort&&sortLabels[initialSort]?initialSort:"popular");
   const view=params.get("view")==="map"?"map":"list";
@@ -73,8 +77,6 @@ export default function CatalogPage(){
     setPriceDraft([formatRub(next[0]),formatRub(next[1])]);
     priceInitialized.current=true;
   },[bounds,initialMin,initialMax]);
-
-  React.useEffect(()=>setViewProgress(view==="map"?1:0),[view]);
 
   React.useEffect(()=>{
     if(initialSort&&sortLabels[initialSort])return;
@@ -101,25 +103,31 @@ export default function CatalogPage(){
         return label.startsWith(rooms)||label.includes(rooms+"-");
       });
       const featureText=[...item.tags,...item.features.map(feature=>feature.label)].join(" ").toLowerCase();
-      const matchesSea=!sea||featureText.includes("мор")||featureText.includes("панорам");
+      const matchesSea=pulseMode||!sea||featureText.includes("мор")||featureText.includes("панорам");
       return matchesQuery&&matchesCity&&matchesPrice&&matchesDelivery&&matchesRooms&&matchesSea;
     });
     if(sort==="priceAsc")return [...filtered].sort((a,b)=>a.priceFrom-b.priceFrom);
     if(sort==="priceDesc")return [...filtered].sort((a,b)=>b.priceFrom-a.priceFrom);
+    if(pulseMode&&pulsePriorities.length){
+      const score=(item:(typeof filtered)[number])=>{
+        const text=[item.district,...item.tags,...item.features.map(feature=>feature.label)].join(" ").toLowerCase();
+        return pulsePriorities.reduce((total,priority)=>{
+          if(priority==="sea"&&(text.includes("мор")||text.includes("панорам")))return total+1;
+          if(priority==="quiet"&&(text.includes("тиш")||text.includes("тих")||text.includes("спокой")))return total+1;
+          if(priority==="center"&&(text.includes("центр")||text.includes("централь")))return total+1;
+          if(priority==="parking"&&(text.includes("парков")||text.includes("паркин")))return total+1;
+          return total;
+        },0);
+      };
+      return [...filtered].sort((a,b)=>score(b)-score(a)||a.sortOrder-b.sortOrder);
+    }
     return [...filtered].sort((a,b)=>a.sortOrder-b.sortOrder);
-  },[properties,query,city,priceRange,delivery,rooms,sea,sort]);
+  },[properties,query,city,priceRange,delivery,rooms,sea,sort,pulseMode,pulsePriorityKey]);
 
   const onQuery=(value:string)=>{
     setQuery(value);
     const next=new URLSearchParams(params);
     value?next.set("q",value):next.delete("q");
-    setParams(next,{replace:true});
-  };
-
-  const selectCity=(value:string)=>{
-    setCity(value);
-    const next=new URLSearchParams(params);
-    value==="Все"?next.delete("city"):next.set("city",value);
     setParams(next,{replace:true});
   };
 
@@ -135,37 +143,6 @@ export default function CatalogPage(){
     const next=new URLSearchParams(params);
     nextSort==="popular"?next.delete("sort"):next.set("sort",nextSort);
     setParams(next,{replace:true});
-  };
-
-  const switchProgressFromPointer=(clientX:number)=>{
-    const rect=switchRef.current?.getBoundingClientRect();
-    if(!rect)return viewProgress;
-    return clamp((clientX-rect.left-rect.width*.25)/(rect.width*.5),0,1);
-  };
-
-  const beginViewDrag=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(event.button!==0)return;
-    dragRef.current.active=true;
-    dragRef.current.moved=false;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setViewProgress(switchProgressFromPointer(event.clientX));
-  };
-
-  const moveViewDrag=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(!dragRef.current.active)return;
-    event.preventDefault();
-    dragRef.current.moved=true;
-    setViewProgress(switchProgressFromPointer(event.clientX));
-  };
-
-  const finishViewDrag=(event:React.PointerEvent<HTMLDivElement>)=>{
-    if(!dragRef.current.active)return;
-    if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);
-    const nextView=switchProgressFromPointer(event.clientX)>=.5?"map":"list";
-    dragRef.current.active=false;
-    setViewProgress(nextView==="map"?1:0);
-    setView(nextView);
-    window.setTimeout(()=>{dragRef.current.moved=false},80);
   };
 
   const setPriceFromSlider=(values:number[])=>{
@@ -216,28 +193,22 @@ export default function CatalogPage(){
     setSea(false);
     setQuery("");
     const next=new URLSearchParams(params);
-    next.delete("city");next.delete("min");next.delete("max");next.delete("delivery");next.delete("rooms");next.delete("sea");next.delete("mortgage");next.delete("q");
+    next.delete("city");next.delete("min");next.delete("max");next.delete("delivery");next.delete("rooms");next.delete("sea");next.delete("mortgage");next.delete("pulse");next.delete("priorities");next.delete("q");
     setParams(next,{replace:true});
   };
 
   return <div className={styles.page}>
     <PageHeader eyebrow="Каталог PULSE.DV" title="Новостройки" subtitle="Подбирайте спокойно — по району, бюджету и сроку сдачи."/>
 
-    <div
-      ref={switchRef}
-      className={styles.viewSwitch}
-      role="tablist"
-      aria-label="Режим каталога"
-      style={{"--view-progress":viewProgress} as React.CSSProperties}
-      onPointerDown={beginViewDrag}
-      onPointerMove={moveViewDrag}
-      onPointerUp={finishViewDrag}
-      onPointerCancel={finishViewDrag}
-    >
-      <span className={styles.viewPill} aria-hidden="true"/>
-      <button className={view==="list"?styles.viewActive:""} onClick={()=>{if(!dragRef.current.moved)setView("list")}}><List size={16}/>Список</button>
-      <button className={view==="map"?styles.viewActive:""} onClick={()=>{if(!dragRef.current.moved)setView("map")}}><MapPinned size={16}/>Карта</button>
-    </div>
+    <SegmentedControl
+      value={view}
+      onChange={setView}
+      ariaLabel="Режим каталога"
+      options={[
+        {value:"list",label:<><List size={16}/>Список</>},
+        {value:"map",label:<><MapPinned size={16}/>Карта</>},
+      ]}
+    />
 
     <div className={styles.search}>
       <Search size={18}/>
@@ -255,6 +226,8 @@ export default function CatalogPage(){
             <div className={styles.filterSlider}><Slider min={minBound} max={maxBound} step={priceStep} value={priceRange} onValueChange={setPriceFromSlider}/><div><span>{shortRub(minBound)}</span><span>{shortRub(maxBound)}</span></div></div>
             <label className={styles.filterTitle}><span>Срок сдачи</span></label>
             <div className={styles.sheetChips}>{["Любой","2026","2027"].map(v=><button onClick={()=>setDelivery(v)} key={v} className={delivery===v?styles.sheetActive:""}>{delivery===v&&<Check size={14}/>} {v}</button>)}</div>
+            <label className={styles.filterTitle}><span>Город</span></label>
+            <div className={styles.sheetChips}>{["Все","Владивосток","Уссурийск","Артём"].map(v=><button onClick={()=>setCity(v)} key={v} className={city===v?styles.sheetActive:""}>{city===v&&<Check size={14}/>} {v}</button>)}</div>
             <label className={styles.filterTitle}><span>Комнатность</span></label>
             <div className={styles.sheetChips}>{["Все","Студия","1","2","3+"].map(v=><button onClick={()=>setRooms(v)} key={v} className={rooms===v?styles.sheetActive:""}>{rooms===v&&<Check size={14}/>} {v}</button>)}</div>
             <label className={styles.filterTitle}><span>Особенности</span></label>
@@ -265,10 +238,8 @@ export default function CatalogPage(){
       </Sheet>
     </div>
 
-    <div className={styles.cityRow}>{["Все","Владивосток","Уссурийск","Артём"].map(name=><button key={name} onClick={()=>selectCity(name)} className={city===name?styles.activeChip:""}>{name}</button>)}</div>
-
     {view==="list"&&<div className={styles.meta}>
-      <span>{visible.length} {visible.length===1?"проект":visible.length>1&&visible.length<5?"проекта":"проектов"}</span>
+      <span className={styles.metaSummary}>{city!=="Все"&&<MapPin size={13}/>} {visible.length} {visible.length===1?"проект":visible.length>1&&visible.length<5?"проекта":"проектов"}{city!=="Все"?" · "+city:""}</span>
       <Sheet>
         <SheetTrigger asChild><button><ArrowUpDown size={14}/>{sortLabels[sort]}</button></SheetTrigger>
         <SheetContent side="bottom" className={styles.sortSheet}>

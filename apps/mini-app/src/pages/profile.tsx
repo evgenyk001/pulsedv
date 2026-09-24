@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { UserRound, MessageCircle, Phone, ChevronRight, ShieldCheck, Heart, Clock3, Info } from "lucide-react";
+import { UserRound, MessageCircle, Phone, ChevronRight, ShieldCheck, Heart, Clock3, Info, PlayCircle } from "lucide-react";
 import { LeadSheet } from "../components/LeadSheet";
 import { PageHeader } from "../components/PageHeader";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
@@ -54,6 +54,7 @@ export default function ProfilePage(){
         <SheetTrigger asChild><button><Info size={18}/><span><b>О сервисе PULSE.DV</b><small>Как устроен подбор и сопровождение</small></span><ChevronRight size={17}/></button></SheetTrigger>
         <SheetContent side="bottom" className={styles.infoSheet}><SheetHeader><SheetTitle>О PULSE.DV</SheetTitle><SheetDescription>Мы помогаем сравнить новостройки, условия покупки и ипотечные сценарии в одном процессе.</SheetDescription></SheetHeader><div className={styles.about}><ShieldCheck size={20}/><p>Информация в приложении — отправная точка для подбора. Перед сделкой менеджер уточняет актуальные условия по выбранному проекту.</p></div></SheetContent>
       </Sheet>
+      <button onClick={()=>window.dispatchEvent(new Event("pulse:show-onboarding"))}><PlayCircle size={18}/><span><b>Показать знакомство</b><small>Повторно открыть onboarding приложения</small></span><ChevronRight size={17}/></button>
     </section>
 
     <LeadSheet title="Связаться с агентством" source="profile-contact"><button className={styles.contact}><Phone size={17}/>Связаться с PULSE.DV</button></LeadSheet>

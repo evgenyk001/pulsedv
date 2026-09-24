@@ -56,29 +56,23 @@ export default function Favorites(){
       {compareIds.length>=2?<Sheet>
         <SheetTrigger asChild>{compareButton}</SheetTrigger>
         <SheetContent side="bottom" className={styles.compareSheet}>
-          <SheetHeader><SheetTitle>Сравнение проектов</SheetTitle><SheetDescription>Ключевые параметры выбранных ЖК — рядом.</SheetDescription></SheetHeader>
-          <div className={styles.compareScroll}>
-            <div className={styles.compareTable} style={{"--compare-count":compared.length} as React.CSSProperties}>
-              <div className={styles.compareLabel}/>
-              {compared.map(property=><div className={styles.compareProject} key={property.id}><strong>{property.name}</strong><span>{property.city} · {property.district}</span></div>)}
-
-              <div className={styles.compareLabel}>Цена от</div>
-              {compared.map(property=><b key={property.id}>{property.priceFrom.toFixed(1).replace(".",",")} млн ₽</b>)}
-
-              <div className={styles.compareLabel}>Срок сдачи</div>
-              {compared.map(property=><span key={property.id}>{property.delivery}</span>)}
-
-              <div className={styles.compareLabel}>Класс</div>
-              {compared.map(property=><span key={property.id}>{property.className}</span>)}
-
-              <div className={styles.compareLabel}>Застройщик</div>
-              {compared.map(property=><span key={property.id}>{property.developerName||"Уточняется"}</span>)}
-
-              <div className={styles.compareLabel}>Планировки</div>
-              {compared.map(property=><span key={property.id}>{property.floorplans.length?property.floorplans.length+" вариантов":"Уточняются"}</span>)}
-            </div>
+          <SheetHeader><SheetTitle>Сравнение проектов</SheetTitle><SheetDescription>Без широкой таблицы — параметры каждого ЖК видны целиком на телефоне.</SheetDescription></SheetHeader>
+          <div className={styles.compareProjects}>
+            {compared.map((property,index)=><section className={styles.compareProjectCard} key={property.id}>
+              <div className={styles.compareProjectHead}>
+                <div className={styles.compareNumber}>{index+1}</div>
+                <div><strong>{property.name}</strong><span>{property.city} · {property.district}</span></div>
+                <Link to={"/property/"+property.id} aria-label={"Открыть "+property.name}><ChevronRight size={17}/></Link>
+              </div>
+              <div className={styles.compareFacts}>
+                <div><span>Цена от</span><b>{property.priceFrom.toFixed(1).replace(".",",")} млн ₽</b></div>
+                <div><span>Срок сдачи</span><b>{property.delivery}</b></div>
+                <div><span>Класс</span><b>{property.className}</b></div>
+                <div><span>Застройщик</span><b>{property.developerName||"Уточняется"}</b></div>
+                <div><span>Планировки</span><b>{property.floorplans.length?property.floorplans.length+" вариантов":"Уточняются"}</b></div>
+              </div>
+            </section>)}
           </div>
-          <div className={styles.compareLinks}>{compared.map(property=><Link key={property.id} to={"/property/"+property.id}>{property.name}<ChevronRight size={15}/></Link>)}</div>
         </SheetContent>
       </Sheet>:compareButton}
     </div>}
