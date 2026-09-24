@@ -2,13 +2,12 @@
   .root{
     all:unset;
     position:relative;
-    display:inline-flex;
-    align-items:center;
-    width:48px;
+    display:inline-block;
+    width:50px;
     height:30px;
     box-sizing:border-box;
-    padding:3px;
     border-radius:999px;
+    overflow:hidden;
     background:linear-gradient(180deg,#dfe5eb,#d6dde5);
     box-shadow:inset 0 1px 2px rgba(54,66,82,.08),inset 0 0 0 1px rgba(68,82,99,.05);
     transition:background .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s ease,transform .16s ease;
@@ -24,7 +23,9 @@
   .root:focus-visible{box-shadow:var(--shadow-focus),inset 0 1px 1px rgba(255,255,255,.24)}
   .root:active{transform:scale(.97)}
   .thumb{
-    display:block;
+    position:absolute;
+    left:3px;
+    top:3px;
     width:24px;
     height:24px;
     border-radius:50%;
@@ -34,7 +35,7 @@
     transition:transform .34s cubic-bezier(.18,.88,.22,1),box-shadow .22s ease;
     will-change:transform;
   }
-  .root[data-state="checked"] .thumb{transform:translate3d(18px,0,0)}
+  .root[data-state="checked"] .thumb{transform:translate3d(20px,0,0)}
   .root[data-disabled]{opacity:.46;cursor:not-allowed;filter:saturate(.5)}
   @media(prefers-reduced-motion:reduce){.root,.thumb{transition:none}}
 }
