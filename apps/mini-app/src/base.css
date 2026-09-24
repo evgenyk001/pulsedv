@@ -81,8 +81,9 @@
   --app-card-border: rgba(255,255,255,0.90);
   --app-card-shadow: 0 1px 2px rgba(35,47,63,.028), 0 10px 30px rgba(47,59,78,.062), inset 0 1px 0 rgba(255,255,255,.86);
   --app-card-shadow-strong: 0 2px 5px rgba(35,47,63,.035), 0 17px 42px rgba(47,59,78,.092), inset 0 1px 0 rgba(255,255,255,.92);
-  --app-radius-card: 28px;
-  --app-radius-control: 20px;
+  --app-radius-card: 30px;
+  --app-radius-control: 22px;
+  --app-radius-pill: 999px;
   --app-section-gap: 26px;
   --app-page-gap: 22px;
   --motion-spring: cubic-bezier(.18,.88,.22,1);
