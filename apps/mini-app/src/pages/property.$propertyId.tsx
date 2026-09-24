@@ -5,6 +5,7 @@ import { LeadSheet } from "../components/LeadSheet";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
 import { useProperties } from "../helpers/useProperties";
 import { useFavoriteIds } from "../helpers/useFavoriteIds";
+import { SegmentedControl } from "../components/SegmentedControl";
 import styles from "./property.$propertyId.module.css";
 
 type Tab="about"|"plans"|"infra";
@@ -59,11 +60,16 @@ export default function PropertyPage(){
         <Link to="/mortgage"><span>Ипотека</span><b>Рассчитать</b></Link>
       </div>
 
-      <div className={styles.tabs}>
-        <button onClick={()=>setTab("about")} className={tab==="about"?styles.active:""}>О проекте</button>
-        <button onClick={()=>setTab("plans")} className={tab==="plans"?styles.active:""}>Планировки</button>
-        <button onClick={()=>setTab("infra")} className={tab==="infra"?styles.active:""}>Детали</button>
-      </div>
+      <SegmentedControl
+        value={tab}
+        onChange={setTab}
+        ariaLabel="Раздел объекта"
+        options={[
+          {value:"about",label:"О проекте"},
+          {value:"plans",label:"Планировки"},
+          {value:"infra",label:"Детали"},
+        ]}
+      />
 
       {tab==="about"&&<>
         <p className={styles.desc}>{p.description||"Описание проекта уточняется."}</p>
