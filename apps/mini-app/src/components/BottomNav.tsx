@@ -211,4 +211,3 @@ export function BottomNav(){
     </div>
   </nav>
 }
-  214
