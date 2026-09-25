@@ -1,8 +1,8 @@
 import React from "react";
 import {
-  getPulseState, listPulseEvents, listPulseLeads,
-  subscribePulseEvents, subscribePulseLeads, subscribePulseState,
-  type PulseEvent, type PulseLead, type PulseState
+  getPulseState, listPulseEvents, listPulseLeads, listPulseProfiles, listPulseTasks,
+  subscribePulseEvents, subscribePulseLeads, subscribePulseProfiles, subscribePulseState, subscribePulseTasks,
+  type PulseEvent, type PulseLead, type PulseState, type PulseTask, type PulseVisitorProfile
 } from "../../../packages/pulse-data";
 
 export function usePulseState(){
@@ -21,4 +21,17 @@ export function usePulseEvents(){
   const [events,setEvents]=React.useState<PulseEvent[]>(listPulseEvents);
   React.useEffect(()=>subscribePulseEvents(()=>setEvents(listPulseEvents())),[]);
   return events;
+}
+
+
+export function usePulseProfiles(){
+  const [profiles,setProfiles]=React.useState<PulseVisitorProfile[]>(listPulseProfiles);
+  React.useEffect(()=>subscribePulseProfiles(()=>setProfiles(listPulseProfiles())),[]);
+  return profiles;
+}
+
+export function usePulseTasks(){
+  const [tasks,setTasks]=React.useState<PulseTask[]>(listPulseTasks);
+  React.useEffect(()=>subscribePulseTasks(()=>setTasks(listPulseTasks())),[]);
+  return tasks;
 }
