@@ -1,8 +1,13 @@
 .root{
+  --segment-count:1;
+  --segment-index:0;
   position:relative;
   display:grid;
+  width:100%;
+  min-width:0;
   height:50px;
   padding:4px;
+  box-sizing:border-box;
   border-radius:999px;
   background:rgba(232,235,239,.76);
   overflow:hidden;
@@ -11,20 +16,23 @@
 .pill{
   position:absolute;
   z-index:0;
-  left:4px;
   top:4px;
   bottom:4px;
+  left:calc(4px + var(--segment-index) * ((100% - 8px) / var(--segment-count)));
+  width:calc((100% - 8px) / var(--segment-count));
   border-radius:999px;
   background:rgba(255,255,255,.94);
   border:1px solid rgba(255,255,255,.96);
   box-shadow:0 4px 14px rgba(39,50,65,.09),inset 0 1px 0 rgba(255,255,255,.96);
-  transition:transform .34s var(--motion-spring),width .18s ease;
-  will-change:transform;
+  transition:left .34s var(--motion-spring),width .18s ease;
+  will-change:left;
+  pointer-events:none;
 }
 .root button{
   position:relative;
   z-index:1;
   min-width:0;
+  height:42px;
   border:0;
   border-radius:999px;
   background:transparent;
