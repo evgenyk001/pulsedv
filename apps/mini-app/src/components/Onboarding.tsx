@@ -1,7 +1,7 @@
 import React from "react";
 import styles from "./Onboarding.module.css";
 
-const asset=(path:string)=>`${import.meta.env.BASE_URL}${path.replace(/^\\//,"")}`;
+const asset=(path:string)=>`${import.meta.env.BASE_URL}${path.startsWith("/")?path.slice(1):path}`;
 const slides=[
   asset("/_cdn/static/fbe56ba1-f7be-4c7e-a604-dd6a20ae71c8-onboarding-final-01.png"),
   asset("/_cdn/static/ef1a2854-7dc1-45d9-8e6d-6a7de5a9ffa3-onboarding-final-02.png")
