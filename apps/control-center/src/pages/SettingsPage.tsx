@@ -1,19 +1,25 @@
 import { Gauge, ShieldCheck, SlidersHorizontal, UsersRound } from "lucide-react";
 import { PageFrame } from "../components/PageFrame";
 import { usePulseState } from "../data";
-import { updatePulseState } from "../../../../packages/pulse-data";
+import { recalculatePulseLeadEngine, updatePulseState } from "../../../../packages/pulse-data";
 
 export function SettingsPage(){
   const state=usePulseState();
   const engine=state.leadEngine;
-  const updateThreshold=(key:"warm"|"hot"|"urgent",value:number)=>updatePulseState(current=>({
-    ...current,
-    leadEngine:{...current.leadEngine,thresholds:{...current.leadEngine.thresholds,[key]:Math.max(0,Math.min(100,value))}}
-  }));
-  const updateRule=(id:string,weight:number)=>updatePulseState(current=>({
-    ...current,
-    leadEngine:{...current.leadEngine,rules:current.leadEngine.rules.map(rule=>rule.id===id?{...rule,weight}:rule)}
-  }));
+  const updateThreshold=(key:"warm"|"hot"|"urgent",value:number)=>{
+    updatePulseState(current=>({
+      ...current,
+      leadEngine:{...current.leadEngine,thresholds:{...current.leadEngine.thresholds,[key]:Math.max(0,Math.min(100,value))}}
+    }));
+    recalculatePulseLeadEngine();
+  };
+  const updateRule=(id:string,weight:number)=>{
+    updatePulseState(current=>({
+      ...current,
+      leadEngine:{...current.leadEngine,rules:current.leadEngine.rules.map(rule=>rule.id===id?{...rule,weight}:rule)}
+    }));
+    recalculatePulseLeadEngine();
+  };
 
   return <PageFrame eyebrow="SYSTEM" title="Настройки" description="Команда, роли и правила Lead Engine. Бизнес-логику можно менять без правки Mini App.">
     <div className="settingsGrid">
