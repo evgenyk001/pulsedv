@@ -1,0 +1,32 @@
+name: Check Lead Engine Backend
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "packages/lead-engine/**"
+      - "packages/api-contracts/**"
+      - ".github/workflows/lead-engine-backend.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "packages/lead-engine/**"
+      - "packages/api-contracts/**"
+      - ".github/workflows/lead-engine-backend.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        working-directory: backend
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        working-directory: backend
+        run: npm run check
