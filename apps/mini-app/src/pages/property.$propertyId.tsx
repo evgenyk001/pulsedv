@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTr
 import { useProperties } from "../helpers/useProperties";
 import { useFavoriteIds } from "../helpers/useFavoriteIds";
 import { SegmentedControl } from "../components/SegmentedControl";
+import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./property.$propertyId.module.css";
 
 type Tab="about"|"plans"|"infra";
@@ -27,6 +28,11 @@ export default function PropertyPage(){
   const [tab,setTab]=React.useState<Tab>("about");
   const {toggle,isFavorite}=useFavoriteIds();
 
+  React.useEffect(()=>{
+    if(!p)return;
+    recordPulseEvent({eventType:"property_view",entityType:"property",entityId:p.id,metadata:{city:p.city,district:p.district,priceFrom:p.priceFrom}});
+  },[p?.id]);
+
   if(isLoading)return <div style={{padding:"42px 18px",fontSize:11,color:"var(--muted-foreground)"}}>Загружаем объект…</div>;
   if(error||!p)return <div style={{padding:"42px 18px"}}><strong>Объект не найден</strong><br/><Link to="/catalog">Вернуться в каталог</Link></div>;
 
@@ -36,7 +42,7 @@ export default function PropertyPage(){
     ...p.images.map(x=>x.url).filter(url=>url!==p.coverImageUrl),
   ];
   const hero=gallery[0];
-  const share=async()=>{if(navigator.share){await navigator.share({title:p.name,text:p.name+" — "+p.city+", "+p.district}).catch(()=>{})}else{await navigator.clipboard?.writeText(window.location.href)}};
+  const share=async()=>{recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city}});if(navigator.share){await navigator.share({title:p.name,text:p.name+" — "+p.city+", "+p.district}).catch(()=>{})}else{await navigator.clipboard?.writeText(window.location.href)}};
 
   return <div className={styles.page}>
     <section className={styles.hero}>

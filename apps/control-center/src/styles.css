@@ -25,3 +25,75 @@
 .eventGrid{grid-template-columns:1fr 1.2fr .8fr 1fr}
 @media(max-width:980px){.eventGrid{grid-template-columns:1fr 1fr}.eventGrid>*:nth-child(n+3){display:none}.weightGrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.tableRow{grid-template-columns:1fr!important;padding:12px 14px}.tableRow>*{display:block!important}.formGrid,.weightGrid{grid-template-columns:1fr}.controlField.wide{grid-column:auto}}
+
+
+/* Lead Engine */
+.leadsScoreGrid{grid-template-columns:1.05fr 1.15fr .72fr .78fr 1.35fr}
+.profilesGrid{grid-template-columns:.9fr .7fr 1fr 1.45fr .9fr}
+.scoreCell{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-width:0}
+.scoreCell>small{color:#7d8895;font-size:9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.scoreCell em{font-style:normal;font-size:8.5px;color:#7b8592;display:flex;align-items:center;gap:4px}
+.scoreBadge{display:inline-flex;align-items:center;gap:5px;min-height:29px;padding:0 9px;border-radius:999px;background:#f3f5f7;color:#687384;border:1px solid #e9edf1}
+.scoreBadge b{font-size:12px}.scoreBadge small{font-size:8px;text-transform:uppercase;letter-spacing:.06em}
+.scoreBadge.warm{background:#fff8e9;border-color:#f4dfb3;color:#8c641e}
+.scoreBadge.hot{background:#fff0e8;border-color:#ffd6c2;color:#b34a1e}
+.scoreBadge.urgent{background:#fff0f1;border-color:#ffd1d5;color:#d50919}
+.nextAction{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.nextAction>b{font-size:10px;line-height:1.35;color:#26313e}
+.nextAction>small{font-size:8.5px;color:#96a0ab}
+.nextAction>svg{color:var(--red)}
+.blockNote{display:block;margin-top:4px;color:#8b95a1;font-size:9px}
+.leadName b{display:flex;align-items:center;gap:5px}
+
+.attentionGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.signalList{display:flex;flex-direction:column;gap:9px;margin-top:16px}
+.signalList>div{min-height:46px;padding:10px 12px;border:1px solid var(--line);border-radius:18px;background:#fafbfc;display:grid;grid-template-columns:auto 1fr;column-gap:9px;align-items:center}
+.signalList>div>b{font-size:10.5px;color:#27313d}
+.signalList>div>small{grid-column:2;font-size:8.8px;color:#89939f;line-height:1.35}
+.signalList.compact>div{grid-template-columns:1fr auto;min-height:40px}
+.signalList.compact>div>small{grid-column:auto;font-size:11px;font-weight:700;color:#1d2733}
+.signalDot{width:9px;height:9px;border-radius:50%;background:#aab2bd;grid-row:1/3}
+.signalDot.warm{background:#d49a2d}.signalDot.hot{background:#e6682b}.signalDot.urgent{background:var(--red)}
+.scoreMini{grid-row:1/3;width:32px;height:32px;border-radius:12px;display:grid;place-items:center;background:#fff0f1;color:var(--red);font-size:11px;font-weight:800}
+.flowLine{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:18px}
+.flowLine span{height:32px;padding:0 10px;border-radius:999px;background:#f5f7f9;display:flex;align-items:center;gap:5px;font-size:9px;font-weight:700;color:#596675}
+.flowLine b{color:#a1a9b3}
+
+.taskStack{display:flex;flex-direction:column;gap:9px}
+.taskCard{padding:12px;border:1px solid var(--line);border-radius:20px;background:#fafbfc;box-shadow:0 5px 16px rgba(40,49,63,.035)}
+.taskCard.hot{border-color:#ffd9c7;background:#fffaf7}.taskCard.urgent{border-color:#ffd2d5;background:#fff7f8}
+.taskTop{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.taskTop span{display:flex;align-items:center;gap:4px;font-size:8px;text-transform:uppercase;color:#7f8995;font-weight:750}
+.taskTop b{font-size:9px;color:#3c4754}
+.taskCard h3{font-size:11px;margin:10px 0 4px}.taskCard p{font-size:9px;line-height:1.4;color:#7e8995;margin:0}
+.taskCard>small{display:block;margin-top:8px;font-size:8px;color:#9aa3ae}
+.taskCard button{margin-top:10px;height:32px;border:0;border-radius:999px;background:#fff;color:#4f5b69;padding:0 10px;display:flex;align-items:center;gap:5px;font-size:9px;font-weight:700;box-shadow:0 3px 10px rgba(40,49,63,.06)}
+.miniEmpty{min-height:84px;display:grid;place-items:center;color:#a0a8b2;font-size:9px}
+
+.funnelRows{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.funnelRow{display:grid;grid-template-columns:26px minmax(120px,.8fr) minmax(140px,2fr) 42px 42px;gap:10px;align-items:center}
+.funnelRow>span{width:26px;height:26px;border-radius:9px;display:grid;place-items:center;background:#f4f6f8;color:#7c8794;font-size:8px;font-weight:800}
+.funnelRow>b{font-size:10px}.funnelRow>div{height:8px;border-radius:999px;background:#eef1f4;overflow:hidden}.funnelRow>div>i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#f20d1d,#f66a74)}
+.funnelRow>strong{font-size:11px;text-align:right}.funnelRow>small{font-size:8px;color:#8f99a4;text-align:right}
+
+.thresholdGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:16px}
+.rulesTable{margin-top:18px;border:1px solid var(--line);border-radius:20px;overflow:hidden}
+.rulesHead,.rulesRow{display:grid;grid-template-columns:1.4fr 1fr 100px 110px;gap:10px;align-items:center;padding:10px 14px}
+.rulesHead{background:#f7f8fa;color:#8a94a0;font-size:8.5px;font-weight:750;text-transform:uppercase;letter-spacing:.06em}
+.rulesRow{border-top:1px solid var(--line);background:#fff;font-size:10px}
+.rulesRow b{font-size:10px}.rulesRow code{font-size:9px;color:#768290}
+.rulesRow input{height:34px;width:82px;border:1px solid #e5e9ee;border-radius:999px;padding:0 10px;font:inherit}
+.rulesRow>span:last-child{color:#7f8995}
+
+@media(max-width:980px){
+  .leadsScoreGrid,.profilesGrid{grid-template-columns:1fr 1fr}
+  .leadsScoreGrid>*:nth-child(n+3),.profilesGrid>*:nth-child(n+3){display:none}
+  .attentionGrid{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+  .leadsScoreGrid,.profilesGrid{grid-template-columns:1fr!important}
+  .leadsScoreGrid>*,.profilesGrid>*{display:flex!important}
+  .thresholdGrid{grid-template-columns:1fr}
+  .rulesHead{display:none}.rulesRow{grid-template-columns:1fr 1fr}.rulesRow>*{min-width:0}
+  .funnelRow{grid-template-columns:26px 1fr 52px}.funnelRow>div{grid-column:2/4}.funnelRow>small{display:none}
+}

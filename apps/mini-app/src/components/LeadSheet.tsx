@@ -3,6 +3,7 @@ import { CheckCircle2, Send } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./Sheet";
 import { Input } from "./Input";
 import { postLead } from "../endpoints/leads_POST.schema";
+import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./LeadSheet.module.css";
 
 type LeadSheetProps={children:React.ReactNode;title?:string;project?:string;propertyId?:string;source?:string};
@@ -24,7 +25,12 @@ export function LeadSheet({children,title="Получить консультац
     finally{setSending(false)}
   };
 
-  return <Sheet onOpenChange={(open)=>{if(!open){setSent(false);setError(null)}}}>
+  return <Sheet onOpenChange={(open)=>{
+    if(open){
+      recordPulseEvent({eventType:"lead_form_open",entityType:propertyId?"property":"funnel",entityId:propertyId||source,metadata:{source,project:project||null}});
+      if(source==="mortgage")recordPulseEvent({eventType:"mortgage_calculated",entityType:"mortgage",entityId:"calculator",metadata:{source}});
+    }else{setSent(false);setError(null)}
+  }}>
     <SheetTrigger asChild>{children}</SheetTrigger>
     <SheetContent side="bottom" className={styles.sheet}>
       {sent?<div className={styles.success}><CheckCircle2 size={38}/><h2>Заявка принята</h2><p>Менеджер PULSE.DV свяжется с вами и уточнит детали{project?(" по "+project):""}.</p></div>:<>
