@@ -1,13 +1,13 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Building2, Heart, Sparkles } from "lucide-react";
+import { NavLottieIcon, type NavIconKind } from "./NavLottieIcon";
 import styles from "./BottomNav.module.css";
 
-const items=[
-  {path:"/",label:"Главная",icon:Home},
-  {path:"/catalog",label:"Каталог",icon:Building2},
-  {path:"/selection",label:"Подбор",icon:Sparkles},
-  {path:"/favorites",label:"Избранное",icon:Heart},
+const items:{path:string;label:string;icon:NavIconKind}[]=[
+  {path:"/",label:"Главная",icon:"home"},
+  {path:"/catalog",label:"Каталог",icon:"catalog"},
+  {path:"/selection",label:"Подбор",icon:"select"},
+  {path:"/favorites",label:"Избранное",icon:"heart"},
 ];
 
 export function BottomNav(){
@@ -15,12 +15,7 @@ export function BottomNav(){
   const navigate=useNavigate();
   const dockRef=React.useRef<HTMLDivElement>(null);
   const dragRef=React.useRef({
-    lastX:0,
-    lastT:0,
-    velocity:0,
-    grabOffset:0,
-    moved:false,
-    previewIndex:0,
+    lastX:0,lastT:0,velocity:0,grabOffset:0,moved:false,previewIndex:0,
   });
   const [segmentWidth,setSegmentWidth]=React.useState(0);
   const [pillX,setPillX]=React.useState(0);
@@ -77,14 +72,7 @@ export function BottomNav(){
     const pillRight=pillX+segmentWidth;
     if(localX<pillLeft-5||localX>pillRight+5)return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    dragRef.current={
-      lastX:event.clientX,
-      lastT:performance.now(),
-      velocity:0,
-      grabOffset:localX-pillX,
-      moved:false,
-      previewIndex:Math.round(progress),
-    };
+    dragRef.current={lastX:event.clientX,lastT:performance.now(),velocity:0,grabOffset:localX-pillX,moved:false,previewIndex:Math.round(progress)};
     setDragging(true);
     setVelocity(0);
   };
@@ -96,11 +84,7 @@ export function BottomNav(){
     const maxX=segmentWidth*(items.length-1);
     const rawX=event.clientX-rect.left-4-dragRef.current.grabOffset;
     const edgeResistance=10;
-    const nextX=rawX<0
-      ? Math.max(-edgeResistance,rawX*.18)
-      : rawX>maxX
-        ? Math.min(maxX+edgeResistance,maxX+(rawX-maxX)*.18)
-        : rawX;
+    const nextX=rawX<0?Math.max(-edgeResistance,rawX*.18):rawX>maxX?Math.min(maxX+edgeResistance,maxX+(rawX-maxX)*.18):rawX;
     const now=performance.now();
     const dx=event.clientX-dragRef.current.lastX;
     const dt=Math.max(5,now-dragRef.current.lastT);
@@ -112,12 +96,8 @@ export function BottomNav(){
     dragRef.current.velocity=filteredVelocity;
     setPillX(nextX);
     setVelocity(filteredVelocity);
-
     const preview=Math.max(0,Math.min(items.length-1,Math.round(nextX/segmentWidth)));
-    if(preview!==dragRef.current.previewIndex){
-      dragRef.current.previewIndex=preview;
-      haptic();
-    }
+    if(preview!==dragRef.current.previewIndex){dragRef.current.previewIndex=preview;haptic()}
   };
 
   const finishDrag=(event:React.PointerEvent<HTMLDivElement>)=>{
@@ -159,55 +139,23 @@ export function BottomNav(){
   const tilt=Math.max(-1.35,Math.min(1.35,velocity*.82));
 
   return <nav className={styles.wrap} aria-label="Основная навигация">
-    <div
-      ref={dockRef}
-      className={`${styles.glassDock} ${dragging?styles.dragging:""}`}
-      onPointerDown={beginDrag}
-      onPointerMove={moveDrag}
-      onPointerUp={finishDrag}
-      onPointerCancel={finishDrag}
-    >
-      <span
-        className={styles.glassPill}
-        aria-hidden="true"
-        style={{
-          width:segmentWidth? `${segmentWidth}px` : "25%",
-          transform:`translate3d(${pillX}px,0,0) scaleX(${1+stretch}) scaleY(${1-stretch*.24}) skewX(${tilt}deg)`
-        }}
-      >
-        <span
-          className={`${styles.pillSurface} ${morphing?styles.pillDrop:""}`}
-          style={{
-            "--drop-shift":`${morphDirection*5}px`,
-            "--drop-origin":morphDirection<0?"100% 50%":morphDirection>0?"0% 50%":"50% 50%",
-          } as React.CSSProperties}
-        >
-          <span className={styles.pillHighlight}/>
-          <span className={styles.pillRefraction}/>
-          <span className={styles.pillCaustic}/>
+    <div ref={dockRef} className={`${styles.glassDock} ${dragging?styles.dragging:""}`} onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={finishDrag} onPointerCancel={finishDrag}>
+      <span className={styles.glassPill} aria-hidden="true" style={{width:segmentWidth?`${segmentWidth}px`:"25%",transform:`translate3d(${pillX}px,0,0) scaleX(${1+stretch}) scaleY(${1-stretch*.24}) skewX(${tilt}deg)`}}>
+        <span className={`${styles.pillSurface} ${morphing?styles.pillDrop:""}`} style={{"--drop-shift":`${morphDirection*5}px`,"--drop-origin":morphDirection<0?"100% 50%":morphDirection>0?"0% 50%":"50% 50%"} as React.CSSProperties}>
+          <span className={styles.pillHighlight}/><span className={styles.pillRefraction}/><span className={styles.pillCaustic}/>
         </span>
       </span>
-      {items.map(({path,label,icon:Icon},index)=>{
+      {items.map(({path,label,icon},index)=>{
         const strength=Math.max(0,1-Math.abs(index-progress));
         const active=strength>.5;
-        const iconScale=.96+strength*.08;
         const lift=-strength*.9;
-        const base=[122,135,150];
-        const accent=[242,13,29];
-        const mix=(a:number,b:number)=>Math.round(a+(b-a)*strength);
-        const color=`rgb(${mix(base[0],accent[0])} ${mix(base[1],accent[1])} ${mix(base[2],accent[2])})`;
-        return <button
-          key={path}
-          type="button"
-          className={`${styles.item} ${active?styles.active:""}`}
-          aria-current={index===activeIndex?"page":undefined}
-          onClick={()=>selectItem(index)}
-          style={{color}}
-        >
-          <span className={styles.icon} style={{transform:`translateY(${lift}px) scale(${iconScale})`}}><Icon size={20} strokeWidth={1.8+strength*.45}/></span>
+        return <button key={path} type="button" className={`${styles.item} ${active?styles.active:""}`} aria-current={index===activeIndex?"page":undefined} onClick={()=>selectItem(index)}>
+          <span className={styles.icon} style={{transform:`translateY(${lift}px) scale(${.96+strength*.08})`}}>
+            <NavLottieIcon kind={icon} active={active}/>
+          </span>
           <span className={styles.label} style={{opacity:.66+strength*.34,transform:`translateY(${-strength*.35}px)`}}>{label}</span>
         </button>
       })}
     </div>
-  </nav>
+  </nav>;
 }

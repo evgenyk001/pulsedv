@@ -19,7 +19,8 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1",
-    "@2gis/mapgl": "^1.78.0"
+    "@2gis/mapgl": "^1.78.0",
+    "lottie-react": "^2.4.1"
   },
   "devDependencies": {
     "@types/react": "^19.1.13",
