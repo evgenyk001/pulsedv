@@ -6,6 +6,7 @@ import { PropertyCard } from "../components/PropertyCard";
 import { useProperties } from "../helpers/useProperties";
 import { useFavoriteIds } from "../helpers/useFavoriteIds";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "../components/Sheet";
+import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./favorites.module.css";
 
 type CompareRow={label:string;value:(property:any)=>React.ReactNode};
@@ -29,11 +30,10 @@ export default function Favorites(){
   },[ids.join("|")]);
 
   const toggleCompare=(id:string)=>{
-    setCompareIds(current=>{
-      if(current.includes(id))return current.filter(item=>item!==id);
-      if(current.length>=3)return current;
-      return [...current,id];
-    });
+    const removing=compareIds.includes(id);
+    if(!removing&&compareIds.length>=3)return;
+    recordPulseEvent({eventType:removing?"compare_remove":"compare_add",entityType:"property",entityId:id});
+    setCompareIds(current=>removing?current.filter(item=>item!==id):[...current,id]);
   };
 
   const compared=saved.filter(property=>compareIds.includes(property.id));
