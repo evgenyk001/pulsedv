@@ -36,11 +36,11 @@ jobs:
 
       - name: Install Mini App dependencies
         working-directory: apps/mini-app
-        run: npm ci
+        run: npm install --no-audit --no-fund
 
       - name: Typecheck Mini App
         working-directory: apps/mini-app
-        run: npm run typecheck
+        run: npm run check
 
       - name: Build Mini App
         working-directory: apps/mini-app
