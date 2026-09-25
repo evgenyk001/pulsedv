@@ -1,0 +1,17 @@
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY backend/package.json backend/package.json
+COPY apps/mini-app/package.json apps/mini-app/package.json
+COPY apps/control-center/package.json apps/control-center/package.json
+RUN npm ci --no-audit --no-fund
+COPY apps/mini-app apps/mini-app
+COPY apps/control-center apps/control-center
+COPY packages packages
+COPY dist dist
+ENV VITE_PULSE_MODE=api
+ENV VITE_API_BASE_URL=/api/v1
+RUN npm run build
+FROM caddy:2-alpine
+COPY --from=build /app/dist /srv/pulsedv
+COPY deploy/Caddyfile /etc/caddy/Caddyfile

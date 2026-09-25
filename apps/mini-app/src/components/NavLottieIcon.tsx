@@ -1,99 +1,25 @@
-import React from "react";
-import Lottie, { type LottieRefCurrentProps } from "lottie-react";
-import { Building2, Heart, Home, Sparkles, type LucideIcon } from "lucide-react";
-
-type Kind="home"|"building"|"sparkles"|"heart";
-
-const FALLBACKS:Record<Kind,LucideIcon>={
-  home:Home,
-  building:Building2,
-  sparkles:Sparkles,
-  heart:Heart,
-};
-
-const path=(v:number[][],closed=false)=>({
-  ty:"sh",ks:{a:0,k:{i:v.map(()=>[0,0]),o:v.map(()=>[0,0]),v,c:closed}},nm:"Path"
-});
-
-const group=(paths:number[][][],closed:boolean,color:number[])=>({
-  ty:"gr",
-  it:[
-    ...paths.map(points=>path(points,closed)),
-    {ty:"st",c:{a:0,k:[...color,1]},o:{a:0,k:100},w:{a:0,k:1.9},lc:2,lj:2,nm:"Stroke"},
-    {ty:"tr",p:{a:0,k:[0,0]},a:{a:0,k:[0,0]},s:{a:0,k:[100,100]},r:{a:0,k:0},o:{a:0,k:100},sk:{a:0,k:0},sa:{a:0,k:0}}
-  ],
-  nm:"Icon"
-});
-
-function iconPaths(kind:Kind){
-  if(kind==="home")return {closed:false,paths:[
-    [[4,11],[12,4],[20,11]],[[6,10],[6,20],[18,20],[18,10]],[[10,20],[10,14],[14,14],[14,20]]
-  ]};
-  if(kind==="building")return {closed:false,paths:[
-    [[6,20],[6,5],[16,5],[16,20]],[[16,10],[20,10],[20,20]],[[4,20],[21,20]],
-    [[9,9],[11,9]],[[9,13],[11,13]],[[9,17],[11,17]]
-  ]};
-  if(kind==="sparkles")return {closed:true,paths:[
-    [[12,3],[13.4,7.6],[18,9],[13.4,10.4],[12,15],[10.6,10.4],[6,9],[10.6,7.6]],
-    [[19,3],[19.7,5.3],[22,6],[19.7,6.7],[19,9],[18.3,6.7],[16,6],[18.3,5.3]],
-    [[5,15],[5.7,17.3],[8,18],[5.7,18.7],[5,21],[4.3,18.7],[2,18],[4.3,17.3]]
-  ]};
-  return {closed:true,paths:[
-    [[12,20],[4.6,13.3],[3.4,10.4],[3.7,7.8],[5.4,5.8],[8,5.2],[10.1,6.1],[12,8.1],[13.9,6.1],[16,5.2],[18.6,5.8],[20.3,7.8],[20.6,10.4],[19.4,13.3]]
-  ]};
+import React from 'react';
+import Lottie, {type LottieRefCurrentProps} from 'lottie-react';
+import {Building2,Heart,Home,Sparkles} from 'lucide-react';
+type Kind='home'|'building'|'sparkles'|'heart';
+const fallback={home:Home,building:Building2,sparkles:Sparkles,heart:Heart};
+const shape=(vertices:number[][],closed=false,ins?:number[][],outs?:number[][])=>({ty:'sh',ks:{a:0,k:{i:ins||vertices.map(()=>[0,0]),o:outs||vertices.map(()=>[0,0]),v:vertices,c:closed}},nm:'Outline'});
+const eased=(t:number,s:number[],e?:number[])=>({t,s,...(e?{e,i:{x:[.3],y:[1]},o:{x:[.2],y:[0]}}:{})});
+function animation(kind:Kind,color:number[]){
+ const outlines=kind==='home'?[shape([[3,10],[12,3],[21,10]]),shape([[5,9],[5,21],[10,21],[10,14],[14,14],[14,21],[19,21],[19,9]])]
+ :kind==='building'?[shape([[5,21],[5,3],[16,3],[16,21]]),shape([[16,9],[21,9],[21,21],[3,21]]),...[7,11,15].flatMap(y=>[shape([[8,y],[9,y]]),shape([[12,y],[13,y]])])]
+ :kind==='sparkles'?[shape([[12,3],[14.5,9.5],[21,12],[14.5,14.5],[12,21],[9.5,14.5],[3,12],[9.5,9.5]],true),shape([[20,2],[20,6]]),shape([[18,4],[22,4]])]
+ :[shape([[12,21],[3,11],[7.5,4],[12,7],[16.5,4],[21,11]],true,[[0,0],[0,3],[-4,0],[-1.5,-2],[0,0],[0,-4]],[[0,0],[0,-4],[2,0],[1.5,-2],[4,0],[0,3]])];
+ const scale=kind==='heart'?[eased(0,[100,100,100],[115,115,100]),eased(8,[115,115,100],[97,97,100]),eased(17,[97,97,100],[100,100,100]),eased(30,[100,100,100])]:[eased(0,[96,96,100],[104,104,100]),eased(13,[104,104,100],[100,100,100]),eased(30,[100,100,100])];
+ return {v:'5.12.2',fr:60,ip:0,op:32,w:24,h:24,nm:'PULSE '+kind,ddd:0,assets:[],layers:[{ddd:0,ind:1,ty:4,nm:kind,sr:1,ks:{o:{a:0,k:100},r:{a:0,k:0},p:{a:0,k:[12,12,0]},a:{a:0,k:[12,12,0]},s:{a:1,k:scale}},ao:0,shapes:[{ty:'gr',it:[...outlines,{ty:'st',c:{a:0,k:[...color,1]},o:{a:0,k:100},w:{a:0,k:1.8},lc:2,lj:2},{ty:'tm',s:{a:0,k:0},e:{a:1,k:[eased(0,[65],[100]),eased(19,[100])]},o:{a:0,k:0},m:1},{ty:'tr',p:{a:0,k:[0,0]},a:{a:0,k:[0,0]},s:{a:0,k:[100,100]},r:{a:0,k:0},o:{a:0,k:100},sk:{a:0,k:0},sa:{a:0,k:0}}]}],ip:0,op:32,st:0,bm:0}]};
 }
-
-function data(kind:Kind,color:number[]){
-  const spec=iconPaths(kind);
-  return {
-    v:"5.12.2",fr:60,ip:0,op:26,w:24,h:24,nm:kind,ddd:0,assets:[],
-    layers:[{
-      ddd:0,ind:1,ty:4,nm:kind,sr:1,
-      ks:{
-        o:{a:0,k:100},r:{a:0,k:0},p:{a:0,k:[12,12,0]},a:{a:0,k:[12,12,0]},
-        s:{a:1,k:[
-          {t:0,s:[100,100,100],e:[116,116,100]},
-          {t:8,s:[116,116,100],e:[96,96,100]},
-          {t:16,s:[96,96,100],e:[100,100,100]},
-          {t:25,s:[100,100,100]}
-        ]}
-      },
-      ao:0,shapes:[group(spec.paths,spec.closed,color)],ip:0,op:26,st:0,bm:0
-    }]
-  };
-}
-
+class IconBoundary extends React.Component<{children:React.ReactNode;fallback:React.ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true};}render(){return this.state.failed?this.props.fallback:this.props.children;}}
 export function NavLottieIcon({kind,active}:{kind:Kind;active:boolean}){
-  const ref=React.useRef<LottieRefCurrentProps|null>(null);
-  const Fallback=FALLBACKS[kind];
-  const animationData=React.useMemo(()=>data(kind,active?[.949,.051,.114]:[.478,.529,.588]),[kind,active]);
-
-  React.useEffect(()=>{
-    if(active)ref.current?.goToAndPlay(0,true);
-    else ref.current?.goToAndStop(0,true);
-  },[active]);
-
-  return <span aria-hidden="true" style={{position:"relative",display:"grid",placeItems:"center",width:24,height:24}}>
-    <Fallback
-      size={21}
-      strokeWidth={active?2.15:1.85}
-      style={{
-        position:"absolute",
-        color:"currentColor",
-        transition:"transform .28s cubic-bezier(.18,.88,.22,1),opacity .2s ease",
-        transform:active?"scale(1.04)":"scale(1)",
-        opacity:.98,
-      }}
-    />
-    <span style={{position:"absolute",inset:0,display:"grid",placeItems:"center",opacity:active?.82:.34,pointerEvents:"none"}}>
-      <Lottie
-        lottieRef={ref}
-        animationData={animationData}
-        autoplay={false}
-        loop={false}
-        rendererSettings={{preserveAspectRatio:"xMidYMid meet"}}
-        style={{width:24,height:24}}
-      />
-    </span>
-  </span>;
+ const ref=React.useRef<LottieRefCurrentProps|null>(null);const Icon=fallback[kind];
+ const [reduce,setReduce]=React.useState(()=>window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+ React.useEffect(()=>{const media=window.matchMedia('(prefers-reduced-motion: reduce)');const sync=()=>setReduce(media.matches);media.addEventListener('change',sync);return()=>media.removeEventListener('change',sync);},[]);
+ const data=React.useMemo(()=>animation(kind,active?[.949,.051,.114]:[.478,.529,.588]),[kind,active]);
+ React.useEffect(()=>{if(active&&!reduce)ref.current?.goToAndPlay(0,true);else ref.current?.goToAndStop(31,true);},[active,reduce,data]);
+ const staticIcon=<Icon size={22} strokeWidth={1.8}/>;
+ return <span aria-hidden="true" style={{display:'grid',placeItems:'center',width:24,height:24}}>{reduce?staticIcon:<IconBoundary fallback={staticIcon}><Lottie lottieRef={ref} animationData={data} autoplay={false} loop={false} onDOMLoaded={()=>{if(active)ref.current?.goToAndPlay(0,true);else ref.current?.goToAndStop(31,true);}} rendererSettings={{preserveAspectRatio:'xMidYMid meet'}} style={{width:24,height:24}}/></IconBoundary>}</span>;
 }

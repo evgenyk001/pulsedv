@@ -1,0 +1,38 @@
+import { test,expect } from '@playwright/test';
+for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry, drag, switch`,async({page})=>{
+ await page.setViewportSize({width,height:844});
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/pulsedv/mini-app/');
+ await page.getByRole('button',{name:'Пропустить онбординг'}).click();
+ const nav=page.getByRole('navigation',{name:'Основная навигация'});
+ await expect(nav.getByRole('button')).toHaveCount(4);
+ await expect(nav.locator('svg')).toHaveCount(4);
+ await nav.getByRole('button',{name:'Каталог',exact:true}).click();
+ const tabs=page.getByRole('tablist',{name:'Режим каталога'});await expect(tabs).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Новостройки',exact:true})).toBeVisible();
+ const pill=tabs.locator('span[aria-hidden="true"]');const first=tabs.getByRole('tab',{name:'Список',exact:true});
+ await expect.poll(async()=>{const a=await pill.boundingBox(),b=await first.boundingBox();return !!a&&!!b&&Math.abs(a.x-b.x)<1&&Math.abs(a.width-b.width)<1;}).toBe(true);
+ const from=await first.boundingBox();const to=await tabs.getByRole('tab',{name:'Карта',exact:true}).boundingBox();
+ await page.mouse.move(from!.x+from!.width/2,from!.y+from!.height/2);await page.mouse.down();await page.mouse.move(to!.x+to!.width/2,to!.y+to!.height/2,{steps:15});await page.mouse.up();
+ await expect(tabs.getByRole('tab',{name:'Карта',exact:true})).toHaveAttribute('aria-selected','true');
+ await tabs.getByRole('tab',{name:'Список',exact:true}).click();
+ await expect(first).toHaveAttribute('aria-selected','true');
+ await nav.getByRole('button',{name:'Подбор',exact:true}).click();
+ await page.getByRole('button',{name:/Продолжить/}).click();await page.getByRole('button',{name:/Продолжить/}).click();await page.getByRole('button',{name:/Продолжить/}).click();
+ const switches=page.getByRole('switch');await expect(switches.first()).toBeVisible();
+ for(const item of await switches.all()){
+  const thumb=item.locator('[data-state]').first();
+  for(let i=0;i<2;i++){await item.click();await expect.poll(async()=>{const a=await item.boundingBox(),b=await thumb.boundingBox();return !!a&&!!b&&b.x>=a.x+2&&b.x+b.width<=a.x+a.width-2&&Math.abs((b.y+b.height/2)-(a.y+a.height/2))<1;}).toBe(true);}
+ }
+ expect(errors).toEqual([]);
+ await page.screenshot({path:`test-results/mini-app-${width}.png`,fullPage:true});
+});
+
+test('Control preview: object editor and real state changes',async({page})=>{
+ await page.setViewportSize({width:1440,height:1000});await page.goto('/pulsedv/control-center/');
+ await expect(page.getByText('Демонстрация · данные только в этом браузере')).toBeVisible();
+ await page.getByRole('link',{name:'Объекты',exact:true}).click();await page.getByRole('button',{name:'Добавить ЖК',exact:true}).click();
+ await page.getByRole('textbox',{name:'Название',exact:true}).fill('Тестовый ЖК');await page.getByRole('button',{name:'Готово',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Тестовый ЖК',exact:true})).toBeVisible();
+ await page.screenshot({path:'test-results/control-objects.png',fullPage:true});
+});

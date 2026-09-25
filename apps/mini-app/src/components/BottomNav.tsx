@@ -41,7 +41,7 @@ export function BottomNav(){
     const dock=dockRef.current;
     if(!dock)return;
     const measure=()=>{
-      const width=Math.max(0,dock.getBoundingClientRect().width-8);
+      const width=Math.max(0,dock.clientWidth-8);
       const segment=width/items.length;
       setSegmentWidth(segment);
       if(!dragging)setPillX(segment*activeIndex);

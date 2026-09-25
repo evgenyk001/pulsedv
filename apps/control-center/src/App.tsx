@@ -1,3 +1,4 @@
+import { runtime } from "../../../packages/pulse-data/runtime";
 import { NavLink, Route, Routes } from "react-router-dom";
 import {
   LayoutDashboard, Handshake, UsersRound, Building2, BadgePercent,
@@ -35,7 +36,7 @@ export function App(){
         <div><b>PULSE Control</b><small>Private workspace</small></div>
       </div>
       <nav>
-        {sections.map(({to,label,icon:Icon,end})=>
+        {sections.filter(section=>!runtime.enabled||runtime.member?.role!=="manager"||["/","/leads","/users","/tasks","/analytics"].includes(section.to)).map(({to,label,icon:Icon,end})=>
           <NavLink key={to} to={to} end={end} className={({isActive})=>isActive?"active":undefined}>
             <Icon size={18}/><span>{label}</span>
           </NavLink>
@@ -49,12 +50,12 @@ export function App(){
         <Route path="/leads" element={<LeadsPage/>}/>
         <Route path="/users" element={<UsersPage/>}/>
         <Route path="/tasks" element={<TasksPage/>}/>
-        <Route path="/objects" element={<ObjectsPage/>}/>
-        <Route path="/mortgage" element={<MortgagePage/>}/>
-        <Route path="/select" element={<SelectPage/>}/>
-        <Route path="/content" element={<ContentPage/>}/>
+        <Route path="/objects" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<ObjectsPage/>}/>
+        <Route path="/mortgage" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<MortgagePage/>}/>
+        <Route path="/select" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<SelectPage/>}/>
+        <Route path="/content" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<ContentPage/>}/>
         <Route path="/analytics" element={<AnalyticsPage/>}/>
-        <Route path="/settings" element={<SettingsPage/>}/>
+        <Route path="/settings" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<SettingsPage/>}/>
       </Routes>
     </main>
   </div>;

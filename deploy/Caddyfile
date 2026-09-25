@@ -1,0 +1,23 @@
+{$SITE_DOMAIN} {
+ encode zstd gzip
+ header {
+  X-Content-Type-Options nosniff
+  Referrer-Policy strict-origin-when-cross-origin
+  -Server
+ }
+ handle /api/* {
+  reverse_proxy api:3000
+ }
+ handle /health {
+  reverse_proxy api:3000
+ }
+ handle /ready {
+  reverse_proxy api:3000
+ }
+ @root path /
+ redir @root /pulsedv/ 302
+ handle {
+  root * /srv
+  file_server
+ }
+}

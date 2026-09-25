@@ -1,47 +1,30 @@
-import React from "react";
-import { Filter, Flame, Gauge, Sparkles } from "lucide-react";
-import { PageFrame } from "../components/PageFrame";
-import { usePulseLeads, usePulseState } from "../data";
-import { updatePulseLead, type PulseLead } from "../../../../packages/pulse-data";
-
-const statuses:PulseLead["status"][]=["new","contacted","qualified","showing","booking","deal","closed","lost"];
-const labels:Record<PulseLead["status"],string>={new:"Новый",contacted:"Связались",qualified:"Квалифицирован",showing:"Показ",booking:"Бронь",deal:"Сделка",closed:"Закрыт",lost:"Потерян"};
-const priorityLabel=(priority:PulseLead["priority"])=>priority==="urgent"?"Срочно":priority==="hot"?"Горячий":priority==="warm"?"Тёплый":"Холодный";
-
+import React from 'react';
+import { Search, Phone, X, Save, Gauge } from 'lucide-react';
+import { PageFrame } from '../components/PageFrame';
+import { usePulseLeads, usePulseState, usePulseEvents, usePulseTasks } from '../data';
+import { updatePulseLead, type PulseLead } from '../../../../packages/pulse-data';
+import { runtime, updateRemote } from '../../../../packages/pulse-data/runtime';
+const statuses:PulseLead['status'][]=['new','contacted','qualified','showing','booking','deal','closed','lost'];
+const labels:Record<PulseLead['status'],string>={new:'Новый',contacted:'Связались',qualified:'Квалифицирован',showing:'Показ',booking:'Бронь',deal:'Сделка',closed:'Закрыт',lost:'Потерян'};
+const priorities:Record<string,string>={urgent:'Срочно',hot:'Горячий',warm:'Тёплый',cold:'Новый интерес'};
 export function LeadsPage(){
-  const leads=usePulseLeads();
-  const state=usePulseState();
-  const [mode,setMode]=React.useState<"all"|"hot"|"new">("all");
-  const visible=leads.filter(lead=>mode==="all"||mode==="new"?mode==="all"||lead.status==="new":lead.priority==="urgent"||lead.priority==="hot");
-  const propertyName=(id:string|null|undefined)=>state.properties.find(item=>item.id===id)?.name||id||"—";
-
-  return <PageFrame eyebrow="CRM" title="Лиды" description="Очередь продаж отсортирована по реальному интересу пользователя, а не только по времени заявки.">
-    <div className="toolbar">
-      <div className="segmented">
-        <button className={mode==="all"?"active":""} onClick={()=>setMode("all")}>Все · {leads.length}</button>
-        <button className={mode==="hot"?"active":""} onClick={()=>setMode("hot")}>Горячие · {leads.filter(x=>x.priority==="urgent"||x.priority==="hot").length}</button>
-        <button className={mode==="new"?"active":""} onClick={()=>setMode("new")}>Новые · {leads.filter(x=>x.status==="new").length}</button>
-      </div>
-      <button className="iconAction" aria-label="Фильтры"><Filter size={17}/></button>
-    </div>
-
-    <section className="tableCard liveTable">
-      <div className="tableHead leadsScoreGrid"><span>Клиент</span><span>Интерес</span><span>Статус</span><span>Менеджер</span><span>Следующее действие</span></div>
-      {visible.length===0?<div className="emptyState"><strong>Здесь пока пусто</strong><span>Lead Engine автоматически поднимет наверх заявки с сильным намерением.</span></div>:visible.map(lead=>{
-        const score=lead.score??0;
-        const reasons=lead.scoreReasons??[];
-        return <div className="tableRow leadsScoreGrid" key={lead.id}>
-          <span className="leadName"><b>{lead.name}</b><small>{lead.phone}</small><small>{lead.source}</small></span>
-          <span className="scoreCell">
-            <span className={"scoreBadge "+(lead.priority||"cold")}><Gauge size={13}/><b>{score}</b><small>{priorityLabel(lead.priority)}</small></span>
-            <small>{propertyName(lead.topPropertyId||lead.propertyId)}</small>
-            {reasons[0]&&<em><Sparkles size={11}/>{reasons[0].label} +{reasons[0].points}</em>}
-          </span>
-          <select className="cellSelect" value={lead.status} onChange={e=>updatePulseLead(lead.id,{status:e.target.value as PulseLead["status"]})}>{statuses.map(status=><option value={status} key={status}>{labels[status]}</option>)}</select>
-          <input className="cellInput" placeholder="Менеджер" value={lead.manager||""} onChange={e=>updatePulseLead(lead.id,{manager:e.target.value||null})}/>
-          <span className="nextAction">{lead.priority==="urgent"&&<Flame size={14}/>}<b>{lead.nextAction||"Связаться и уточнить задачу"}</b><small>{new Date(lead.updatedAt).toLocaleString("ru-RU")}</small></span>
-        </div>
-      })}
-    </section>
-  </PageFrame>;
+ const leads=usePulseLeads();const state=usePulseState();const events=usePulseEvents();const tasks=usePulseTasks();
+ const [mode,setMode]=React.useState('active');const [query,setQuery]=React.useState('');const [selected,setSelected]=React.useState<string|null>(new URLSearchParams(location.hash.split('?')[1]).get('lead'));
+ const [draft,setDraft]=React.useState<{status:PulseLead['status'];manager:string|null;comment:string;nextAction:string;expectedUpdatedAt:string}|null>(null);const [busy,setBusy]=React.useState(false);const [error,setError]=React.useState('');
+ const lead=leads.find(x=>x.id===selected);
+ React.useEffect(()=>{setDraft(lead?{status:lead.status,manager:lead.manager,comment:lead.comment||'',nextAction:lead.nextAction||'',expectedUpdatedAt:lead.updatedAt}:null);setError('');},[selected]);
+ const open=(item:PulseLead)=>{setSelected(item.id);setDraft({status:item.status,manager:item.manager,comment:item.comment||'',nextAction:item.nextAction||'',expectedUpdatedAt:item.updatedAt});setError('');};
+ const visible=leads.filter(l=>(mode==='all'||mode==='hot'&&['hot','urgent'].includes(l.priority||'')||mode==='active'&&!['closed','lost','deal'].includes(l.status))&&(l.name+' '+l.phone+' '+l.source).toLowerCase().includes(query.toLowerCase())).sort((a,b)=>(b.score||0)-(a.score||0)||Date.parse(b.createdAt)-Date.parse(a.createdAt));
+ const save=async()=>{if(!lead||!draft)return;setBusy(true);setError('');try{const patch:Record<string,unknown>={status:draft.status,comment:draft.comment,nextAction:draft.nextAction,expectedUpdatedAt:draft.expectedUpdatedAt};if(!runtime.enabled||runtime.member?.role!=='manager')patch.manager=draft.manager;if(runtime.enabled)await updateRemote('leads',lead.id,patch);else updatePulseLead(lead.id,patch);setSelected(null);}catch(e){setError(e instanceof Error?e.message:'Не удалось сохранить');}finally{setBusy(false);}};
+ return <PageFrame eyebrow="CRM" title="Лиды" description="Контекст клиента, ответственный и следующий шаг — в одной карточке.">
+  <div className="toolbar"><div className="segmented">{[['active','В работе'],['hot','Горячие'],['all','Все']].map(([value,label])=><button key={value} className={mode===value?'active':''} onClick={()=>setMode(value)}>{label}</button>)}</div><label className="controlSearch"><Search size={17}/><input aria-label="Поиск клиента" placeholder="Имя, телефон, источник" value={query} onChange={e=>setQuery(e.target.value)}/></label></div>
+  <section className="tableCard liveTable"><div className="tableHead leadsScoreGrid"><span>Клиент</span><span>Интерес</span><span>Статус</span><span>Менеджер</span><span>Следующее действие</span></div>
+   {!visible.length?<div className="emptyState"><strong>Заявок не найдено</strong><span>Новые обращения появятся здесь после отправки из мини‑аппа.</span></div>:visible.map(l=><button className="tableRow leadsScoreGrid leadRowButton" onClick={()=>open(l)} key={l.id}><span className="leadName"><b>{l.name}</b><small>{l.phone}</small><small>{l.source}</small></span><span className="scoreCell"><span className={'scoreBadge '+(l.priority||'cold')}><Gauge size={14}/><b>{l.score||0}</b><small>{priorities[l.priority||'cold']}</small></span><small>{state.properties.find(p=>p.id===(l.topPropertyId||l.propertyId))?.name||'Общий подбор'}</small></span><span className="statusChip">{labels[l.status]}</span><span>{runtime.snapshot.members.find(m=>m.id===l.manager)?.name||l.manager||'Не назначен'}</span><span className="nextAction"><b>{l.nextAction||'Связаться и уточнить задачу'}</b><small>{new Date(l.createdAt).toLocaleString('ru-RU')}</small></span></button>)}
+  </section>
+  {lead&&draft&&<div className="drawerBackdrop" onClick={()=>setSelected(null)}><section className="detailDrawer" role="dialog" aria-modal="true" aria-label="Карточка клиента" onClick={e=>e.stopPropagation()}><div className="drawerHeader"><div><span className="kicker">КЛИЕНТ</span><h2>{lead.name}</h2></div><button aria-label="Закрыть" onClick={()=>setSelected(null)}><X/></button></div><a className="phoneLink" href={'tel:'+lead.phone.replace(/[^+\d]/g,'')}><Phone size={17}/>{lead.phone}</a><div className="formGrid"><label className="controlField"><span>Статус</span><select value={draft.status} onChange={e=>setDraft({...draft,status:e.target.value as PulseLead['status']})}>{statuses.map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label><label className="controlField"><span>Ответственный</span><select disabled={runtime.enabled&&runtime.member?.role==='manager'} value={draft.manager||''} onChange={e=>setDraft({...draft,manager:e.target.value||null})}><option value="">Не назначен</option>{runtime.snapshot.members.filter(m=>m.active).map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label><label className="controlField wide"><span>Следующее действие</span><input value={draft.nextAction} onChange={e=>setDraft({...draft,nextAction:e.target.value})}/></label><label className="controlField wide"><span>Заметка менеджера</span><textarea rows={4} value={draft.comment} onChange={e=>setDraft({...draft,comment:e.target.value})}/></label></div>
+  <h3>Почему такой приоритет</h3><div className="signalList">{(lead.scoreReasons||[]).map(r=><div key={r.ruleId}><b>{r.label}</b><small>{r.points>0?'+':''}{r.points}</small></div>)}</div>
+  <h3>Задачи</h3>{tasks.filter(t=>t.leadId===lead.id).map(t=><p key={t.id}>{t.title} · {new Date(t.dueAt).toLocaleString('ru-RU')} · {t.status}</p>)}
+  <h3>Последние действия</h3><div className="timeline">{events.filter(e=>e.sessionId===lead.sessionId).slice(0,20).map(e=><div key={e.id}><b>{e.eventType}</b><span>{state.properties.find(p=>p.id===e.entityId)?.name||e.entityId}</span><small>{new Date(e.createdAt).toLocaleString('ru-RU')}</small></div>)}</div>
+  {error&&<p className="errorNotice" role="alert">{error}</p>}<button className="primaryAction" disabled={busy} onClick={()=>void save()}><Save size={16}/>{busy?'Сохраняем…':'Сохранить карточку'}</button></section></div>}
+ </PageFrame>;
 }

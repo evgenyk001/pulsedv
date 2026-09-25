@@ -33,8 +33,7 @@ jobs:
           node-version: 22
 
       - name: Install Mini App dependencies
-        working-directory: apps/mini-app
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Typecheck Mini App
         working-directory: apps/mini-app

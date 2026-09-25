@@ -19,14 +19,14 @@ export function TasksPage(){
   return <PageFrame eyebrow="OPERATIONS" title="Задачи" description="Lead Engine создаёт задачи автоматически после получения контакта и пересчитывает приоритет по поведению клиента.">
     <section className="kanban">
       {columns.map(column=>{
-        const list=tasks.filter(task=>task.status===column.status);
+        const list=tasks.filter(task=>task.status===column.status).sort((a,b)=>Date.parse(a.dueAt)-Date.parse(b.dueAt));
         return <div className="kanbanCol" key={column.status}>
           <div className="kanbanTitle"><b>{column.title}</b><span>{list.length}</span></div>
           {list.length===0?<div className="miniEmpty">Нет задач</div>:<div className="taskStack">{list.map(task=><article className={"taskCard "+task.priority} key={task.id}>
             <div className="taskTop"><span>{task.priority==="urgent"?<Flame size={14}/>:<Clock3 size={14}/>} {task.priority}</span><b>{leadName(task.leadId)}</b></div>
             <h3>{task.title}</h3>
             <p>{task.reason}</p>
-            <small>до {new Date(task.dueAt).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"})}</small>
+            <small className={task.status!=="done"&&Date.parse(task.dueAt)<Date.now()?"overdue":""}>{task.status!=="done"&&Date.parse(task.dueAt)<Date.now()?"Просрочено · ":"До "}{new Date(task.dueAt).toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})}</small>
             {task.status!=="done"&&<button onClick={()=>updatePulseTask(task.id,{status:nextStatus(task.status)})}>Дальше <MoveRight size={14}/></button>}
           </article>)}</div>}
         </div>

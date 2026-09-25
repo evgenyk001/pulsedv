@@ -96,7 +96,7 @@ export async function processSessionIntent(
 
   await repo.appendScoreHistory(profile.id,lead?.id??null,result);
 
-  if(!lead)return{profile,result,lead:null,task:null};
+  if(!lead||["closed","lost","deal"].includes(lead.status))return{profile,result,lead:null,task:null};
 
   await repo.updateLeadIntent(lead.id,result);
 
@@ -137,7 +137,7 @@ export async function processSessionIntent(
   const becameUrgent=result.priority==="urgent"&&previousPriority!=="urgent";
   const isNewLead=lead.status==="new"&&lead.score===0;
 
-  if(managerId&&(crossedHotBoundary||becameUrgent||isNewLead)){
+  if(managerId&&!isNewLead&&(crossedHotBoundary||becameUrgent)){
     await repo.enqueueOutbox({
       topic:managerTopic(result.priority),
       aggregateType:"lead",

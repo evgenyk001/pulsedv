@@ -1,3 +1,4 @@
+import { TeamSettings } from "../components/TeamSettings";
 import { Gauge, ShieldCheck, SlidersHorizontal, UsersRound } from "lucide-react";
 import { PageFrame } from "../components/PageFrame";
 import { usePulseState } from "../data";
@@ -22,10 +23,7 @@ export function SettingsPage(){
   };
 
   return <PageFrame eyebrow="SYSTEM" title="Настройки" description="Команда, роли и правила Lead Engine. Бизнес-логику можно менять без правки Mini App.">
-    <div className="settingsGrid">
-      <section className="panel settingRow"><ShieldCheck size={20}/><div><h2>Auth + RBAC</h2><p>Отдельная серверная авторизация. Никакого admin-кода в публичном клиенте.</p></div><span className="statusChip">Production этап</span></section>
-      <section className="panel settingRow"><UsersRound size={20}/><div><h2>Команда</h2><p>Роли: owner, admin, manager. Права на объекты, лиды, контент и аналитику.</p></div><span className="statusChip">План</span></section>
-    </div>
+    <TeamSettings/>
 
     <section className="panel">
       <div className="panelTitle"><Gauge size={20}/><div><span>LEAD ENGINE</span><h2>Пороги Interest Score</h2></div></div>

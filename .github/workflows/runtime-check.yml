@@ -1,0 +1,45 @@
+name: PULSE runtime and contracts
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, feat/production-runtime-control]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: pulse
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: pulse_test
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U pulse -d pulse_test" --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npm test
+        env:
+          TEST_DATABASE_URL: postgres://pulse:ci-only-password@localhost:5432/pulse_test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pulse-ui-review
+          path: |
+            playwright-report
+            test-results
+      - name: Validate VPS images
+        run: |
+          docker build -f deploy/Dockerfile.api -t pulse-api-test .
+          docker build -f deploy/Dockerfile.web -t pulse-web-test .

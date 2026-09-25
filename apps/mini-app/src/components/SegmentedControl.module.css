@@ -12,20 +12,22 @@
   background:rgba(232,235,239,.76);
   overflow:hidden;
   isolation:isolate;
+  touch-action:pan-y;
+  user-select:none;
 }
 .pill{
   position:absolute;
   z-index:0;
   top:4px;
   bottom:4px;
-  left:calc(4px + var(--segment-index) * ((100% - 8px) / var(--segment-count)));
+  left:4px;
   width:calc((100% - 8px) / var(--segment-count));
   border-radius:999px;
   background:rgba(255,255,255,.94);
   border:1px solid rgba(255,255,255,.96);
   box-shadow:0 4px 14px rgba(39,50,65,.09),inset 0 1px 0 rgba(255,255,255,.96);
-  transition:left .34s var(--motion-spring),width .18s ease;
-  will-change:left;
+  transition:transform .28s cubic-bezier(.2,.8,.2,1),width .18s ease;
+  will-change:transform;
   pointer-events:none;
 }
 .root button{
@@ -51,3 +53,4 @@
 .root button:active{transform:scale(.98)}
 .root .active{color:var(--foreground)}
 @media(prefers-reduced-motion:reduce){.pill{transition:none}}
+.root button:focus-visible{outline:2px solid var(--primary);outline-offset:-3px}

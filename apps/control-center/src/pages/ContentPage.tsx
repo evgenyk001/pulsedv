@@ -20,7 +20,7 @@ export function ContentPage(){
     <section className="panel">
       <span className="kicker">Баннеры главной</span>
       <div className="editorList">
-        {state.banners.sort((a,b)=>a.sortOrder-b.sortOrder).map(banner=><article className="editorRow" key={banner.id}>
+        {[...state.banners].sort((a,b)=>a.sortOrder-b.sortOrder).map(banner=><article className="editorRow" key={banner.id}>
           <div className="editorRowTop"><b>{banner.city||"PULSE.DV"}</b><label className="miniCheck"><input type="checkbox" checked={banner.enabled} onChange={e=>patchBanner(banner.id,{enabled:e.target.checked})}/>Виден</label></div>
           <div className="formGrid">
             <label className="controlField wide"><span>Заголовок</span><input value={banner.title} onChange={e=>patchBanner(banner.id,{title:e.target.value})}/></label>
