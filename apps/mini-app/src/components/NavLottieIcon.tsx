@@ -1,7 +1,15 @@
 import React from "react";
 import Lottie, { type LottieRefCurrentProps } from "lottie-react";
+import { Building2, Heart, Home, Sparkles, type LucideIcon } from "lucide-react";
 
 type Kind="home"|"building"|"sparkles"|"heart";
+
+const FALLBACKS:Record<Kind,LucideIcon>={
+  home:Home,
+  building:Building2,
+  sparkles:Sparkles,
+  heart:Heart,
+};
 
 const path=(v:number[][],closed=false)=>({
   ty:"sh",ks:{a:0,k:{i:v.map(()=>[0,0]),o:v.map(()=>[0,0]),v,c:closed}},nm:"Path"
@@ -18,18 +26,14 @@ const group=(paths:number[][][],closed:boolean,color:number[])=>({
 });
 
 function iconPaths(kind:Kind){
-  if(kind==="home") return {closed:false,paths:[
-    [[4,11],[12,4],[20,11]],
-    [[6,10],[6,20],[18,20],[18,10]],
-    [[10,20],[10,14],[14,14],[14,20]]
+  if(kind==="home")return {closed:false,paths:[
+    [[4,11],[12,4],[20,11]],[[6,10],[6,20],[18,20],[18,10]],[[10,20],[10,14],[14,14],[14,20]]
   ]};
-  if(kind==="building") return {closed:false,paths:[
-    [[6,20],[6,5],[16,5],[16,20]],
-    [[16,10],[20,10],[20,20]],
-    [[4,20],[21,20]],
+  if(kind==="building")return {closed:false,paths:[
+    [[6,20],[6,5],[16,5],[16,20]],[[16,10],[20,10],[20,20]],[[4,20],[21,20]],
     [[9,9],[11,9]],[[9,13],[11,13]],[[9,17],[11,17]]
   ]};
-  if(kind==="sparkles") return {closed:true,paths:[
+  if(kind==="sparkles")return {closed:true,paths:[
     [[12,3],[13.4,7.6],[18,9],[13.4,10.4],[12,15],[10.6,10.4],[6,9],[10.6,7.6]],
     [[19,3],[19.7,5.3],[22,6],[19.7,6.7],[19,9],[18.3,6.7],[16,6],[18.3,5.3]],
     [[5,15],[5.7,17.3],[8,18],[5.7,18.7],[5,21],[4.3,18.7],[2,18],[4.3,17.3]]
@@ -61,19 +65,35 @@ function data(kind:Kind,color:number[]){
 
 export function NavLottieIcon({kind,active}:{kind:Kind;active:boolean}){
   const ref=React.useRef<LottieRefCurrentProps|null>(null);
+  const Fallback=FALLBACKS[kind];
   const animationData=React.useMemo(()=>data(kind,active?[.949,.051,.114]:[.478,.529,.588]),[kind,active]);
 
   React.useEffect(()=>{
-    if(active) ref.current?.goToAndPlay(0,true);
+    if(active)ref.current?.goToAndPlay(0,true);
     else ref.current?.goToAndStop(0,true);
   },[active]);
 
-  return <Lottie
-    lottieRef={ref}
-    animationData={animationData}
-    autoplay={false}
-    loop={false}
-    style={{width:22,height:22}}
-    aria-hidden="true"
-  />;
+  return <span aria-hidden="true" style={{position:"relative",display:"grid",placeItems:"center",width:24,height:24}}>
+    <Fallback
+      size={21}
+      strokeWidth={active?2.15:1.85}
+      style={{
+        position:"absolute",
+        color:"currentColor",
+        transition:"transform .28s cubic-bezier(.18,.88,.22,1),opacity .2s ease",
+        transform:active?"scale(1.04)":"scale(1)",
+        opacity:.98,
+      }}
+    />
+    <span style={{position:"absolute",inset:0,display:"grid",placeItems:"center",opacity:active?.82:.34,pointerEvents:"none"}}>
+      <Lottie
+        lottieRef={ref}
+        animationData={animationData}
+        autoplay={false}
+        loop={false}
+        rendererSettings={{preserveAspectRatio:"xMidYMid meet"}}
+        style={{width:24,height:24}}
+      />
+    </span>
+  </span>;
 }
