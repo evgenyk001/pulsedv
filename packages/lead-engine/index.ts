@@ -78,8 +78,9 @@ function latestValue(events:LeadEngineEvent[],selector:(event:LeadEngineEvent)=>
   return null;
 }
 
-export function scoreLeadEvents(events:LeadEngineEvent[],config:LeadEngineConfig=DEFAULT_LEAD_ENGINE_CONFIG):LeadScoreResult{
-  const sorted=[...events].sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt));
+export function scoreLeadEvents(events:LeadEngineEvent[],config:LeadEngineConfig=DEFAULT_LEAD_ENGINE_CONFIG,now=new Date()):LeadScoreResult{
+  const recent=events.filter(e=>Date.parse(e.createdAt)>=now.getTime()-30*86400_000&&Date.parse(e.createdAt)<=now.getTime()+60_000);
+  const sorted=[...recent].sort((a,b)=>Date.parse(a.createdAt)-Date.parse(b.createdAt));
   const reasons:LeadScoreReason[]=[];
   let rawScore=0;
 
@@ -98,10 +99,10 @@ export function scoreLeadEvents(events:LeadEngineEvent[],config:LeadEngineConfig
   for(const event of sorted){
     if(event.entityType!=="property"||!event.entityId)continue;
     const rule=config.rules.find(item=>item.eventType===event.eventType);
-    const weight=Math.max(1,rule?.weight??1);
+    const weight=rule?.weight??0;
     propertyWeights.set(event.entityId,(propertyWeights.get(event.entityId)??0)+weight);
   }
-  const topPropertyId=[...propertyWeights.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]??null;
+  const topPropertyId=[...propertyWeights.entries()].filter(([,weight])=>weight>0).sort((a,b)=>b[1]-a[1])[0]?.[0]??null;
 
   const city=latestValue(sorted,event=>safeString(event.metadata.city));
   const mortgageProgram=latestValue(sorted,event=>

@@ -9,7 +9,7 @@ export function OverviewPage(){
   const profiles=usePulseProfiles();
   const tasks=usePulseTasks();
   const sessions=new Set(events.map(event=>event.sessionId)).size;
-  const conversion=sessions?Math.round(leads.length/sessions*100):0;
+  const conversion=sessions?Math.round(new Set(leads.map(x=>x.sessionId).filter(Boolean)).size/sessions*100):0;
   const hotProfiles=profiles.filter(item=>item.priority==="hot"||item.priority==="urgent");
   const urgentTasks=tasks.filter(task=>task.status!=="done"&&task.priority==="urgent");
 
@@ -40,7 +40,7 @@ export function OverviewPage(){
 
     <section className="panel">
       <div className="panelTitle"><ShieldCheck size={20}/><div><span>ARCHITECTURE</span><h2>Mini App → Event Stream → Lead Engine → PULSE Control</h2></div></div>
-      <p>Сейчас работает preview-адаптер на browser storage, но scoring, профили, задачи и контракты уже отделены от хранения. Production-адаптер сможет заменить его на API/Postgres без переписывания экранов.</p>
+      <p>Заявки, интересы клиента и задачи связаны между собой. Проверьте сроки связи и назначенных менеджеров. Режим подключения указан в верхней панели.</p>
       <div className="flowLine"><span><Activity size={14}/> user_events</span><b>→</b><span>Interest Score</span><b>→</b><span>CRM task</span><b>→</b><span>Менеджер</span></div>
     </section>
   </PageFrame>;

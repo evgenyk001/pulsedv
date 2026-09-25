@@ -1,0 +1,9 @@
+.git
+node_modules
+**/node_modules
+.env
+.env.*
+coverage
+playwright-report
+test-results
+.sites-runtime

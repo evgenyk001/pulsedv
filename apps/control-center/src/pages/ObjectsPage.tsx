@@ -1,37 +1,30 @@
-import { Plus } from "lucide-react";
-import { PageFrame } from "../components/PageFrame";
-import { usePulseState } from "../data";
-import { updatePulseState, type PulseProperty, type PropertyStatus } from "../../../../packages/pulse-data";
-
-const freshProperty=():PulseProperty=>({
-  id:"property-"+Date.now(),name:"Новый ЖК",city:"Владивосток",district:"",address:null,
-  latitude:null,longitude:null,priceFrom:0,delivery:"",className:"",status:"draft",
-  description:"",developerName:"",tags:[],coverImageUrl:null,sortOrder:999,
-  images:[],features:[],floorplans:[]
-});
-
+import React from 'react';
+import { Plus, Search, X } from 'lucide-react';
+import { PageFrame } from '../components/PageFrame';
+import { usePulseState } from '../data';
+import { updatePulseState, type PulseProperty } from '../../../../packages/pulse-data';
+const fresh=():PulseProperty=>({id:crypto.randomUUID(),name:'Новый ЖК',city:'Владивосток',district:'',address:null,latitude:null,longitude:null,priceFrom:0,delivery:'',className:'',status:'draft',description:'',developerName:'',tags:[],coverImageUrl:null,sortOrder:999,images:[],features:[],floorplans:[]});
 export function ObjectsPage(){
-  const state=usePulseState();
-  const patch=(id:string,patch:Partial<PulseProperty>)=>updatePulseState(current=>({
-    ...current,
-    properties:current.properties.map(item=>item.id===id?{...item,...patch}:item)
-  }));
-  const add=()=>updatePulseState(current=>({...current,properties:[...current.properties,freshProperty()]}));
-
-  return <PageFrame eyebrow="CATALOG" title="Объекты" description="Единый каталог Mini App: название, город, застройщик, цена и публикация."
-    action={<button className="primaryAction" onClick={add}><Plus size={16}/>Добавить объект</button>}>
-    <section className="tableCard liveTable">
-      <div className="tableHead objectsGrid"><span>ЖК</span><span>Город</span><span>Застройщик</span><span>Цена от, млн</span><span>Статус</span></div>
-      {state.properties.map(property=><div className="tableRow objectsGrid" key={property.id}>
-        <input className="cellInput" value={property.name} onChange={e=>patch(property.id,{name:e.target.value})}/>
-        <input className="cellInput" value={property.city} onChange={e=>patch(property.id,{city:e.target.value})}/>
-        <input className="cellInput" value={property.developerName} onChange={e=>patch(property.id,{developerName:e.target.value})}/>
-        <input className="cellInput" inputMode="decimal" value={property.priceFrom||""} onChange={e=>patch(property.id,{priceFrom:Number(e.target.value.replace(",","."))||0})}/>
-        <select className="cellSelect" value={property.status} onChange={e=>patch(property.id,{status:e.target.value as PropertyStatus})}>
-          <option value="published">Опубликован</option><option value="draft">Черновик</option><option value="archived">Архив</option>
-        </select>
-      </div>)}
-    </section>
-    <p className="syncNote">Изменения применяются к Mini App сразу в preview. В production этот же интерфейс будет работать через API/Postgres.</p>
-  </PageFrame>;
+ const state=usePulseState();const [selected,setSelected]=React.useState<string|null>(null);const [query,setQuery]=React.useState('');const p=state.properties.find(x=>x.id===selected);
+ const patch=(change:Partial<PulseProperty>)=>updatePulseState(s=>({...s,properties:s.properties.map(x=>x.id===selected?{...x,...change}:x)}));
+ const add=()=>{const p=fresh();updatePulseState(s=>({...s,properties:[...s.properties,p]}));setSelected(p.id);};
+ const list=state.properties.filter(p=>(p.name+' '+p.city+' '+p.developerName).toLowerCase().includes(query.toLowerCase()));
+ return <PageFrame eyebrow="CATALOG" title="Объекты" description="Подготовьте карточку и планировки, затем опубликуйте объект." action={<button className="primaryAction" onClick={add}><Plus size={16}/>Добавить ЖК</button>}>
+  <div className="toolbar"><span>{state.properties.filter(p=>p.status==='published').length} опубликовано · {state.properties.filter(p=>p.status==='draft').length} черновиков</span><label className="controlSearch"><Search size={17}/><input placeholder="ЖК, город, застройщик" value={query} onChange={e=>setQuery(e.target.value)}/></label></div>
+  <div className="objectCards">{list.map(p=><button key={p.id} className="objectCard" onClick={()=>setSelected(p.id)}>{p.coverImageUrl?<img src={p.coverImageUrl} alt=""/>:<div className="objectPlaceholder">PULSE.DV</div>}<div><span className={'statusChip '+p.status}>{p.status==='published'?'Опубликован':p.status==='draft'?'Черновик':'Архив'}</span><h3>{p.name}</h3><p>{p.city} · {p.developerName||'Застройщик не указан'}</p><b>от {p.priceFrom} млн ₽</b><small>{p.floorplans.length} планировок</small></div></button>)}</div>
+  {!list.length&&<div className="emptyState"><strong>Добавьте первый объект</strong><span>Черновики видит только команда. В мини‑апп попадут опубликованные ЖК.</span></div>}
+  {p&&<div className="drawerBackdrop"><section className="detailDrawer wideDrawer" role="dialog" aria-modal="true" aria-label="Редактор объекта"><div className="drawerHeader"><div><span className="kicker">ОБЪЕКТ</span><h2>{p.name}</h2></div><button aria-label="Закрыть редактор" onClick={()=>setSelected(null)}><X/></button></div><div className="formGrid">
+   {([['name','Название'],['city','Город'],['district','Район'],['address','Адрес'],['developerName','Застройщик'],['delivery','Срок сдачи'],['className','Класс'],['coverImageUrl','Обложка · HTTPS URL']] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input value={p[key]||''} onChange={e=>patch({[key]:e.target.value||(['address','coverImageUrl'].includes(key)?null:'')})}/></label>)}
+   {([['priceFrom','Цена от, млн ₽'],['latitude','Широта'],['longitude','Долгота'],['sortOrder','Порядок']] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input type="number" step="any" value={p[key]??''} onChange={e=>patch({[key]:e.target.value===''&&['latitude','longitude'].includes(key)?null:Number(e.target.value)})}/></label>)}
+   <label className="controlField"><span>Статус</span><select value={p.status} onChange={e=>patch({status:e.target.value as PulseProperty['status']})}><option value="draft">Черновик</option><option value="published">Опубликован</option><option value="archived">Архив</option></select></label><label className="controlField"><span>Теги через запятую</span><input value={p.tags.join(', ')} onChange={e=>patch({tags:e.target.value.split(',').map(s=>s.trim())})}/></label><label className="controlField wide"><span>Описание</span><textarea rows={5} value={p.description} onChange={e=>patch({description:e.target.value})}/></label>
+  </div>
+  <div className="sectionEditorTitle"><h3>Планировки</h3><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:'1',areaFrom:null,areaTo:null,priceFrom:null,imageUrl:null,sortOrder:p.floorplans.length}]})}><Plus size={16}/>Добавить</button></div>
+  {p.floorplans.map((plan,i)=><div className="editorRow" key={plan.id||i}><div className="formGrid">{([['roomLabel','Комнатность'],['areaFrom','Площадь от, м²'],['areaTo','Площадь до, м²'],['priceFrom','Цена от, млн ₽'],['imageUrl','Изображение · HTTPS URL']] as const).map(([key,label])=><label className="controlField" key={key}><span>{label}</span><input type={['roomLabel','imageUrl'].includes(key)?'text':'number'} step="any" value={plan[key]??''} onChange={e=>patch({floorplans:p.floorplans.map((x,j)=>j!==i?x:{...x,[key]:['roomLabel','imageUrl'].includes(key)?e.target.value||null:e.target.value===''?null:Number(e.target.value)})})}/></label>)}</div><button className="textDanger" onClick={()=>patch({floorplans:p.floorplans.filter((_,j)=>i!==j)})}>Удалить планировку</button></div>)}
+  <div className="sectionEditorTitle"><h3>Галерея</h3><button onClick={()=>patch({images:[...p.images,{id:crypto.randomUUID(),url:'',alt:p.name,sortOrder:p.images.length}]})}><Plus size={16}/>Добавить фото</button></div>
+  {p.images.map((photo,i)=><div className="inlineEditor" key={photo.id||i}><input aria-label="URL фотографии" value={photo.url} placeholder="https://…" onChange={e=>patch({images:p.images.map((x,j)=>i===j?{...x,url:e.target.value}:x)})}/><button aria-label="Удалить фотографию" onClick={()=>patch({images:p.images.filter((_,j)=>i!==j)})}><X size={16}/></button></div>)}
+  <div className="sectionEditorTitle"><h3>Особенности</h3><button onClick={()=>patch({features:[...p.features,{id:crypto.randomUUID(),label:'',icon:'building',sortOrder:p.features.length}]})}><Plus size={16}/>Добавить</button></div>
+  {p.features.map((feature,i)=><div className="inlineEditor" key={feature.id||i}><input aria-label="Особенность" value={feature.label} onChange={e=>patch({features:p.features.map((x,j)=>i===j?{...x,label:e.target.value}:x)})}/><select value={feature.icon} aria-label="Иконка особенности" onChange={e=>patch({features:p.features.map((x,j)=>i===j?{...x,icon:e.target.value}:x)})}>{[['building','Дом'],['waves','Море'],['trees','Парк'],['car','Парковка'],['baby','Дети'],['map-pin','Расположение']].map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><button aria-label="Удалить особенность" onClick={()=>patch({features:p.features.filter((_,j)=>i!==j)})}><X size={16}/></button></div>)}
+  <p className="syncNote">Изменения подготовлены. Закройте карточку и нажмите «Сохранить» в верхней панели. Для публикации нужны обложка, цена, застройщик и срок сдачи.</p><button className="primaryAction" onClick={()=>setSelected(null)}>Готово</button>
+  </section></div>}
+ </PageFrame>;
 }

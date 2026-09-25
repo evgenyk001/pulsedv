@@ -6,7 +6,7 @@ export function AnalyticsPage(){
   const leads=usePulseLeads();
   const profiles=usePulseProfiles();
   const sessions=new Set(events.map(event=>event.sessionId)).size;
-  const conversion=sessions?Math.round(leads.length/sessions*100):0;
+  const conversion=sessions?Math.round(new Set(leads.map(x=>x.sessionId).filter(Boolean)).size/sessions*100):0;
   const count=(type:string)=>events.filter(event=>event.eventType===type).length;
   const uniqueSessions=(type:string)=>new Set(events.filter(event=>event.eventType===type).map(event=>event.sessionId)).size;
   const funnel=[
@@ -15,7 +15,7 @@ export function AnalyticsPage(){
     {label:"Добавили в избранное",value:uniqueSessions("favorite_add"),base:sessions},
     {label:"Прошли PULSE Select",value:uniqueSessions("select_submit"),base:sessions},
     {label:"Открыли форму",value:uniqueSessions("lead_form_open"),base:sessions},
-    {label:"Оставили контакт",value:leads.length,base:sessions},
+    {label:"Оставили контакт",value:new Set(leads.map(x=>x.sessionId).filter(Boolean)).size,base:sessions},
   ];
 
   return <PageFrame eyebrow="EVENTS + INTENT" title="Аналитика" description="Воронка показывает путь до контакта, а не только финальное количество заявок.">

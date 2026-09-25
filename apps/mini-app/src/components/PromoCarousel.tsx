@@ -42,7 +42,7 @@ export function PromoCarousel(){
     cta:banner.ctaLabel||"Подробнее",
     to:banner.actionUrl||"/catalog",
     icon:Sparkles,
-  })):fallbackSlides,[managed]);
+  })):[],[managed]);
 
   const [api,setApi]=React.useState<CarouselApi>();
   const [selected,setSelected]=React.useState(0);
@@ -64,7 +64,7 @@ export function PromoCarousel(){
     setHidden(true);
   };
 
-  if(hidden)return null;
+  if(hidden||!slides.length)return null;
 
   return <div className={styles.wrap}>
     <button type="button" className={styles.dismiss} onClick={dismiss} aria-label="Скрыть баннеры на эту сессию"><X size={15}/></button>

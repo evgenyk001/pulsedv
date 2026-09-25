@@ -1,7 +1,24 @@
 {
-  "name": "pulse-dv-landing",
+  "name": "pulse-dv",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": { "dev": "node dev-server.mjs", "check": "node --check dist/script.js" }
+  "workspaces": [
+    "apps/mini-app",
+    "apps/control-center",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "node dev-server.mjs",
+    "check": "npm run check --workspaces && node --check dist/script.js",
+    "build": "npm run build -w apps/mini-app && npm run build -w apps/control-center",
+    "test": "npm run test -w backend",
+    "verify": "npm run check && npm test && npm run build"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0"
+  }
 }

@@ -16,8 +16,7 @@ jobs:
         with:
           node-version: 22
       - name: Install
-        working-directory: apps/control-center
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
       - name: Typecheck
         working-directory: apps/control-center
         run: npm run check

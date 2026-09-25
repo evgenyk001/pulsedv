@@ -1,3 +1,4 @@
+import { matchScore } from "../../../../packages/domain/propertyMatch";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, ChevronRight, ChevronLeft, ShieldCheck, Waves, Building2, CalendarDays, WalletCards } from "lucide-react";
@@ -86,32 +87,7 @@ export default function SelectionPage(){
   };
 
   const ranked=React.useMemo(()=>{
-    const weights=control.select.weights;
-    const maxScore=weights.city+weights.budget+weights.rooms+weights.delivery+weights.preferences;
-    return properties.map(property=>{
-      let score=0;
-      if(property.city===city)score+=weights.city;
-
-      const prices=property.floorplans.map(x=>x.priceFrom).filter((x):x is number=>x!=null).map(x=>x*1_000_000);
-      const priceMatch=prices.length?prices.some(price=>price>=budget[0]&&price<=budget[1]):property.priceFrom*1_000_000<=budget[1];
-      if(priceMatch)score+=weights.budget;
-
-      const roomMatch=!property.floorplans.length||property.floorplans.some(plan=>{
-        const label=plan.roomLabel.toLowerCase();
-        if(rooms==="Студия")return label.includes("студ");
-        if(rooms==="3+")return Number(label.match(/\d+/)?.[0]||0)>=3;
-        return label.startsWith(rooms)||label.includes(rooms+"-");
-      });
-      if(roomMatch)score+=weights.rooms;
-
-      if(delivery==="Любой"||property.delivery.includes(delivery))score+=weights.delivery;
-
-      const haystack=[...property.tags,...property.features.map(x=>x.label)].join(" ").toLowerCase();
-      const seaMatch=!sea||haystack.includes("мор")||haystack.includes("панорам");
-      if(seaMatch)score+=weights.preferences;
-
-      return {property,score:Math.round(score/Math.max(1,maxScore)*100)};
-    }).sort((a,b)=>b.score-a.score);
+    return properties.map(property=>({property,score:matchScore(property,{city,rooms,min:budget[0],max:budget[1],delivery,sea},control.select.weights)})).sort((a,b)=>b.score-a.score);
   },[properties,city,budget,rooms,delivery,sea,control.select.weights]);
 
   const strongCount=ranked.filter(item=>item.score>=70).length;

@@ -42,7 +42,7 @@ export default function PropertyPage(){
     ...p.images.map(x=>x.url).filter(url=>url!==p.coverImageUrl),
   ];
   const hero=gallery[0];
-  const share=async()=>{recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city}});if(navigator.share){await navigator.share({title:p.name,text:p.name+" — "+p.city+", "+p.district}).catch(()=>{})}else{await navigator.clipboard?.writeText(window.location.href)}};
+  const share=async()=>{recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city}});if(navigator.share){await navigator.share({title:p.name,text:p.name+" — "+p.city+", "+p.district,url:window.location.href}).catch(()=>{})}else{await navigator.clipboard?.writeText(window.location.href)}};
 
   return <div className={styles.page}>
     <section className={styles.hero}>
@@ -63,7 +63,7 @@ export default function PropertyPage(){
 
       <div className={styles.priceRow}>
         <strong>от {p.priceFrom.toFixed(1).replace(".",",")} млн ₽</strong>
-        <Link to="/mortgage"><span>Ипотека</span><b>Рассчитать</b></Link>
+        <Link to={"/mortgage?price="+Math.round(p.priceFrom*1_000_000)+"&property="+encodeURIComponent(p.id)}><span>Ипотека</span><b>Рассчитать</b></Link>
       </div>
 
       <SegmentedControl<Tab>

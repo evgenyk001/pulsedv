@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import React from "react";
 import { AlertTriangle, BadgePercent, Calculator, ChevronRight, Info, Percent, ShieldCheck, WalletCards } from "lucide-react";
 import { Slider } from "../components/Slider";
@@ -27,16 +28,19 @@ const annuity=(principal:number,annualRate:number,months:number)=>{
 };
 
 export default function MortgagePage(){
+  const [params]=useSearchParams();
+  const requested=Number(params.get("price"));
+  const initialPrice=Number.isFinite(requested)&&requested>0?clamp(requested,PRICE_MIN,PRICE_MAX):9_000_000;
   const control=usePulseControlState();
   const programs=control.mortgagePrograms;
   const [program,setProgram]=React.useState<ProgramId>("family");
   const rule=programs.find(item=>item.id===program)??programs[0];
-  const [price,setPrice]=React.useState(9_000_000);
+  const [price,setPrice]=React.useState(initialPrice);
   const [down,setDown]=React.useState(2_000_000);
   const [years,setYears]=React.useState(25);
   const [rate,setRate]=React.useState(rule?.rate??6);
   const [largeArea,setLargeArea]=React.useState(false);
-  const [priceDraft,setPriceDraft]=React.useState(formatRub(9_000_000));
+  const [priceDraft,setPriceDraft]=React.useState(formatRub(initialPrice));
   const [downDraft,setDownDraft]=React.useState(formatRub(2_000_000));
   const [rateDraft,setRateDraft]=React.useState(String(rule?.rate??6).replace(".",","));
 
@@ -78,6 +82,8 @@ export default function MortgagePage(){
 
   const updatePrice=(value:number)=>{
     const next=clamp(snap(value,MONEY_STEP),PRICE_MIN,PRICE_MAX);
+    const nextMin=ceilStep(next*rule.minDownPct/100,MONEY_STEP);
+    const nextDown=clamp(down,nextMin,next-MONEY_STEP);setDown(nextDown);setDownDraft(formatRub(nextDown));
     setPrice(next);setPriceDraft(formatRub(next));
   };
   const updateDown=(value:number)=>{
@@ -163,7 +169,7 @@ export default function MortgagePage(){
       </div>
     </section>
 
-    <LeadSheet title="Проверить ипотечные программы" source="mortgage">
+    <LeadSheet title="Проверить ипотечные программы" source="mortgage" propertyId={params.get("property")||undefined} context={{program,price,down,years,rate,payment}}>
       <button className={styles.cta}>Получить точный расчёт <ChevronRight size={18}/></button>
     </LeadSheet>
     <div className={styles.note}><ShieldCheck size={15}/>Расчёт предварительный. Финальные условия подтверждает банк.</div>

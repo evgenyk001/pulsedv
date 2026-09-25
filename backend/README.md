@@ -1,119 +1,41 @@
-# PULSE.DV backend / Lead Engine
+# PULSE API
 
-This directory is the production backend foundation for the PULSE.DV lead-generation system.
-The current browser-storage adapter in `packages/pulse-data` remains a preview adapter only.
+Рабочая реализация Fastify + PostgreSQL. Инструкция VPS: [deploy/README.md](../deploy/README.md).
 
-## Runtime flow
+## Запуск
 
-```
-Telegram Mini App
-  -> POST /v1/auth/telegram
-  -> POST /v1/events (batched, idempotent)
-  -> Postgres user_events
-  -> Lead Engine
-  -> visitor_profiles / leads / crm_tasks
-  -> transactional outbox
-  -> Telegram bot notifications
-  -> PULSE Control
+Переменные окружения: `DATABASE_URL`, `PUBLIC_ORIGIN`, `NODE_ENV`, необязательные `BOT_TOKEN`, `MAP_2GIS_KEY`, `CONSENT_VERSION`, `TRUST_PROXY_HOPS`.
+
+```sh
+node --import tsx backend/src/migrate.ts
+# OWNER_EMAIL и OWNER_PASSWORD передаются только через окружение
+node --import tsx backend/src/bootstrap.ts
+node --import tsx backend/src/server.ts
+node --import tsx backend/src/worker.ts
 ```
 
-## Identity
+Bootstrap создаёт первого владельца, не сбрасывает пароли существующих пользователей. Пароль минимум 14 символов. Хранение паролей: scrypt; токены в БД хранятся хешированными. Cookie сотрудников HttpOnly, SameSite Strict, Secure в production. CORS для сторонних сайтов не включён. API и фронтенд размещаются на одном origin.
 
-The client sends raw Telegram WebApp `initData`.
-Only the server verifies it with the bot token. Client-supplied Telegram user ids are never trusted.
+## Маршруты
 
-A user can have many sessions. Anonymous sessions are allowed. Once Telegram identity or a contact form is available,
-the session is linked without discarding the behavioral history accumulated before the lead was created.
+Префикс `/api/v1`:
 
-## Event ingestion
+- `GET /public/state`, `GET /public/map` — опубликованный каталог и настройка карты.
+- `POST /auth/session` — серверная сессия посетителя с Bearer-токеном.
+- `POST /auth/telegram` — проверка подписи и возраста initData, привязка истории.
+- `POST /events` — до 100 событий с дедупликацией и фильтрацией metadata. `lead_created` создаёт только сервер.
+- `POST /leads` — нормализованный телефон, согласие, версия согласия, idempotencyKey; транзакция заявки, событий, задач и outbox.
+- `POST /control/login`, `GET /control/me`, `POST /control/logout`, `POST /control/password` — сессии сотрудников.
+- `GET /control/snapshot` — данные CRM; менеджер видит только свои назначенные заявки и задачи.
+- `PUT /control/state` — сохранение конфигурации с версией; owner/admin.
+- `PATCH /control/leads/:id`, `PATCH /control/tasks/:id` — изменения с expectedUpdatedAt; конфликт возвращает 409.
+- `POST /control/members`, `PATCH /control/members/:id` — управление сотрудниками; owner.
+- `GET /control/audit`, `POST /control/notifications/:id/retry` — аудит и повтор доставки; owner/admin.
 
-`POST /v1/events` accepts batches of up to 100 events.
+`/health` проверяет процесс; `/ready` — доступность БД. Актуальные схемы находятся в `src/validation.ts` и `src/app.ts`; `packages/api-contracts` содержит исходные доменные типы.
 
-Every event carries:
-- a client-generated `idempotencyKey`;
-- `sessionId`;
-- `eventType`;
-- optional entity type/id;
-- metadata;
-- client occurrence timestamp.
+## Обработка
 
-The database has a unique constraint on `idempotency_key`, so retries are safe.
-The API returns accepted vs duplicate counts.
+Скоринг учитывает события за 30 дней. Анонимный интерес сам по себе не создаёт CRM-заявку. Закрытые заявки не получают новые автоматические задачи. Worker забирает outbox через SKIP LOCKED с арендой и повторяет доставку с задержкой, максимум 8 попыток. Доставка at-least-once: при сбое после приёма сообщения Telegram возможен дубль. Исчерпанные попытки видны в Control, доступен ручной повтор.
 
-Important product events include:
-`property_view`, `favorite_add`, `compare_add`, `catalog_filter`,
-`mortgage_program`, `mortgage_calculated`, `select_submit`,
-`property_share`, `lead_form_open`, `lead_created`.
-
-## Lead Engine
-
-The scoring algorithm is pure TypeScript in `packages/lead-engine`.
-Weights and thresholds are stored in Postgres and edited from PULSE Control.
-
-The engine derives:
-- Interest Score 0–100;
-- cold / warm / hot / urgent priority;
-- top property;
-- city and mortgage intent;
-- explainable score reasons;
-- recommended next action.
-
-Anonymous high-intent visitors remain visitor profiles, not fake CRM leads.
-A CRM lead is created only when a contact/identity path exists.
-
-## CRM tasks and SLA
-
-When a contactable lead reaches:
-- warm: task due in 60 minutes;
-- hot: task due in 15 minutes;
-- urgent: task due in 5 minutes.
-
-New signals may shorten the deadline, never move it later.
-Closed/lost leads do not receive new automated tasks.
-
-Manager routing first prefers active managers matching the city, then lowest open-task load.
-More routing dimensions can be added via `routing_rules` without changing the Mini App.
-
-## Reliable notifications
-
-The Lead Engine never calls Telegram directly inside the lead/event transaction.
-It writes an `outbox_events` row in the same durable backend flow.
-
-The worker:
-1. claims pending outbox rows;
-2. resolves manager/user Telegram id;
-3. sends the bot message;
-4. marks success;
-5. retries failures with exponential backoff.
-
-This prevents a temporary Telegram outage from losing a hot-lead alert.
-
-## Production API surface
-
-Planned stable v1 routes:
-
-- `POST /v1/auth/telegram`
-- `POST /v1/events`
-- `POST /v1/leads`
-- `GET /v1/control/leads`
-- `PATCH /v1/control/leads/:id`
-- `GET /v1/control/profiles`
-- `GET /v1/control/tasks`
-- `PATCH /v1/control/tasks/:id`
-- `GET /v1/control/lead-engine`
-- `PUT /v1/control/lead-engine`
-- `GET /v1/control/analytics/funnel`
-
-The request/response types live in `packages/api-contracts`.
-
-## Data and privacy
-
-Phone/name are stored on `leads`, not duplicated into every event.
-Consent timestamp/version is recorded with the lead.
-Raw behavior stays in `user_events`; operational summaries stay in `visitor_profiles`.
-Retention windows should be configurable before production launch.
-
-## Migration from preview
-
-No page should know whether data comes from localStorage or Postgres.
-The next integration step is to implement a production API adapter with the same domain interfaces already consumed by Mini App and PULSE Control.
+Snapshot ограничен 1000 заявок/задач/профилей и 2000 событий; интерфейс сообщает об ограничении. Для большого объёма нужны серверная пагинация и агрегаты. Срок хранения и автоматическая очистка требуют отдельной настройки перед эксплуатацией.

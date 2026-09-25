@@ -1,3 +1,5 @@
+import { matchesBudgetAndRooms, hasSea, matchScore } from "../../../../packages/domain/propertyMatch";
+import { usePulseControlState } from "../helpers/usePulseControlState";
 import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, SlidersHorizontal, List, MapPinned, ArrowUpDown, Check, ChevronRight, MapPin } from "lucide-react";
@@ -39,6 +41,7 @@ const sortLabels:Record<SortMode,string>={
 
 export default function CatalogPage(){
   const [params,setParams]=useSearchParams();
+  const control=usePulseControlState();
   const {data:properties=[],isLoading,error}=useProperties();
   const {data:bounds}=usePriceBounds();
   const minBound=bounds?.minPriceRub??FALLBACK_MIN;
@@ -67,32 +70,27 @@ export default function CatalogPage(){
     if(stored&&sortLabels[stored])setSort(stored);
   },[initialSort]);
 
+  React.useEffect(()=>{
+    if(!bounds||priceInitialized.current)return;
+    const range:[number,number]=[initialMin??bounds.minPriceRub,initialMax??bounds.maxPriceRub];
+    setPriceRange(range);setPriceDraft([formatRub(range[0]),formatRub(range[1])]);priceInitialized.current=true;
+  },[bounds]);
+
   const visible=useMemo(()=>{
     const filtered=properties.filter((item)=>{
       const matchesQuery=(item.name+" "+item.city+" "+item.district+" "+item.developerName).toLowerCase().includes(query.toLowerCase());
       const matchesCity=city==="Все"||item.city===city;
-      const floorPrices=item.floorplans.map(x=>x.priceFrom).filter((x):x is number=>x!=null).map(x=>x*1_000_000);
-      const matchesPrice=floorPrices.length
-        ?floorPrices.some(price=>price>=priceRange[0]&&price<=priceRange[1])
-        :item.priceFrom*1_000_000<=priceRange[1];
+      const matchesPrice=matchesBudgetAndRooms(item,{rooms,min:priceRange[0],max:priceRange[1]});
       const matchesDelivery=delivery==="Любой"||item.delivery.includes(delivery);
-      const matchesRooms=rooms==="Все"||item.floorplans.some(plan=>{
-        const label=plan.roomLabel.toLowerCase();
-        if(rooms==="Студия")return label.includes("студ");
-        if(rooms==="3+"){
-          const count=Number(label.match(/\d+/)?.[0]||0);
-          return count>=3;
-        }
-        return label.startsWith(rooms)||label.includes(rooms+"-");
-      });
-      const featureText=[...item.tags,...item.features.map(feature=>feature.label)].join(" ").toLowerCase();
-      const matchesSea=!sea||featureText.includes("мор")||featureText.includes("панорам");
+      const matchesRooms=true;
+      const matchesSea=!sea||hasSea(item);
       return matchesQuery&&matchesCity&&matchesPrice&&matchesDelivery&&matchesRooms&&matchesSea;
     });
     if(sort==="priceAsc")return [...filtered].sort((a,b)=>a.priceFrom-b.priceFrom);
     if(sort==="priceDesc")return [...filtered].sort((a,b)=>b.priceFrom-a.priceFrom);
+    if(params.get("pulse")==="1")return [...filtered].sort((a,b)=>matchScore(b,{city,rooms,min:priceRange[0],max:priceRange[1],delivery,sea},control.select.weights)-matchScore(a,{city,rooms,min:priceRange[0],max:priceRange[1],delivery,sea},control.select.weights)||a.sortOrder-b.sortOrder);
     return [...filtered].sort((a,b)=>a.sortOrder-b.sortOrder);
-  },[properties,query,city,priceRange,delivery,rooms,sea,sort]);
+  },[properties,query,city,priceRange,delivery,rooms,sea,sort,params,control.select.weights]);
 
   const onQuery=(value:string)=>{
     setQuery(value);
