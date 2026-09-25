@@ -35,6 +35,22 @@ jobs:
       - name: Install Mini App dependencies
         working-directory: apps/mini-app
         run: npm install --no-audit --no-fund
+      - name: Enforce public Mini App boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -nE 'to="/(login|admin)|pathname.*"/(login|admin)|startsWith\("/admin' apps/mini-app/src; then
+            echo "Admin/login code must live in apps/control-center, not in the public Mini App."
+            exit 1
+          fi
+      - name: Enforce public Mini App boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -nE 'to="/(login|admin)|pathname.*"/(login|admin)|startsWith\("/admin' apps/mini-app/src; then
+            echo "Admin/login code must live in apps/control-center, not in the public Mini App."
+            exit 1
+          fi
       - name: Typecheck Mini App
         working-directory: apps/mini-app
         run: npm run check
