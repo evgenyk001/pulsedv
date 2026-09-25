@@ -1,4 +1,5 @@
 import React from "react";
+import { getPulseState, recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./Onboarding.module.css";
 
 const asset=(path:string)=>`${import.meta.env.BASE_URL}${path.startsWith("/")?path.slice(1):path}`;
@@ -10,7 +11,7 @@ const slides=[
 export function Onboarding({onDone}:{onDone:()=>void}){
   const [index,setIndex]=React.useState(0);
   const startX=React.useRef<number|null>(null);
-  const finish=()=>{localStorage.setItem("pulse_onboarding_version","6");onDone()};
+  const finish=()=>{const version=getPulseState().content.onboardingVersion;localStorage.setItem("pulse_onboarding_version",version);recordPulseEvent({eventType:"onboarding_complete",entityType:"onboarding",entityId:version});onDone()};
   const next=()=>index===slides.length-1?finish():setIndex(index+1);
 
   React.useEffect(()=>{
