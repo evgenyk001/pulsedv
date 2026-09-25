@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import "./floot-runtime.css";
 import "./base.css";
 import { AppShell } from "./components/AppShell";
 import HomePage from "./pages/_index";
