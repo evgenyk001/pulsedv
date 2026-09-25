@@ -17,10 +17,12 @@ type Slide={
   icon:LucideIcon;
 };
 
+const asset=(path:string)=>`${import.meta.env.BASE_URL}${path.startsWith("/")?path.slice(1):path}`;
+
 const fallbackSlides:Slide[] = [
-  { id:"projects",image:"/_cdn/static/938f9be1-5061-411a-ac1d-f1362819f38b.png",eyebrow:"Новостройки Приморья",title:"Квартира, которую хочется показывать друзьям",text:"Проекты Владивостока, Артёма и Уссурийска в одном каталоге.",cta:"Смотреть проекты",to:"/catalog",icon:Building2 },
-  { id:"mortgage",image:"/_cdn/static/2f66fed6-2933-4ec7-8a98-583896cd9e5f.png",eyebrow:"Семейная ипотека",title:"Сначала платёж. Потом — подходящие квартиры",text:"Подберём проекты под комфортный ежемесячный платёж.",cta:"Рассчитать",to:"/mortgage",icon:Percent },
-  { id:"select",image:"/_cdn/static/7493f319-d413-4d3d-90e4-66b4a2ee6ecd.png",eyebrow:"PULSE Select",title:"Не листайте сотни квартир вручную",text:"Ответьте на несколько вопросов — покажем подходящие ЖК.",cta:"Начать подбор",to:"/selection",icon:Sparkles }
+  { id:"projects",image:asset("/_cdn/static/938f9be1-5061-411a-ac1d-f1362819f38b.png"),eyebrow:"Новостройки Приморья",title:"Квартира, которую хочется показывать друзьям",text:"Проекты Владивостока, Артёма и Уссурийска в одном каталоге.",cta:"Смотреть проекты",to:"/catalog",icon:Building2 },
+  { id:"mortgage",image:asset("/_cdn/static/2f66fed6-2933-4ec7-8a98-583896cd9e5f.png"),eyebrow:"Семейная ипотека",title:"Сначала платёж. Потом — подходящие квартиры",text:"Подберём проекты под комфортный ежемесячный платёж.",cta:"Рассчитать",to:"/mortgage",icon:Percent },
+  { id:"select",image:asset("/_cdn/static/7493f319-d413-4d3d-90e4-66b4a2ee6ecd.png"),eyebrow:"PULSE Select",title:"Не листайте сотни квартир вручную",text:"Ответьте на несколько вопросов — покажем подходящие ЖК.",cta:"Начать подбор",to:"/selection",icon:Sparkles }
 ];
 
 function BannerLink({to,className,children,label}:{to:string;className:string;children:React.ReactNode;label:string}){

@@ -7,7 +7,6 @@
     height:30px;
     box-sizing:border-box;
     border-radius:999px;
-    overflow:hidden;
     background:linear-gradient(180deg,#dfe5eb,#d6dde5);
     box-shadow:inset 0 1px 2px rgba(54,66,82,.08),inset 0 0 0 1px rgba(68,82,99,.05);
     transition:background .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s ease,transform .16s ease;
@@ -15,6 +14,7 @@
     -webkit-tap-highlight-color:transparent;
     flex-shrink:0;
     vertical-align:middle;
+    overflow:hidden;
   }
   .root[data-state="checked"]{
     background:linear-gradient(180deg,color-mix(in srgb,var(--primary) 94%,white),var(--primary));

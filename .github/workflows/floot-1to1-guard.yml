@@ -1,0 +1,45 @@
+name: Floot 1:1 migration guard
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Protect frozen landing
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          CHANGED="$(git diff --name-only origin/main...HEAD)"
+          echo "$CHANGED"
+
+          if echo "$CHANGED" | grep -E '^(dist/index\.html|dist/style\.css|dist/script\.js|dist/assets/)' >/dev/null; then
+            echo "Frozen landing files changed. Migration must not modify the landing."
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Mini App dependencies
+        working-directory: apps/mini-app
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck Mini App
+        working-directory: apps/mini-app
+        run: npm run check
+
+      - name: Build Mini App
+        working-directory: apps/mini-app
+        run: npm run build

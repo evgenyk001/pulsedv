@@ -18,7 +18,8 @@
     "lucide-react": "^0.544.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "react-router-dom": "^7.9.1"
+    "react-router-dom": "^7.9.1",
+    "@2gis/mapgl": "^1.78.0"
   },
   "devDependencies": {
     "@types/react": "^19.1.13",

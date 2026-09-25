@@ -8,6 +8,16 @@ import { useFavoriteIds } from "../helpers/useFavoriteIds";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "../components/Sheet";
 import styles from "./favorites.module.css";
 
+type CompareRow={label:string;value:(property:any)=>React.ReactNode};
+
+const compareRows:CompareRow[]=[
+  {label:"Цена от",value:property=>property.priceFrom.toFixed(1).replace(".",",")+" млн ₽"},
+  {label:"Срок сдачи",value:property=>property.delivery},
+  {label:"Класс",value:property=>property.className},
+  {label:"Застройщик",value:property=>property.developerName||"Уточняется"},
+  {label:"Планировки",value:property=>property.floorplans.length?property.floorplans.length+" вариантов":"Уточняются"},
+];
+
 export default function Favorites(){
   const {data:properties=[],isLoading}=useProperties();
   const {ids}=useFavoriteIds();
@@ -56,7 +66,8 @@ export default function Favorites(){
       {compareIds.length>=2?<Sheet>
         <SheetTrigger asChild>{compareButton}</SheetTrigger>
         <SheetContent side="bottom" className={styles.compareSheet}>
-          <SheetHeader><SheetTitle>Сравнение проектов</SheetTitle><SheetDescription>Без широкой таблицы — параметры каждого ЖК видны целиком на телефоне.</SheetDescription></SheetHeader>
+          <SheetHeader><SheetTitle>Сравнение проектов</SheetTitle><SheetDescription>Без таблицы и горизонтального скролла — параметры каждого ЖК видны сразу.</SheetDescription></SheetHeader>
+
           <div className={styles.compareProjects}>
             {compared.map((property,index)=><section className={styles.compareProjectCard} key={property.id}>
               <div className={styles.compareProjectHead}>
@@ -65,14 +76,15 @@ export default function Favorites(){
                 <Link to={"/property/"+property.id} aria-label={"Открыть "+property.name}><ChevronRight size={17}/></Link>
               </div>
               <div className={styles.compareFacts}>
-                <div><span>Цена от</span><b>{property.priceFrom.toFixed(1).replace(".",",")} млн ₽</b></div>
-                <div><span>Срок сдачи</span><b>{property.delivery}</b></div>
-                <div><span>Класс</span><b>{property.className}</b></div>
-                <div><span>Застройщик</span><b>{property.developerName||"Уточняется"}</b></div>
-                <div><span>Планировки</span><b>{property.floorplans.length?property.floorplans.length+" вариантов":"Уточняются"}</b></div>
+                {compareRows.map(row=><div key={row.label}>
+                  <span>{row.label}</span>
+                  <b>{row.value(property)}</b>
+                </div>)}
               </div>
             </section>)}
           </div>
+
+          <div className={styles.compareHint}>Сравните значения сверху вниз — так различия между проектами легче увидеть на телефоне.</div>
         </SheetContent>
       </Sheet>:compareButton}
     </div>}
