@@ -9,7 +9,7 @@ declare global { interface Window { Telegram?: { WebApp?: { ready?:()=>void; exp
 export function AppShell({children}:{children:React.ReactNode}){
   const location=useLocation();
   const [showOnboarding,setShowOnboarding]=React.useState(false);
-  const hideNav=location.pathname.startsWith("/property/")||location.pathname.startsWith("/admin")||location.pathname==="/login";
+  const hideNav=location.pathname.startsWith("/property/");
   React.useEffect(()=>{
     setShowOnboarding(localStorage.getItem("pulse_onboarding_version")!=="6");
     const replay=()=>setShowOnboarding(true);
