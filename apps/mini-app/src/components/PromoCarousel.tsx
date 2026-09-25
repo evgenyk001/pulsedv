@@ -17,7 +17,7 @@ type Slide={
   icon:LucideIcon;
 };
 
-const asset=(path:string)=>`${import.meta.env.BASE_URL}${path.replace(/^\\//,"")}`;
+const asset=(path:string)=>`${import.meta.env.BASE_URL}${path.startsWith("/")?path.slice(1):path}`;
 
 const fallbackSlides:Slide[] = [
   { id:"projects",image:asset("/_cdn/static/938f9be1-5061-411a-ac1d-f1362819f38b.png"),eyebrow:"Новостройки Приморья",title:"Квартира, которую хочется показывать друзьям",text:"Проекты Владивостока, Артёма и Уссурийска в одном каталоге.",cta:"Смотреть проекты",to:"/catalog",icon:Building2 },
