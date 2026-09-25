@@ -1,0 +1,26 @@
+name: Check PULSE Control Center
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/control-center/**"
+      - ".github/workflows/control-center-check.yml"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        working-directory: apps/control-center
+        run: npm install --no-audit --no-fund
+      - name: Typecheck
+        working-directory: apps/control-center
+        run: npm run check
+      - name: Build
+        working-directory: apps/control-center
+        run: npm run build
