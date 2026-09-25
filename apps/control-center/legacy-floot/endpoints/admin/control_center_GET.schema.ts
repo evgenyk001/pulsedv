@@ -1,0 +1,3 @@
+import superjson from "superjson";
+export type OutputType={kpi:{leads:number;qualified:number;inWork:number;bookings:number;deals:number;developers:number;projects:number;units:number;offers:number};pipeline:Array<{status:string;count:number}>;developers:Array<{id:string;name:string;status:string}>;offers:Array<{id:string;title:string;status:string;exclusive:boolean}>;banners:Array<{id:string;title:string;active:boolean}>};
+export async function getControlCenter(init?:RequestInit):Promise<OutputType>{const response=await fetch("/_api/admin/control_center",{method:"GET",credentials:"include",...init});if(!response.ok)throw new Error("Не удалось загрузить Control Center");return superjson.parse<OutputType>(await response.text())}
