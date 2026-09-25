@@ -1,29 +1,61 @@
-import { Building2, ChartNoAxesCombined, Handshake, Images, LayoutDashboard, Settings2, UsersRound } from "lucide-react";
+import { NavLink, Route, Routes } from "react-router-dom";
+import {
+  LayoutDashboard, Handshake, UsersRound, Building2, BadgePercent,
+  Sparkles, Images, ChartNoAxesCombined, Settings2, ListChecks
+} from "lucide-react";
+import { OverviewPage } from "./pages/OverviewPage";
+import { LeadsPage } from "./pages/LeadsPage";
+import { UsersPage } from "./pages/UsersPage";
+import { TasksPage } from "./pages/TasksPage";
+import { ObjectsPage } from "./pages/ObjectsPage";
+import { MortgagePage } from "./pages/MortgagePage";
+import { SelectPage } from "./pages/SelectPage";
+import { ContentPage } from "./pages/ContentPage";
+import { AnalyticsPage } from "./pages/AnalyticsPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 const sections=[
-  {label:"Обзор",icon:LayoutDashboard},
-  {label:"Лиды",icon:Handshake},
-  {label:"Пользователи",icon:UsersRound},
-  {label:"Объекты",icon:Building2},
-  {label:"Контент",icon:Images},
-  {label:"Аналитика",icon:ChartNoAxesCombined},
-  {label:"Настройки",icon:Settings2},
+  {to:"/",label:"Обзор",icon:LayoutDashboard,end:true},
+  {to:"/leads",label:"Лиды",icon:Handshake},
+  {to:"/users",label:"Пользователи",icon:UsersRound},
+  {to:"/tasks",label:"Задачи",icon:ListChecks},
+  {to:"/objects",label:"Объекты",icon:Building2},
+  {to:"/mortgage",label:"Ипотека",icon:BadgePercent},
+  {to:"/select",label:"PULSE Select",icon:Sparkles},
+  {to:"/content",label:"Контент",icon:Images},
+  {to:"/analytics",label:"Аналитика",icon:ChartNoAxesCombined},
+  {to:"/settings",label:"Настройки",icon:Settings2},
 ];
 
 export function App(){
   return <div className="control">
     <aside className="sidebar">
-      <div className="brand"><span className="mark"><i/><i/><i/></span><div><b>PULSE Control</b><small>Private workspace</small></div></div>
-      <nav>{sections.map(({label,icon:Icon},index)=><button className={index===0?"active":""} key={label}><Icon size={18}/><span>{label}</span></button>)}</nav>
+      <div className="brand">
+        <span className="mark"><i/><i/><i/></span>
+        <div><b>PULSE Control</b><small>Private workspace</small></div>
+      </div>
+      <nav>
+        {sections.map(({to,label,icon:Icon,end})=>
+          <NavLink key={to} to={to} end={end} className={({isActive})=>isActive?"active":undefined}>
+            <Icon size={18}/><span>{label}</span>
+          </NavLink>
+        )}
+      </nav>
+      <div className="sidebarFoot">PULSE.DV · Control Center</div>
     </aside>
     <main>
-      <header><div><span>CONTROL CENTER</span><h1>Операционная панель PULSE.DV</h1><p>Админка теперь живёт отдельно от клиентского Mini App.</p></div><div className="status">Private</div></header>
-      <section className="grid">
-        <article><span>Лиды сегодня</span><strong>—</strong><small>Подключим к общей базе</small></article>
-        <article><span>Активные объекты</span><strong>—</strong><small>Каталог и статусы публикации</small></article>
-        <article><span>PULSE Select</span><strong>—</strong><small>События и конверсия</small></article>
-      </section>
-      <section className="panel"><div><h2>Разделение началось</h2><p>Следующий шаг — перенести сюда Floot admin baseline: лиды, объекты, баннеры и pipeline, затем подключить отдельную серверную авторизацию и RBAC.</p></div></section>
+      <Routes>
+        <Route path="/" element={<OverviewPage/>}/>
+        <Route path="/leads" element={<LeadsPage/>}/>
+        <Route path="/users" element={<UsersPage/>}/>
+        <Route path="/tasks" element={<TasksPage/>}/>
+        <Route path="/objects" element={<ObjectsPage/>}/>
+        <Route path="/mortgage" element={<MortgagePage/>}/>
+        <Route path="/select" element={<SelectPage/>}/>
+        <Route path="/content" element={<ContentPage/>}/>
+        <Route path="/analytics" element={<AnalyticsPage/>}/>
+        <Route path="/settings" element={<SettingsPage/>}/>
+      </Routes>
     </main>
-  </div>
+  </div>;
 }

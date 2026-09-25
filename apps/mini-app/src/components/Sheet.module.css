@@ -16,7 +16,7 @@
     height:auto;
     max-height:min(82dvh,680px);
     padding:30px 16px 16px;
-    border-radius:32px!important;
+    border-radius:var(--app-radius-sheet)!important;
     overflow-y:auto;
     background:rgba(248,250,252,.94);
     border:1px solid rgba(255,255,255,.88);
@@ -35,7 +35,7 @@
 
   .grabZone{position:absolute;z-index:4;left:0;right:0;top:0;height:30px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
   .dragging .grabZone{cursor:grabbing}
-  .grabber{width:38px;height:5px;border-radius:999px;background:rgba(90,103,121,.24);box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}
+  .grabber{width:38px;height:5px;border-radius:var(--app-radius-pill);background:rgba(90,103,121,.24);box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}
 
   .close{position:absolute;top:16px;right:16px;display:flex;align-items:center;justify-content:center;width:2rem;height:2rem;border-radius:var(--radius-full);background-color:var(--muted);color:var(--muted-foreground);border:none;cursor:pointer;transition:background-color var(--animation-duration-fast) ease,transform var(--animation-duration-fast) ease}
   .bottom .close{display:none}
