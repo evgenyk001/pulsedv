@@ -5,28 +5,11 @@ import { Switch } from "../components/Switch";
 import { LeadSheet } from "../components/LeadSheet";
 import { PageHeader } from "../components/PageHeader";
 import { Input } from "../components/Input";
+import { usePulseControlState } from "../helpers/usePulseControlState";
+import { recordPulseEvent, type MortgageProgramRule } from "../../../../packages/pulse-data";
 import styles from "./mortgage.module.css";
 
-type ProgramId="family"|"farEast"|"it"|"standard";
-type ProgramRule={
-  id:ProgramId;
-  label:string;
-  rate:number;
-  maxYears:number;
-  minDownPct:number;
-  subsidizedLimit:number;
-  totalLimit:number;
-  blended:boolean;
-  hint:string;
-};
-
-const PROGRAMS:ProgramRule[]=[
-  {id:"family",label:"Семейная",rate:6,maxYears:30,minDownPct:20.1,subsidizedLimit:6_000_000,totalLimit:15_000_000,blended:true,hint:"Льготная часть — до 6 млн ₽. Увеличенный лимит может включать часть по рыночной ставке."},
-  {id:"farEast",label:"Дальневосточная",rate:2,maxYears:20,minDownPct:20.1,subsidizedLimit:6_000_000,totalLimit:9_000_000,blended:false,hint:"До 6 млн ₽; до 9 млн ₽ — при выполнении условия по площади новостройки."},
-  {id:"it",label:"IT",rate:6,maxYears:30,minDownPct:20.1,subsidizedLimit:9_000_000,totalLimit:18_000_000,blended:true,hint:"Базовый льготный лимит — 9 млн ₽, увеличенный — до 18 млн ₽."},
-  {id:"standard",label:"Базовая",rate:18,maxYears:30,minDownPct:20.1,subsidizedLimit:100_000_000,totalLimit:100_000_000,blended:false,hint:"Рыночная программа. Ставка в расчёте редактируется вручную."},
-];
-
+type ProgramId=MortgageProgramRule["id"];
 const MONEY_STEP=100_000;
 const PRICE_MIN=3_000_000;
 const PRICE_MAX=40_000_000;
@@ -44,108 +27,93 @@ const annuity=(principal:number,annualRate:number,months:number)=>{
 };
 
 export default function MortgagePage(){
+  const control=usePulseControlState();
+  const programs=control.mortgagePrograms;
   const [program,setProgram]=React.useState<ProgramId>("family");
-  const rule=PROGRAMS.find(item=>item.id===program)!;
+  const rule=programs.find(item=>item.id===program)??programs[0];
   const [price,setPrice]=React.useState(9_000_000);
   const [down,setDown]=React.useState(2_000_000);
   const [years,setYears]=React.useState(25);
-  const [rate,setRate]=React.useState(6);
-  const [marketRate,setMarketRate]=React.useState(18);
+  const [rate,setRate]=React.useState(rule?.rate??6);
   const [largeArea,setLargeArea]=React.useState(false);
   const [priceDraft,setPriceDraft]=React.useState(formatRub(9_000_000));
   const [downDraft,setDownDraft]=React.useState(formatRub(2_000_000));
-  const [rateDraft,setRateDraft]=React.useState("6");
-  const [marketRateDraft,setMarketRateDraft]=React.useState("18");
+  const [rateDraft,setRateDraft]=React.useState(String(rule?.rate??6).replace(".",","));
 
-  const minDown=React.useMemo(()=>ceilStep(price*rule.minDownPct/100,MONEY_STEP),[price,rule.minDownPct]);
+  if(!rule)return null;
+
+  const minDown=ceilStep(price*rule.minDownPct/100,MONEY_STEP);
   const maxDown=Math.max(minDown,price-MONEY_STEP);
-  const effectiveSubsidizedLimit=program==="farEast"&&largeArea?9_000_000:rule.subsidizedLimit;
   const loan=Math.max(price-down,0);
+  const effectiveLoanLimit=program==="farEast"&&largeArea?Math.max(rule.subsidizedLimit,9_000_000):rule.subsidizedLimit;
+  const overProgramLimit=program!=="standard"&&loan>effectiveLoanLimit;
   const months=years*12;
-  const subsidizedPart=Math.min(loan,effectiveSubsidizedLimit);
-  const excessPart=Math.max(loan-effectiveSubsidizedLimit,0);
-  const subsidizedPayment=annuity(subsidizedPart,rate,months);
-  const excessPayment=annuity(excessPart,marketRate,months);
-  const payment=program==="standard"?annuity(loan,rate,months):subsidizedPayment+excessPayment;
+  const payment=overProgramLimit?0:annuity(loan,rate,months);
   const total=payment*months;
   const overpayment=Math.max(total-loan,0);
   const income=payment/.45;
   const downPercent=price?down/price*100:0;
-  const overProgramLimit=loan>rule.totalLimit;
-  const belowMinDown=down<minDown;
-  const hasMixedPart=program!=="standard"&&excessPart>0;
+  const requiredDown=overProgramLimit?ceilStep(Math.max(minDown,price-effectiveLoanLimit),MONEY_STEP):minDown;
 
   React.useEffect(()=>{
     if(years>rule.maxYears)setYears(rule.maxYears);
-    if(down<minDown){
-      setDown(minDown);
-      setDownDraft(formatRub(minDown));
-    }
+    if(down<minDown){setDown(minDown);setDownDraft(formatRub(minDown))}
   },[rule.maxYears,minDown]);
 
+  React.useEffect(()=>{
+    setRate(rule.rate);
+    setRateDraft(String(rule.rate).replace(".",","));
+  },[rule.rate,rule.id]);
+
   const chooseProgram=(id:ProgramId)=>{
-    const next=PROGRAMS.find(item=>item.id===id)!;
+    const next=programs.find(item=>item.id===id);
+    if(!next)return;
     setProgram(id);
     setRate(next.rate);
     setRateDraft(String(next.rate).replace(".",","));
     setYears(current=>Math.min(current,next.maxYears));
     if(id!=="farEast")setLargeArea(false);
+    recordPulseEvent({eventType:"mortgage_program",entityType:"mortgage_program",entityId:id});
   };
 
   const updatePrice=(value:number)=>{
     const next=clamp(snap(value,MONEY_STEP),PRICE_MIN,PRICE_MAX);
-    setPrice(next);
-    setPriceDraft(formatRub(next));
+    setPrice(next);setPriceDraft(formatRub(next));
   };
-
   const updateDown=(value:number)=>{
     const next=clamp(snap(value,MONEY_STEP),minDown,maxDown);
-    setDown(next);
-    setDownDraft(formatRub(next));
+    setDown(next);setDownDraft(formatRub(next));
   };
-
   const commitMoney=(kind:"price"|"down")=>{
     const draft=kind==="price"?priceDraft:downDraft;
     const raw=parseNumber(draft);
-    if(!Number.isFinite(raw)||raw<=0){
-      kind==="price"?setPriceDraft(formatRub(price)):setDownDraft(formatRub(down));
-      return;
-    }
+    if(!Number.isFinite(raw)||raw<=0){kind==="price"?setPriceDraft(formatRub(price)):setDownDraft(formatRub(down));return}
     kind==="price"?updatePrice(raw):updateDown(raw);
   };
-
-  const commitRate=(kind:"program"|"market")=>{
-    const draft=kind==="program"?rateDraft:marketRateDraft;
-    const current=kind==="program"?rate:marketRate;
-    const raw=parseNumber(draft);
-    const next=Number.isFinite(raw)?clamp(Math.round(raw*10)/10,.1,40):current;
-    if(kind==="program"){
-      setRate(next);
-      setRateDraft(String(next).replace(".",","));
-    }else{
-      setMarketRate(next);
-      setMarketRateDraft(String(next).replace(".",","));
-    }
+  const commitRate=()=>{
+    const raw=parseNumber(rateDraft);
+    const next=Number.isFinite(raw)?clamp(Math.round(raw*10)/10,.1,40):rate;
+    setRate(next);setRateDraft(String(next).replace(".",","));
   };
 
   return <div className={styles.page}>
-    <PageHeader eyebrow="Финансовый сценарий" title="Ипотека" subtitle="Предварительный расчёт с учётом срока, минимального взноса и лимита выбранной программы." action={<div className={styles.headerIcon}><Calculator size={20}/></div>}/>
+    <PageHeader eyebrow="Финансовый сценарий" title="Ипотека" subtitle="Предварительный расчёт по правилам, которыми управляет PULSE Control." action={<div className={styles.headerIcon}><Calculator size={20}/></div>}/>
 
     <section className={styles.programSection}>
-      <div className={styles.sectionLabel}><span>Программа</span><small>Условия задаются автоматически</small></div>
+      <div className={styles.sectionLabel}><span>Программа</span><small>Настройки приходят из PULSE Control</small></div>
       <div className={styles.programs}>
-        {PROGRAMS.map(item=><button key={item.id} className={program===item.id?styles.programActive:""} onClick={()=>chooseProgram(item.id)}>
+        {programs.map(item=><button type="button" key={item.id} className={program===item.id?styles.programActive:""} onClick={()=>chooseProgram(item.id)}>
           <span>{item.label}</span><b>от {item.rate}%</b>
         </button>)}
       </div>
       <div className={styles.ruleStrip}>
         <span><b>{rule.maxYears}</b> лет максимум</span>
         <span><b>{rule.minDownPct}%</b> ПВ от</span>
-        <span><b>{formatRub(effectiveSubsidizedLimit)}</b> ₽ льготный лимит</span>
+        <span><b>{formatRub(effectiveLoanLimit)}</b> ₽ лимит</span>
       </div>
       <div className={styles.ruleHint}><Info size={14}/><span>{rule.hint}</span></div>
       {program==="farEast"&&<div className={styles.optionRow}>
-        <div><strong>Площадь новостройки свыше 64 м²</strong><span>Тогда лимит кредита для расчёта повышается до 9 млн ₽</span></div>
+        <div><strong>Площадь новостройки свыше 64 м²</strong><span>Использовать повышенный лимит до 9 млн ₽</span></div>
         <Switch checked={largeArea} onCheckedChange={setLargeArea}/>
       </div>}
     </section>
@@ -171,49 +139,33 @@ export default function MortgagePage(){
         </div>
         <div className={styles.rateField}>
           <label>Ставка программы</label>
-          <div><Input inputMode="decimal" value={rateDraft} onChange={e=>setRateDraft(e.target.value)} onBlur={()=>commitRate("program")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><Percent size={15}/></div>
+          <div><Input inputMode="decimal" value={rateDraft} onChange={e=>setRateDraft(e.target.value)} onBlur={commitRate} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><Percent size={15}/></div>
         </div>
       </div>
-
-      {hasMixedPart&&<div className={styles.mixedRate}>
-        <div><strong>Часть сверх льготного лимита</strong><span>{formatRub(excessPart)} ₽ считаем отдельно по ориентировочной рыночной ставке.</span></div>
-        <div className={styles.rateField}><label>Ставка сверх лимита</label><div><Input inputMode="decimal" value={marketRateDraft} onChange={e=>setMarketRateDraft(e.target.value)} onBlur={()=>commitRate("market")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><Percent size={15}/></div></div>
-      </div>}
     </section>
 
-    {(overProgramLimit||belowMinDown||hasMixedPart)&&<section className={styles.warning+" "+(overProgramLimit?styles.warningStrong:"")}>
+    {overProgramLimit&&<section className={styles.warning+" "+styles.warningStrong}>
       <AlertTriangle size={18}/>
-      <div>
-        <strong>{overProgramLimit?"Сумма выходит за максимальный лимит программы":hasMixedPart?"Есть часть сверх льготного лимита":"Проверьте первоначальный взнос"}</strong>
-        <span>{overProgramLimit
-          ?("Кредит "+formatRub(loan)+" ₽ превышает ориентир "+formatRub(rule.totalLimit)+" ₽ для выбранной программы.")
-          :hasMixedPart
-            ?"Это смешанный ориентировочный расчёт, а не обещание банка выдать комбинированный кредит."
-            :"Первоначальный взнос ниже минимального требования."}</span>
-      </div>
+      <div><strong>Сумма кредита выше лимита программы</strong><span>Увеличьте первоначальный взнос минимум до {formatRub(requiredDown)} ₽ или выберите другой сценарий.</span></div>
     </section>}
 
     <section className={styles.result}>
       <div className={styles.resultTop}>
         <div className={styles.resultIcon}><WalletCards size={20}/></div>
-        <div><span>Ориентировочный платёж</span><strong>{formatRub(payment)} ₽ / мес</strong></div>
+        <div><span>Ориентировочный платёж</span><strong>{overProgramLimit?"—":formatRub(payment)+" ₽ / мес"}</strong></div>
         <BadgePercent size={20}/>
       </div>
-      {hasMixedPart&&<div className={styles.splitResult}>
-        <span>Льготная часть: {formatRub(subsidizedPart)} ₽ → {formatRub(subsidizedPayment)} ₽/мес</span>
-        <span>Сверх лимита: {formatRub(excessPart)} ₽ → {formatRub(excessPayment)} ₽/мес</span>
-      </div>}
       <div className={styles.resultGrid}>
         <div><span>Сумма кредита</span><b>{formatRub(loan)} ₽</b></div>
-        <div><span>Переплата</span><b>{formatRub(overpayment)} ₽</b></div>
-        <div><span>Всего выплат</span><b>{formatRub(total)} ₽</b></div>
-        <div><span>Доход, ориентир</span><b>от {formatRub(income)} ₽</b></div>
+        <div><span>Переплата</span><b>{overProgramLimit?"—":formatRub(overpayment)+" ₽"}</b></div>
+        <div><span>Всего выплат</span><b>{overProgramLimit?"—":formatRub(total)+" ₽"}</b></div>
+        <div><span>Доход, ориентир</span><b>{overProgramLimit?"—":"от "+formatRub(income)+" ₽"}</b></div>
       </div>
     </section>
 
     <LeadSheet title="Проверить ипотечные программы" source="mortgage">
       <button className={styles.cta}>Получить точный расчёт <ChevronRight size={18}/></button>
     </LeadSheet>
-    <div className={styles.note}><ShieldCheck size={15}/>Расчёт предварительный. Банк проверяет eligibility, объект, лимиты, страховки и персональную ставку отдельно.</div>
-  </div>
+    <div className={styles.note}><ShieldCheck size={15}/>Расчёт предварительный. Финальные условия подтверждает банк.</div>
+  </div>;
 }
