@@ -1,88 +1,43 @@
 import React from "react";
-import { Building2, Check, Heart, MapPin, Search, Sparkles } from "lucide-react";
 import styles from "./Onboarding.module.css";
 
 const slides=[
-  {
-    eyebrow:"Новостройки Приморья",
-    title:"Всё важное — в одном месте",
-    text:"Проекты, цены, районы и сроки сдачи без десятков вкладок и лишнего шума.",
-    scene:"catalog",
-  },
-  {
-    eyebrow:"PULSE Select",
-    title:"Короткий подбор вместо длинной анкеты",
-    text:"Задайте основу и мягкие приоритеты — PULSE покажет, почему один вариант подходит лучше другого.",
-    scene:"select",
-  },
-  {
-    eyebrow:"От выбора к сделке",
-    title:"Сохраняйте, сравнивайте, спрашивайте",
-    text:"Избранное и связь с PULSE.DV остаются рядом, когда вы готовы перейти к следующему шагу.",
-    scene:"deal",
-  },
-] as const;
+  "/_cdn/static/fbe56ba1-f7be-4c7e-a604-dd6a20ae71c8-onboarding-final-01.png",
+  "/_cdn/static/ef1a2854-7dc1-45d9-8e6d-6a7de5a9ffa3-onboarding-final-02.png"
+];
 
 export function Onboarding({onDone}:{onDone:()=>void}){
   const [index,setIndex]=React.useState(0);
   const startX=React.useRef<number|null>(null);
-  const slide=slides[index];
+  const finish=()=>{localStorage.setItem("pulse_onboarding_version","6");onDone()};
+  const next=()=>index===slides.length-1?finish():setIndex(index+1);
 
-  const finish=()=>{
-    localStorage.setItem("pulse_onboarding_version","7");
-    onDone();
-  };
-  const next=()=>index===slides.length-1?finish():setIndex(value=>value+1);
+  React.useEffect(()=>{
+    slides.forEach(src=>{
+      const image=new Image();
+      image.src=src;
+    });
+  },[]);
 
   return <section
     className={styles.overlay}
-    aria-label="Знакомство с PULSE.DV"
-    onTouchStart={event=>startX.current=event.touches[0]?.clientX??null}
-    onTouchEnd={event=>{
+    aria-label="Онбординг PULSEDV"
+    onTouchStart={e=>startX.current=e.touches[0]?.clientX??null}
+    onTouchEnd={e=>{
       if(startX.current===null)return;
-      const delta=(event.changedTouches[0]?.clientX??startX.current)-startX.current;
-      if(delta<-42&&index<slides.length-1)setIndex(value=>value+1);
-      if(delta>42&&index>0)setIndex(value=>value-1);
+      const delta=(e.changedTouches[0]?.clientX??startX.current)-startX.current;
+      if(delta<-42&&index<slides.length-1)setIndex(index+1);
+      if(delta>42&&index>0)setIndex(index-1);
       startX.current=null;
     }}
   >
-    <div className={styles.inner}>
-      <button className={styles.skip} type="button" onClick={finish}>Пропустить</button>
-
-      <div className={styles.art} data-scene={slide.scene}>
-        <div className={styles.artGlow}/>
-        {slide.scene==="catalog"&&<>
-          <div className={styles.phoneCard}>
-            <div className={styles.miniSearch}><Search size={14}/><span>ЖК, район, застройщик</span></div>
-            <div className={styles.buildings}><Building2 size={29}/><Building2 size={24}/><Building2 size={20}/></div>
-          </div>
-          <div className={styles.pin}><MapPin size={17}/></div>
-        </>}
-        {slide.scene==="select"&&<>
-          <div className={styles.selectMark}><Sparkles size={29}/></div>
-          <div className={styles.selectStack}>
-            <span><Check size={13}/>Бюджет</span>
-            <span><Check size={13}/>2 комнаты</span>
-            <span><Check size={13}/>Ближе к морю</span>
-          </div>
-          <div className={styles.match}>92%</div>
-        </>}
-        {slide.scene==="deal"&&<>
-          <div className={styles.dealHouse}><Building2 size={35}/></div>
-          <div className={styles.heart}><Heart size={22} fill="currentColor"/></div>
-          <div className={styles.message}><span/><span/><span/></div>
-        </>}
-        <strong className={styles.wordmark}>PULSE.DV</strong>
+    <div className={styles.stage}>
+      <img className={styles.screen} src={slides[index]} alt="" draggable={false} fetchPriority="high"/>
+      <button type="button" className={styles.skipHotspot} onClick={finish} aria-label="Пропустить онбординг"/>
+      <button type="button" className={styles.primaryHotspot} onClick={next} aria-label={index===0?"Продолжить":"Начать"}/>
+      <div className={styles.dotHotspots} aria-label="Страницы онбординга">
+        {slides.map((_,i)=><button key={i} type="button" onClick={()=>setIndex(i)} aria-label={"Экран "+(i+1)}/>)}
       </div>
-
-      <div className={styles.copy} key={index}>
-        <span>{slide.eyebrow}</span>
-        <h1>{slide.title}</h1>
-        <p>{slide.text}</p>
-      </div>
-
-      <button className={styles.primary} type="button" onClick={next}>{index===slides.length-1?"Начать":"Продолжить"}</button>
-      <div className={styles.dots}>{slides.map((_,dot)=><button type="button" key={dot} className={dot===index?styles.dotActive:""} onClick={()=>setIndex(dot)} aria-label={"Экран "+(dot+1)}/>)}</div>
     </div>
   </section>;
 }
