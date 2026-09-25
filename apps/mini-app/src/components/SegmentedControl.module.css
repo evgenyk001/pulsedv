@@ -4,7 +4,7 @@
   grid-template-columns:repeat(var(--segment-count),minmax(0,1fr));
   height:50px;
   padding:4px;
-  border-radius:999px;
+  border-radius:var(--app-radius-pill);
   background:rgba(232,235,239,.76);
   overflow:hidden;
   isolation:isolate;
