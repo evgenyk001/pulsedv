@@ -1,3 +1,5 @@
+import { DEFAULT_LEAD_ENGINE_CONFIG, scoreLeadEvents, type LeadEngineConfig, type LeadPriority, type LeadScoreReason } from "../lead-engine";
+
 export type PropertyStatus="draft"|"published"|"archived";
 
 export type PulseProperty={
@@ -40,6 +42,7 @@ export type PulseState={
   mortgagePrograms:MortgageProgramRule[];
   select:PulseSelectConfig;
   content:PulseContentConfig;
+  leadEngine:LeadEngineConfig;
   updatedAt:string;
 };
 
@@ -47,6 +50,23 @@ export type PulseLead={
   id:string; source:string; propertyId:string|null; name:string; phone:string; comment:string|null;
   status:"new"|"contacted"|"qualified"|"showing"|"booking"|"deal"|"closed"|"lost";
   manager:string|null; createdAt:string; updatedAt:string;
+  sessionId?:string|null; userId?:string|null; score?:number; priority?:LeadPriority;
+  scoreReasons?:LeadScoreReason[]; topPropertyId?:string|null; city?:string|null;
+  mortgageProgram?:string|null; nextAction?:string|null;
+};
+
+export type PulseVisitorProfile={
+  id:string; sessionId:string; userId:string|null; score:number; priority:LeadPriority;
+  scoreReasons:LeadScoreReason[]; topPropertyId:string|null; city:string|null;
+  mortgageProgram:string|null; nextAction:string; eventCount:number;
+  firstSeenAt:string; lastSeenAt:string; updatedAt:string;
+};
+
+export type PulseTask={
+  id:string; leadId:string|null; profileId:string; sessionId:string;
+  title:string; reason:string; priority:Exclude<LeadPriority,"cold">;
+  status:"today"|"in_progress"|"waiting"|"done";
+  dueAt:string; createdAt:string; updatedAt:string;
 };
 
 export type PulseEvent={
@@ -58,9 +78,13 @@ const STATE_KEY="pulse.dv.control.state.v1";
 const LEADS_KEY="pulse.dv.control.leads.v1";
 const EVENTS_KEY="pulse.dv.control.events.v1";
 const SESSION_KEY="pulse.dv.session.v1";
+const PROFILES_KEY="pulse.dv.control.profiles.v1";
+const TASKS_KEY="pulse.dv.control.tasks.v1";
 export const PULSE_STATE_EVENT="pulse:control-state";
 export const PULSE_LEADS_EVENT="pulse:control-leads";
 export const PULSE_EVENTS_EVENT="pulse:control-events";
+export const PULSE_PROFILES_EVENT="pulse:control-profiles";
+export const PULSE_TASKS_EVENT="pulse:control-tasks";
 
 const now=()=>new Date().toISOString();
 const id=()=>typeof crypto!=="undefined"&&"randomUUID" in crypto?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36);
@@ -92,6 +116,7 @@ export const DEFAULT_STATE:PulseState={
   mortgagePrograms:DEFAULT_MORTGAGE_PROGRAMS,
   select:{cities:["Владивосток","Уссурийск","Артём"],roomOptions:["Студия","1","2","3+"],deliveryOptions:["Любой","2026","2027"],mortgageEnabled:true,seaEnabled:true,weights:{city:25,budget:30,rooms:20,delivery:10,preferences:15}},
   content:{onboardingEnabled:true,onboardingVersion:"6"},
+  leadEngine:DEFAULT_LEAD_ENGINE_CONFIG,
   updatedAt:now()
 };
 
@@ -104,6 +129,12 @@ function mergeState(input:Partial<PulseState>|null|undefined):PulseState{
     mortgagePrograms:Array.isArray(input?.mortgagePrograms)?input!.mortgagePrograms:DEFAULT_STATE.mortgagePrograms,
     select:{...DEFAULT_STATE.select,...(input?.select||{}),weights:{...DEFAULT_STATE.select.weights,...(input?.select?.weights||{})}},
     content:{...DEFAULT_STATE.content,...(input?.content||{})},
+    leadEngine:{
+      ...DEFAULT_STATE.leadEngine,
+      ...(input?.leadEngine||{}),
+      thresholds:{...DEFAULT_STATE.leadEngine.thresholds,...(input?.leadEngine?.thresholds||{})},
+      rules:Array.isArray(input?.leadEngine?.rules)?input!.leadEngine.rules:DEFAULT_STATE.leadEngine.rules,
+    },
     updatedAt:input?.updatedAt||DEFAULT_STATE.updatedAt
   };
 }
@@ -140,16 +171,21 @@ export function listPulseLeads():PulseLead[]{
   try{const value=JSON.parse(localStorage.getItem(LEADS_KEY)||"[]");return Array.isArray(value)?value:[]}
   catch{return[]}
 }
-export function addPulseLead(payload:Omit<PulseLead,"id"|"status"|"manager"|"createdAt"|"updatedAt">){
+export function addPulseLead(payload:Omit<PulseLead,"id"|"status"|"manager"|"createdAt"|"updatedAt"|"sessionId"|"userId"|"score"|"priority"|"scoreReasons"|"topPropertyId"|"city"|"mortgageProgram"|"nextAction">){
   const created=now();
-  const lead:PulseLead={...payload,id:id(),status:"new",manager:null,createdAt:created,updatedAt:created};
+  const currentSession=sessionId();
+  const lead:PulseLead={
+    ...payload,id:id(),status:"new",manager:null,createdAt:created,updatedAt:created,
+    sessionId:currentSession,userId:null,score:0,priority:"cold",scoreReasons:[],
+    topPropertyId:payload.propertyId,city:null,mortgageProgram:null,nextAction:null
+  };
   const leads=[lead,...listPulseLeads()];
   localStorage.setItem(LEADS_KEY,JSON.stringify(leads));
   window.dispatchEvent(new CustomEvent(PULSE_LEADS_EVENT));
   recordPulseEvent({eventType:"lead_created",entityType:"lead",entityId:lead.id,metadata:{source:lead.source,propertyId:lead.propertyId}});
   return lead;
 }
-export function updatePulseLead(idValue:string,patch:Partial<Pick<PulseLead,"status"|"manager"|"comment">>){
+export function updatePulseLead(idValue:string,patch:Partial<Pick<PulseLead,"status"|"manager"|"comment"|"nextAction">>){
   if(!canStore())return;
   const leads=listPulseLeads().map(lead=>lead.id===idValue?{...lead,...patch,updatedAt:now()}:lead);
   localStorage.setItem(LEADS_KEY,JSON.stringify(leads));
@@ -161,6 +197,122 @@ export function subscribePulseLeads(listener:()=>void){
   const storage=(event:StorageEvent)=>{if(event.key===LEADS_KEY)listener()};
   window.addEventListener(PULSE_LEADS_EVENT,local);window.addEventListener("storage",storage);
   return()=>{window.removeEventListener(PULSE_LEADS_EVENT,local);window.removeEventListener("storage",storage)};
+}
+
+
+export function listPulseProfiles():PulseVisitorProfile[]{
+  if(!canStore())return[];
+  try{const value=JSON.parse(localStorage.getItem(PROFILES_KEY)||"[]");return Array.isArray(value)?value:[]}
+  catch{return[]}
+}
+export function subscribePulseProfiles(listener:()=>void){
+  if(typeof window==="undefined")return()=>{};
+  const local=()=>listener();
+  const storage=(event:StorageEvent)=>{if(event.key===PROFILES_KEY)listener()};
+  window.addEventListener(PULSE_PROFILES_EVENT,local);window.addEventListener("storage",storage);
+  return()=>{window.removeEventListener(PULSE_PROFILES_EVENT,local);window.removeEventListener("storage",storage)};
+}
+
+export function listPulseTasks():PulseTask[]{
+  if(!canStore())return[];
+  try{const value=JSON.parse(localStorage.getItem(TASKS_KEY)||"[]");return Array.isArray(value)?value:[]}
+  catch{return[]}
+}
+export function updatePulseTask(idValue:string,patch:Partial<Pick<PulseTask,"status"|"title"|"reason"|"dueAt">>){
+  if(!canStore())return;
+  const tasks=listPulseTasks().map(task=>task.id===idValue?{...task,...patch,updatedAt:now()}:task);
+  localStorage.setItem(TASKS_KEY,JSON.stringify(tasks));
+  window.dispatchEvent(new CustomEvent(PULSE_TASKS_EVENT));
+}
+export function subscribePulseTasks(listener:()=>void){
+  if(typeof window==="undefined")return()=>{};
+  const local=()=>listener();
+  const storage=(event:StorageEvent)=>{if(event.key===TASKS_KEY)listener()};
+  window.addEventListener(PULSE_TASKS_EVENT,local);window.addEventListener("storage",storage);
+  return()=>{window.removeEventListener(PULSE_TASKS_EVENT,local);window.removeEventListener("storage",storage)};
+}
+
+function dueAtFor(priority:Exclude<LeadPriority,"cold">){
+  const minutes=priority==="urgent"?5:priority==="hot"?15:60;
+  return new Date(Date.now()+minutes*60_000).toISOString();
+}
+
+function syncSessionSignals(session:string,events:PulseEvent[]){
+  if(!canStore())return;
+  const sessionEvents=events.filter(event=>event.sessionId===session);
+  if(!sessionEvents.length)return;
+  const state=getPulseState();
+  const result=scoreLeadEvents(sessionEvents,state.leadEngine);
+  const previous=listPulseProfiles().find(profile=>profile.sessionId===session);
+  const profile:PulseVisitorProfile={
+    id:previous?.id||id(),
+    sessionId:session,
+    userId:sessionEvents.find(event=>event.userId)?.userId??previous?.userId??null,
+    score:result.score,
+    priority:result.priority,
+    scoreReasons:result.reasons,
+    topPropertyId:result.topPropertyId,
+    city:result.city,
+    mortgageProgram:result.mortgageProgram,
+    nextAction:result.recommendedAction,
+    eventCount:result.eventCount,
+    firstSeenAt:previous?.firstSeenAt||sessionEvents[sessionEvents.length-1]?.createdAt||now(),
+    lastSeenAt:result.lastIntentAt||now(),
+    updatedAt:now(),
+  };
+  const profiles=[profile,...listPulseProfiles().filter(item=>item.sessionId!==session)]
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,1000);
+  localStorage.setItem(PROFILES_KEY,JSON.stringify(profiles));
+  window.dispatchEvent(new CustomEvent(PULSE_PROFILES_EVENT));
+
+  const leads=listPulseLeads();
+  const linked=leads.filter(lead=>lead.sessionId===session);
+  if(linked.length){
+    const nextLeads=leads.map(lead=>lead.sessionId===session?{
+      ...lead,
+      score:profile.score,
+      priority:profile.priority,
+      scoreReasons:profile.scoreReasons,
+      topPropertyId:profile.topPropertyId??lead.propertyId??null,
+      city:profile.city,
+      mortgageProgram:profile.mortgageProgram,
+      nextAction:profile.nextAction,
+      updatedAt:now(),
+    }:lead);
+    localStorage.setItem(LEADS_KEY,JSON.stringify(nextLeads));
+    window.dispatchEvent(new CustomEvent(PULSE_LEADS_EVENT));
+  }
+
+  if(linked.length&&profile.priority!=="cold"){
+    const lead=linked[0];
+    const tasks=listPulseTasks();
+    const existing=tasks.find(task=>task.leadId===lead.id&&task.status!=="done");
+    const priority=profile.priority as Exclude<LeadPriority,"cold">;
+    const nextTask:PulseTask=existing?{
+      ...existing,
+      title:priority==="urgent"?"Связаться с горячим лидом":"Связаться с лидом",
+      reason:profile.nextAction,
+      priority,
+      dueAt:dueAtFor(priority),
+      updatedAt:now(),
+    }:{
+      id:id(),
+      leadId:lead.id,
+      profileId:profile.id,
+      sessionId:session,
+      title:priority==="urgent"?"Связаться с горячим лидом":"Связаться с лидом",
+      reason:profile.nextAction,
+      priority,
+      status:"today",
+      dueAt:dueAtFor(priority),
+      createdAt:now(),
+      updatedAt:now(),
+    };
+    const nextTasks=[nextTask,...tasks.filter(task=>task.id!==nextTask.id)];
+    localStorage.setItem(TASKS_KEY,JSON.stringify(nextTasks));
+    window.dispatchEvent(new CustomEvent(PULSE_TASKS_EVENT));
+  }
 }
 
 function sessionId(){
@@ -180,6 +332,7 @@ export function recordPulseEvent(input:{eventType:string;entityType?:string|null
   const events=[event,...listPulseEvents()].slice(0,1000);
   localStorage.setItem(EVENTS_KEY,JSON.stringify(events));
   window.dispatchEvent(new CustomEvent(PULSE_EVENTS_EVENT));
+  syncSessionSignals(event.sessionId,events);
 }
 export function subscribePulseEvents(listener:()=>void){
   if(typeof window==="undefined")return()=>{};
@@ -192,7 +345,10 @@ export function subscribePulseEvents(listener:()=>void){
 export function resetPulsePreviewData(){
   if(!canStore())return;
   localStorage.removeItem(STATE_KEY);localStorage.removeItem(LEADS_KEY);localStorage.removeItem(EVENTS_KEY);
+  localStorage.removeItem(PROFILES_KEY);localStorage.removeItem(TASKS_KEY);
   window.dispatchEvent(new CustomEvent(PULSE_STATE_EVENT));
   window.dispatchEvent(new CustomEvent(PULSE_LEADS_EVENT));
   window.dispatchEvent(new CustomEvent(PULSE_EVENTS_EVENT));
+  window.dispatchEvent(new CustomEvent(PULSE_PROFILES_EVENT));
+  window.dispatchEvent(new CustomEvent(PULSE_TASKS_EVENT));
 }
