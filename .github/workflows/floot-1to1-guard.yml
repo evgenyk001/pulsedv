@@ -30,9 +30,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: apps/mini-app/package-lock.json
+          node-version: 22
 
       - name: Install Mini App dependencies
         working-directory: apps/mini-app
