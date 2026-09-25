@@ -1,0 +1,9 @@
+/* Floot runtime compatibility for standalone Vite/GitHub Pages.
+   Floot injects these browser resets outside project base.css. */
+*,*::before,*::after{box-sizing:border-box}
+html,body,#root{width:100%;min-width:0;min-height:100%;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;background:#F3F5F8}
+body{min-height:100dvh;overflow-x:hidden;background:#F3F5F8}
+#root{min-height:100dvh;overflow-x:hidden}
+img,svg,video,canvas{display:block;max-width:100%}
+button,input,textarea,select{font:inherit}
