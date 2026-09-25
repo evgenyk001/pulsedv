@@ -205,4 +205,3 @@ export default function SelectionPage(){
     <div className={styles.note}><ShieldCheck size={15}/>Параметры можно изменить позже</div>
   </div>
 }
-  208
