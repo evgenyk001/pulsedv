@@ -16,7 +16,7 @@
     height:auto;
     max-height:min(82dvh,680px);
     padding:30px 16px 16px;
-    border-radius:30px!important;
+    border-radius:32px!important;
     overflow-y:auto;
     background:rgba(248,250,252,.94);
     border:1px solid rgba(255,255,255,.88);
