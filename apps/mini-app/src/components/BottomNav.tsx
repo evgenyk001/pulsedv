@@ -1,13 +1,13 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Building2, Heart, Sparkles } from "lucide-react";
+import { NavLottieIcon, type NavIconKind } from "./NavLottieIcon";
 import styles from "./BottomNav.module.css";
 
-const items=[
-  {path:"/",label:"Главная",icon:Home},
-  {path:"/catalog",label:"Каталог",icon:Building2},
-  {path:"/selection",label:"Подбор",icon:Sparkles},
-  {path:"/favorites",label:"Избранное",icon:Heart},
+const items:{path:string;label:string;icon:NavIconKind}[]=[
+  {path:"/",label:"Главная",icon:"home"},
+  {path:"/catalog",label:"Каталог",icon:"catalog"},
+  {path:"/selection",label:"Подбор",icon:"select"},
+  {path:"/favorites",label:"Избранное",icon:"favorite"},
 ];
 
 export function BottomNav(){
@@ -187,7 +187,7 @@ export function BottomNav(){
           <span className={styles.pillCaustic}/>
         </span>
       </span>
-      {items.map(({path,label,icon:Icon},index)=>{
+      {items.map(({path,label,icon},index)=>{
         const strength=Math.max(0,1-Math.abs(index-progress));
         const active=strength>.5;
         const iconScale=.96+strength*.08;
@@ -204,7 +204,7 @@ export function BottomNav(){
           onClick={()=>selectItem(index)}
           style={{color}}
         >
-          <span className={styles.icon} style={{transform:`translateY(${lift}px) scale(${iconScale})`}}><Icon size={20} strokeWidth={1.8+strength*.45}/></span>
+          <span className={styles.icon} style={{transform:`translateY(${lift}px) scale(${iconScale})`}}><NavLottieIcon kind={icon} strength={strength} active={index===activeIndex}/></span>
           <span className={styles.label} style={{opacity:.66+strength*.34,transform:`translateY(${-strength*.35}px)`}}>{label}</span>
         </button>
       })}
