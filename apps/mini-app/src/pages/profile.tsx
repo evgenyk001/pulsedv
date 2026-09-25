@@ -58,6 +58,5 @@ export default function ProfilePage(){
     </section>
 
     <LeadSheet title="Связаться с агентством" source="profile-contact"><button className={styles.contact}><Phone size={17}/>Связаться с PULSE.DV</button></LeadSheet>
-    <Link to="/login" className={styles.workspace}>Для команды PULSE.DV</Link>
   </div>
 }
