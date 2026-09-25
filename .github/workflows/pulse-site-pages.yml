@@ -35,6 +35,14 @@ jobs:
       - name: Install Mini App dependencies
         working-directory: apps/mini-app
         run: npm install --no-audit --no-fund
+      - name: Enforce public/private boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -nE '"/(admin|login)|to="/(admin|login)|startsWith\("/admin' apps/mini-app/src --include='*.ts' --include='*.tsx'; then
+            echo "Admin/login routes must live in apps/control-center, never in the public Mini App."
+            exit 1
+          fi
       - name: Typecheck Mini App
         working-directory: apps/mini-app
         run: npm run check
@@ -60,6 +68,14 @@ jobs:
       - name: Install Mini App dependencies
         working-directory: apps/mini-app
         run: npm install --no-audit --no-fund
+      - name: Enforce public/private boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -R -nE '"/(admin|login)|to="/(admin|login)|startsWith\("/admin' apps/mini-app/src --include='*.ts' --include='*.tsx'; then
+            echo "Admin/login routes must live in apps/control-center, never in the public Mini App."
+            exit 1
+          fi
       - name: Typecheck Mini App
         working-directory: apps/mini-app
         run: npm run check
