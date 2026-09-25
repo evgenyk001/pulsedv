@@ -83,6 +83,9 @@
   --app-card-shadow-strong: 0 2px 5px rgba(35,47,63,.035), 0 17px 42px rgba(47,59,78,.092), inset 0 1px 0 rgba(255,255,255,.92);
   --app-radius-card: 30px;
   --app-radius-control: 22px;
+  --app-radius-pill: 999px;
+  --app-icon-size: 44px;
+  --app-icon-radius: 16px;
   --app-section-gap: 26px;
   --app-page-gap: 22px;
   --motion-spring: cubic-bezier(.18,.88,.22,1);
