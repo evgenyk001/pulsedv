@@ -22,7 +22,7 @@
 }
 .root:focus-visible{box-shadow:var(--shadow-focus),inset 0 1px 1px rgba(255,255,255,.24)}
 .root:active{transform:scale(.97)}
-.thumb{
+.root > .thumb{
   display:block;
   position:absolute;
   top:3px;

@@ -105,4 +105,3 @@ export const DEFAULT_STATE:PulseState={
   leadEngine:DEFAULT_LEAD_ENGINE_CONFIG,
   updatedAt:now()
 };
-
