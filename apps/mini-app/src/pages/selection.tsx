@@ -1,20 +1,17 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Building2, CalendarDays, CarFront, Check, ChevronLeft, ChevronRight, MapPin, ShieldCheck, Sparkles, Trees, WalletCards, Waves } from "lucide-react";
+import { Sparkles, ChevronRight, ChevronLeft, ShieldCheck, Waves, Building2, CalendarDays, WalletCards } from "lucide-react";
 import { Slider } from "../components/Slider";
 import { Switch } from "../components/Switch";
 import { Input } from "../components/Input";
 import { PageHeader } from "../components/PageHeader";
 import { usePriceBounds } from "../helpers/usePriceBounds";
 import { useProperties } from "../helpers/useProperties";
-import type { PropertyRecord } from "../helpers/propertyTypes";
 import styles from "./selection.module.css";
 
 const FALLBACK_MIN=4_000_000;
 const FALLBACK_MAX=25_000_000;
 const FALLBACK_STEP=100_000;
-
-type Preference="sea"|"quiet"|"center"|"parking";
 
 const formatRub=(value:number)=>new Intl.NumberFormat("ru-RU").format(Math.round(value));
 const shortRub=(value:number)=>{
@@ -23,36 +20,6 @@ const shortRub=(value:number)=>{
 };
 const snap=(value:number,step:number)=>Math.round(value/step)*step;
 const clamp=(value:number,min:number,max:number)=>Math.min(max,Math.max(min,value));
-
-const roomMatches=(property:PropertyRecord,rooms:string)=>{
-  if(rooms==="Любая")return true;
-  if(!property.floorplans.length)return true;
-  return property.floorplans.some(plan=>{
-    const label=plan.roomLabel.toLowerCase();
-    if(rooms==="Студия")return label.includes("студ");
-    if(rooms==="3+"){
-      const count=Number(label.match(/\d+/)?.[0]||0);
-      return count>=3;
-    }
-    return label.startsWith(rooms)||label.includes(rooms+"-");
-  });
-};
-
-const prices=(property:PropertyRecord)=>{
-  const floorplanPrices=property.floorplans
-    .map(item=>item.priceFrom)
-    .filter((value):value is number=>value!==null)
-    .map(value=>value*1_000_000);
-  return floorplanPrices.length?floorplanPrices:[property.priceFrom*1_000_000];
-};
-
-const preferenceMatches=(property:PropertyRecord,preference:Preference)=>{
-  const text=[property.district,...property.tags,...property.features.map(feature=>feature.label)].join(" ").toLowerCase();
-  if(preference==="sea")return text.includes("мор")||text.includes("панорам");
-  if(preference==="quiet")return text.includes("тиш")||text.includes("тих")||text.includes("спокой");
-  if(preference==="center")return text.includes("центр")||text.includes("централь");
-  return text.includes("парков")||text.includes("паркин");
-};
 
 export default function SelectionPage(){
   const navigate=useNavigate();
@@ -70,7 +37,7 @@ export default function SelectionPage(){
   const budgetInitialized=React.useRef(false);
   const [delivery,setDelivery]=React.useState("Любой");
   const [mortgage,setMortgage]=React.useState(true);
-  const [preferences,setPreferences]=React.useState<Set<Preference>>(new Set());
+  const [sea,setSea]=React.useState(false);
   const last=step===3;
 
   React.useEffect(()=>{
@@ -89,9 +56,9 @@ export default function SelectionPage(){
 
   const editDraft=(index:0|1,value:string)=>{
     const clean=value.replace(/[^0-9]/g,"");
-    setBudgetDraft(current=>{
-      const next:[string,string]=[...current] as [string,string];
-      next[index]=clean?formatRub(Number(clean)):"";
+    setBudgetDraft(prev=>{
+      const next:[string,string]=[...prev] as [string,string];
+      next[index]=clean?new Intl.NumberFormat("ru-RU").format(Number(clean)):"";
       return next;
     });
   };
@@ -108,58 +75,54 @@ export default function SelectionPage(){
     setBudgetDraft([formatRub(next[0]),formatRub(next[1])]);
   };
 
-  const ranked=React.useMemo(()=>properties.map(property=>{
-    let score=0;
-    const reasons:string[]=[];
-    if(city==="Любой"||property.city===city){score+=25;reasons.push(city==="Любой"?"география не ограничена":"подходит город")}
-    if(roomMatches(property,rooms)){score+=20;reasons.push(rooms==="Любая"?"формат не ограничен":"есть нужная комнатность")}
-    if(prices(property).some(price=>price>=budget[0]&&price<=budget[1])){score+=30;reasons.push("в вашем бюджете")}
-    if(delivery==="Любой"||property.delivery.includes(delivery)){score+=10;reasons.push(delivery==="Любой"?"срок не ограничен":"подходит срок сдачи")}
-    const activePreferences=[...preferences];
-    if(activePreferences.length){
-      const bonus=15/activePreferences.length;
-      activePreferences.forEach(preference=>{
-        if(preferenceMatches(property,preference)){
-          score+=bonus;
-          const labels:Record<Preference,string>={sea:"вид на море",quiet:"тихое окружение",center:"ближе к центру",parking:"парковка"};
-          reasons.push(labels[preference]);
-        }
-      });
-    }else{
-      score+=15;
+  const count=React.useMemo(()=>properties.filter(property=>{
+    if(property.city!==city)return false;
+    if(delivery!=="Любой"&&!property.delivery.includes(delivery))return false;
+    const floorplanPrices=property.floorplans.map(x=>x.priceFrom).filter((x):x is number=>x!=null).map(x=>x*1_000_000);
+    const priceMatch=floorplanPrices.length
+      ?floorplanPrices.some(price=>price>=budget[0]&&price<=budget[1])
+      :property.priceFrom*1_000_000<=budget[1];
+    if(!priceMatch)return false;
+    if(sea){
+      const search=[...property.tags,...property.features.map(x=>x.label)].join(" ").toLowerCase();
+      if(!search.includes("мор")&&!search.includes("панорам"))return false;
     }
-    return {property,score:Math.round(Math.min(score,100)),reasons};
-  }).sort((a,b)=>b.score-a.score),[properties,city,rooms,budget,delivery,preferences]);
-
-  const top=ranked[0];
-  const strongCount=ranked.filter(item=>item.score>=70).length;
-
-  const togglePreference=(preference:Preference)=>{
-    setPreferences(current=>{
-      const next=new Set(current);
-      next.has(preference)?next.delete(preference):next.add(preference);
-      return next;
-    });
-  };
+    if(property.floorplans.length){
+      const roomMatch=property.floorplans.some(plan=>{
+        const label=plan.roomLabel.toLowerCase();
+        if(rooms==="Студия")return label.includes("студ");
+        if(rooms==="3+"){
+          const n=Number(label.match(/\d+/)?.[0]||0);
+          return n>=3;
+        }
+        return label.startsWith(rooms)||label.includes(rooms+"-");
+      });
+      if(!roomMatch)return false;
+    }
+    return true;
+  }).length,[properties,city,delivery,budget,sea,rooms]);
 
   const next=()=>{
     if(last){
       const params=new URLSearchParams({
+        city,
         min:(budget[0]/1_000_000).toFixed(1),
         max:(budget[1]/1_000_000).toFixed(1),
-        pulse:"1",
+        rooms,
       });
-      if(city!=="Любой")params.set("city",city);
-      if(rooms!=="Любая")params.set("rooms",rooms);
       if(delivery!=="Любой")params.set("delivery",delivery);
-      if(preferences.has("sea"))params.set("sea","1");
-      if(preferences.size)params.set("priorities",[...preferences].join(","));
+      if(sea)params.set("sea","1");
       if(mortgage)params.set("mortgage","1");
       try{
         const history=JSON.parse(localStorage.getItem("pulse_selection_history")||"[]");
         const nextHistory=[{
-          city,rooms,min:budget[0],max:budget[1],delivery,mortgage,
-          sea:preferences.has("sea"),
+          city,
+          rooms,
+          min:budget[0],
+          max:budget[1],
+          delivery,
+          mortgage,
+          sea,
           createdAt:Date.now(),
         },...(Array.isArray(history)?history:[])].slice(0,5);
         localStorage.setItem("pulse_selection_history",JSON.stringify(nextHistory));
@@ -167,14 +130,14 @@ export default function SelectionPage(){
       navigate("/catalog?"+params.toString());
       return;
     }
-    setStep(value=>Math.min(3,value+1));
+    setStep(v=>Math.min(3,v+1));
   };
 
   return <div className={styles.page}>
-    <PageHeader eyebrow="PULSE Select" title="Найдём ваш вариант" subtitle="Четыре коротких шага. Без длинной анкеты — только параметры, которые реально помогают расставить проекты."/>
+    <PageHeader eyebrow="PULSE Select" title="Найдём ваш вариант" subtitle="Четыре коротких шага — без длинной анкеты и лишних полей."/>
 
     <div className={styles.progress} aria-label={"Шаг "+(step+1)+" из 4"}>
-      {[0,1,2,3].map(index=><i key={index} className={index<=step?styles.progressActive:""}/>)}
+      {[0,1,2,3].map(i=><i key={i} className={i<=step?styles.progressActive:""}/>)}
     </div>
 
     <section className={styles.card}>
@@ -182,9 +145,9 @@ export default function SelectionPage(){
         <div className={styles.cardIcon}><Building2 size={20}/></div>
         <span className={styles.stepLabel}>Шаг 1 из 4</span>
         <h2>Где ищем квартиру?</h2>
-        <p>Можно выбрать конкретный город или не ограничивать географию.</p>
+        <p>Выберите город — остальные параметры настроим дальше.</p>
         <div className={styles.choiceGrid}>
-          {["Владивосток","Уссурийск","Артём","Любой"].map(value=><button key={value} onClick={()=>setCity(value)} className={city===value?styles.active:""}>{value}</button>)}
+          {["Владивосток","Уссурийск","Артём"].map(v=><button key={v} onClick={()=>setCity(v)} className={city===v?styles.active:""}>{v}</button>)}
         </div>
       </>}
 
@@ -192,11 +155,11 @@ export default function SelectionPage(){
         <div className={styles.cardIcon}><WalletCards size={20}/></div>
         <span className={styles.stepLabel}>Шаг 2 из 4</span>
         <h2>Комфортный бюджет</h2>
-        <p>Задайте диапазон. Ползунок и ручной ввод работают с шагом 100 000 ₽.</p>
+        <p>Диапазон автоматически построен по ценам квартир, которые сейчас загружены в PULSE.DV.</p>
         <div className={styles.valueCard}><span>{shortRub(budget[0])} — {shortRub(budget[1])}</span><strong>шаг 100 000 ₽</strong></div>
         <div className={styles.budgetInputs}>
-          <label><span>От</span><div><Input inputMode="numeric" value={budgetDraft[0]} onChange={event=>editDraft(0,event.target.value)} onBlur={()=>commitDraft(0)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur()}}/><b>₽</b></div></label>
-          <label><span>До</span><div><Input inputMode="numeric" value={budgetDraft[1]} onChange={event=>editDraft(1,event.target.value)} onBlur={()=>commitDraft(1)} onKeyDown={event=>{if(event.key==="Enter")event.currentTarget.blur()}}/><b>₽</b></div></label>
+          <label><span>От</span><div><Input inputMode="numeric" value={budgetDraft[0]} onChange={e=>editDraft(0,e.target.value)} onBlur={()=>commitDraft(0)} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div></label>
+          <label><span>До</span><div><Input inputMode="numeric" value={budgetDraft[1]} onChange={e=>editDraft(1,e.target.value)} onBlur={()=>commitDraft(1)} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div></label>
         </div>
         <div className={styles.sliderWrap}>
           <Slider min={minPrice} max={maxPrice} step={priceStep} value={budget} onValueChange={setBudgetFromSlider}/>
@@ -207,42 +170,39 @@ export default function SelectionPage(){
       {step===2&&<>
         <div className={styles.cardIcon}><Sparkles size={20}/></div>
         <span className={styles.stepLabel}>Шаг 3 из 4</span>
-        <h2>Какой формат нужен?</h2>
-        <p>Если комнатность пока не принципиальна — PULSE не будет отбрасывать проекты из-за неё.</p>
+        <h2>Сколько комнат?</h2>
+        <p>Выберите вариант, который ближе всего к вашему сценарию.</p>
         <div className={styles.choiceGrid}>
-          {["Студия","1","2","3+","Любая"].map(value=><button key={value} onClick={()=>setRooms(value)} className={rooms===value?styles.active:""}>{value}</button>)}
+          {["Студия","1","2","3+"].map(v=><button key={v} onClick={()=>setRooms(v)} className={rooms===v?styles.active:""}>{v}</button>)}
         </div>
       </>}
 
       {step===3&&<>
         <div className={styles.cardIcon}><CalendarDays size={20}/></div>
         <span className={styles.stepLabel}>Шаг 4 из 4</span>
-        <h2>Что для вас важнее?</h2>
-        <p>Это мягкие приоритеты. Они повышают подходящие проекты в выдаче, но не скрывают остальные.</p>
-        <div className={styles.preferenceGrid}>
-          <button onClick={()=>togglePreference("sea")} className={preferences.has("sea")?styles.preferenceActive:""}><Waves size={17}/><span>Вид на море</span>{preferences.has("sea")&&<Check size={15}/>}</button>
-          <button onClick={()=>togglePreference("quiet")} className={preferences.has("quiet")?styles.preferenceActive:""}><Trees size={17}/><span>Тише вокруг</span>{preferences.has("quiet")&&<Check size={15}/>}</button>
-          <button onClick={()=>togglePreference("center")} className={preferences.has("center")?styles.preferenceActive:""}><MapPin size={17}/><span>Ближе к центру</span>{preferences.has("center")&&<Check size={15}/>}</button>
-          <button onClick={()=>togglePreference("parking")} className={preferences.has("parking")?styles.preferenceActive:""}><CarFront size={17}/><span>Парковка</span>{preferences.has("parking")&&<Check size={15}/>}</button>
+        <h2>Последние детали</h2>
+        <p>Срок сдачи и несколько предпочтений помогут точнее отобрать проекты.</p>
+        <div className={styles.choiceGrid}>
+          {["Любой","2026","2027"].map(v=><button onClick={()=>setDelivery(v)} key={v} className={delivery===v?styles.active:""}>{v}</button>)}
         </div>
-        <div className={styles.deliveryBlock}>
-          <span>Срок сдачи</span>
-          <div className={styles.deliveryChoices}>{["Любой","2026","2027"].map(value=><button onClick={()=>setDelivery(value)} key={value} className={delivery===value?styles.active:""}>{value}</button>)}</div>
+        <div className={styles.switches}>
+          <div className={styles.switchRow}><div><strong>Нужна ипотека</strong><span>Учтём это как параметр подбора</span></div><Switch checked={mortgage} onCheckedChange={setMortgage}/></div>
+          <div className={styles.switchRow}><div><strong>Вид на море</strong><span>Добавим проекты с панорамами</span></div><Switch checked={sea} onCheckedChange={setSea}/></div>
         </div>
-        <div className={styles.switchRow}><div><strong>Нужна ипотека</strong><span>Учтём это в следующем этапе консультации</span></div><Switch checked={mortgage} onCheckedChange={setMortgage}/></div>
       </>}
     </section>
 
     <div className={styles.result}>
-      <div><Sparkles size={18}/><span><strong>{top?"Лучшее совпадение — "+top.score+"%":"Подбираем варианты"}</strong><small>{top?top.property.name+" · "+top.reasons.slice(0,2).join(" · "):"Меняйте параметры — результат обновится"}</small></span></div>
-      <div className={styles.resultCount}>{strongCount}</div>
+      <div><Sparkles size={18}/><span><strong>Подходит {count} {count===1?"проект":count>1&&count<5?"проекта":"проектов"}</strong><small>{city} · {rooms} комнаты</small></span></div>
+      {sea?<Waves size={18}/>:<ChevronRight size={18}/>}
     </div>
 
     <div className={styles.actions}>
-      {step>0&&<button className={styles.back} onClick={()=>setStep(value=>Math.max(0,value-1))}><ChevronLeft size={17}/>Назад</button>}
+      {step>0&&<button className={styles.back} onClick={()=>setStep(v=>Math.max(0,v-1))}><ChevronLeft size={17}/>Назад</button>}
       <button className={styles.next} onClick={next}>{last?"Показать варианты":"Продолжить"}<ChevronRight size={18}/></button>
     </div>
 
-    <div className={styles.note}><ShieldCheck size={15}/>PULSE Select объясняет совпадения и не скрывает варианты из-за мягких предпочтений</div>
+    <div className={styles.note}><ShieldCheck size={15}/>Параметры можно изменить позже</div>
   </div>
 }
+  208
