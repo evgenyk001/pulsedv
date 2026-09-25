@@ -5,6 +5,7 @@ import { Slider } from "../components/Slider";
 import { Switch } from "../components/Switch";
 import { Input } from "../components/Input";
 import { PageHeader } from "../components/PageHeader";
+import { SegmentedControl } from "../components/SegmentedControl";
 import { usePriceBounds } from "../helpers/usePriceBounds";
 import { useProperties } from "../helpers/useProperties";
 import styles from "./selection.module.css";
@@ -182,9 +183,13 @@ export default function SelectionPage(){
         <span className={styles.stepLabel}>Шаг 4 из 4</span>
         <h2>Последние детали</h2>
         <p>Срок сдачи и несколько предпочтений помогут точнее отобрать проекты.</p>
-        <div className={styles.choiceGrid}>
-          {["Любой","2026","2027"].map(v=><button onClick={()=>setDelivery(v)} key={v} className={delivery===v?styles.active:""}>{v}</button>)}
-        </div>
+        <SegmentedControl
+          className={styles.deliveryTabs}
+          value={delivery}
+          onChange={setDelivery}
+          ariaLabel="Срок сдачи"
+          options={["Любой","2026","2027"].map(value=>({value,label:value}))}
+        />
         <div className={styles.switches}>
           <div className={styles.switchRow}><div><strong>Нужна ипотека</strong><span>Учтём это как параметр подбора</span></div><Switch checked={mortgage} onCheckedChange={setMortgage}/></div>
           <div className={styles.switchRow}><div><strong>Вид на море</strong><span>Добавим проекты с панорамами</span></div><Switch checked={sea} onCheckedChange={setSea}/></div>
