@@ -10,6 +10,7 @@ import { usePriceBounds } from "../helpers/usePriceBounds";
 import { PropertyMap } from "../components/PropertyMap";
 import { Input } from "../components/Input";
 import { SegmentedControl } from "../components/SegmentedControl";
+import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./catalog.module.css";
 
 const FALLBACK_MIN=4_000_000;
@@ -150,6 +151,7 @@ export default function CatalogPage(){
     rooms==="Все"?next.delete("rooms"):next.set("rooms",rooms);
     sea?next.set("sea","1"):next.delete("sea");
     setParams(next,{replace:true});
+    recordPulseEvent({eventType:"catalog_filter",entityType:"catalog",entityId:"filters",metadata:{city,min:priceRange[0],max:priceRange[1],delivery,rooms,sea,results:visible.length}});
   };
 
   const resetFilters=()=>{
