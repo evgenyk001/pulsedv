@@ -83,6 +83,9 @@
   --app-card-shadow-strong: 0 2px 5px rgba(35,47,63,.035), 0 17px 42px rgba(47,59,78,.092), inset 0 1px 0 rgba(255,255,255,.92);
   --app-radius-card: 30px;
   --app-radius-control: 22px;
+  --app-radius-pill: 999px;
+  --app-icon-radius: 16px;
+  --app-control-height: 48px;
   --app-section-gap: 26px;
   --app-page-gap: 22px;
   --motion-spring: cubic-bezier(.18,.88,.22,1);
@@ -138,4 +141,42 @@
   --chart-color-3: #49AF8A;
   --chart-color-4: #D9A14F;
   --chart-color-5: #9B8CC2;
+}
+
+
+/* PULSE.DV unified interaction geometry */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]){
+  border-radius:var(--app-radius-pill)!important;
+}
+:where(button,a)[class*="cta"],
+:where(button,a)[class*="apply"],
+:where(button,a)[class*="contact"],
+:where(button,a)[class*="primary"],
+:where(button,a)[class*="secondary"],
+:where(button,a)[class*="next"],
+:where(button,a)[class*="back"]:not([aria-label]),
+:where(button,a)[class*="catalog"],
+:where(button,a)[class*="compareCta"],
+:where(button,a)[class*="submit"]{
+  border-radius:var(--app-radius-pill)!important;
+}
+:where([class*="programs"],[class*="choiceGrid"],[class*="sheetChips"],[class*="sortOptions"],[class*="tabs"]) > button{
+  border-radius:var(--app-radius-pill)!important;
+}
+:where([class*="viewSwitch"],[class*="segmented"],[role="tablist"]){
+  border-radius:var(--app-radius-pill)!important;
+}
+:where([class*="viewSwitch"],[class*="segmented"],[role="tablist"]) button{
+  border-radius:var(--app-radius-pill)!important;
+}
+:where(div,span)[class*="Icon"],:where(div,span)[class*="icon"]{
+  border-radius:var(--app-icon-radius);
+}
+svg.lucide{
+  stroke-width:1.8;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+button,a,input{
+  -webkit-tap-highlight-color:transparent;
 }
