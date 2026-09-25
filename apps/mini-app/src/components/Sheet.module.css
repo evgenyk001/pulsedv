@@ -3,7 +3,7 @@
   .overlay[data-state="open"]{animation:overlayIn .34s cubic-bezier(.2,.8,.2,1)}
   .overlay[data-state="closed"]{animation:overlayOut .24s ease both}
 
-  .content{position:fixed;z-index:var(--z-overlay);display:flex;flex-direction:column;background:var(--popup);color:var(--popup-foreground);box-shadow:var(--shadow-lg);overscroll-behavior:contain}
+  .content{position:fixed;z-index:var(--z-overlay);display:flex;flex-direction:column;background:var(--popup);color:var(--popup-foreground);box-shadow:var(--shadow-lg);overscroll-behavior:contain;font-family:var(--font-family-base)}
   .top{top:0;left:0;right:0;height:80vh;max-height:500px;border-bottom-left-radius:var(--radius-md);border-bottom-right-radius:var(--radius-md)}
   .left{top:0;left:0;bottom:0;width:100%;max-width:400px;border-top-right-radius:var(--radius-md);border-bottom-right-radius:var(--radius-md)}
   .right{top:0;right:0;bottom:0;width:100%;max-width:400px;border-top-left-radius:var(--radius-md);border-bottom-left-radius:var(--radius-md)}
@@ -46,8 +46,8 @@
   .header{display:flex;flex-direction:column;gap:7px;padding:14px 4px 15px;border-bottom:0}
   .bottom .header{padding-right:4px}
   .footer{display:flex;flex-direction:column;gap:var(--spacing-3);margin-top:auto;padding:16px 4px 4px;border-top:0}
-  .title{font-family:var(--font-family-display);font-size:1.25rem;line-height:1.08;letter-spacing:-.035em;font-weight:700;color:var(--popup-foreground)}
-  .description{max-width:360px;font-size:.72rem;color:var(--muted-foreground);line-height:1.5}
+  .title{font-family:var(--font-family-base);font-size:20px;line-height:1.08;letter-spacing:-.035em;font-weight:760;color:var(--popup-foreground)}
+  .description{max-width:360px;font-family:var(--font-family-base);font-size:11px;font-weight:450;color:var(--muted-foreground);line-height:1.5}.content button,.content input,.content textarea,.content select{font-family:var(--font-family-base)}
 
   @keyframes overlayIn{from{opacity:0}to{opacity:1}}
   @keyframes overlayOut{from{opacity:1}to{opacity:0}}

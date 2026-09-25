@@ -6,11 +6,13 @@ on:
     paths:
       - "dist/**"
       - "apps/mini-app/**"
+      - "apps/control-center/**"
       - ".github/workflows/pulse-site-pages.yml"
   pull_request:
     branches: ["main"]
     paths:
       - "apps/mini-app/**"
+      - "apps/control-center/**"
       - ".github/workflows/pulse-site-pages.yml"
   workflow_dispatch:
 
@@ -49,6 +51,15 @@ jobs:
       - name: Build Mini App
         working-directory: apps/mini-app
         run: npm run build
+      - name: Install Control Center dependencies
+        working-directory: apps/control-center
+        run: npm install --no-audit --no-fund
+      - name: Typecheck Control Center
+        working-directory: apps/control-center
+        run: npm run check
+      - name: Build Control Center
+        working-directory: apps/control-center
+        run: npm run build
       - name: Check landing JavaScript
         run: node --check dist/script.js
 
@@ -81,6 +92,15 @@ jobs:
         run: npm run check
       - name: Build Mini App
         working-directory: apps/mini-app
+        run: npm run build
+      - name: Install Control Center dependencies
+        working-directory: apps/control-center
+        run: npm install --no-audit --no-fund
+      - name: Typecheck Control Center
+        working-directory: apps/control-center
+        run: npm run check
+      - name: Build Control Center
+        working-directory: apps/control-center
         run: npm run build
       - name: Check landing JavaScript
         run: node --check dist/script.js
