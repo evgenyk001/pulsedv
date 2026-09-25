@@ -1,17 +1,23 @@
 import { ShieldCheck } from "lucide-react";
 import { PageFrame } from "../components/PageFrame";
+import { usePulseEvents, usePulseLeads, usePulseState } from "../data";
 
 export function OverviewPage(){
-  return <PageFrame eyebrow="CONTROL CENTER" title="Операционная панель PULSE.DV" description="Отдельная приватная зона команды. Публичный Mini App больше не содержит admin-интерфейс.">
+  const state=usePulseState();
+  const leads=usePulseLeads();
+  const events=usePulseEvents();
+  const sessions=new Set(events.map(event=>event.sessionId)).size;
+  const conversion=sessions?Math.round(leads.length/sessions*100):0;
+  return <PageFrame eyebrow="CONTROL CENTER" title="Операционная панель PULSE.DV" description="Mini App и PULSE Control работают через единый слой данных.">
     <section className="metrics">
-      <article><span>Новые лиды</span><strong>—</strong><small>после подключения backend</small></article>
-      <article><span>Активные объекты</span><strong>—</strong><small>единый каталог</small></article>
-      <article><span>Задачи</span><strong>—</strong><small>pipeline менеджеров</small></article>
-      <article><span>Конверсия</span><strong>—</strong><small>после user_events</small></article>
+      <article><span>Новые лиды</span><strong>{leads.filter(x=>x.status==="new").length}</strong><small>{leads.length} всего</small></article>
+      <article><span>Активные объекты</span><strong>{state.properties.filter(x=>x.status==="published").length}</strong><small>{state.properties.length} в каталоге</small></article>
+      <article><span>Сессии</span><strong>{sessions}</strong><small>{events.length} событий</small></article>
+      <article><span>Конверсия</span><strong>{conversion}%</strong><small>лиды / сессии</small></article>
     </section>
     <section className="panel">
-      <div className="panelTitle"><ShieldCheck size={20}/><div><span>Архитектура</span><h2>Control Center физически отделён</h2></div></div>
-      <p>Следующий слой — отдельная серверная авторизация, RBAC и подключение общей базы. Floot admin baseline остаётся в репозитории только как migration reference.</p>
+      <div className="panelTitle"><ShieldCheck size={20}/><div><span>Связь активна</span><h2>Mini App ↔ PULSE Control</h2></div></div>
+      <p>В preview данные синхронизируются между двумя отдельными приложениями на одном origin. Следующий production-адаптер заменит browser storage на API/Postgres, не меняя интерфейсы страниц.</p>
     </section>
   </PageFrame>;
 }

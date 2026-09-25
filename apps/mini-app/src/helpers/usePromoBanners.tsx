@@ -1,20 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import React from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getPulseState, subscribePulseState, type PulseBanner } from "../../../../packages/pulse-data";
 
-export type PromoBanner={
-  id:string;
-  title:string;
-  body:string;
-  imageUrl:string|null;
-  ctaLabel:string|null;
-  actionUrl:string|null;
-  city:string|null;
-  audience:string|null;
-};
+export type PromoBanner=PulseBanner;
 
 export function usePromoBanners(){
+  const client=useQueryClient();
+  React.useEffect(()=>subscribePulseState(()=>client.invalidateQueries({queryKey:["promo-banners"]})),[client]);
   return useQuery<PromoBanner[]>({
     queryKey:["promo-banners"],
-    queryFn:async()=>[],
+    queryFn:async()=>getPulseState().banners.filter(banner=>banner.enabled).sort((a,b)=>a.sortOrder-b.sortOrder),
     staleTime:Infinity
   });
 }

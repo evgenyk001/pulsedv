@@ -1,4 +1,5 @@
 import React from "react";
+import { recordPulseEvent } from "../../../../packages/pulse-data";
 
 const KEY="pulse.dv.favorites.v1";
 
@@ -18,11 +19,13 @@ export function useFavoriteIds(){
     window.addEventListener("storage",sync);
     return()=>{window.removeEventListener("pulse-favorites",sync);window.removeEventListener("storage",sync)};
   },[]);
-  const toggle=React.useCallback((id:string)=>{
+  const toggle=React.useCallback((propertyId:string)=>{
     const current=readIds();
-    const next=current.includes(id)?current.filter(x=>x!==id):[...current,id];
+    const removing=current.includes(propertyId);
+    const next=removing?current.filter(x=>x!==propertyId):[...current,propertyId];
     window.localStorage.setItem(KEY,JSON.stringify(next));
     window.dispatchEvent(new Event("pulse-favorites"));
+    recordPulseEvent({eventType:removing?"favorite_remove":"favorite_add",entityType:"property",entityId:propertyId});
     setIds(next);
   },[]);
   return {ids,toggle,isFavorite:(id:string)=>ids.includes(id)};

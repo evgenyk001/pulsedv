@@ -19,22 +19,19 @@ export function SegmentedControl<T extends string>({
   ariaLabel?:string;
   className?:string;
 }){
+  const count=Math.max(1,options.length);
   const activeIndex=Math.max(0,options.findIndex(option=>option.value===value));
-  const columns=options.map(()=>"minmax(0,1fr)").join(" ");
   return <div
     className={styles.root+" "+className}
     role="tablist"
     aria-label={ariaLabel}
-    style={{gridTemplateColumns:columns}}
+    style={{
+      "--segment-count":count,
+      "--segment-index":activeIndex,
+      gridTemplateColumns:`repeat(${count},minmax(0,1fr))`,
+    } as React.CSSProperties}
   >
-    <span
-      className={styles.pill}
-      aria-hidden="true"
-      style={{
-        width:`calc((100% - 8px) / ${Math.max(1,options.length)})`,
-        transform:`translate3d(${activeIndex*100}%,0,0)`,
-      }}
-    />
+    <span className={styles.pill} aria-hidden="true"/>
     {options.map(option=><button
       type="button"
       role="tab"
