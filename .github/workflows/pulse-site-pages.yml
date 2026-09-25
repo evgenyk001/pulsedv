@@ -7,12 +7,14 @@ on:
       - "dist/**"
       - "apps/mini-app/**"
       - "apps/control-center/**"
+      - "packages/**"
       - ".github/workflows/pulse-site-pages.yml"
   pull_request:
     branches: ["main"]
     paths:
       - "apps/mini-app/**"
       - "apps/control-center/**"
+      - "packages/**"
       - ".github/workflows/pulse-site-pages.yml"
   workflow_dispatch:
 
