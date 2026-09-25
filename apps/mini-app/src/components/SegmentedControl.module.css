@@ -1,7 +1,6 @@
 .root{
   position:relative;
   display:grid;
-  grid-template-columns:repeat(var(--segment-count),minmax(0,1fr));
   height:50px;
   padding:4px;
   border-radius:999px;
@@ -15,13 +14,11 @@
   left:4px;
   top:4px;
   bottom:4px;
-  width:calc((100% - 8px)/var(--segment-count));
   border-radius:999px;
   background:rgba(255,255,255,.94);
   border:1px solid rgba(255,255,255,.96);
   box-shadow:0 4px 14px rgba(39,50,65,.09),inset 0 1px 0 rgba(255,255,255,.96);
-  transform:translateX(calc(var(--segment-index)*100%));
-  transition:transform .34s var(--motion-spring);
+  transition:transform .34s var(--motion-spring),width .18s ease;
   will-change:transform;
 }
 .root button{
