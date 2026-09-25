@@ -267,7 +267,7 @@ function syncSessionSignals(session:string,events:PulseEvent[]){
   window.dispatchEvent(new CustomEvent(PULSE_PROFILES_EVENT));
 
   const leads=listPulseLeads();
-  const linked=leads.filter(lead=>lead.sessionId===session);
+  const linked=leads.filter(lead=>lead.sessionId===session&&lead.status!=="closed"&&lead.status!=="lost");
   if(linked.length){
     const nextLeads=leads.map(lead=>lead.sessionId===session?{
       ...lead,
@@ -289,12 +289,18 @@ function syncSessionSignals(session:string,events:PulseEvent[]){
     const tasks=listPulseTasks();
     const existing=tasks.find(task=>task.leadId===lead.id&&task.status!=="done");
     const priority=profile.priority as Exclude<LeadPriority,"cold">;
+    const rank:Record<Exclude<LeadPriority,"cold">,number>={warm:1,hot:2,urgent:3};
+    const escalated=existing&&rank[priority]>rank[existing.priority];
+    const escalatedDue=dueAtFor(priority);
+    const stableDue=existing
+      ?(escalated&&Date.parse(escalatedDue)<Date.parse(existing.dueAt)?escalatedDue:existing.dueAt)
+      :escalatedDue;
     const nextTask:PulseTask=existing?{
       ...existing,
       title:priority==="urgent"?"Связаться с горячим лидом":"Связаться с лидом",
       reason:profile.nextAction,
       priority,
-      dueAt:dueAtFor(priority),
+      dueAt:stableDue,
       updatedAt:now(),
     }:{
       id:id(),
@@ -313,6 +319,13 @@ function syncSessionSignals(session:string,events:PulseEvent[]){
     localStorage.setItem(TASKS_KEY,JSON.stringify(nextTasks));
     window.dispatchEvent(new CustomEvent(PULSE_TASKS_EVENT));
   }
+}
+
+export function recalculatePulseLeadEngine(){
+  if(!canStore())return;
+  const events=listPulseEvents();
+  const sessions=Array.from(new Set(events.map(event=>event.sessionId)));
+  sessions.forEach(session=>syncSessionSignals(session,events));
 }
 
 function sessionId(){
