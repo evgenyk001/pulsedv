@@ -20,16 +20,21 @@ export function SegmentedControl<T extends string>({
   className?:string;
 }){
   const activeIndex=Math.max(0,options.findIndex(option=>option.value===value));
+  const columns=options.map(()=>"minmax(0,1fr)").join(" ");
   return <div
     className={styles.root+" "+className}
     role="tablist"
     aria-label={ariaLabel}
-    style={{
-      "--segment-count":options.length,
-      "--segment-index":activeIndex,
-    } as React.CSSProperties}
+    style={{gridTemplateColumns:columns}}
   >
-    <span className={styles.pill} aria-hidden="true"/>
+    <span
+      className={styles.pill}
+      aria-hidden="true"
+      style={{
+        width:`calc((100% - 8px) / ${Math.max(1,options.length)})`,
+        transform:`translate3d(${activeIndex*100}%,0,0)`,
+      }}
+    />
     {options.map(option=><button
       type="button"
       role="tab"
