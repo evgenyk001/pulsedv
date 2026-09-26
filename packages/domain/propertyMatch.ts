@@ -123,6 +123,7 @@ export function selectionMatch(
   property:PulseProperty,
   criteria:SelectionCriteria,
   programs:MortgageProgramRule[],
+  weights:PulseSelectConfig['weights'],
 ):SelectionMatch{
   const cityOk=criteria.city==='Все'||criteria.city==='Не важно'||property.city===criteria.city;
   const price=representativePrice(property,criteria.rooms);
