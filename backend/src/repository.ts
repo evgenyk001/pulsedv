@@ -1,8 +1,32 @@
 import type { Sql } from './database';
 import { camelRow } from './database';
 import type { LeadEngineRepository } from './leadEngineService';
-import type { PulseState } from '../../packages/pulse-data/model';
-export async function readState(sql:Sql):Promise<{state:PulseState;version:number}>{const row=(await sql.query('select document,version from app_config where singleton=true')).rows[0];if(!row)throw new Error('Run migrations before starting API');return {state:row.document,version:row.version};}
+import { DEFAULT_STATE, type PulseState } from '../../packages/pulse-data/model';
+function normalizeState(input:Partial<PulseState>|null|undefined):PulseState{
+ const value=input||{};
+ return {
+  ...DEFAULT_STATE,
+  ...value,
+  properties:Array.isArray(value.properties)?value.properties:DEFAULT_STATE.properties,
+  banners:Array.isArray(value.banners)?value.banners:DEFAULT_STATE.banners,
+  mortgagePrograms:Array.isArray(value.mortgagePrograms)?value.mortgagePrograms:DEFAULT_STATE.mortgagePrograms,
+  select:{
+   ...DEFAULT_STATE.select,
+   ...(value.select||{}),
+   preferenceEnabled:{...DEFAULT_STATE.select.preferenceEnabled,...(value.select?.preferenceEnabled||{})},
+   weights:{...DEFAULT_STATE.select.weights,...(value.select?.weights||{})}
+  },
+  content:{...DEFAULT_STATE.content,...(value.content||{})},
+  leadEngine:{
+   ...DEFAULT_STATE.leadEngine,
+   ...(value.leadEngine||{}),
+   thresholds:{...DEFAULT_STATE.leadEngine.thresholds,...(value.leadEngine?.thresholds||{})},
+   rules:Array.isArray(value.leadEngine?.rules)?value.leadEngine.rules:DEFAULT_STATE.leadEngine.rules
+  },
+  updatedAt:value.updatedAt||DEFAULT_STATE.updatedAt
+ };
+}
+export async function readState(sql:Sql):Promise<{state:PulseState;version:number}>{const row=(await sql.query('select document,version from app_config where singleton=true')).rows[0];if(!row)throw new Error('Run migrations before starting API');return {state:normalizeState(row.document),version:row.version};}
 export function leadRepository(sql:Sql):LeadEngineRepository {
  return {
   async insertEvents(events){let accepted=0;const affected=new Set<string>();for(const e of events){const result=await sql.query('insert into user_events(idempotency_key,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at) values($1,$2,$3,$4,$5,$6,$7::jsonb,$8) on conflict(idempotency_key) do nothing returning id',[e.idempotencyKey,e.sessionId,e.userId,e.eventType,e.entityType,e.entityId,JSON.stringify(e.metadata),e.createdAt]);if(result.rows.length){accepted++;affected.add(e.sessionId);}}return {accepted,duplicates:events.length-accepted,affectedSessionIds:[...affected]};},
