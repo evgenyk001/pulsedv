@@ -25,7 +25,12 @@ function mergeState(input:Partial<PulseState>|null|undefined):PulseState{
     properties:Array.isArray(input?.properties)?input!.properties:DEFAULT_STATE.properties,
     banners:Array.isArray(input?.banners)?input!.banners:DEFAULT_STATE.banners,
     mortgagePrograms:Array.isArray(input?.mortgagePrograms)?input!.mortgagePrograms:DEFAULT_STATE.mortgagePrograms,
-    select:{...DEFAULT_STATE.select,...(input?.select||{}),weights:{...DEFAULT_STATE.select.weights,...(input?.select?.weights||{})}},
+    select:{
+      ...DEFAULT_STATE.select,
+      ...(input?.select||{}),
+      preferenceEnabled:{...DEFAULT_STATE.select.preferenceEnabled,...(input?.select?.preferenceEnabled||{})},
+      weights:{...DEFAULT_STATE.select.weights,...(input?.select?.weights||{})}
+    },
     content:{...DEFAULT_STATE.content,...(input?.content||{})},
     leadEngine:{
       ...DEFAULT_STATE.leadEngine,
