@@ -138,8 +138,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const changed={...state,properties:[],updatedAt:new Date().toISOString()};
    const result=await sql.query('update app_config set document=$1::jsonb,version=version+1,updated_at=now() where singleton=true and version=$2 returning version',[JSON.stringify(changed),version]);
    if(!result.rows.length)throw new HttpError(409,'Настройки изменил другой сотрудник. Обновите данные и повторите правки');
-   const catalog=(await listCatalog(sql,{status:'all',page:1,limit:2000,view:'match'})).items;
-   await audit(sql,request.member!.id,'config.update',null,{version:result.rows[0].version});return {state:{...changed,properties:catalog},version:result.rows[0].version};
+   await audit(sql,request.member!.id,'config.update',null,{version:result.rows[0].version});return {state:changed,version:result.rows[0].version};
   });
  });
  app.patch('/api/v1/control/leads/:id',{preHandler:control},async request=>{
