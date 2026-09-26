@@ -151,17 +151,17 @@
 .pulseCore{position:relative;display:grid;grid-template-columns:92px 1fr;gap:14px;align-items:center;min-height:128px;padding:15px 16px;border-radius:27px;background:linear-gradient(145deg,#121923,#202a37 72%,#281920);color:white;overflow:hidden;box-shadow:0 19px 42px rgba(22,30,42,.15)}
 .pulseCore:before{content:"";position:absolute;inset:-70% auto auto 38%;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(242,13,29,.23),rgba(242,13,29,.04) 43%,transparent 68%);pointer-events:none}
 .pulseCore:after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 0 68%,rgba(255,255,255,.025));pointer-events:none}
-.coreVisual{position:relative;z-index:1;width:86px;height:86px;display:grid;place-items:center;animation:coreWake .42s var(--motion-soft) both}
-.coreRingSvg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 9px rgba(242,13,29,.08))}
-.coreTrackOuter,.coreTrack,.coreProgressOutline,.coreProgress,.coreProgressGlow{fill:none;vector-effect:non-scaling-stroke;transform:rotate(-90deg);transform-origin:50% 50%}
-.coreTrackOuter{stroke:rgba(255,255,255,.055);stroke-width:11}
-.coreTrack{stroke:rgba(255,255,255,.12);stroke-width:7}
-.coreProgressOutline{stroke:rgba(255,80,94,.3);stroke-width:10;stroke-linecap:round;stroke-dashoffset:0;transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1)}
-.coreProgress{stroke-width:6.4;stroke-linecap:round;stroke-dashoffset:0;transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1);filter:drop-shadow(0 0 4px rgba(242,13,29,.22));animation:ringNativeBreath 2.15s ease-in-out infinite}
-.coreProgressGlow{stroke:rgba(255,255,255,.46);stroke-width:2;stroke-linecap:round;stroke-dashoffset:0;opacity:.14;transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1);animation:ringNativeSheen 1.85s ease-in-out infinite}
-.coreValue{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
-.coreValue strong{font-size:23px;line-height:1;font-weight:770;letter-spacing:-.055em}
-.coreValue span{margin-top:4px;font-size:6.8px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);font-weight:760}
+.pulseRing{position:relative;z-index:1;width:86px;height:86px;display:grid;place-items:center;flex:none;animation:coreWake .42s var(--motion-soft) both}
+.ringSvg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 7px rgba(242,13,29,.07))}
+.ringTrackOuter,.ringTrack,.ringProgressOutline,.ringProgress,.ringProgressGlow{fill:none;vector-effect:non-scaling-stroke;transform:rotate(-90deg);transform-origin:50% 50%}
+.ringTrackOuter{stroke:rgba(255,255,255,.05);stroke-width:10}
+.ringTrack{stroke:rgba(255,255,255,.12);stroke-width:6.2}
+.ringProgressOutline{stroke:rgba(255,80,94,.2);stroke-width:8.2;stroke-linecap:round;transition:stroke-dashoffset .9s cubic-bezier(.22,1,.36,1)}
+.ringProgress{stroke-width:5.8;stroke-linecap:round;transition:stroke-dashoffset .9s cubic-bezier(.22,1,.36,1);filter:drop-shadow(0 0 3px rgba(242,13,29,.2));animation:ringNativeBreath 2.15s ease-in-out infinite}
+.ringProgressGlow{stroke:rgba(255,255,255,.34);stroke-width:1.5;stroke-linecap:round;opacity:.1;transition:stroke-dashoffset .9s cubic-bezier(.22,1,.36,1);animation:ringNativeSheen 1.85s ease-in-out infinite}
+.ringCenter{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
+.ringCenter strong{font-size:23px;line-height:1;font-weight:770;letter-spacing:-.055em}
+.ringCenter span{margin-top:4px;font-size:6.4px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);font-weight:780}
 .coreCopy{position:relative;z-index:1;min-width:0}
 .coreCopy>span{display:block;font-size:7px;letter-spacing:.12em;color:#ff7f8a;font-weight:820}
 .coreCopy>strong{display:block;margin-top:6px;font-size:12px;line-height:1.2;letter-spacing:-.018em}
@@ -189,17 +189,7 @@
 .matchingSteps i:nth-child(2):after{animation-delay:.16s}.matchingSteps i:nth-child(3):after{animation-delay:.32s}
 
 .resultHero{padding:20px 18px 22px;border-radius:29px;background:linear-gradient(145deg,#101720,#202b38 70%,#2a1820)}
-.resultCore{position:relative;width:74px;height:74px;margin-bottom:17px;display:grid;place-items:center}
-.resultCoreRingSvg{position:absolute;inset:0;width:100%;height:100%;overflow:visible;filter:drop-shadow(0 0 8px rgba(242,13,29,.09))}
-.resultTrackOuter,.resultTrack,.resultProgressOutline,.resultProgress,.resultProgressGlow{fill:none;vector-effect:non-scaling-stroke;transform:rotate(-90deg);transform-origin:50% 50%}
-.resultTrackOuter{stroke:rgba(255,255,255,.055);stroke-width:11}
-.resultTrack{stroke:rgba(255,255,255,.12);stroke-width:7}
-.resultProgressOutline{stroke:rgba(255,80,94,.3);stroke-width:10;stroke-linecap:round;transition:stroke-dasharray .95s cubic-bezier(.22,1,.36,1)}
-.resultProgress{stroke-width:6.4;stroke-linecap:round;transition:stroke-dasharray .95s cubic-bezier(.22,1,.36,1);filter:drop-shadow(0 0 4px rgba(242,13,29,.22));animation:ringNativeBreath 2.15s ease-in-out infinite}
-.resultProgressGlow{stroke:rgba(255,255,255,.46);stroke-width:2;stroke-linecap:round;opacity:.14;transition:stroke-dasharray .95s cubic-bezier(.22,1,.36,1);animation:ringNativeSheen 1.85s ease-in-out infinite}
-.resultCore>div:last-child{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
-.resultCore strong{font-size:20px;line-height:1;letter-spacing:-.05em}
-.resultCore span{margin-top:4px;font-size:5.5px;letter-spacing:.12em;color:rgba(255,255,255,.48);font-weight:800}
+.resultHero>.pulseRing{margin-bottom:17px}
 .resultHero h1{font-size:29px;max-width:330px}
 .resultIntro{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:5px 2px 0}
 .resultIntro>div{display:flex;flex-direction:column}
@@ -235,13 +225,13 @@
 @keyframes matchSpark{0%,100%{transform:scale(.92);opacity:.7}50%{transform:scale(1.08);opacity:1}}
 @keyframes stepScan{0%,18%{transform:translateX(-100%)}55%,100%{transform:translateX(100%)}}
 @media(prefers-reduced-motion:reduce){
-  .coreVisual,.coreProgress,.coreProgressGlow,.resultProgress,.resultProgressGlow,.scanRing,.scanRingTwo,.matchingCore svg,.matchingSteps i:after{animation:none}
-  .coreProgressOutline,.coreProgress,.coreProgressGlow,.resultProgressOutline,.resultProgress,.resultProgressGlow{transition:none}
+  .pulseRing,.ringProgress,.ringProgressGlow,.scanRing,.scanRingTwo,.matchingCore svg,.matchingSteps i:after{animation:none}
+  .ringProgressOutline,.ringProgress,.ringProgressGlow{transition:none}
 }
 @media(max-width:360px){
   .hero h1{font-size:32px}
   .pulseCore{grid-template-columns:78px 1fr;padding:13px}
-  .coreVisual{width:74px;height:74px}
+  .pulseRing{width:74px;height:74px}
   .coreCopy>small{font-size:7.4px}
   .smartInput input{font-size:8.7px!important}
   .resultIntro{align-items:flex-start;flex-direction:column;gap:4px}
