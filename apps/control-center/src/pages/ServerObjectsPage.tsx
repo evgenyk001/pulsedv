@@ -280,9 +280,13 @@ export function ServerObjectsPage(){
         documents:documentsBy.get(row.id)||[],
       }));
 
-      const result=await importAdminCatalog(properties,{
+      const replace={
         images:parsed.has("images"),features:parsed.has("features"),floorplans:parsed.has("floorplans"),documents:parsed.has("documents")
-      });
+      };
+      const replacing=[replace.floorplans&&"планировки",replace.features&&"особенности",replace.images&&"фото по URL",replace.documents&&"документы по URL"].filter(Boolean).join(", ");
+      const confirmed=window.confirm(`Импортировать ${properties.length} ЖК?\n\nСуществующие объекты с тем же ID будут обновлены.${replacing?`\nБудут заменены: ${replacing}.`:"\nМедиа и дочерние данные без отдельного CSV сохранятся."}`);
+      if(!confirmed){setNotice("Импорт отменён");return}
+      const result=await importAdminCatalog(properties,replace);
       setNotice(`Импортировано ${result.total}: новых ${result.created}, обновлено ${result.updated}`);
       setPage(1);await load();
     }catch(e){setError(e instanceof Error?e.message:"Не удалось импортировать CSV")}
