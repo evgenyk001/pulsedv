@@ -104,6 +104,48 @@ function parseScaledMoney(value:string,unit:string){
   return /млн|мил/i.test(unit)?Math.round(amount*1_000_000):Math.round(amount*1_000);
 }
 
+function PulseRing({value,label,sublabel}:{value:number;label:string;sublabel:string}){
+  const gradientId=React.useId().replace(/:/g,"");
+  const radius=42;
+  const circumference=2*Math.PI*radius;
+  const percent=Math.max(0,Math.min(100,value));
+  const offset=circumference*(1-percent/100);
+
+  return <div className={styles.pulseRing}>
+    <svg className={styles.ringSvg} viewBox="0 0 100 100" aria-hidden="true">
+      <defs>
+        <linearGradient id={gradientId} x1="22" y1="8" x2="82" y2="88" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#ff4352"/>
+          <stop offset="48%" stopColor="#f20d1d"/>
+          <stop offset="100%" stopColor="#ff2639"/>
+        </linearGradient>
+      </defs>
+      <circle className={styles.ringTrackOuter} cx="50" cy="50" r={radius}/>
+      <circle className={styles.ringTrack} cx="50" cy="50" r={radius}/>
+      <circle
+        className={styles.ringProgressOutline}
+        cx="50" cy="50" r={radius}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+      />
+      <circle
+        className={styles.ringProgress}
+        cx="50" cy="50" r={radius}
+        stroke={`url(#${gradientId})`}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+      />
+      <circle
+        className={styles.ringProgressGlow}
+        cx="50" cy="50" r={radius}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+      />
+    </svg>
+    <div className={styles.ringCenter}><strong>{label}</strong><span>{sublabel}</span></div>
+  </div>;
+}
+
 export default function SelectionPage(){
   const navigate=useNavigate();
   const control=usePulseControlState();
@@ -287,13 +329,13 @@ export default function SelectionPage(){
     const smartBoost=Math.min(10,smartSignal*1.7);
 
     if(step===0){
-      if(firstStepCount===0)return 1;
+      if(firstStepCount===0)return 0;
       return Math.round(Math.max(3,Math.min(18,4+narrowing*6+smartBoost)));
     }
 
     // После финансового шага и дальше PULSE показывает только реальную уверенность:
     // если нет ни одного допустимого варианта, кольцо не растёт.
-    if(eligible.length===0)return 1;
+    if(eligible.length===0)return 0;
 
     const matchSignal=Math.max(0,Math.min(1,topScore/100));
     const strongRatio=Math.max(0,Math.min(1,strongCount/Math.max(1,eligible.length)));
@@ -316,7 +358,7 @@ export default function SelectionPage(){
 
     return Math.round(Math.max(4,Math.min(97,value)));
   },[step,properties.length,firstStepCount,topScore,eligible.length,strongCount,preferences.length,smartSignal,delivery]);
-  const [animatedPulseLevel,setAnimatedPulseLevel]=React.useState(1);
+  const [animatedPulseLevel,setAnimatedPulseLevel]=React.useState(0);
   const [animatedResultScore,setAnimatedResultScore]=React.useState(0);
   React.useEffect(()=>{
     const frame=window.requestAnimationFrame(()=>setAnimatedPulseLevel(pulseLevel));
@@ -610,35 +652,11 @@ export default function SelectionPage(){
     const topPayment=source[0]?.match.mortgagePayment??null;
     return <div className={styles.page}>
       <section className={styles.resultHero} aria-label="Результат PULSE Select">
-        <div className={styles.resultCore}>
-          <svg className={styles.resultCoreRingSvg} viewBox="0 0 100 100" aria-hidden="true">
-            <defs>
-              <linearGradient id="pulse-result-red" x1="22" y1="8" x2="82" y2="88" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stopColor="#ff4352"/>
-                <stop offset="48%" stopColor="#f20d1d"/>
-                <stop offset="100%" stopColor="#ff2639"/>
-              </linearGradient>
-            </defs>
-            <circle className={styles.resultTrackOuter} cx="50" cy="50" r="42"/>
-            <circle className={styles.resultTrack} cx="50" cy="50" r="42"/>
-            <circle
-              className={styles.resultProgressOutline}
-              cx="50" cy="50" r="42" pathLength="100"
-              style={{strokeDasharray:`${animatedResultScore} 100`}}
-            />
-            <circle
-              className={styles.resultProgress}
-              cx="50" cy="50" r="42" pathLength="100" stroke="url(#pulse-result-red)"
-              style={{strokeDasharray:`${animatedResultScore} 100`}}
-            />
-            <circle
-              className={styles.resultProgressGlow}
-              cx="50" cy="50" r="42" pathLength="100"
-              style={{strokeDasharray:`${animatedResultScore} 100`}}
-            />
-          </svg>
-          <div><strong>{topScore}%</strong><span>PULSE MATCH</span></div>
-        </div>
+        <PulseRing
+          value={animatedResultScore}
+          label={`${topScore}%`}
+          sublabel="PULSE MATCH"
+        />
         <span className={styles.eyebrow}>PULSE SELECT</span>
         <h1>{eligible.length?"Мы нашли ваш вектор":"Нужно немного расширить рамки"}</h1>
         <p>{eligible.length
@@ -750,35 +768,11 @@ export default function SelectionPage(){
     </section>}
 
     <section className={styles.pulseCore} aria-label="Живой профиль PULSE Select">
-      <div className={styles.coreVisual}>
-        <svg className={styles.coreRingSvg} viewBox="0 0 100 100" aria-hidden="true">
-          <defs>
-            <linearGradient id="pulse-core-red" x1="22" y1="8" x2="82" y2="88" gradientUnits="userSpaceOnUse">
-              <stop offset="0%" stopColor="#ff4352"/>
-              <stop offset="48%" stopColor="#f20d1d"/>
-              <stop offset="100%" stopColor="#ff2639"/>
-            </linearGradient>
-          </defs>
-          <circle className={styles.coreTrackOuter} cx="50" cy="50" r="42"/>
-          <circle className={styles.coreTrack} cx="50" cy="50" r="42"/>
-          <circle
-            className={styles.coreProgressOutline}
-            cx="50" cy="50" r="42" pathLength="100"
-            style={{strokeDasharray:`${animatedPulseLevel} 100`}}
-          />
-          <circle
-            className={styles.coreProgress}
-            cx="50" cy="50" r="42" pathLength="100" stroke="url(#pulse-core-red)"
-            style={{strokeDasharray:`${animatedPulseLevel} 100`}}
-          />
-          <circle
-            className={styles.coreProgressGlow}
-            cx="50" cy="50" r="42" pathLength="100"
-            style={{strokeDasharray:`${animatedPulseLevel} 100`}}
-          />
-        </svg>
-        <div className={styles.coreValue}><strong>{liveCount}</strong><span>{plural(liveCount,["вариант","варианта","вариантов"])}</span></div>
-      </div>
+      <PulseRing
+        value={animatedPulseLevel}
+        label={String(liveCount)}
+        sublabel={plural(liveCount,["вариант","варианта","вариантов"])}
+      />
       <div className={styles.coreCopy}>
         <span>PULSE CORE · LIVE</span>
         <strong>{step===0?"Уже понимаем основу":step===1?"Проверяем покупательную способность":step===2?"Уточняем горизонт":"Расставляем личные приоритеты"}</strong>
