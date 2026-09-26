@@ -716,7 +716,7 @@ export default function SelectionPage(){
           />
           <circle
             className={styles.coreProgress}
-            cx="50" cy="50" r="42" pathLength="100"
+            cx="50" cy="50" r="42" pathLength="100" stroke="url(#pulse-core-red)"
             style={{strokeDasharray:`${animatedPulseLevel} 100`}}
           />
           <circle
