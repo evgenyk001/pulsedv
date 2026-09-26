@@ -157,7 +157,7 @@
 .coreTrackOuter{stroke:rgba(255,255,255,.055);stroke-width:11}
 .coreTrack{stroke:rgba(255,255,255,.12);stroke-width:7}
 .coreProgressOutline{stroke:rgba(255,80,94,.3);stroke-width:10;stroke-linecap:round;stroke-dashoffset:0;transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1)}
-.coreProgress{stroke:url(#pulse-core-red);stroke-width:6.4;stroke-linecap:round;stroke-dashoffset:0;transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1);filter:drop-shadow(0 0 4px rgba(242,13,29,.22));animation:ringNativeBreath 2.15s ease-in-out infinite}
+.coreProgress{stroke-width:6.4;stroke-linecap:round;stroke-dashoffset:0;transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1);filter:drop-shadow(0 0 4px rgba(242,13,29,.22));animation:ringNativeBreath 2.15s ease-in-out infinite}
 .coreProgressGlow{stroke:rgba(255,255,255,.46);stroke-width:2;stroke-linecap:round;stroke-dashoffset:0;opacity:.14;transition:stroke-dasharray .9s cubic-bezier(.22,1,.36,1);animation:ringNativeSheen 1.85s ease-in-out infinite}
 .coreValue{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
 .coreValue strong{font-size:23px;line-height:1;font-weight:770;letter-spacing:-.055em}
