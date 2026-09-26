@@ -25,7 +25,7 @@ import { Slider } from "../components/Slider";
 import { Input } from "../components/Input";
 import { SegmentedControl } from "../components/SegmentedControl";
 import { usePriceBounds } from "../helpers/usePriceBounds";
-import { useProperties } from "../helpers/useProperties";
+import { useSelectionProperties } from "../helpers/useCatalog";
 import { usePulseControlState } from "../helpers/usePulseControlState";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./selection.module.css";
@@ -150,7 +150,7 @@ export default function SelectionPage(){
   const navigate=useNavigate();
   const control=usePulseControlState();
   const {data:bounds}=usePriceBounds();
-  const {data:properties=[]}=useProperties();
+  const {data:properties=[]}=useSelectionProperties();
   const minPrice=bounds?.minPriceRub??FALLBACK_MIN;
   const maxPrice=bounds?.maxPriceRub??FALLBACK_MAX;
   const priceStep=bounds?.stepRub??FALLBACK_STEP;
