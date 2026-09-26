@@ -28,7 +28,7 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await page.getByRole('button',{name:/Продолжить/}).click();
  await expect(page.getByRole('heading',{name:'Когда нужны ключи?',exact:true})).toBeVisible();
  await page.getByRole('button',{name:/Продолжить/}).click();
- await expect(page.getByRole('heading',{name:'Что для вас важно?',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Что делает квартиру «вашей»?',exact:true})).toBeVisible();
  const sea=page.getByRole('button',{name:/Вид на море/});await sea.click();await expect(sea).toHaveAttribute('aria-pressed','true');
  const parking=page.getByRole('button',{name:/Парковка/});await parking.click();await expect(parking).toHaveAttribute('aria-pressed','true');
  await page.getByRole('button',{name:'Собрать мой подбор',exact:true}).click();
