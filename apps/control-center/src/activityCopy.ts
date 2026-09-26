@@ -25,6 +25,27 @@ const sourceNames:Record<string,string>={
   home:"Главная",
 };
 
+const eventNames:Record<string,string>={
+  property_view:"Просмотр карточки ЖК",
+  favorite_add:"Добавление в избранное",
+  favorite_remove:"Удаление из избранного",
+  catalog_filter:"Изменение фильтров",
+  compare_add:"Добавление к сравнению",
+  compare_remove:"Удаление из сравнения",
+  mortgage_program:"Выбор ипотечной программы",
+  mortgage_calculated:"Расчёт ипотеки",
+  select_submit:"Завершение PULSE Select",
+  property_share:"Отправка ссылки на ЖК",
+  lead_form_open:"Открытие формы консультации",
+  contact_click:"Попытка связаться",
+  lead_created:"Отправка заявки",
+  return_visit:"Повторный визит",
+  onboarding_complete:"Завершение онбординга",
+  page_view:"Переход по приложению",
+};
+
+export const eventTypeName=(eventType:string)=>eventNames[eventType]||"Действие пользователя";
+
 export const priorityName=(priority:string|undefined)=>
   priority==="urgent"?"Срочный":
   priority==="hot"?"Горячий":
@@ -114,6 +135,6 @@ export function describeEvent(event:PulseEvent,state:PulseState){
     case "return_visit":
       return {title:"Вернулся в приложение",detail:"Повторный визит"};
     default:
-      return {title:"Действие в приложении",detail:propertyName||city||"Активность пользователя"};
+      return {title:eventTypeName(event.eventType),detail:propertyName||city||"Активность пользователя"};
   }
 }
