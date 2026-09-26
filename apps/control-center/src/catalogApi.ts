@@ -50,6 +50,22 @@ export async function uploadAdminMedia(
   return data.property as PulseProperty;
 }
 
+export async function uploadAdminMediaCompact(
+  propertyId:string,
+  file:File,
+  kind:"cover"|"gallery"|"floorplan"|"presentation"|"document",
+  floorplanId?:string
+){
+  const params=new URLSearchParams({kind,filename:file.name,compact:"1"});
+  if(floorplanId)params.set("floorplanId",floorplanId);
+  const response=await fetch("/api/v1/control/catalog/"+encodeURIComponent(propertyId)+"/media?"+params.toString(),{
+    method:"POST",credentials:"same-origin",headers:{"Content-Type":file.type||"application/octet-stream"},body:file,
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error||"Не удалось загрузить файл");
+  return data as {ok:true;url:string};
+}
+
 export async function deleteAdminMedia(
   propertyId:string,
   mediaId:string,
