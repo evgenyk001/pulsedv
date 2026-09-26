@@ -125,8 +125,15 @@ export async function registerCatalogRoutes(
     const input=catalogImportSchema.parse(request.body);
     let created=0,updated=0;
     await db.transaction(async sql=>{
-      for(const property of input.properties){
-        const exists=await getCatalogProperty(sql,property.id,"any");
+      for(const incoming of input.properties){
+        const exists=await getCatalogProperty(sql,incoming.id,"any");
+        const property=exists?{
+          ...incoming,
+          images:input.replace.images?incoming.images:exists.images,
+          features:input.replace.features?incoming.features:exists.features,
+          floorplans:input.replace.floorplans?incoming.floorplans:exists.floorplans,
+          documents:input.replace.documents?incoming.documents:(exists.documents??[]),
+        }:incoming;
         await upsertCatalogProperty(sql,property);
         exists?updated++:created++;
       }
