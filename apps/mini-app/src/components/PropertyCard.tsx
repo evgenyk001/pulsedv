@@ -107,7 +107,7 @@ function CatalogPropertyCard({property,initialRoom="Все",pulseScore=null}:{pr
         <Heart size={17} fill={saved?"currentColor":"none"}/>
       </button>
 
-      <div className={styles.photoCounter}>{gallery.length>1?`${photoIndex+1} / ${gallery.length}`:`${Math.max(1,gallery.length)} фото`}</div>
+      <div className={styles.photoCounter}>{gallery.length>1?`${photoIndex+1} / ${gallery.length}`:gallery.length===1?"1 фото":"Фото готовится"}</div>
       {gallery.length>1&&<div className={styles.galleryDots} aria-hidden="true">{gallery.map((_,index)=><i key={index} className={index===photoIndex?styles.galleryDotActive:""}/>)}</div>}
     </div>
 
@@ -130,7 +130,7 @@ function CatalogPropertyCard({property,initialRoom="Все",pulseScore=null}:{pr
       </div>}
 
       {roomOptions.length>0&&<section className={styles.plansSection}>
-        <div className={styles.catalogSectionHead}><span>Планировки</span><small>{property.floorplans.length} {property.floorplans.length===1?"вариант":"вариантов"}</small></div>
+        <div className={styles.catalogSectionHead}><span>Планировки</span><small>{property.floorplans.length} {property.floorplans.length===1?"вариант":property.floorplans.length>1&&property.floorplans.length<5?"варианта":"вариантов"}</small></div>
         <div className={styles.roomTabs} role="tablist" aria-label={`Планировки ${property.name}`}>
           {roomOptions.map(option=><button
             type="button"
