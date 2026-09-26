@@ -57,7 +57,7 @@ export async function deleteAdminMedia(
 ){
   const response=await api<{ok:true;property:PulseProperty}>(
     "/control/catalog/"+encodeURIComponent(propertyId)+"/media/"+encodeURIComponent(mediaId)+"?kind="+kind,
-    {method:"DELETE"}
+    {method:"DELETE",body:"{}"}
   );
   return response.property;
 }
