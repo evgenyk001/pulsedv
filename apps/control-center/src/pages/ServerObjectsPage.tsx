@@ -6,7 +6,7 @@ import { PageFrame } from "../components/PageFrame";
 import type { PulseProperty } from "../../../../packages/pulse-data";
 import {
   createAdminProperty,deleteAdminMedia,getAdminProperty,importAdminCatalog,listAdminCatalog,
-  saveAdminProperty,uploadAdminMedia
+  saveAdminProperty,uploadAdminMedia,uploadAdminMediaCompact
 } from "../catalogApi";
 
 type StatusFilter="all"|"draft"|"published"|"archived";
@@ -201,11 +201,11 @@ export function ServerObjectsPage(){
         const token=(parts[1]||"").toLowerCase();
         if(!propertyId||!token){failed.push(file.name);continue}
         try{
-          if(token==="cover")await uploadAdminMedia(propertyId,file,"cover");
-          else if(token==="gallery")await uploadAdminMedia(propertyId,file,"gallery");
-          else if(token==="presentation")await uploadAdminMedia(propertyId,file,"presentation");
-          else if(token==="document")await uploadAdminMedia(propertyId,file,"document");
-          else if(token==="floorplan"&&parts[2])await uploadAdminMedia(propertyId,file,"floorplan",parts[2]);
+          if(token==="cover")await uploadAdminMediaCompact(propertyId,file,"cover");
+          else if(token==="gallery")await uploadAdminMediaCompact(propertyId,file,"gallery");
+          else if(token==="presentation")await uploadAdminMediaCompact(propertyId,file,"presentation");
+          else if(token==="document")await uploadAdminMediaCompact(propertyId,file,"document");
+          else if(token==="floorplan"&&parts[2])await uploadAdminMediaCompact(propertyId,file,"floorplan",parts[2]);
           else{failed.push(file.name);continue}
           uploaded++;
         }catch{failed.push(file.name)}
