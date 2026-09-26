@@ -7,6 +7,7 @@ COPY apps/control-center/package.json apps/control-center/package.json
 RUN npm ci --omit=dev --no-audit --no-fund
 COPY backend backend
 COPY packages packages
+RUN mkdir -p /data/media && chown -R node:node /data/media
 ENV NODE_ENV=production
 USER node
 EXPOSE 3000
