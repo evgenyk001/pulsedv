@@ -10,6 +10,7 @@ export type PulseProperty={
   images:{id?:string;url:string;alt:string;sortOrder:number}[];
   features:{id?:string;label:string;icon:string;sortOrder:number}[];
   floorplans:{id?:string;roomLabel:string;areaFrom:number|null;areaTo:number|null;priceFrom:number|null;imageUrl:string|null;sortOrder:number}[];
+  documents?:{id?:string;kind:"presentation"|"document";name:string;url:string;mimeType:string|null;sizeBytes:number|null;sortOrder:number}[];
 };
 
 export type PulseBanner={
