@@ -280,8 +280,14 @@ export default function SelectionPage(){
   }).length,[properties,city,rooms]);
   const liveCount=step===0?firstStepCount:eligible.length;
 
-  const pulseLevel=Math.max(18,Math.min(100,(step+1)*20+Math.min(20,topScore/5)));
-  const [animatedPulseLevel,setAnimatedPulseLevel]=React.useState(3);
+  const pulseLevel=step===0
+    ?6
+    :step===1
+      ?34
+      :step===2
+        ?62
+        :84+Math.min(12,preferences.length*4);
+  const [animatedPulseLevel,setAnimatedPulseLevel]=React.useState(2);
   React.useEffect(()=>{
     const frame=window.requestAnimationFrame(()=>setAnimatedPulseLevel(pulseLevel));
     return()=>window.cancelAnimationFrame(frame);
