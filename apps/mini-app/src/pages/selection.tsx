@@ -231,7 +231,7 @@ export default function SelectionPage(){
   }),[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,preferences]);
 
   const ranked=React.useMemo(()=>properties
-    .map(property=>({property,match:selectionMatch(property,criteria,control.mortgagePrograms)}))
+    .map(property=>({property,match:selectionMatch(property,criteria,control.mortgagePrograms,control.select.weights)}))
     .sort((a,b)=>Number(b.match.eligible)-Number(a.match.eligible)||b.match.score-a.match.score||a.property.sortOrder-b.property.sortOrder)
   ,[properties,criteria,control.mortgagePrograms]);
 
