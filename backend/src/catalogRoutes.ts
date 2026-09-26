@@ -31,6 +31,7 @@ const mediaQuery=z.object({
   kind:z.enum(mediaKinds),
   floorplanId:z.string().max(120).optional(),
   filename:z.string().max(300).optional(),
+  compact:z.literal("1").optional(),
 }).strict();
 
 const mediaSpec:Record<string,{ext:string;group:"image"|"pdf"}>={
@@ -214,6 +215,7 @@ export async function registerCatalogRoutes(
       await bestEffortDelete(config,url);
       throw error;
     }
+    if(query.compact)return {ok:true,url};
     return {property:await getCatalogProperty(db,id,"any")};
   });
 
