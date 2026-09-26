@@ -3,8 +3,10 @@ import { Plus, Search, X } from 'lucide-react';
 import { PageFrame } from '../components/PageFrame';
 import { usePulseState } from '../data';
 import { updatePulseState, type PulseProperty } from '../../../../packages/pulse-data';
+import { runtime } from '../../../../packages/pulse-data/runtime';
+import { ServerObjectsPage } from './ServerObjectsPage';
 const fresh=():PulseProperty=>({id:crypto.randomUUID(),name:'Новый ЖК',city:'Владивосток',district:'',address:null,latitude:null,longitude:null,priceFrom:0,delivery:'',className:'',status:'draft',description:'',developerName:'',tags:[],coverImageUrl:null,sortOrder:999,images:[],features:[],floorplans:[]});
-export function ObjectsPage(){
+function PreviewObjectsPage(){
  const state=usePulseState();const [selected,setSelected]=React.useState<string|null>(null);const [query,setQuery]=React.useState('');const p=state.properties.find(x=>x.id===selected);
  const patch=(change:Partial<PulseProperty>)=>updatePulseState(s=>({...s,properties:s.properties.map(x=>x.id===selected?{...x,...change}:x)}));
  const add=()=>{const p=fresh();updatePulseState(s=>({...s,properties:[...s.properties,p]}));setSelected(p.id);};
@@ -28,3 +30,5 @@ export function ObjectsPage(){
   </section></div>}
  </PageFrame>;
 }
+
+export function ObjectsPage(){return runtime.enabled?<ServerObjectsPage/>:<PreviewObjectsPage/>;}
