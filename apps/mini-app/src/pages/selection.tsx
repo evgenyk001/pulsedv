@@ -319,7 +319,7 @@ export default function SelectionPage(){
     if(mortgageIntent){nextMode="mortgage";found++;}
     else if(cashIntent){nextMode="cash";found++;}
 
-    const paymentMatch=text.match(/(?:плат[её]ж[^\d]{0,18})?(\d{2,3})\s*(тыс|тысяч|к)(?:\s*(?:руб|₽))?\s*(?:\/\s*мес|в месяц)/i);
+    const paymentMatch=text.match(/(?:плат[её]ж[^\d]{0,18})?(\d{2,3})\s*(тыс|тысяч|к)\.?(?:\s*(?:руб|₽))?\s*(?:\/\s*мес|в месяц)/i);
     if(paymentMatch){
       const parsed=parseScaledMoney(paymentMatch[1],paymentMatch[2]);
       if(parsed){nextPayment=clamp(snap(parsed,5_000),15_000,300_000);nextMode="mortgage";found++;}
@@ -335,7 +335,7 @@ export default function SelectionPage(){
     if(budgetMatch&&!downMatch){
       const parsed=parseScaledMoney(budgetMatch[1],budgetMatch[2]);
       if(parsed){
-        const max=clamp(snap(parsed,priceStep),minPrice,Math.max(maxPrice,parsed));
+        const max=clamp(snap(parsed,priceStep),minPrice,maxPrice);
         nextBudget=[minPrice,max];
         if(!mortgageIntent)nextMode="cash";
         found++;
@@ -476,7 +476,7 @@ export default function SelectionPage(){
       });
     }else{
       const extra=Math.max(500_000,Math.round(budget[1]*.08/100_000)*100_000);
-      const next={...criteria,max:budget[1]+extra};
+      const next={...criteria,max:Math.min(maxPrice,budget[1]+extra)};
       const result=gainFor(next);
       items.push({
         id:"more-payment",
@@ -520,7 +520,7 @@ export default function SelectionPage(){
         setMonthlyPayment(next);setPaymentDraft(formatRub(next));
       }else{
         const extra=Math.max(500_000,Math.round(budget[1]*.08/100_000)*100_000);
-        const next:[number,number]=[budget[0],budget[1]+extra];
+        const next:[number,number]=[budget[0],Math.min(maxPrice,budget[1]+extra)];
         setBudget(next);setBudgetDraft([formatRub(next[0]),formatRub(next[1])]);
       }
     }
