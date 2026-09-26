@@ -15,7 +15,6 @@ export function useFavoriteProperties(ids:string[]){
     queryFn:()=>getPropertiesByIds(ids),
     enabled:ids.length>0,
     staleTime:30_000,
-    initialData:ids.length?undefined:[],
   });
 }
 
@@ -36,13 +35,14 @@ export function useCatalogMeta(){
   return useQuery({queryKey:["catalog","meta"],queryFn:getCatalogMeta,staleTime:60_000});
 }
 
-export function useCatalogInfinite(filters:Omit<CatalogFilters,"page">){
+export function useCatalogInfinite(filters:Omit<CatalogFilters,"page">,enabled=true){
   return useInfiniteQuery({
     queryKey:["catalog","list",filters],
     initialPageParam:1,
     queryFn:({pageParam})=>getCatalogPage({...filters,page:pageParam}),
     getNextPageParam:last=>last.hasMore?last.page+1:undefined,
     staleTime:30_000,
+    enabled,
   });
 }
 
