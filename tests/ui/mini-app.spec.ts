@@ -18,7 +18,19 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await tabs.getByRole('tab',{name:'Список',exact:true}).click();
  await expect(first).toHaveAttribute('aria-selected','true');
  await nav.getByRole('button',{name:'Подбор',exact:true}).click();
- await page.getByRole('button',{name:/Продолжить/}).click();await page.getByRole('button',{name:/Продолжить/}).click();await page.getByRole('button',{name:/Продолжить/}).click();
+ await expect(page.getByRole('heading',{name:'Где и что ищем?',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Продолжить/}).click();
+ await expect(page.getByRole('heading',{name:'Как удобнее считать?',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Продолжить/}).click();
+ await expect(page.getByRole('heading',{name:'Когда нужны ключи?',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Продолжить/}).click();
+ await expect(page.getByRole('heading',{name:'Что для вас важно?',exact:true})).toBeVisible();
+ const sea=page.getByRole('button',{name:/Вид на море/});await sea.click();await expect(sea).toHaveAttribute('aria-pressed','true');
+ const parking=page.getByRole('button',{name:/Парковка/});await parking.click();await expect(parking).toHaveAttribute('aria-pressed','true');
+ await page.getByRole('button',{name:'Показать подбор',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Подбор готов',exact:true})).toBeVisible();
+ await page.goto('/pulsedv/mini-app/#/mortgage');
+ await page.getByRole('button',{name:/Дальневосточная/}).click();
  const switches=page.getByRole('switch');await expect(switches.first()).toBeVisible();
  for(const item of await switches.all()){
   const thumb=item.locator('[data-state]').first();
