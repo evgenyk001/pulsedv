@@ -560,7 +560,7 @@ export default function SelectionPage(){
     const source=eligible.length?display:ranked.slice(0,3);
     const topPayment=source[0]?.match.mortgagePayment??null;
     return <div className={styles.page}>
-      <section className={styles.resultHero}>
+      <section className={styles.resultHero} aria-label="Результат PULSE Select">
         <div className={styles.resultCore}>
           <div className={styles.resultCoreRing} style={{"--pulse-level":Math.max(6,topScore)+"%"} as React.CSSProperties}/>
           <div><strong>{topScore}%</strong><span>PULSE MATCH</span></div>
