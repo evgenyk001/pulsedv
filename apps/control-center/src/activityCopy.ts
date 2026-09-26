@@ -119,7 +119,23 @@ export function describeEvent(event:PulseEvent,state:PulseState){
     }
     case "select_submit":{
       const budget=min!=null&&max!=null?`${min.toLocaleString("ru-RU")}–${max.toLocaleString("ru-RU")} ₽`:null;
-      const parts=[city,rooms&&rooms!=="Все"?`${rooms} комн.`:null,budget].filter(Boolean);
+      const payment=number(meta.payment);
+      const down=number(meta.down);
+      const purchaseMode=text(meta.purchaseMode);
+      const match=number(meta.topScore);
+      const preferences=text(meta.preferences);
+      const finance=purchaseMode==="mortgage"&&payment!=null
+        ?`до ${payment.toLocaleString("ru-RU")} ₽/мес${down!=null?` · взнос ${down.toLocaleString("ru-RU")} ₽`:""}`
+        :budget;
+      const parts=[
+        city,
+        rooms&&rooms!=="Все"?(rooms==="Студия"?"Студия":`${rooms} комн.`):null,
+        finance,
+        delivery&&delivery!=="Не важно"?`срок ${delivery}`:null,
+        preferences?`приоритеты: ${preferences}`:null,
+        match!=null?`Match ${match}%`:null,
+        results!=null?`${results} вариантов`:null,
+      ].filter(Boolean);
       return {title:"Завершил PULSE Select",detail:parts.join(" · ")||"Получил персональную подборку"};
     }
     case "property_share":

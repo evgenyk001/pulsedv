@@ -21,6 +21,11 @@ test('SQL/API: заявки между устройствами, дедупли�
  const ownerCookie={pulse_control:await login('owner@example.test')};const managerCookie={pulse_control:await login('manager@example.test')};
  let identity:any;let other:any;let leadId='';let first:any;
  await t.test('сотрудник без cookie не получает CRM',async()=>{assert.equal((await app.inject('/api/v1/control/snapshot')).statusCode,401);});
+ await t.test('старый PULSE Select config получает новые настройки без миграции документа',async()=>{
+  await db.query("update app_config set document=document #- '{select,smartQueryEnabled}' #- '{select,whatIfEnabled}' #- '{select,maxPreferences}' #- '{select,preferenceEnabled}'");
+  const snapshot=await app.inject({url:'/api/v1/control/snapshot',cookies:ownerCookie});assert.equal(snapshot.statusCode,200,snapshot.body);
+  const select=snapshot.json().state.select;assert.equal(select.smartQueryEnabled,true);assert.equal(select.whatIfEnabled,true);assert.equal(select.maxPreferences,3);assert.equal(select.preferenceEnabled.sea,true);
+ });
  await t.test('публикация каталога, черновики скрыты, конфликт версии отклонён',async()=>{
   const doc={...DEFAULT_STATE,properties:DEFAULT_STATE.properties.map((p,i)=>({...p,status:i===0?'draft':'published'}))};
   const response=await app.inject({method:'PUT',url:'/api/v1/control/state',headers,cookies:ownerCookie,payload:{state:doc,version:1}});assert.equal(response.statusCode,200,response.body);

@@ -175,7 +175,7 @@ export default function SelectionPage(){
   const [showAll,setShowAll]=React.useState(false);
   const [city,setCity]=React.useState(defaultCity);
   const [rooms,setRooms]=React.useState(defaultRooms);
-  const [purchaseMode,setPurchaseMode]=React.useState<PurchaseMode>(saved.purchaseMode==="cash"?"cash":"mortgage");
+  const [purchaseMode,setPurchaseMode]=React.useState<PurchaseMode>(control.select.mortgageEnabled&&saved.purchaseMode!=="cash"?"mortgage":"cash");
   const [budget,setBudget]=React.useState<[number,number]>(saved.budget||[FALLBACK_MIN,FALLBACK_MAX]);
   const [budgetDraft,setBudgetDraft]=React.useState<[string,string]>([
     formatRub(saved.budget?.[0]??FALLBACK_MIN),
@@ -187,7 +187,7 @@ export default function SelectionPage(){
   const [monthlyPayment,setMonthlyPayment]=React.useState(saved.monthlyPayment??60_000);
   const [paymentDraft,setPaymentDraft]=React.useState(formatRub(saved.monthlyPayment??60_000));
   const [delivery,setDelivery]=React.useState(saved.delivery||"Не важно");
-  const [preferences,setPreferences]=React.useState<PreferenceId[]>(Array.isArray(saved.preferences)?saved.preferences.slice(0,3):[]);
+  const [preferences,setPreferences]=React.useState<PreferenceId[]>(Array.isArray(saved.preferences)?saved.preferences.slice(0,control.select.maxPreferences):[]);
   const [smartQuery,setSmartQuery]=React.useState("");
   const [smartStatus,setSmartStatus]=React.useState("");
   const [smartSignal,setSmartSignal]=React.useState(0);
@@ -199,8 +199,18 @@ export default function SelectionPage(){
   },[control.select.cities,control.select.roomOptions,city,rooms]);
 
   React.useEffect(()=>{
-    if(city!=="Владивосток"&&preferences.includes("sea"))setPreferences(current=>current.filter(id=>id!=="sea"));
-  },[city,preferences]);
+    if(!control.select.mortgageEnabled&&purchaseMode!=="cash")setPurchaseMode("cash");
+  },[control.select.mortgageEnabled,purchaseMode]);
+
+  React.useEffect(()=>{
+    setPreferences(current=>{
+      const next=current
+        .filter(id=>control.select.preferenceEnabled[id])
+        .filter(id=>id!=="sea"||(control.select.seaEnabled&&city==="Владивосток"))
+        .slice(0,control.select.maxPreferences);
+      return next.length===current.length&&next.every((id,index)=>id===current[index])?current:next;
+    });
+  },[city,control.select.seaEnabled,control.select.maxPreferences,control.select.preferenceEnabled]);
 
   React.useEffect(()=>{
     if(!bounds||budgetInitialized.current)return;
@@ -282,14 +292,16 @@ export default function SelectionPage(){
     }
   };
 
-  const visiblePreferences=city==="Владивосток"
-    ?preferenceOptions
-    :preferenceOptions.filter(option=>option.id!=="sea");
+  const visiblePreferences=preferenceOptions.filter(option=>{
+    if(!control.select.preferenceEnabled[option.id])return false;
+    if(option.id==="sea")return control.select.seaEnabled&&city==="Владивосток";
+    return true;
+  });
 
   const togglePreference=(id:PreferenceId)=>{
     setPreferences(current=>{
       if(current.includes(id))return current.filter(item=>item!==id);
-      if(current.length>=3)return current;
+      if(current.length>=control.select.maxPreferences)return current;
       return [...current,id];
     });
     safeHaptic();
@@ -406,19 +418,19 @@ export default function SelectionPage(){
 
     const mortgageIntent=/ипотек|платеж|платёж|в месяц|\/мес/.test(text);
     const cashIntent=/налич|без ипотек|полная стоимость/.test(text);
-    if(mortgageIntent){nextMode="mortgage";found++;}
+    if(mortgageIntent&&control.select.mortgageEnabled){nextMode="mortgage";found++;}
     else if(cashIntent){nextMode="cash";found++;}
 
     const paymentMatch=text.match(/(?:плат[её]ж[^\d]{0,18})?(\d{2,3})\s*(тыс|тысяч|к)\.?(?:\s*(?:руб|₽))?\s*(?:\/\s*мес|в месяц)/i);
     if(paymentMatch){
       const parsed=parseScaledMoney(paymentMatch[1],paymentMatch[2]);
-      if(parsed){nextPayment=clamp(snap(parsed,5_000),15_000,300_000);nextMode="mortgage";found++;}
+      if(parsed&&control.select.mortgageEnabled){nextPayment=clamp(snap(parsed,5_000),15_000,300_000);nextMode="mortgage";found++;}
     }
 
     const downMatch=text.match(/(?:первоначальн\w*\s+)?взнос[^\d]{0,18}(\d+(?:[.,]\d+)?)\s*(млн|миллион\w*|тыс|тысяч)/i);
     if(downMatch){
       const parsed=parseScaledMoney(downMatch[1],downMatch[2]);
-      if(parsed){nextDown=clamp(snap(parsed,100_000),0,Math.max(maxPrice,parsed));nextMode="mortgage";found++;}
+      if(parsed&&control.select.mortgageEnabled){nextDown=clamp(snap(parsed,100_000),0,Math.max(maxPrice,parsed));nextMode="mortgage";found++;}
     }
 
     const budgetMatch=text.match(/(?:до|бюджет[^\d]{0,12}|стоимост\w*[^\d]{0,12})(\d+(?:[.,]\d+)?)\s*(млн|миллион\w*)/i);
@@ -445,13 +457,14 @@ export default function SelectionPage(){
       ["finish",/отделк|ремонт|готов.*заех/],
     ];
     for(const [id,pattern] of preferenceMap){
-      if(pattern.test(text)&&!nextPreferences.includes(id)){
+      const enabled=control.select.preferenceEnabled[id]&&(id!=="sea"||control.select.seaEnabled);
+      if(enabled&&pattern.test(text)&&!nextPreferences.includes(id)){
         nextPreferences.push(id);
         found++;
       }
     }
 
-    if(nextCity!=="Владивосток"){
+    if(nextCity!=="Владивосток"||!control.select.seaEnabled){
       const index=nextPreferences.indexOf("sea");
       if(index>=0)nextPreferences.splice(index,1);
     }
@@ -466,7 +479,7 @@ export default function SelectionPage(){
     setMonthlyPayment(nextPayment);
     setPaymentDraft(formatRub(nextPayment));
     setDelivery(nextDelivery);
-    setPreferences(nextPreferences.slice(0,3));
+    setPreferences(nextPreferences.filter(id=>control.select.preferenceEnabled[id]).slice(0,control.select.maxPreferences));
     setSmartSignal(found);
     setSmartStatus(found
       ?`PULSE понял ${found} ${plural(found,["параметр","параметра","параметров"])}. Проверьте — всё уже выставлено ниже.`
@@ -497,7 +510,7 @@ export default function SelectionPage(){
         payment:monthlyPayment,
         preferences:preferences.join(","),
         purchaseMode,
-        topScore,strongCount,
+        topScore,strongCount,results:eligible.length,
         source:"pulse-select-v3",
       }
     });
@@ -714,7 +727,7 @@ export default function SelectionPage(){
         })}
       </section>
 
-      {scenarios.length>0&&<section className={styles.whatIf}>
+      {control.select.whatIfEnabled&&scenarios.length>0&&<section className={styles.whatIf}>
         <div className={styles.whatIfHead}>
           <div><Sparkles size={16}/><span>А что если?</span></div>
           <p>Одно изменение — и PULSE сразу пересчитает подбор.</p>
@@ -747,7 +760,7 @@ export default function SelectionPage(){
       <p>PULSE соберёт ваш запрос и покажет не сотню карточек, а несколько осмысленных вариантов.</p>
     </header>
 
-    {step===0&&<section className={styles.smartPrompt}>
+    {step===0&&control.select.smartQueryEnabled&&<section className={styles.smartPrompt}>
       <div className={styles.smartPromptHead}><Sparkles size={16}/><span>Можно своими словами</span><small>beta</small></div>
       <div className={styles.smartInput}>
         <Search size={17}/>
@@ -818,7 +831,7 @@ export default function SelectionPage(){
           <div><span className={styles.stepLabel}>ВОЗМОЖНОСТИ</span><h2>Как удобнее считать?</h2><p>Если берёте ипотеку, PULSE ориентируется на взнос и комфортный платёж, а не заставляет угадывать цену квартиры.</p></div>
         </div>
 
-        <SegmentedControl
+        {control.select.mortgageEnabled&&<SegmentedControl
           className={styles.purchaseTabs}
           value={purchaseMode}
           onChange={value=>{setPurchaseMode(value as PurchaseMode);safeHaptic();}}
@@ -827,7 +840,7 @@ export default function SelectionPage(){
             {value:"mortgage",label:"Ипотека"},
             {value:"cash",label:"По стоимости"},
           ]}
-        />
+        />}
 
         {purchaseMode==="cash"?<>
           <div className={styles.moneyHero}><span>Ваш диапазон</span><strong>{shortRub(budget[0])} — {shortRub(budget[1])}</strong></div>
@@ -879,20 +892,20 @@ export default function SelectionPage(){
       {step===3&&<>
         <div className={styles.sectionHead}>
           <div className={styles.cardIcon}><Sparkles size={19}/></div>
-          <div><span className={styles.stepLabel}>ХАРАКТЕР</span><h2>Что делает квартиру «вашей»?</h2><p>Выберите до трёх вещей. Это не жёсткие фильтры — они учат PULSE правильно расставлять приоритеты.</p></div>
+          <div><span className={styles.stepLabel}>ХАРАКТЕР</span><h2>Что делает квартиру «вашей»?</h2><p>Выберите до {control.select.maxPreferences} приоритетов. Это не жёсткие фильтры — они учат PULSE правильно расставлять приоритеты.</p></div>
         </div>
 
         <div className={styles.preferenceGrid}>
           {visiblePreferences.map(option=>{
             const selected=preferences.includes(option.id);
-            const disabled=!selected&&preferences.length>=3;
+            const disabled=!selected&&preferences.length>=control.select.maxPreferences;
             return <button type="button" key={option.id} aria-pressed={selected} disabled={disabled} onClick={()=>togglePreference(option.id)} className={selected?styles.preferenceActive:""}>
               <span className={styles.preferenceIcon}>{selected?<Check size={16}/>:preferenceIcon(option.id)}</span>
               <span><strong>{option.label}</strong><small>{option.hint}</small></span>
             </button>
           })}
         </div>
-        <div className={styles.selectionCount}>{preferences.length}/3 выбрано</div>
+        <div className={styles.selectionCount}>{preferences.length}/{control.select.maxPreferences} выбрано</div>
       </>}
     </section>
 

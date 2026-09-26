@@ -52,3 +52,42 @@ test('Control preview: object editor and real state changes',async({page})=>{
  await expect(page.getByRole('heading',{name:'Тестовый ЖК',exact:true})).toBeVisible();
  await page.screenshot({path:'test-results/control-objects.png',fullPage:true});
 });
+
+
+test('Control preview: PULSE Select settings and activity stay connected',async({page})=>{
+ await page.setViewportSize({width:1280,height:900});
+ await page.goto('/pulsedv/control-center/');
+ await page.getByRole('link',{name:'PULSE Select',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'PULSE Select',exact:true})).toBeVisible();
+
+ const smart=page.getByRole('checkbox',{name:'Умная строка запроса'});
+ if(await smart.isChecked())await smart.click();
+ const sea=page.getByRole('checkbox',{name:'Вид на море'});
+ if(await sea.isChecked())await sea.click();
+ const max=page.getByRole('spinbutton',{name:'Максимум личных приоритетов'});
+ await max.fill('2');
+ await max.blur();
+
+ await page.goto('/pulsedv/mini-app/');
+ const skip=page.getByRole('button',{name:'Пропустить онбординг'});
+ if(await skip.isVisible().catch(()=>false))await skip.click();
+ const nav=page.getByRole('navigation',{name:'Основная навигация'});
+ await nav.getByRole('button',{name:'Подбор',exact:true}).click();
+ await expect(page.getByRole('textbox',{name:'Опишите квартиру своими словами'})).toHaveCount(0);
+
+ await page.getByRole('button',{name:/Продолжить/}).click();
+ await page.getByRole('button',{name:/Продолжить/}).click();
+ await page.getByRole('button',{name:/Продолжить/}).click();
+ await expect(page.getByRole('heading',{name:'Что делает квартиру «вашей»?',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:/Вид на море/})).toHaveCount(0);
+ await expect(page.getByText(/0\/2 выбрано/)).toBeVisible();
+ await page.getByRole('button',{name:/Для семьи/}).click();
+ await page.getByRole('button',{name:/Парковка/}).click();
+ await expect(page.getByText(/2\/2 выбрано/)).toBeVisible();
+ await page.getByRole('button',{name:'Собрать мой подбор',exact:true}).click();
+ await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
+
+ await page.goto('/pulsedv/control-center/#/select');
+ await expect(page.getByText(/Посетитель .*…/).first()).toBeVisible();
+ await expect(page.getByText('PULSE MATCH').last()).toBeVisible();
+});

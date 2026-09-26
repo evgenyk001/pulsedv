@@ -21,7 +21,20 @@ export const stateSchema=z.object({
  properties:z.array(property).max(2000),
  banners:z.array(z.object({id,title:text(250),body:text(1000),imageUrl:image,ctaLabel:nullableText(100),actionUrl,city:nullableText(100),audience:nullableText(),enabled:z.boolean(),sortOrder:z.number().int()})).max(100),
  mortgagePrograms:z.array(z.object({id:z.enum(['family','farEast','it','standard']),label:text(100),rate:z.number().min(0).max(60),maxYears:z.number().int().min(1).max(40),minDownPct:z.number().min(0).max(99),subsidizedLimit:z.number().positive(),totalLimit:z.number().positive(),blended:z.boolean(),hint:text(2000)})).min(1).max(4),
- select:z.object({cities:z.array(text(100).min(1)).min(1).max(30),roomOptions:z.array(text(30).min(1)).min(1).max(10),deliveryOptions:z.array(text(100).min(1)).min(1).max(30),mortgageEnabled:z.boolean(),seaEnabled:z.boolean(),weights:z.object({city:z.number().min(0).max(100),budget:z.number().min(0).max(100),rooms:z.number().min(0).max(100),delivery:z.number().min(0).max(100),preferences:z.number().min(0).max(100)})}),
+ select:z.object({
+  cities:z.array(text(100).min(1)).min(1).max(30),
+  roomOptions:z.array(text(30).min(1)).min(1).max(10),
+  deliveryOptions:z.array(text(100).min(1)).min(1).max(30),
+  mortgageEnabled:z.boolean(),
+  seaEnabled:z.boolean(),
+  smartQueryEnabled:z.boolean(),
+  whatIfEnabled:z.boolean(),
+  maxPreferences:z.number().int().min(1).max(6),
+  preferenceEnabled:z.object({
+    sea:z.boolean(),family:z.boolean(),parking:z.boolean(),center:z.boolean(),courtyard:z.boolean(),finish:z.boolean()
+  }),
+  weights:z.object({city:z.number().min(0).max(100),budget:z.number().min(0).max(100),rooms:z.number().min(0).max(100),delivery:z.number().min(0).max(100),preferences:z.number().min(0).max(100)})
+ }),
  content:z.object({onboardingEnabled:z.boolean(),onboardingVersion:text(50).min(1)}),leadEngine:engineSchema,updatedAt:z.string()
 }).superRefine((s,ctx)=>{for(const key of ['properties','banners','mortgagePrograms'] as const)if(new Set(s[key].map(x=>x.id)).size!==s[key].length)ctx.addIssue({code:'custom',message:`Повторяющиеся ID: ${key}`});});
 export const phoneSchema=text(30).transform(value=>value.replace(/[^\d+]/g,'').replace(/^8(?=\d{10}$)/,'+7').replace(/^7(?=\d{10}$)/,'+7')).pipe(z.string().regex(/^\+[1-9]\d{9,14}$/,'Укажите телефон в международном формате'));

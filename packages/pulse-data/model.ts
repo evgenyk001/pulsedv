@@ -28,6 +28,17 @@ export type PulseSelectConfig={
   deliveryOptions:string[];
   mortgageEnabled:boolean;
   seaEnabled:boolean;
+  smartQueryEnabled:boolean;
+  whatIfEnabled:boolean;
+  maxPreferences:number;
+  preferenceEnabled:{
+    sea:boolean;
+    family:boolean;
+    parking:boolean;
+    center:boolean;
+    courtyard:boolean;
+    finish:boolean;
+  };
   weights:{city:number;budget:number;rooms:number;delivery:number;preferences:number};
 };
 
@@ -100,7 +111,18 @@ export const DEFAULT_STATE:PulseState={
   properties:DEFAULT_PROPERTIES,
   banners:DEFAULT_BANNERS,
   mortgagePrograms:DEFAULT_MORTGAGE_PROGRAMS,
-  select:{cities:["Владивосток","Уссурийск","Артём"],roomOptions:["Студия","1","2","3+"],deliveryOptions:["Любой","2026","2027"],mortgageEnabled:true,seaEnabled:true,weights:{city:25,budget:30,rooms:20,delivery:10,preferences:15}},
+  select:{
+    cities:["Владивосток","Уссурийск","Артём"],
+    roomOptions:["Студия","1","2","3+"],
+    deliveryOptions:["Любой","2026","2027"],
+    mortgageEnabled:true,
+    seaEnabled:true,
+    smartQueryEnabled:true,
+    whatIfEnabled:true,
+    maxPreferences:3,
+    preferenceEnabled:{sea:true,family:true,parking:true,center:true,courtyard:true,finish:true},
+    weights:{city:25,budget:30,rooms:20,delivery:10,preferences:15}
+  },
   content:{onboardingEnabled:true,onboardingVersion:"6"},
   leadEngine:DEFAULT_LEAD_ENGINE_CONFIG,
   updatedAt:now()
