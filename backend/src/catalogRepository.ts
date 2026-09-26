@@ -84,7 +84,7 @@ async function hydrate(sql:Sql,items:CatalogProperty[],view:CatalogView){
 
 export async function listCatalog(sql:Sql,options:CatalogListOptions={}){
   const page=Math.max(1,Math.floor(options.page??1));
-  const limit=Math.max(1,Math.min(1000,Math.floor(options.limit??20)));
+  const limit=Math.max(1,Math.min(2000,Math.floor(options.limit??20)));
   const where:string[]=[];
   const values:unknown[]=[];
   const add=(value:unknown)=>{values.push(value);return "$"+values.length;};
