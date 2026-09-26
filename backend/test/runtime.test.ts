@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID, createHmac } from 'node:crypto';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { testDatabase } from './database';
 import { migrate } from '../src/migrate';
 import { createApp } from '../src/app';
@@ -12,8 +15,9 @@ import { processNotificationOutbox } from '../src/notificationWorker';
 
 test('SQL/API: заявки между устройствами, дедупликация, RBAC, конфликты, очередь',async t=>{
  const db=await testDatabase();await migrate(db);await migrate(db);
- const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',BOT_TOKEN:'test-only-token'});
- const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close();});
+ const mediaRoot=await mkdtemp(join(tmpdir(),'pulse-media-'));
+ const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',BOT_TOKEN:'test-only-token',MEDIA_ROOT:mediaRoot});
+ const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close();await rm(mediaRoot,{recursive:true,force:true});});
  const owner=(await db.query("insert into team_members(name,email,password_hash,role,telegram_user_id) values('Owner','owner@example.test',$1,'owner',12345) returning id",[await hashPassword('long-test-password')])).rows[0];
  const manager=(await db.query("insert into team_members(name,email,password_hash,role) values('Manager','manager@example.test',$1,'manager') returning id",[await hashPassword('long-test-password')])).rows[0];
  const headers={'content-type':'application/json',origin:config.PUBLIC_ORIGIN};
@@ -26,12 +30,32 @@ test('SQL/API: заявки между устройствами, дедупли�
   const snapshot=await app.inject({url:'/api/v1/control/snapshot',cookies:ownerCookie});assert.equal(snapshot.statusCode,200,snapshot.body);
   const select=snapshot.json().state.select;assert.equal(select.smartQueryEnabled,true);assert.equal(select.whatIfEnabled,true);assert.equal(select.maxPreferences,3);assert.equal(select.preferenceEnabled.sea,true);
  });
- await t.test('публикация каталога, черновики скрыты, конфликт версии отклонён',async()=>{
-  const doc={...DEFAULT_STATE,properties:DEFAULT_STATE.properties.map((p,i)=>({...p,status:i===0?'draft':'published'}))};
+ await t.test('каталог отделён от config: импорт, пагинация, detail и RBAC',async()=>{
+  const doc={...DEFAULT_STATE,properties:[]};
   const response=await app.inject({method:'PUT',url:'/api/v1/control/state',headers,cookies:ownerCookie,payload:{state:doc,version:1}});assert.equal(response.statusCode,200,response.body);
-  assert.equal((await app.inject('/api/v1/public/state')).json().state.properties.length,3);
+  assert.equal((await app.inject('/api/v1/public/state')).json().state.properties.length,0);
   assert.equal((await app.inject({method:'PUT',url:'/api/v1/control/state',headers,cookies:ownerCookie,payload:{state:doc,version:1}})).statusCode,409);
   assert.equal((await app.inject({method:'PUT',url:'/api/v1/control/state',headers,cookies:managerCookie,payload:{state:doc,version:2}})).statusCode,403);
+
+  const properties=DEFAULT_STATE.properties.map(p=>({...p,documents:[]}));
+  const imported=await app.inject({method:'POST',url:'/api/v1/control/catalog/import',headers,cookies:ownerCookie,payload:{properties,replace:{images:true,features:true,floorplans:true,documents:true}}});
+  assert.equal(imported.statusCode,200,imported.body);assert.equal(imported.json().created,properties.length);
+
+  const page1=await app.inject('/api/v1/public/catalog?limit=2&view=card');assert.equal(page1.statusCode,200,page1.body);
+  assert.equal(page1.json().items.length,2);assert.equal(page1.json().total,properties.length);assert.equal(page1.json().hasMore,true);
+  const page2=await app.inject('/api/v1/public/catalog?page=2&limit=2&view=card');assert.equal(page2.json().items.length,2);
+  const detail=await app.inject('/api/v1/public/catalog/solnechniy');assert.equal(detail.statusCode,200,detail.body);assert.ok(detail.json().property.floorplans.length>0);
+  assert.equal((await app.inject({url:'/api/v1/control/catalog',cookies:managerCookie})).statusCode,403);
+ });
+
+ await t.test('фото каталога загружается в persistent media storage',async()=>{
+  const uploaded=await app.inject({
+   method:'POST',url:'/api/v1/control/catalog/solnechniy/media?kind=gallery&filename=test.png',
+   headers:{origin:config.PUBLIC_ORIGIN,'content-type':'image/png'},cookies:ownerCookie,payload:Buffer.from([137,80,78,71,13,10,26,10])
+  });
+  assert.equal(uploaded.statusCode,200,uploaded.body);
+  const image=uploaded.json().property.images.find((item:any)=>String(item.url).startsWith('/media/images/'));
+  assert.ok(image?.url);
  });
  await t.test('сессия выдана сервером; подмена пользователя/события отклоняется',async()=>{
   identity=(await app.inject({method:'POST',url:'/api/v1/auth/session',headers,payload:{source:'test'}})).json();other=(await app.inject({method:'POST',url:'/api/v1/auth/session',headers,payload:{source:'other-device'}})).json();assert.ok(identity.accessToken);assert.notEqual(identity.sessionId,other.sessionId);
