@@ -10,13 +10,6 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await nav.getByRole('button',{name:'Каталог',exact:true}).click();
  const tabs=page.getByRole('tablist',{name:'Режим каталога'});await expect(tabs).toBeVisible();
  await expect(page.getByRole('heading',{name:'Новостройки',exact:true})).toBeVisible();
- const catalogCard=page.locator('article').first();
- const detailsButton=catalogCard.getByRole('button',{name:'Все характеристики'});
- await expect(detailsButton).toBeVisible();
- await expect(catalogCard.getByRole('tablist',{name:/Планировки/})).toBeVisible();
- await detailsButton.click();
- await expect(catalogCard.getByText('Застройщик',{exact:true})).toBeVisible();
- await catalogCard.getByRole('button',{name:'Скрыть характеристики'}).click();
  const pill=tabs.locator('span[aria-hidden="true"]');const first=tabs.getByRole('tab',{name:'Список',exact:true});
  await expect.poll(async()=>{const a=await pill.boundingBox(),b=await first.boundingBox();return !!a&&!!b&&Math.abs(a.x-b.x)<1&&Math.abs(a.width-b.width)<1;}).toBe(true);
  const from=await first.boundingBox();const to=await tabs.getByRole('tab',{name:'Карта',exact:true}).boundingBox();
@@ -24,6 +17,13 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await expect(tabs.getByRole('tab',{name:'Карта',exact:true})).toHaveAttribute('aria-selected','true');
  await tabs.getByRole('tab',{name:'Список',exact:true}).click();
  await expect(first).toHaveAttribute('aria-selected','true');
+ const catalogCard=page.locator('article').first();
+ const detailsButton=catalogCard.getByRole('button',{name:'Все характеристики'});
+ await expect(detailsButton).toBeVisible();
+ await expect(catalogCard.getByRole('tablist',{name:/Планировки/})).toBeVisible();
+ await detailsButton.click();
+ await expect(catalogCard.getByText('Застройщик',{exact:true})).toBeVisible();
+ await catalogCard.getByRole('button',{name:'Скрыть характеристики'}).click();
  await nav.getByRole('button',{name:'Подбор',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Где и что ищем?',exact:true})).toBeVisible();
  await expect(page.getByLabel('Живой профиль PULSE Select')).toBeVisible();
