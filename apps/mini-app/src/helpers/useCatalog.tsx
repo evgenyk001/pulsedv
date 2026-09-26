@@ -1,14 +1,27 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import React from "react";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { subscribePulseState } from "../../../../packages/pulse-data";
+import { runtime } from "../../../../packages/pulse-data/runtime";
 import {
   getCatalogMeta,getCatalogPage,getFeaturedProperties,getMapProperties,getPropertiesByIds,getPropertyDetail,getSelectionProperties,
   type CatalogFilters
 } from "./catalogApi";
 
+function useCatalogInvalidation(){
+  const client=useQueryClient();
+  React.useEffect(()=>{
+    if(runtime.enabled)return;
+    return subscribePulseState(()=>{void client.invalidateQueries({queryKey:["catalog"]})});
+  },[client]);
+}
+
 export function useFeaturedProperties(limit=3){
+  useCatalogInvalidation();
   return useQuery({queryKey:["catalog","featured",limit],queryFn:()=>getFeaturedProperties(limit),staleTime:60_000});
 }
 
 export function useFavoriteProperties(ids:string[]){
+  useCatalogInvalidation();
   const stable=[...ids].sort();
   return useQuery({
     queryKey:["catalog","favorites",stable],
@@ -19,10 +32,12 @@ export function useFavoriteProperties(ids:string[]){
 }
 
 export function useSelectionProperties(enabled=true){
+  useCatalogInvalidation();
   return useQuery({queryKey:["catalog","selection"],queryFn:getSelectionProperties,staleTime:60_000,enabled});
 }
 
 export function usePropertyDetail(id:string){
+  useCatalogInvalidation();
   return useQuery({
     queryKey:["catalog","property",id],
     queryFn:()=>getPropertyDetail(id),
@@ -32,10 +47,12 @@ export function usePropertyDetail(id:string){
 }
 
 export function useCatalogMeta(){
+  useCatalogInvalidation();
   return useQuery({queryKey:["catalog","meta"],queryFn:getCatalogMeta,staleTime:60_000});
 }
 
 export function useCatalogInfinite(filters:Omit<CatalogFilters,"page">,enabled=true){
+  useCatalogInvalidation();
   return useInfiniteQuery({
     queryKey:["catalog","list",filters],
     initialPageParam:1,
@@ -47,6 +64,7 @@ export function useCatalogInfinite(filters:Omit<CatalogFilters,"page">,enabled=t
 }
 
 export function useMapCatalog(filters:Omit<CatalogFilters,"page"|"limit"|"view">,enabled=true){
+  useCatalogInvalidation();
   return useQuery({
     queryKey:["catalog","map",filters],
     queryFn:()=>getMapProperties(filters),
