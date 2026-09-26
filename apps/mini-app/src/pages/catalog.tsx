@@ -105,7 +105,7 @@ export default function CatalogPage(){
     view:"card" as const,
   }),[params,appliedCity,appliedMin,appliedMax,appliedDelivery,appliedRooms,appliedSea,sort]);
 
-  const listQuery=useCatalogInfinite(serverFilters);
+  const listQuery=useCatalogInfinite(serverFilters,view==="list"&&!pulseMode);
   const mapQuery=useMapCatalog({
     q:params.get("q")||undefined,city:appliedCity,min:appliedMin,max:appliedMax,
     delivery:appliedDelivery,rooms:appliedRooms,sea:appliedSea,sort,
