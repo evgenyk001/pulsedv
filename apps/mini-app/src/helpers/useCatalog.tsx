@@ -19,8 +19,8 @@ export function useFavoriteProperties(ids:string[]){
   });
 }
 
-export function useSelectionProperties(){
-  return useQuery({queryKey:["catalog","selection"],queryFn:getSelectionProperties,staleTime:60_000});
+export function useSelectionProperties(enabled=true){
+  return useQuery({queryKey:["catalog","selection"],queryFn:getSelectionProperties,staleTime:60_000,enabled});
 }
 
 export function usePropertyDetail(id:string){
@@ -46,10 +46,11 @@ export function useCatalogInfinite(filters:Omit<CatalogFilters,"page">){
   });
 }
 
-export function useMapCatalog(filters:Omit<CatalogFilters,"page"|"limit"|"view">){
+export function useMapCatalog(filters:Omit<CatalogFilters,"page"|"limit"|"view">,enabled=true){
   return useQuery({
     queryKey:["catalog","map",filters],
     queryFn:()=>getMapProperties(filters),
     staleTime:30_000,
+    enabled,
   });
 }
