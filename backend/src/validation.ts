@@ -82,5 +82,11 @@ export const catalogPropertySchema=z.object({
 });
 
 export const catalogImportSchema=z.object({
- properties:z.array(catalogPropertySchema).min(1).max(1000)
+ properties:z.array(catalogPropertySchema).min(1).max(1000),
+ replace:z.object({
+  images:z.boolean().default(false),
+  features:z.boolean().default(false),
+  floorplans:z.boolean().default(false),
+  documents:z.boolean().default(false)
+ }).default({images:false,features:false,floorplans:false,documents:false})
 }).strict();
