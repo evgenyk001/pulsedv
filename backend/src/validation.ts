@@ -1,6 +1,6 @@
 import { z } from 'zod';
 const text=(max=200)=>z.string().trim().max(max);
-const https=z.string().max(2048).refine(value=>{try{return new URL(value).protocol==='https:';}catch{return false;}},'Нужна HTTPS-ссылка');
+const https=z.string().max(2048).refine(value=>{try{return value.startsWith('/media/')||new URL(value).protocol==='https:';}catch{return false;}},'Нужна HTTPS-ссылка или внутренний /media/ путь');
 const nullableText=(max=200)=>text(max).nullable();
 const image=https.nullable();
 const id=text(120).regex(/^[a-zA-Z0-9_-]+$/);
