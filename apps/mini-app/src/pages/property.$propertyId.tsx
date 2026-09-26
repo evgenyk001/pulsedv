@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Heart, Share2, MapPin, CalendarDays, Building2, Waves, Trees, CarFront,
   Baby, ShieldCheck, ChevronRight, Send, Sparkles, MapPinned, LayoutGrid, Ruler,
-  WalletCards, Image as ImageIcon
+  WalletCards, Image as ImageIcon, FileText
 } from "lucide-react";
 import { LeadSheet } from "../components/LeadSheet";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
@@ -180,6 +180,17 @@ export default function PropertyPage(){
           <div><span>Типы квартир</span><strong>{roomOptions.length?roomOptions.join(" · "):"Уточняются"}</strong></div>
         </div>
       </section>
+
+      {(p.documents??[]).length>0&&<section className={styles.section}>
+        <div className={styles.sectionHead}><div><span>МАТЕРИАЛЫ</span><h2>Документы проекта</h2></div><small>{(p.documents??[]).length} файлов</small></div>
+        <div className={styles.materials}>
+          {(p.documents??[]).map(doc=><a key={doc.id||doc.url} href={doc.url} target="_blank" rel="noreferrer">
+            <span><FileText size={18}/></span>
+            <div><strong>{doc.name}</strong><small>{doc.kind==="presentation"?"Презентация":"Документ"}{doc.sizeBytes?" · "+Math.round(doc.sizeBytes/1024/1024*10)/10+" МБ":""}</small></div>
+            <ChevronRight size={16}/>
+          </a>)}
+        </div>
+      </section>}
 
       <Sheet>
         <SheetTrigger asChild>
