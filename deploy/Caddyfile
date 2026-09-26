@@ -14,6 +14,11 @@
  handle /ready {
   reverse_proxy api:3000
  }
+ handle /media/* {
+  root * /srv
+  header Cache-Control "public, max-age=31536000, immutable"
+  file_server
+ }
  @root path /
  redir @root /pulsedv/ 302
  handle {
