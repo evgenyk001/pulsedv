@@ -189,7 +189,7 @@
 .matchingSteps i:nth-child(2):after{animation-delay:.16s}.matchingSteps i:nth-child(3):after{animation-delay:.32s}
 
 .resultHero{padding:20px 18px 22px;border-radius:29px;background:linear-gradient(145deg,#101720,#202b38 70%,#2a1820)}
-.resultHero>.pulseRing{margin-bottom:17px}
+.resultHero>.pulseRing{margin-bottom:17px;width:94px;height:94px}
 .resultHero h1{font-size:29px;max-width:330px}
 .resultIntro{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding:5px 2px 0}
 .resultIntro>div{display:flex;flex-direction:column}
@@ -232,6 +232,7 @@
   .hero h1{font-size:32px}
   .pulseCore{grid-template-columns:78px 1fr;padding:13px}
   .pulseRing{width:74px;height:74px}
+  .resultHero>.pulseRing{width:82px;height:82px}
   .coreCopy>small{font-size:7.4px}
   .smartInput input{font-size:8.7px!important}
   .resultIntro{align-items:flex-start;flex-direction:column;gap:4px}
