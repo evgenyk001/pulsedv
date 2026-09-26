@@ -230,7 +230,15 @@ export default function CatalogPage(){
     {view==="list"?<div className={styles.list}>
       {isLoading&&<div className={styles.empty}><strong>Загружаем каталог</strong><span>Объекты появятся через секунду.</span></div>}
       {error&&<div className={styles.empty}><strong>Не удалось загрузить каталог</strong><span>Проверьте соединение и попробуйте снова.</span></div>}
-      {!isLoading&&!error&&visible.map(property=><PropertyCard key={property.id} property={property} compact/>)}
+      {!isLoading&&!error&&visible.map(property=><PropertyCard
+        key={property.id}
+        property={property}
+        catalog
+        initialRoom={rooms}
+        pulseScore={params.get("pulse")==="1"
+          ?matchScore(property,{city,rooms,min:priceRange[0],max:priceRange[1],delivery,sea},control.select.weights)
+          :null}
+      />)}
       {!isLoading&&!error&&visible.length===0&&<div className={styles.empty}><strong>Ничего не нашли</strong><span>Попробуйте изменить фильтры или город.</span><button onClick={resetFilters}>Сбросить фильтры</button></div>}
     </div>:<div className={styles.mapMode}><PropertyMap properties={visible} selectedId={selectedId} onSelect={setSelectedId} onOpen={id=>navigate("/property/"+id)} city={city==="Все"?undefined:city}/></div>}
   </div>
