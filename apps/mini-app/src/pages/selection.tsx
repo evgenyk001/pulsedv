@@ -190,6 +190,13 @@ export default function SelectionPage(){
     setBudgetDraft([formatRub(next[0]),formatRub(next[1])]);
   };
 
+  const editMoney=(kind:"down"|"payment",value:string)=>{
+    const clean=value.replace(/[^0-9]/g,"");
+    const formatted=clean?formatRub(Number(clean)):"";
+    if(kind==="down")setDownDraft(formatted);
+    else setPaymentDraft(formatted);
+  };
+
   const commitMoney=(kind:"down"|"payment")=>{
     const draft=kind==="down"?downDraft:paymentDraft;
     const current=kind==="down"?downPayment:monthlyPayment;
@@ -421,13 +428,13 @@ export default function SelectionPage(){
           <div className={styles.financeGrid}>
             <label className={styles.financeCard}>
               <span><Banknote size={15}/>Первоначальный взнос</span>
-              <div><Input inputMode="numeric" value={downDraft} onChange={e=>setDownDraft(formatRub(Number(e.target.value.replace(/[^0-9]/g,""))||0))} onBlur={()=>commitMoney("down")}/><b>₽</b></div>
+              <div><Input inputMode="numeric" value={downDraft} onChange={e=>editMoney("down",e.target.value)} onBlur={()=>commitMoney("down")}/><b>₽</b></div>
               <div className={styles.quickRow}>{[1_000_000,1_500_000,2_000_000,3_000_000].map(value=><button type="button" key={value} onClick={()=>{setDownPayment(value);setDownDraft(formatRub(value));}}>{shortRub(value)}</button>)}</div>
             </label>
 
             <label className={styles.financeCard}>
               <span><WalletCards size={15}/>Комфортный платёж</span>
-              <div><Input inputMode="numeric" value={paymentDraft} onChange={e=>setPaymentDraft(formatRub(Number(e.target.value.replace(/[^0-9]/g,""))||0))} onBlur={()=>commitMoney("payment")}/><b>₽</b></div>
+              <div><Input inputMode="numeric" value={paymentDraft} onChange={e=>editMoney("payment",e.target.value)} onBlur={()=>commitMoney("payment")}/><b>₽</b></div>
               <div className={styles.quickRow}>{[40_000,60_000,80_000,100_000].map(value=><button type="button" key={value} onClick={()=>{setMonthlyPayment(value);setPaymentDraft(formatRub(value));}}>{Math.round(value/1_000)} тыс.</button>)}</div>
             </label>
           </div>
