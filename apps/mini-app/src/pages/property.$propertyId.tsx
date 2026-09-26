@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { LeadSheet } from "../components/LeadSheet";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
-import { useProperties } from "../helpers/useProperties";
+import { usePropertyDetail } from "../helpers/useCatalog";
 import { useFavoriteIds } from "../helpers/useFavoriteIds";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./property.$propertyId.module.css";
@@ -26,8 +26,7 @@ const priceLabel=(value:number)=>"от "+value.toFixed(1).replace(".",",")+" м�
 
 export default function PropertyPage(){
   const {propertyId=""}=useParams();
-  const {data:properties=[],isLoading,error}=useProperties();
-  const p=properties.find(x=>x.id===propertyId);
+  const {data:p,isLoading,error}=usePropertyDetail(propertyId);
   const {toggle,isFavorite}=useFavoriteIds();
   const [photoIndex,setPhotoIndex]=React.useState(0);
   const [selectedRoom,setSelectedRoom]=React.useState("");
