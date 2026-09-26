@@ -1,4 +1,4 @@
-@property --ring-value{syntax:"<percentage>";inherits:false;initial-value:3%;}
+@property --ring-value{syntax:"<percentage>";inherits:false;initial-value:2%;}
 .page{display:flex;flex-direction:column;gap:16px;padding-bottom:10px}
 .hero{padding:4px 2px 2px}
 .heroTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -153,7 +153,7 @@
 .pulseCore:before{content:"";position:absolute;inset:-70% auto auto 38%;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(242,13,29,.23),rgba(242,13,29,.04) 43%,transparent 68%);pointer-events:none}
 .pulseCore:after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 0 68%,rgba(255,255,255,.025));pointer-events:none}
 .coreVisual{position:relative;z-index:1;width:86px;height:86px;display:grid;place-items:center;animation:coreWake .42s var(--motion-soft) both}
-.coreRing{--ring-value:3%;position:absolute;inset:4px;border-radius:50%;background:conic-gradient(from -90deg,var(--primary) 0 var(--ring-value),rgba(255,255,255,.11) var(--ring-value) 100%);filter:drop-shadow(0 0 10px rgba(242,13,29,.15));transition:--ring-value .88s cubic-bezier(.22,1,.36,1),filter .35s ease;animation:ringBreath 2.6s ease-in-out infinite}
+.coreRing{--ring-value:2%;position:absolute;inset:4px;border-radius:50%;background:conic-gradient(from -90deg,var(--primary) 0 var(--ring-value),rgba(255,255,255,.11) var(--ring-value) 100%);filter:drop-shadow(0 0 10px rgba(242,13,29,.15));transition:--ring-value .88s cubic-bezier(.22,1,.36,1),filter .35s ease;animation:ringBreath 2.6s ease-in-out infinite}
 .coreRing:before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from -90deg,rgba(255,255,255,0) 0 8%,rgba(255,255,255,.36) 12%,rgba(255,255,255,0) 19% 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px));mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px));opacity:.55;animation:ringSheen 3.1s linear infinite;pointer-events:none}
 .coreRing:after{content:"";position:absolute;inset:5px;border-radius:50%;background:#151d28;border:1px solid rgba(255,255,255,.08)}
 .coreValue{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
