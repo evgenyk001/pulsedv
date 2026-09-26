@@ -138,14 +138,25 @@ export async function getCatalogProperty(sql:Sql,id:string,status:"published"|"a
 }
 
 export async function catalogMeta(sql:Sql,status:"published"|"all"="published"){
-  const where=status==="published"?"where status='published'":"";
-  const row=(await sql.query(`select coalesce(min(price_from),0) as min_price,coalesce(max(price_from),0) as max_price,count(*)::int as total from catalog_properties ${where}`)).rows[0];
-  const cities=(await sql.query(`select city,count(*)::int as count from catalog_properties ${where} group by city order by city`)).rows;
+  const propertyWhere=status==="published"?"where status='published'":"";
+  const joinedStatus=status==="published"?"and p.status='published'":"";
+  const row=(await sql.query(`select
+    coalesce(min(price),0) as min_price,
+    coalesce(max(price),0) as max_price
+    from (
+      select price_from as price from catalog_properties ${propertyWhere}
+      union all
+      select fp.price_from as price from catalog_property_floorplans fp
+      join catalog_properties p on p.id=fp.property_id
+      where fp.price_from is not null ${joinedStatus}
+    ) prices`)).rows[0];
+  const countRow=(await sql.query(`select count(*)::int as total from catalog_properties ${propertyWhere}`)).rows[0];
+  const cities=(await sql.query(`select city,count(*)::int as count from catalog_properties ${propertyWhere} group by city order by city`)).rows;
   return{
     minPriceRub:Math.round(Number(row?.min_price??0)*1_000_000),
     maxPriceRub:Math.round(Number(row?.max_price??0)*1_000_000),
     stepRub:100_000,
-    total:Number(row?.total??0),
+    total:Number(countRow?.total??0),
     cities:cities.map(item=>({city:item.city,count:Number(item.count)})),
   };
 }
