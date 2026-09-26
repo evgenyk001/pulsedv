@@ -1,3 +1,4 @@
+@property --ring-value{syntax:"<percentage>";inherits:false;initial-value:3%;}
 .page{display:flex;flex-direction:column;gap:16px;padding-bottom:10px}
 .hero{padding:4px 2px 2px}
 .heroTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
@@ -152,10 +153,9 @@
 .pulseCore:before{content:"";position:absolute;inset:-70% auto auto 38%;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(242,13,29,.23),rgba(242,13,29,.04) 43%,transparent 68%);pointer-events:none}
 .pulseCore:after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 0 68%,rgba(255,255,255,.025));pointer-events:none}
 .coreVisual{position:relative;z-index:1;width:86px;height:86px;display:grid;place-items:center;animation:coreWake .42s var(--motion-soft) both}
-.coreRing{position:absolute;inset:4px;border-radius:50%;background:conic-gradient(var(--primary) 0 var(--pulse-level),rgba(255,255,255,.11) var(--pulse-level) 100%);filter:drop-shadow(0 0 11px rgba(242,13,29,.13))}
+.coreRing{--ring-value:3%;position:absolute;inset:4px;border-radius:50%;background:conic-gradient(from -90deg,var(--primary) 0 var(--ring-value),rgba(255,255,255,.11) var(--ring-value) 100%);filter:drop-shadow(0 0 10px rgba(242,13,29,.15));transition:--ring-value .88s cubic-bezier(.22,1,.36,1),filter .35s ease;animation:ringBreath 2.6s ease-in-out infinite}
+.coreRing:before{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from -90deg,rgba(255,255,255,0) 0 8%,rgba(255,255,255,.36) 12%,rgba(255,255,255,0) 19% 100%);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px));mask:radial-gradient(farthest-side,transparent calc(100% - 7px),#000 calc(100% - 6px));opacity:.55;animation:ringSheen 3.1s linear infinite;pointer-events:none}
 .coreRing:after{content:"";position:absolute;inset:5px;border-radius:50%;background:#151d28;border:1px solid rgba(255,255,255,.08)}
-.coreOrbit{position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,255,255,.11);animation:orbit 9s linear infinite}
-.coreOrbit:before{content:"";position:absolute;width:6px;height:6px;border-radius:50%;background:#fff;top:7px;left:18px;box-shadow:0 0 10px rgba(255,255,255,.45)}
 .coreValue{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center}
 .coreValue strong{font-size:23px;line-height:1;font-weight:770;letter-spacing:-.055em}
 .coreValue span{margin-top:4px;font-size:6.8px;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.5);font-weight:760}
@@ -221,14 +221,15 @@
 .scenarioList b{flex:none;display:flex;align-items:center;gap:4px;color:#40556b;font-size:8px;font-weight:760}
 
 @keyframes coreWake{0%{opacity:.72;transform:scale(.965)}55%{transform:scale(1.025)}100%{opacity:1;transform:scale(1)}}
-@keyframes orbit{to{transform:rotate(360deg)}}
+@keyframes ringBreath{0%,100%{filter:drop-shadow(0 0 8px rgba(242,13,29,.12))}50%{filter:drop-shadow(0 0 16px rgba(242,13,29,.26))}}
+@keyframes ringSheen{to{transform:rotate(360deg)}}
 @keyframes scanSpin{to{transform:rotate(360deg)}}
 @keyframes matchSpark{0%,100%{transform:scale(.92);opacity:.7}50%{transform:scale(1.08);opacity:1}}
 @keyframes stepScan{0%,18%{transform:translateX(-100%)}55%,100%{transform:translateX(100%)}}
 @keyframes resultRing{from{transform:rotate(-38deg) scale(.88);opacity:.2}to{transform:rotate(0) scale(1);opacity:1}}
 
 @media(prefers-reduced-motion:reduce){
-  .coreVisual,.coreOrbit,.scanRing,.scanRingTwo,.matchingCore svg,.matchingSteps i:after,.resultCoreRing{animation:none}
+  .coreVisual,.coreRing,.coreRing:before,.scanRing,.scanRingTwo,.matchingCore svg,.matchingSteps i:after,.resultCoreRing{animation:none;transition:none}
 }
 @media(max-width:360px){
   .hero h1{font-size:32px}

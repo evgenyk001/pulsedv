@@ -280,8 +280,12 @@ export default function SelectionPage(){
   }).length,[properties,city,rooms]);
   const liveCount=step===0?firstStepCount:eligible.length;
 
-  const profileKey=[step,city,rooms,purchaseMode,budget[1],downPayment,monthlyPayment,delivery,preferences.join("-"),liveCount].join("|");
   const pulseLevel=Math.max(18,Math.min(100,(step+1)*20+Math.min(20,topScore/5)));
+  const [animatedPulseLevel,setAnimatedPulseLevel]=React.useState(3);
+  React.useEffect(()=>{
+    const frame=window.requestAnimationFrame(()=>setAnimatedPulseLevel(pulseLevel));
+    return()=>window.cancelAnimationFrame(frame);
+  },[pulseLevel]);
   const financeLabel=purchaseMode==="mortgage"?("до "+Math.round(monthlyPayment/1000)+" тыс./мес"):("до "+shortRub(budget[1]));
 
   const persistSelection=()=>{
@@ -676,9 +680,8 @@ export default function SelectionPage(){
     </section>}
 
     <section className={styles.pulseCore} aria-label="Живой профиль PULSE Select">
-      <div key={profileKey} className={styles.coreVisual}>
-        <div className={styles.coreRing} style={{"--pulse-level":pulseLevel+"%"} as React.CSSProperties}/>
-        <div className={styles.coreOrbit}/>
+      <div className={styles.coreVisual}>
+        <div className={styles.coreRing} style={{"--ring-value":animatedPulseLevel+"%"} as React.CSSProperties}/>
         <div className={styles.coreValue}><strong>{liveCount}</strong><span>{plural(liveCount,["вариант","варианта","вариантов"])}</span></div>
       </div>
       <div className={styles.coreCopy}>
