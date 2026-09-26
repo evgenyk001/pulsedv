@@ -120,3 +120,10 @@
   .planCard{flex-basis:92%}
   .specs>div{grid-template-columns:82px 1fr}
 }
+
+.materials{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.materials a{min-height:58px;padding:10px 11px;border-radius:17px;background:#f7f9fb;border:1px solid #edf0f3;color:var(--foreground);text-decoration:none;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
+.materials a>span{width:36px;height:36px;border-radius:12px;background:#fff;display:grid;place-items:center;color:var(--primary);border:1px solid #edf0f3}
+.materials a>div{display:flex;flex-direction:column;min-width:0}
+.materials strong{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.materials small{margin-top:3px;font-size:7.8px;color:var(--muted-foreground)}
