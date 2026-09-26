@@ -273,7 +273,7 @@ export default function SelectionPage(){
   const ranked=React.useMemo(()=>rankFor(criteria),[rankFor,criteria]);
   const eligible=ranked.filter(item=>item.match.eligible);
   const strongCount=eligible.filter(item=>item.match.score>=85).length;
-  const topScore=eligible[0]?.match.score??ranked[0]?.match.score??0;
+  const topScore=eligible[0]?.match.score??0;
 
   const firstStepCount=React.useMemo(()=>properties.filter(property=>{
     const cityOk=city==="Все"||city==="Не важно"||property.city===city;
@@ -284,25 +284,52 @@ export default function SelectionPage(){
   const pulseLevel=React.useMemo(()=>{
     const catalogSize=Math.max(1,properties.length);
     const narrowing=Math.max(0,Math.min(1,1-firstStepCount/catalogSize));
-    const matchSignal=Math.max(0,Math.min(1,topScore/100));
-    const availabilitySignal=eligible.length
-      ?Math.min(1,(strongCount/Math.max(1,eligible.length))*.65+Math.min(1,eligible.length/Math.max(1,firstStepCount))*.35)
-      :0;
-    const preferenceSignal=Math.min(1,preferences.length/3);
-    const smartBoost=Math.min(12,smartSignal*2);
+    const smartBoost=Math.min(10,smartSignal*1.7);
 
-    let value=4+narrowing*5;
-    if(step===0)value+=smartBoost;
-    if(step===1)value=24+narrowing*7+matchSignal*11+availabilitySignal*6+Math.min(6,smartBoost*.5);
-    if(step===2)value=48+narrowing*5+matchSignal*11+availabilitySignal*7+(delivery!=="Не важно"?7:2);
-    if(step===3)value=69+narrowing*4+matchSignal*10+availabilitySignal*6+preferenceSignal*9;
-    return Math.round(Math.max(3,Math.min(97,value)));
+    if(step===0){
+      if(firstStepCount===0)return 1;
+      return Math.round(Math.max(3,Math.min(18,4+narrowing*6+smartBoost)));
+    }
+
+    // После финансового шага и дальше PULSE показывает только реальную уверенность:
+    // если нет ни одного допустимого варианта, кольцо не растёт.
+    if(eligible.length===0)return 1;
+
+    const matchSignal=Math.max(0,Math.min(1,topScore/100));
+    const strongRatio=Math.max(0,Math.min(1,strongCount/Math.max(1,eligible.length)));
+    const choiceSignal=Math.max(0,Math.min(1,eligible.length/Math.max(3,firstStepCount)));
+    const preferenceSignal=Math.min(1,preferences.length/3);
+
+    const stageBase=step===1?20:step===2?43:64;
+    const stageDetail=step===1
+      ?Math.min(6,smartBoost*.45)
+      :step===2
+        ?(delivery!=="Не важно"?6:1)
+        :preferenceSignal*8;
+
+    const value=
+      stageBase+
+      matchSignal*14+
+      strongRatio*7+
+      choiceSignal*5+
+      stageDetail;
+
+    return Math.round(Math.max(4,Math.min(97,value)));
   },[step,properties.length,firstStepCount,topScore,eligible.length,strongCount,preferences.length,smartSignal,delivery]);
-  const [animatedPulseLevel,setAnimatedPulseLevel]=React.useState(1.5);
+  const [animatedPulseLevel,setAnimatedPulseLevel]=React.useState(1);
+  const [animatedResultScore,setAnimatedResultScore]=React.useState(0);
   React.useEffect(()=>{
     const frame=window.requestAnimationFrame(()=>setAnimatedPulseLevel(pulseLevel));
     return()=>window.cancelAnimationFrame(frame);
   },[pulseLevel]);
+  React.useEffect(()=>{
+    if(!showResult){
+      setAnimatedResultScore(0);
+      return;
+    }
+    const frame=window.requestAnimationFrame(()=>setAnimatedResultScore(topScore));
+    return()=>window.cancelAnimationFrame(frame);
+  },[showResult,topScore]);
   const financeLabel=purchaseMode==="mortgage"?("до "+Math.round(monthlyPayment/1000)+" тыс./мес"):("до "+shortRub(budget[1]));
 
   const persistSelection=()=>{
@@ -584,7 +611,32 @@ export default function SelectionPage(){
     return <div className={styles.page}>
       <section className={styles.resultHero} aria-label="Результат PULSE Select">
         <div className={styles.resultCore}>
-          <div className={styles.resultCoreRing} style={{"--pulse-level":Math.max(6,topScore)+"%"} as React.CSSProperties}/>
+          <svg className={styles.resultCoreRingSvg} viewBox="0 0 100 100" aria-hidden="true">
+            <defs>
+              <linearGradient id="pulse-result-red" x1="22" y1="8" x2="82" y2="88" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#ff4352"/>
+                <stop offset="48%" stopColor="#f20d1d"/>
+                <stop offset="100%" stopColor="#ff2639"/>
+              </linearGradient>
+            </defs>
+            <circle className={styles.resultTrackOuter} cx="50" cy="50" r="42"/>
+            <circle className={styles.resultTrack} cx="50" cy="50" r="42"/>
+            <circle
+              className={styles.resultProgressOutline}
+              cx="50" cy="50" r="42" pathLength="100"
+              style={{strokeDasharray:`${animatedResultScore} 100`}}
+            />
+            <circle
+              className={styles.resultProgress}
+              cx="50" cy="50" r="42" pathLength="100" stroke="url(#pulse-result-red)"
+              style={{strokeDasharray:`${animatedResultScore} 100`}}
+            />
+            <circle
+              className={styles.resultProgressGlow}
+              cx="50" cy="50" r="42" pathLength="100"
+              style={{strokeDasharray:`${animatedResultScore} 100`}}
+            />
+          </svg>
           <div><strong>{topScore}%</strong><span>PULSE MATCH</span></div>
         </div>
         <span className={styles.eyebrow}>PULSE SELECT</span>
