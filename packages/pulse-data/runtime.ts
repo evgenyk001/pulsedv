@@ -61,8 +61,12 @@ export async function saveState(){
  if(runtime.saving)return;
  runtime.saving=true;notify();
  const submitted=runtime.snapshot.state;
- try{const result=await api('/control/state',{method:'PUT',body:JSON.stringify({state:submitted,version:runtime.snapshot.version})});
-  if(runtime.snapshot.state===submitted){runtime.snapshot={...runtime.snapshot,...result};runtime.dirty=false;}else runtime.snapshot.version=result.version;
+ const payloadState={...submitted,properties:[]};
+ try{const result=await api<any>('/control/state',{method:'PUT',body:JSON.stringify({state:payloadState,version:runtime.snapshot.version})});
+  if(runtime.snapshot.state===submitted){
+   runtime.snapshot={...runtime.snapshot,...result,state:{...result.state,properties:submitted.properties}};
+   runtime.dirty=false;
+  }else runtime.snapshot.version=result.version;
   runtime.error=null;runtime.lastSync=new Date().toISOString();
  }catch(error){runtimeError(error);throw error;}finally{runtime.saving=false;notify();}
 }
