@@ -189,6 +189,33 @@ export function ServerObjectsPage(){
     finally{setBusy(false)}
   };
 
+  const importMediaBatch=async(files:FileList|null)=>{
+    if(!files?.length)return;
+    setBusy(true);setError("");setNotice("");
+    let uploaded=0;const failed:string[]=[];
+    try{
+      for(const file of Array.from(files)){
+        const stem=file.name.replace(/\.[^.]+$/,"");
+        const parts=stem.split("__").filter(Boolean);
+        const propertyId=parts[0];
+        const token=(parts[1]||"").toLowerCase();
+        if(!propertyId||!token){failed.push(file.name);continue}
+        try{
+          if(token==="cover")await uploadAdminMedia(propertyId,file,"cover");
+          else if(token==="gallery")await uploadAdminMedia(propertyId,file,"gallery");
+          else if(token==="presentation")await uploadAdminMedia(propertyId,file,"presentation");
+          else if(token==="document")await uploadAdminMedia(propertyId,file,"document");
+          else if(token==="floorplan"&&parts[2])await uploadAdminMedia(propertyId,file,"floorplan",parts[2]);
+          else{failed.push(file.name);continue}
+          uploaded++;
+        }catch{failed.push(file.name)}
+      }
+      setNotice(`Медиа: загружено ${uploaded}${failed.length?`, не разобрано ${failed.length}`:""}`);
+      if(failed.length)setError("Проверьте имена файлов: "+failed.slice(0,5).join(", ")+(failed.length>5?"…":""));
+      await load();
+    }finally{setBusy(false)}
+  };
+
   const importCsv=async(files:FileList|null)=>{
     if(!files?.length)return;
     setBusy(true);setError("");setNotice("");
@@ -272,6 +299,7 @@ export function ServerObjectsPage(){
     action={<div className="catalogAdminActions">
       <button className="secondaryAction" onClick={downloadTemplates}><Download size={16}/>Шаблоны CSV</button>
       <label className="secondaryAction fileButton"><Upload size={16}/>Импорт CSV<input type="file" accept=".csv,text/csv" multiple onChange={e=>void importCsv(e.target.files)}/></label>
+      <label className="secondaryAction fileButton"><ImagePlus size={16}/>Медиа пачкой<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple onChange={e=>void importMediaBatch(e.target.files)}/></label>
       <button className="primaryAction" disabled={busy} onClick={()=>void add()}><Plus size={16}/>Добавить ЖК</button>
     </div>}
   >
@@ -290,6 +318,7 @@ export function ServerObjectsPage(){
       <span><b>{data.total}</b> объектов</span>
       <span>Страница {page} из {totalPages}</span>
       <span>По 24 карточки</span>
+      <span title="Пример: solnechniy__gallery__01.jpg">Медиа: ID__cover / gallery / presentation / floorplan__PLANID</span>
     </div>
 
     {loading?<div className="emptyState"><strong>Загружаем каталог</strong><span>Получаем только текущую страницу.</span></div>:
