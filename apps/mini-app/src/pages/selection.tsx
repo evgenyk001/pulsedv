@@ -148,6 +148,7 @@ export default function SelectionPage(){
   const [preferences,setPreferences]=React.useState<PreferenceId[]>(Array.isArray(saved.preferences)?saved.preferences.slice(0,3):[]);
   const [smartQuery,setSmartQuery]=React.useState("");
   const [smartStatus,setSmartStatus]=React.useState("");
+  const [smartSignal,setSmartSignal]=React.useState(0);
   const last=step===3;
 
   React.useEffect(()=>{
@@ -280,14 +281,24 @@ export default function SelectionPage(){
   }).length,[properties,city,rooms]);
   const liveCount=step===0?firstStepCount:eligible.length;
 
-  const pulseLevel=step===0
-    ?6
-    :step===1
-      ?34
-      :step===2
-        ?62
-        :84+Math.min(12,preferences.length*4);
-  const [animatedPulseLevel,setAnimatedPulseLevel]=React.useState(2);
+  const pulseLevel=React.useMemo(()=>{
+    const catalogSize=Math.max(1,properties.length);
+    const narrowing=Math.max(0,Math.min(1,1-firstStepCount/catalogSize));
+    const matchSignal=Math.max(0,Math.min(1,topScore/100));
+    const availabilitySignal=eligible.length
+      ?Math.min(1,(strongCount/Math.max(1,eligible.length))*.65+Math.min(1,eligible.length/Math.max(1,firstStepCount))*.35)
+      :0;
+    const preferenceSignal=Math.min(1,preferences.length/3);
+    const smartBoost=Math.min(12,smartSignal*2);
+
+    let value=4+narrowing*5;
+    if(step===0)value+=smartBoost;
+    if(step===1)value=24+narrowing*7+matchSignal*11+availabilitySignal*6+Math.min(6,smartBoost*.5);
+    if(step===2)value=48+narrowing*5+matchSignal*11+availabilitySignal*7+(delivery!=="Не важно"?7:2);
+    if(step===3)value=69+narrowing*4+matchSignal*10+availabilitySignal*6+preferenceSignal*9;
+    return Math.round(Math.max(3,Math.min(97,value)));
+  },[step,properties.length,firstStepCount,topScore,eligible.length,strongCount,preferences.length,smartSignal,delivery]);
+  const [animatedPulseLevel,setAnimatedPulseLevel]=React.useState(1.5);
   React.useEffect(()=>{
     const frame=window.requestAnimationFrame(()=>setAnimatedPulseLevel(pulseLevel));
     return()=>window.cancelAnimationFrame(frame);
@@ -387,6 +398,7 @@ export default function SelectionPage(){
     setPaymentDraft(formatRub(nextPayment));
     setDelivery(nextDelivery);
     setPreferences(nextPreferences.slice(0,3));
+    setSmartSignal(found);
     setSmartStatus(found
       ?`PULSE понял ${found} ${plural(found,["параметр","параметра","параметров"])}. Проверьте — всё уже выставлено ниже.`
       :"Не хочу додумывать за вас. Выберите параметры ниже — это займёт меньше минуты."
@@ -687,7 +699,32 @@ export default function SelectionPage(){
 
     <section className={styles.pulseCore} aria-label="Живой профиль PULSE Select">
       <div className={styles.coreVisual}>
-        <div className={styles.coreRing} style={{"--ring-value":animatedPulseLevel+"%"} as React.CSSProperties}/>
+        <svg className={styles.coreRingSvg} viewBox="0 0 100 100" aria-hidden="true">
+          <defs>
+            <linearGradient id="pulse-core-red" x1="22" y1="8" x2="82" y2="88" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stopColor="#ff4352"/>
+              <stop offset="48%" stopColor="#f20d1d"/>
+              <stop offset="100%" stopColor="#ff2639"/>
+            </linearGradient>
+          </defs>
+          <circle className={styles.coreTrackOuter} cx="50" cy="50" r="42"/>
+          <circle className={styles.coreTrack} cx="50" cy="50" r="42"/>
+          <circle
+            className={styles.coreProgressOutline}
+            cx="50" cy="50" r="42" pathLength="100"
+            style={{strokeDasharray:`${animatedPulseLevel} 100`}}
+          />
+          <circle
+            className={styles.coreProgress}
+            cx="50" cy="50" r="42" pathLength="100" stroke="url(#pulse-core-red)"
+            style={{strokeDasharray:`${animatedPulseLevel} 100`}}
+          />
+          <circle
+            className={styles.coreProgressGlow}
+            cx="50" cy="50" r="42" pathLength="100"
+            style={{strokeDasharray:`${animatedPulseLevel} 100`}}
+          />
+        </svg>
         <div className={styles.coreValue}><strong>{liveCount}</strong><span>{plural(liveCount,["вариант","варианта","вариантов"])}</span></div>
       </div>
       <div className={styles.coreCopy}>
