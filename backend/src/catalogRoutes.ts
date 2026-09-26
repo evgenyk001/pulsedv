@@ -99,9 +99,9 @@ export async function registerCatalogRoutes(
     return {property};
   });
 
-  app.post("/api/v1/control/catalog",{preHandler:editor},async request=>{
+  app.post("/api/v1/control/catalog",{preHandler:editor},async(request,reply)=>{
     const property=catalogPropertySchema.parse(request.body);
-    if(await getCatalogProperty(db,property.id,"any"))return app.httpErrors?.conflict?.("Такой ID уже существует")??Promise.reject(Object.assign(new Error("Такой ID уже существует"),{statusCode:409}));
+    if(await getCatalogProperty(db,property.id,"any"))return reply.code(409).send({error:"Такой ID уже существует"});
     await db.transaction(async sql=>{
       await upsertCatalogProperty(sql,property);
       await audit(sql,request.member!.id,"catalog.create",property.id,{status:property.status});
