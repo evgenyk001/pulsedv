@@ -12,7 +12,7 @@ import { stateSchema, leadSchema, eventsSchema, safeMetadata } from './validatio
 import { audit, leadRepository, readState } from './repository';
 import { ingestEventBatch, processSessionIntent } from './leadEngineService';
 import { registerCatalogRoutes } from './catalogRoutes';
-import { listCatalog } from './catalogRepository';
+import { getCatalogProperty, listCatalog } from './catalogRepository';
 
 type Member={id:string;name:string;email:string;role:'owner'|'admin'|'manager';active:boolean};
 type Visitor={sessionId:string;userId:string|null};
@@ -92,7 +92,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const session=request.visitor!;await sessionLock(sql,session.sessionId);
    const existing=(await sql.query('select id,name,phone,source,property_id,comment from leads where session_id=$1 and idempotency_key=$2',[session.sessionId,input.idempotencyKey])).rows[0];
    if(existing){if(existing.name!==input.name||existing.phone!==input.phone||existing.source!==input.source||existing.property_id!==(input.propertyId??null)||existing.comment!==(input.comment??null))throw new HttpError(409,'Ключ заявки уже использован');return {ok:true,id:existing.id,duplicate:true};}
-   if(input.propertyId&&!(await readState(sql)).state.properties.some(p=>p.id===input.propertyId&&p.status==='published'))throw new HttpError(400,'Объект больше не опубликован');
+   if(input.propertyId&&!await getCatalogProperty(sql,input.propertyId,'published'))throw new HttpError(400,'Объект больше не опубликован');
    const row=(await sql.query('insert into leads(session_id,user_id,idempotency_key,source,property_id,name,phone,comment,consent_at,consent_version) values($1,$2,$3,$4,$5,$6,$7,$8,now(),$9) returning id',[session.sessionId,session.userId,input.idempotencyKey,input.source,input.propertyId??null,input.name,input.phone,input.comment??null,config.CONSENT_VERSION])).rows[0];
    const repo=leadRepository(sql);
    await repo.insertEvents([{idempotencyKey:'lead:'+row.id,sessionId:session.sessionId,userId:session.userId,eventType:'lead_created',entityType:'lead',entityId:row.id,metadata:{source:input.source},createdAt:new Date().toISOString()}]);
