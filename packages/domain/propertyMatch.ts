@@ -73,13 +73,13 @@ function propertyText(property:PulseProperty){
 }
 
 export function hasSea(property:PulseProperty){
-  return /мор[еяю]|морской|панорам/.test(propertyText(property));
+  return property.city==='Владивосток'&&/мор[еяю]|морской/.test(propertyText(property));
 }
 
 export function matchesPreference(property:PulseProperty,id:PreferenceId){
   const text=propertyText(property);
-  if(id==='sea')return property.city==='Владивосток'&&hasSea(property);
-  if(id==='family')return /семейн|детск|школ|садик|сад\b/.test(text);
+  if(id==='sea')return hasSea(property);
+  if(id==='family')return /семейн|детск|школ|садик/.test(text);
   if(id==='parking')return /парков|паркинг/.test(text);
   if(id==='center')return /центр|центральн/.test(text);
   if(id==='courtyard')return /двор|благоустрой|зел[её]н|прогулоч/.test(text);
