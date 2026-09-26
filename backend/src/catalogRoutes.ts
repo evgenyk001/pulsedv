@@ -162,7 +162,7 @@ export async function registerCatalogRoutes(
   app.post("/api/v1/control/catalog/:id/media",{
     preHandler:editor,
     bodyLimit:55*1024*1024,
-    config:{rateLimit:{max:40,timeWindow:"1 minute"}},
+    config:{rateLimit:{max:600,timeWindow:"1 minute"}},
   },async(request,reply)=>{
     const id=z.string().min(1).max(120).parse((request.params as any).id);
     const query=mediaQuery.parse(request.query);
