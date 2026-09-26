@@ -71,19 +71,19 @@ export function SelectPage(){
 
         <label className="switchControl">
           <span><b>Умная строка запроса</b><small>«Опишите квартиру своими словами» на первом шаге.</small></span>
-          <input type="checkbox" checked={state.select.smartQueryEnabled} onChange={e=>patch({smartQueryEnabled:e.target.checked})}/>
+          <input type="checkbox" aria-label="Умная строка запроса" checked={state.select.smartQueryEnabled} onChange={e=>patch({smartQueryEnabled:e.target.checked})}/>
         </label>
         <label className="switchControl">
           <span><b>Ипотечный сценарий</b><small>Разрешить подбор по взносу и комфортному платежу.</small></span>
-          <input type="checkbox" checked={state.select.mortgageEnabled} onChange={e=>patch({mortgageEnabled:e.target.checked})}/>
+          <input type="checkbox" aria-label="Ипотечный сценарий" checked={state.select.mortgageEnabled} onChange={e=>patch({mortgageEnabled:e.target.checked})}/>
         </label>
         <label className="switchControl">
           <span><b>«А что если?»</b><small>Показывать сценарии пересчёта после результата.</small></span>
-          <input type="checkbox" checked={state.select.whatIfEnabled} onChange={e=>patch({whatIfEnabled:e.target.checked})}/>
+          <input type="checkbox" aria-label="А что если" checked={state.select.whatIfEnabled} onChange={e=>patch({whatIfEnabled:e.target.checked})}/>
         </label>
         <label className="controlField">
           <span>Максимум личных приоритетов</span>
-          <input type="number" min="1" max="6" value={state.select.maxPreferences} onChange={e=>patch({maxPreferences:Math.max(1,Math.min(6,Number(e.target.value)||1))})}/>
+          <input type="number" aria-label="Максимум личных приоритетов" min="1" max="6" value={state.select.maxPreferences} onChange={e=>patch({maxPreferences:Math.max(1,Math.min(6,Number(e.target.value)||1))})}/>
         </label>
       </div>
     </section>
@@ -96,7 +96,7 @@ export function SelectPage(){
         {(Object.keys(preferenceLabels) as (keyof typeof preferenceLabels)[]).map(key=>
           <label className="switchControl" key={key}>
             <span><b>{preferenceLabels[key]}</b><small>{key==="sea"?"Только Владивосток":"Мягкий приоритет ранжирования"}</small></span>
-            <input type="checkbox" checked={state.select.preferenceEnabled[key]&&(key!=="sea"||state.select.seaEnabled)} onChange={e=>patchPreference(key,e.target.checked)}/>
+            <input type="checkbox" aria-label={preferenceLabels[key]} checked={state.select.preferenceEnabled[key]&&(key!=="sea"||state.select.seaEnabled)} onChange={e=>patchPreference(key,e.target.checked)}/>
           </label>
         )}
       </div>
