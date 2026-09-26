@@ -121,11 +121,13 @@ export async function listCatalog(sql:Sql,options:CatalogListOptions={}){
   const totalResult=await sql.query("select count(*)::int as total from catalog_properties p"+clause,values);
   const total=Number(totalResult.rows[0]?.total??0);
   const listValues=[...values,limit,(page-1)*limit];
+  const view=options.view??"card";
+  const columns=view==="full"?"p.*":`p.id,p.name,p.city,p.district,p.address,p.latitude,p.longitude,p.price_from,p.delivery,p.class_name,p.status,''::text as description,p.developer_name,p.tags,p.cover_image_url,p.sort_order`;
   const rows=(await sql.query(
-    "select p.* from catalog_properties p"+clause+" order by "+order+" limit $"+(values.length+1)+" offset $"+(values.length+2),
+    "select "+columns+" from catalog_properties p"+clause+" order by "+order+" limit $"+(values.length+1)+" offset $"+(values.length+2),
     listValues
   )).rows;
-  const items=await hydrate(sql,rows.map(normalizeBase),options.view??"card");
+  const items=await hydrate(sql,rows.map(normalizeBase),view);
   return {items,page,limit,total,hasMore:page*limit<total};
 }
 
