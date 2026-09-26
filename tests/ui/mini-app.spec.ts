@@ -10,6 +10,13 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await nav.getByRole('button',{name:'Каталог',exact:true}).click();
  const tabs=page.getByRole('tablist',{name:'Режим каталога'});await expect(tabs).toBeVisible();
  await expect(page.getByRole('heading',{name:'Новостройки',exact:true})).toBeVisible();
+ const detailsButton=page.getByRole('button',{name:'Все характеристики'}).first();
+ await expect(detailsButton).toBeVisible();
+ const catalogCard=detailsButton.locator('xpath=ancestor::article');
+ await expect(catalogCard.getByRole('tablist',{name:/Планировки/})).toBeVisible();
+ await detailsButton.click();
+ await expect(catalogCard.getByText('Застройщик',{exact:true})).toBeVisible();
+ await detailsButton.click();
  const pill=tabs.locator('span[aria-hidden="true"]');const first=tabs.getByRole('tab',{name:'Список',exact:true});
  await expect.poll(async()=>{const a=await pill.boundingBox(),b=await first.boundingBox();return !!a&&!!b&&Math.abs(a.x-b.x)<1&&Math.abs(a.width-b.width)<1;}).toBe(true);
  const from=await first.boundingBox();const to=await tabs.getByRole('tab',{name:'Карта',exact:true}).boundingBox();
