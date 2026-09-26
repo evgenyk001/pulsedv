@@ -385,14 +385,14 @@ export default function SelectionPage(){
         <div className={styles.fieldBlock}>
           <label>Город</label>
           <div className={styles.choiceGrid}>
-            {control.select.cities.map(value=><button type="button" key={value} onClick={()=>setCity(value)} className={city===value?styles.active:""}>{value}</button>)}
+            {control.select.cities.map(value=><button type="button" key={value} aria-pressed={city===value} onClick={()=>setCity(value)} className={city===value?styles.active:""}>{value}</button>)}
           </div>
         </div>
 
         <div className={styles.fieldBlock}>
           <label>Комнатность</label>
           <div className={styles.roomGrid}>
-            {control.select.roomOptions.map(value=><button type="button" key={value} onClick={()=>setRooms(value)} className={rooms===value?styles.active:""}>{value}</button>)}
+            {control.select.roomOptions.map(value=><button type="button" key={value} aria-pressed={rooms===value} onClick={()=>setRooms(value)} className={rooms===value?styles.active:""}>{value}</button>)}
           </div>
         </div>
       </>}
@@ -449,7 +449,7 @@ export default function SelectionPage(){
         </div>
 
         <div className={styles.deliveryGrid}>
-          {deliveryOptions.map(value=><button type="button" key={value} onClick={()=>setDelivery(value)} className={delivery===value?styles.active:""}>
+          {deliveryOptions.map(value=><button type="button" key={value} aria-pressed={delivery===value} onClick={()=>setDelivery(value)} className={delivery===value?styles.active:""}>
             {value==="Сдан"&&<Check size={14}/>}
             {value}
           </button>)}
@@ -471,7 +471,7 @@ export default function SelectionPage(){
           {visiblePreferences.map(option=>{
             const selected=preferences.includes(option.id);
             const disabled=!selected&&preferences.length>=3;
-            return <button type="button" key={option.id} disabled={disabled} onClick={()=>togglePreference(option.id)} className={selected?styles.preferenceActive:""}>
+            return <button type="button" key={option.id} aria-pressed={selected} disabled={disabled} onClick={()=>togglePreference(option.id)} className={selected?styles.preferenceActive:""}>
               <span className={styles.preferenceIcon}>{selected?<Check size={16}/>:preferenceIcon(option.id)}</span>
               <span><strong>{option.label}</strong><small>{option.hint}</small></span>
             </button>
