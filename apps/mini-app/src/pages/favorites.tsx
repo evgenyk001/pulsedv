@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Heart, ChevronRight, Sparkles, GitCompareArrows, Check } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { PropertyCard } from "../components/PropertyCard";
-import { useProperties } from "../helpers/useProperties";
+import { useFavoriteProperties } from "../helpers/useCatalog";
 import { useFavoriteIds } from "../helpers/useFavoriteIds";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "../components/Sheet";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
@@ -20,9 +20,8 @@ const compareRows:CompareRow[]=[
 ];
 
 export default function Favorites(){
-  const {data:properties=[],isLoading}=useProperties();
   const {ids}=useFavoriteIds();
-  const saved=properties.filter(x=>ids.includes(x.id));
+  const {data:saved=[],isLoading}=useFavoriteProperties(ids);
   const [compareIds,setCompareIds]=React.useState<string[]>([]);
 
   React.useEffect(()=>{

@@ -3,11 +3,11 @@ import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Heart, Share2, MapPin, CalendarDays, Building2, Waves, Trees, CarFront,
   Baby, ShieldCheck, ChevronRight, Send, Sparkles, MapPinned, LayoutGrid, Ruler,
-  WalletCards, Image as ImageIcon
+  WalletCards, Image as ImageIcon, FileText
 } from "lucide-react";
 import { LeadSheet } from "../components/LeadSheet";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
-import { useProperties } from "../helpers/useProperties";
+import { usePropertyDetail } from "../helpers/useCatalog";
 import { useFavoriteIds } from "../helpers/useFavoriteIds";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./property.$propertyId.module.css";
@@ -26,8 +26,7 @@ const priceLabel=(value:number)=>"от "+value.toFixed(1).replace(".",",")+" м�
 
 export default function PropertyPage(){
   const {propertyId=""}=useParams();
-  const {data:properties=[],isLoading,error}=useProperties();
-  const p=properties.find(x=>x.id===propertyId);
+  const {data:p,isLoading,error}=usePropertyDetail(propertyId);
   const {toggle,isFavorite}=useFavoriteIds();
   const [photoIndex,setPhotoIndex]=React.useState(0);
   const [selectedRoom,setSelectedRoom]=React.useState("");
@@ -181,6 +180,17 @@ export default function PropertyPage(){
           <div><span>Типы квартир</span><strong>{roomOptions.length?roomOptions.join(" · "):"Уточняются"}</strong></div>
         </div>
       </section>
+
+      {(p.documents??[]).length>0&&<section className={styles.section}>
+        <div className={styles.sectionHead}><div><span>МАТЕРИАЛЫ</span><h2>Документы проекта</h2></div><small>{(p.documents??[]).length} файлов</small></div>
+        <div className={styles.materials}>
+          {(p.documents??[]).map(doc=><a key={doc.id||doc.url} href={doc.url} target="_blank" rel="noreferrer">
+            <span><FileText size={18}/></span>
+            <div><strong>{doc.name}</strong><small>{doc.kind==="presentation"?"Презентация":"Документ"}{doc.sizeBytes?" · "+Math.round(doc.sizeBytes/1024/1024*10)/10+" МБ":""}</small></div>
+            <ChevronRight size={16}/>
+          </a>)}
+        </div>
+      </section>}
 
       <Sheet>
         <SheetTrigger asChild>

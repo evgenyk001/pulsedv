@@ -1,4 +1,4 @@
-import { matchesBudgetAndRooms, hasSea, matchScore } from "../../../../packages/domain/propertyMatch";
+import { matchScore } from "../../../../packages/domain/propertyMatch";
 import { usePulseControlState } from "../helpers/usePulseControlState";
 import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTr
 import { Slider } from "../components/Slider";
 import { PropertyCard } from "../components/PropertyCard";
 import { PageHeader } from "../components/PageHeader";
-import { useProperties } from "../helpers/useProperties";
+import { useCatalogInfinite, useMapCatalog, useSelectionProperties } from "../helpers/useCatalog";
 import { usePriceBounds } from "../helpers/usePriceBounds";
 import { PropertyMap } from "../components/PropertyMap";
 import { Input } from "../components/Input";
@@ -42,7 +42,6 @@ const sortLabels:Record<SortMode,string>={
 export default function CatalogPage(){
   const [params,setParams]=useSearchParams();
   const control=usePulseControlState();
-  const {data:properties=[],isLoading,error}=useProperties();
   const {data:bounds}=usePriceBounds();
   const minBound=bounds?.minPriceRub??FALLBACK_MIN;
   const maxBound=bounds?.maxPriceRub??FALLBACK_MAX;
@@ -51,6 +50,7 @@ export default function CatalogPage(){
   const initialMax=parsePriceParam(params.get("max"));
 
   const [query,setQuery]=useState(params.get("q")||"");
+  const deferredQuery=React.useDeferredValue(query);
   const [city,setCity]=useState(params.get("city")||"Все");
   const [priceRange,setPriceRange]=useState<[number,number]>([initialMin??FALLBACK_MIN,initialMax??FALLBACK_MAX]);
   const [priceDraft,setPriceDraft]=useState<[string,string]>([formatRub(initialMin??FALLBACK_MIN),formatRub(initialMax??FALLBACK_MAX)]);
@@ -63,6 +63,14 @@ export default function CatalogPage(){
   const view=params.get("view")==="map"?"map":"list";
   const [selectedId,setSelectedId]=useState<string|undefined>();
   const navigate=useNavigate();
+  const pulseMode=params.get("pulse")==="1";
+
+  const appliedCity=params.get("city")||"Все";
+  const appliedDelivery=params.get("delivery")||"Любой";
+  const appliedRooms=params.get("rooms")||"Все";
+  const appliedSea=params.get("sea")==="1";
+  const appliedMin=parsePriceParam(params.get("min"))??minBound;
+  const appliedMax=parsePriceParam(params.get("max"))??maxBound;
 
   React.useEffect(()=>{
     if(initialSort&&sortLabels[initialSort])return;
@@ -76,28 +84,63 @@ export default function CatalogPage(){
     setPriceRange(range);setPriceDraft([formatRub(range[0]),formatRub(range[1])]);priceInitialized.current=true;
   },[bounds]);
 
-  const visible=useMemo(()=>{
-    const filtered=properties.filter((item)=>{
-      const matchesQuery=(item.name+" "+item.city+" "+item.district+" "+item.developerName).toLowerCase().includes(query.toLowerCase());
-      const matchesCity=city==="Все"||item.city===city;
-      const matchesPrice=matchesBudgetAndRooms(item,{rooms,min:priceRange[0],max:priceRange[1]});
-      const matchesDelivery=delivery==="Любой"||item.delivery.includes(delivery);
-      const matchesRooms=true;
-      const matchesSea=!sea||hasSea(item);
-      return matchesQuery&&matchesCity&&matchesPrice&&matchesDelivery&&matchesRooms&&matchesSea;
+  React.useEffect(()=>{
+    const next=new URLSearchParams(params);
+    const current=next.get("q")||"";
+    if(current===deferredQuery)return;
+    deferredQuery?next.set("q",deferredQuery):next.delete("q");
+    setParams(next,{replace:true});
+  },[deferredQuery]);
+
+  const serverFilters=React.useMemo(()=>({
+    limit:20,
+    q:params.get("q")||undefined,
+    city:appliedCity,
+    min:appliedMin,
+    max:appliedMax,
+    delivery:appliedDelivery,
+    rooms:appliedRooms,
+    sea:appliedSea,
+    sort,
+    view:"card" as const,
+  }),[params,appliedCity,appliedMin,appliedMax,appliedDelivery,appliedRooms,appliedSea,sort]);
+
+  const listQuery=useCatalogInfinite(serverFilters,view==="list"&&!pulseMode);
+  const mapQuery=useMapCatalog({
+    q:params.get("q")||undefined,city:appliedCity,min:appliedMin,max:appliedMax,
+    delivery:appliedDelivery,rooms:appliedRooms,sea:appliedSea,sort,
+  },view==="map"&&!pulseMode);
+  const pulseQuery=useSelectionProperties(pulseMode);
+
+  const serverItems=React.useMemo(()=>listQuery.data?.pages.flatMap(page=>page.items)??[],[listQuery.data]);
+  const serverTotal=listQuery.data?.pages[0]?.total??0;
+
+  const pulseItems=useMemo(()=>{
+    if(!pulseMode)return [];
+    const properties=pulseQuery.data??[];
+    const filtered=properties.filter(item=>{
+      const matchesQuery=(item.name+" "+item.city+" "+item.district+" "+item.developerName).toLowerCase().includes((params.get("q")||"").toLowerCase());
+      const matchesCity=appliedCity==="Все"||item.city===appliedCity;
+      const matchesDelivery=appliedDelivery==="Любой"||item.delivery.includes(appliedDelivery);
+      const prices=(appliedRooms==="Все"?item.floorplans:item.floorplans.filter(plan=>plan.roomLabel===appliedRooms))
+        .map(plan=>plan.priceFrom).filter((value):value is number=>value!==null).map(value=>value*1_000_000);
+      const representative=prices.length?Math.min(...prices):item.priceFrom*1_000_000;
+      const matchesPrice=representative>=appliedMin&&representative<=appliedMax;
+      const matchesSea=!appliedSea||item.tags.some(tag=>tag.toLowerCase().includes("море"))||item.features.some(feature=>feature.label.toLowerCase().includes("море"));
+      return matchesQuery&&matchesCity&&matchesDelivery&&matchesPrice&&matchesSea;
     });
     if(sort==="priceAsc")return [...filtered].sort((a,b)=>a.priceFrom-b.priceFrom);
     if(sort==="priceDesc")return [...filtered].sort((a,b)=>b.priceFrom-a.priceFrom);
-    if(params.get("pulse")==="1")return [...filtered].sort((a,b)=>matchScore(b,{city,rooms,min:priceRange[0],max:priceRange[1],delivery,sea},control.select.weights)-matchScore(a,{city,rooms,min:priceRange[0],max:priceRange[1],delivery,sea},control.select.weights)||a.sortOrder-b.sortOrder);
-    return [...filtered].sort((a,b)=>a.sortOrder-b.sortOrder);
-  },[properties,query,city,priceRange,delivery,rooms,sea,sort,params,control.select.weights]);
+    return [...filtered].sort((a,b)=>matchScore(b,{city:appliedCity,rooms:appliedRooms,min:appliedMin,max:appliedMax,delivery:appliedDelivery,sea:appliedSea},control.select.weights)-matchScore(a,{city:appliedCity,rooms:appliedRooms,min:appliedMin,max:appliedMax,delivery:appliedDelivery,sea:appliedSea},control.select.weights)||a.sortOrder-b.sortOrder);
+  },[pulseMode,pulseQuery.data,params,appliedCity,appliedDelivery,appliedRooms,appliedMin,appliedMax,appliedSea,sort,control.select.weights]);
 
-  const onQuery=(value:string)=>{
-    setQuery(value);
-    const next=new URLSearchParams(params);
-    value?next.set("q",value):next.delete("q");
-    setParams(next,{replace:true});
-  };
+  const visible=pulseMode?pulseItems:serverItems;
+  const total=pulseMode?pulseItems.length:serverTotal;
+  const mapProperties=pulseMode?pulseItems:(mapQuery.data??[]);
+  const isLoading=pulseMode?pulseQuery.isLoading:view==="map"?mapQuery.isLoading:listQuery.isLoading;
+  const error=pulseMode?pulseQuery.error:view==="map"?mapQuery.error:listQuery.error;
+
+  const onQuery=(value:string)=>setQuery(value);
 
   const setView=(nextView:"list"|"map")=>{
     const next=new URLSearchParams(params);
@@ -149,7 +192,7 @@ export default function CatalogPage(){
     rooms==="Все"?next.delete("rooms"):next.set("rooms",rooms);
     sea?next.set("sea","1"):next.delete("sea");
     setParams(next,{replace:true});
-    recordPulseEvent({eventType:"catalog_filter",entityType:"catalog",entityId:"filters",metadata:{city,min:priceRange[0],max:priceRange[1],delivery,rooms,sea,results:visible.length}});
+    recordPulseEvent({eventType:"catalog_filter",entityType:"catalog",entityId:"filters",metadata:{city,min:priceRange[0],max:priceRange[1],delivery,rooms,sea,results:total}});
   };
 
   const resetFilters=()=>{
@@ -166,18 +209,15 @@ export default function CatalogPage(){
     setParams(next,{replace:true});
   };
 
+  const pluralProject=(count:number)=>count===1?"проект":count>1&&count<5?"проекта":"проектов";
+
   return <div className={styles.page}>
     <PageHeader eyebrow="Каталог PULSE.DV" title="Новостройки" subtitle="Подбирайте спокойно — по району, бюджету и сроку сдачи."/>
 
-    <SegmentedControl
-      value={view}
-      onChange={setView}
-      ariaLabel="Режим каталога"
-      options={[
-        {value:"list",label:<><List size={16}/>Список</>},
-        {value:"map",label:<><MapPinned size={16}/>Карта</>},
-      ]}
-    />
+    <SegmentedControl value={view} onChange={setView} ariaLabel="Режим каталога" options={[
+      {value:"list",label:<><List size={16}/>Список</>},
+      {value:"map",label:<><MapPinned size={16}/>Карта</>},
+    ]}/>
 
     <div className={styles.search}>
       <Search size={18}/>
@@ -201,27 +241,22 @@ export default function CatalogPage(){
             <div className={styles.sheetChips}>{["Все","Студия","1","2","3+"].map(v=><button onClick={()=>setRooms(v)} key={v} className={rooms===v?styles.sheetActive:""}>{rooms===v&&<Check size={14}/>} {v}</button>)}</div>
             <label className={styles.filterTitle}><span>Особенности</span></label>
             <div className={styles.sheetChips}><button onClick={()=>setSea(value=>!value)} className={sea?styles.sheetActive:""}>{sea&&<Check size={14}/>} Вид на море</button></div>
-            <SheetClose asChild><button className={styles.apply} onClick={applyFilters}>Показать {visible.length} {visible.length===1?"проект":visible.length>1&&visible.length<5?"проекта":"проектов"}</button></SheetClose>
+            <SheetClose asChild><button className={styles.apply} onClick={applyFilters}>Применить фильтры</button></SheetClose>
           </div>
         </SheetContent>
       </Sheet>
     </div>
 
     {view==="list"&&<div className={styles.meta}>
-      <span className={styles.metaSummary}>{city!=="Все"&&<MapPin size={13}/>} {visible.length} {visible.length===1?"проект":visible.length>1&&visible.length<5?"проекта":"проектов"}{city!=="Все"?" · "+city:""}</span>
+      <span className={styles.metaSummary}>{appliedCity!=="Все"&&<MapPin size={13}/>} {total} {pluralProject(total)}{appliedCity!=="Все"?" · "+appliedCity:""}</span>
       <Sheet>
         <SheetTrigger asChild><button><ArrowUpDown size={14}/>{sortLabels[sort]}</button></SheetTrigger>
         <SheetContent side="bottom" className={styles.sortSheet}>
           <SheetHeader><SheetTitle>Сортировка</SheetTitle><SheetDescription>Выберите порядок проектов в каталоге.</SheetDescription></SheetHeader>
           <div className={styles.sortOptions}>
-            {(Object.keys(sortLabels) as SortMode[]).map(mode=>
-              <SheetClose asChild key={mode}>
-                <button onClick={()=>selectSort(mode)} className={sort===mode?styles.sortActive:""}>
-                  <span>{sortLabels[mode]}</span>
-                  {sort===mode?<Check size={17}/>:<ChevronRight size={17}/>}
-                </button>
-              </SheetClose>
-            )}
+            {(Object.keys(sortLabels) as SortMode[]).map(mode=><SheetClose asChild key={mode}>
+              <button onClick={()=>selectSort(mode)} className={sort===mode?styles.sortActive:""}><span>{sortLabels[mode]}</span>{sort===mode?<Check size={17}/>:<ChevronRight size={17}/>}</button>
+            </SheetClose>)}
           </div>
         </SheetContent>
       </Sheet>
@@ -232,6 +267,13 @@ export default function CatalogPage(){
       {error&&<div className={styles.empty}><strong>Не удалось загрузить каталог</strong><span>Проверьте соединение и попробуйте снова.</span></div>}
       {!isLoading&&!error&&visible.map(property=><PropertyCard key={property.id} property={property} compact/>)}
       {!isLoading&&!error&&visible.length===0&&<div className={styles.empty}><strong>Ничего не нашли</strong><span>Попробуйте изменить фильтры или город.</span><button onClick={resetFilters}>Сбросить фильтры</button></div>}
-    </div>:<div className={styles.mapMode}><PropertyMap properties={visible} selectedId={selectedId} onSelect={setSelectedId} onOpen={id=>navigate("/property/"+id)} city={city==="Все"?undefined:city}/></div>}
-  </div>
+      {!pulseMode&&listQuery.hasNextPage&&<button className={styles.loadMore} disabled={listQuery.isFetchingNextPage} onClick={()=>void listQuery.fetchNextPage()}>
+        {listQuery.isFetchingNextPage?"Загружаем…":`Показать ещё · ${Math.max(0,total-visible.length)}`}
+      </button>}
+    </div>:<div className={styles.mapMode}>
+      {isLoading?<div className={styles.empty}><strong>Загружаем карту</strong><span>Получаем объекты для отображения.</span></div>:
+       error?<div className={styles.empty}><strong>Не удалось загрузить объекты</strong><span>Проверьте соединение.</span></div>:
+       <PropertyMap properties={mapProperties} selectedId={selectedId} onSelect={setSelectedId} onOpen={id=>navigate("/property/"+id)} city={appliedCity==="Все"?undefined:appliedCity}/>}
+    </div>}
+  </div>;
 }

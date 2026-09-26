@@ -1,6 +1,6 @@
 import { z } from 'zod';
 const text=(max=200)=>z.string().trim().max(max);
-const https=z.string().max(2048).refine(value=>{try{return new URL(value).protocol==='https:';}catch{return false;}},'Нужна HTTPS-ссылка');
+const https=z.string().max(2048).refine(value=>{try{return value.startsWith('/media/')||new URL(value).protocol==='https:';}catch{return false;}},'Нужна HTTPS-ссылка или внутренний /media/ путь');
 const nullableText=(max=200)=>text(max).nullable();
 const image=https.nullable();
 const id=text(120).regex(/^[a-zA-Z0-9_-]+$/);
@@ -45,3 +45,48 @@ export function safeMetadata(input:Record<string,unknown>){
  const allowed=['city','district','priceFrom','min','max','rooms','delivery','sea','mortgage','topScore','strongCount','program','price','down','years','rate','payment','results','source','purchaseMode','preferences'];
  return Object.fromEntries(Object.entries(input).filter(([key,value])=>allowed.includes(key)&&(typeof value==='boolean'||typeof value==='number'&&Number.isFinite(value)||typeof value==='string'&&value.length<=150)));
 }
+
+
+const mediaUrl=z.string().max(2048).refine(value=>{
+ try{return value.startsWith('/media/')||new URL(value).protocol==='https:';}catch{return false;}
+},'Нужна HTTPS-ссылка или внутренний /media/ путь');
+
+export const catalogPropertySchema=z.object({
+ id,
+ name:text().min(1),
+ city:text(100).min(1),
+ district:text(100),
+ address:nullableText(400),
+ latitude:z.number().min(-90).max(90).nullable(),
+ longitude:z.number().min(-180).max(180).nullable(),
+ priceFrom:z.number().min(0).max(10000),
+ delivery:text(100),
+ className:text(100),
+ status:z.enum(['draft','published','archived']),
+ description:text(10000),
+ developerName:text(),
+ tags:z.array(text(100)).max(20),
+ coverImageUrl:mediaUrl.nullable(),
+ sortOrder:z.number().int(),
+ images:z.array(z.object({id:id.optional(),url:mediaUrl,alt:text(),sortOrder:z.number().int()})).max(100),
+ features:z.array(z.object({id:id.optional(),label:text(),icon:text(50),sortOrder:z.number().int()})).max(50),
+ floorplans:z.array(z.object({id:id.optional(),roomLabel:text(30).min(1),areaFrom:z.number().positive().nullable(),areaTo:z.number().positive().nullable(),priceFrom:z.number().positive().nullable(),imageUrl:mediaUrl.nullable(),sortOrder:z.number().int()})).max(500),
+ documents:z.array(z.object({
+  id:id.optional(),kind:z.enum(['presentation','document']),name:text(300).min(1),url:mediaUrl,
+  mimeType:nullableText(120),sizeBytes:z.number().int().nonnegative().nullable(),sortOrder:z.number().int()
+ })).max(50).default([])
+}).superRefine((p,ctx)=>{
+ if(p.status==='published'&&(!p.coverImageUrl||!p.developerName||!p.delivery||p.priceFrom<=0))ctx.addIssue({code:'custom',message:'Для публикации нужны обложка, застройщик, срок сдачи и цена'});
+ if((p.latitude===null)!==(p.longitude===null))ctx.addIssue({code:'custom',message:'Укажите обе координаты'});
+ for(const plan of p.floorplans)if(plan.areaFrom&&plan.areaTo&&plan.areaFrom>plan.areaTo)ctx.addIssue({code:'custom',message:'Минимальная площадь больше максимальной'});
+});
+
+export const catalogImportSchema=z.object({
+ properties:z.array(catalogPropertySchema).min(1).max(1000),
+ replace:z.object({
+  images:z.boolean().default(false),
+  features:z.boolean().default(false),
+  floorplans:z.boolean().default(false),
+  documents:z.boolean().default(false)
+ }).default({images:false,features:false,floorplans:false,documents:false})
+}).strict();

@@ -11,6 +11,8 @@ import { verifyTelegramInitData } from './telegramInitData';
 import { stateSchema, leadSchema, eventsSchema, safeMetadata } from './validation';
 import { audit, leadRepository, readState } from './repository';
 import { ingestEventBatch, processSessionIntent } from './leadEngineService';
+import { registerCatalogRoutes } from './catalogRoutes';
+import { getCatalogProperty, listCatalog } from './catalogRepository';
 
 type Member={id:string;name:string;email:string;role:'owner'|'admin'|'manager';active:boolean};
 type Visitor={sessionId:string;userId:string|null};
@@ -27,7 +29,10 @@ export async function createApp(db:Database,config:RuntimeConfig){
   reply.header('X-Content-Type-Options','nosniff').header('Cache-Control','no-store');
   if(!['GET','HEAD','OPTIONS'].includes(request.method)){
    if(request.headers.origin&&request.headers.origin!==config.PUBLIC_ORIGIN)throw new HttpError(403,'Недопустимый источник запроса');
-   if(!request.headers['content-type']?.startsWith('application/json'))throw new HttpError(415,'Требуется application/json');
+   const contentType=request.headers['content-type']||'';
+   const mediaUpload=request.url.startsWith('/api/v1/control/catalog/')&&request.url.includes('/media');
+   const allowedMedia=mediaUpload&&(['image/jpeg','image/png','image/webp','application/pdf'].some(type=>contentType.startsWith(type)));
+   if(!contentType.startsWith('application/json')&&!allowedMedia)throw new HttpError(415,mediaUpload?'Нужен JPG, PNG, WebP или PDF':'Требуется application/json');
   }
  });
  app.setErrorHandler((error,request,reply)=>{
@@ -52,7 +57,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  const cookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1/control',maxAge:8*3600};
  app.get('/health',async()=>({status:'ok'}));
  app.get('/ready',async()=>{await db.query('select 1');await readState(db);return {status:'ready'};});
- app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);return {version,consentVersion:config.CONSENT_VERSION,state:{...state,properties:state.properties.filter(p=>p.status==='published'),banners:state.banners.filter(b=>b.enabled)}};});
+ app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);return {version,consentVersion:config.CONSENT_VERSION,state:{...state,properties:[],banners:state.banners.filter(b=>b.enabled)}};});
  app.get('/api/v1/public/map',async()=>{if(!config.MAP_2GIS_KEY)throw new HttpError(503,'Карта временно недоступна');return {provider:'2gis',key:config.MAP_2GIS_KEY};});
  app.post('/api/v1/auth/session',{config:{rateLimit:{max:20,timeWindow:'1 minute'}}},async request=>{
   const input=z.object({source:z.string().max(100).optional()}).parse(request.body);
@@ -87,7 +92,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const session=request.visitor!;await sessionLock(sql,session.sessionId);
    const existing=(await sql.query('select id,name,phone,source,property_id,comment from leads where session_id=$1 and idempotency_key=$2',[session.sessionId,input.idempotencyKey])).rows[0];
    if(existing){if(existing.name!==input.name||existing.phone!==input.phone||existing.source!==input.source||existing.property_id!==(input.propertyId??null)||existing.comment!==(input.comment??null))throw new HttpError(409,'Ключ заявки уже использован');return {ok:true,id:existing.id,duplicate:true};}
-   if(input.propertyId&&!(await readState(sql)).state.properties.some(p=>p.id===input.propertyId&&p.status==='published'))throw new HttpError(400,'Объект больше не опубликован');
+   if(input.propertyId&&!await getCatalogProperty(sql,input.propertyId,'published'))throw new HttpError(400,'Объект больше не опубликован');
    const row=(await sql.query('insert into leads(session_id,user_id,idempotency_key,source,property_id,name,phone,comment,consent_at,consent_version) values($1,$2,$3,$4,$5,$6,$7,$8,now(),$9) returning id',[session.sessionId,session.userId,input.idempotencyKey,input.source,input.propertyId??null,input.name,input.phone,input.comment??null,config.CONSENT_VERSION])).rows[0];
    const repo=leadRepository(sql);
    await repo.insertEvents([{idempotencyKey:'lead:'+row.id,sessionId:session.sessionId,userId:session.userId,eventType:'lead_created',entityType:'lead',entityId:row.id,metadata:{source:input.source},createdAt:new Date().toISOString()}]);
@@ -116,7 +121,9 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.get('/api/v1/control/me',{preHandler:control},async request=>({member:request.member}));
  app.post('/api/v1/control/logout',{preHandler:control},async(request,reply)=>{await db.query('delete from auth_tokens where token_hash=$1',[tokenHash(request.cookies.pulse_control!)]);reply.clearCookie('pulse_control',cookieOptions);return {ok:true};});
  app.get('/api/v1/control/snapshot',{preHandler:control},async request=>{
-  const m=request.member!;const scoped=m.role==='manager';const {state,version}=await readState(db);
+  const m=request.member!;const scoped=m.role==='manager';const {state:storedState,version}=await readState(db);
+  const catalog=(await listCatalog(db,{status:'all',page:1,limit:2000,view:'match'})).items;
+  const state={...storedState,properties:catalog};
   const leads=(await db.query(`select * from leads ${scoped?'where manager_id=$1':''} order by score desc,created_at desc limit 1000`,scoped?[m.id]:[])).rows.map(row=>{const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;return lead;});
   const tasks=(await db.query(`select * from crm_tasks ${scoped?'where assigned_to=$1':''} order by due_at limit 1000`,scoped?[m.id]:[])).rows.map(camelRow);
   const events=(await db.query(`select id,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at as created_at from user_events ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by occurred_at desc limit 2000`,scoped?[m.id]:[])).rows.map(camelRow);
@@ -128,7 +135,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.put('/api/v1/control/state',{preHandler:editor},async request=>{
   const {state,version}=z.object({state:stateSchema,version:z.number().int().positive()}).parse(request.body);
   return db.transaction(async sql=>{
-   const changed={...state,updatedAt:new Date().toISOString()};
+   const changed={...state,properties:[],updatedAt:new Date().toISOString()};
    const result=await sql.query('update app_config set document=$1::jsonb,version=version+1,updated_at=now() where singleton=true and version=$2 returning version',[JSON.stringify(changed),version]);
    if(!result.rows.length)throw new HttpError(409,'Настройки изменил другой сотрудник. Обновите данные и повторите правки');
    await audit(sql,request.member!.id,'config.update',null,{version:result.rows[0].version});return {state:changed,version:result.rows[0].version};
@@ -167,5 +174,6 @@ export async function createApp(db:Database,config:RuntimeConfig){
   return db.transaction(async sql=>{const member=(await sql.query('select * from team_members where id=$1 for update',[id])).rows[0];if(!member)throw new HttpError(404,'Сотрудник не найден');for(const [key,value] of Object.entries(patch)){const column={active:'active',cities:'cities',telegramUserId:'telegram_user_id'}[key]!;await sql.query(`update team_members set ${column}=$2 where id=$1`,[id,value]);}if(patch.active===false)await sql.query('delete from auth_tokens where member_id=$1',[id]);await audit(sql,request.member!.id,'member.update',id);return {ok:true};});
  });
  app.get('/api/v1/control/audit',{preHandler:editor},async()=>({items:(await db.query('select a.id,a.action,a.entity_id,a.details,a.created_at,m.name from audit_log a left join team_members m on m.id=a.member_id order by a.id desc limit 100')).rows.map(camelRow)}));
+ await registerCatalogRoutes(app,{db,config,control,editor,owner});
  return app;
 }

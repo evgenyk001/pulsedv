@@ -24,6 +24,16 @@ export type PropertyFloorplan={
   sortOrder:number;
 };
 
+export type PropertyDocument={
+  id?:string;
+  kind:"presentation"|"document";
+  name:string;
+  url:string;
+  mimeType:string|null;
+  sizeBytes:number|null;
+  sortOrder:number;
+};
+
 export type PropertyRecord={
   id:string;
   name:string;
@@ -44,4 +54,5 @@ export type PropertyRecord={
   images:PropertyImage[];
   features:PropertyFeature[];
   floorplans:PropertyFloorplan[];
+  documents?:PropertyDocument[];
 };

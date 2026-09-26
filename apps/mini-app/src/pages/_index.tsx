@@ -4,14 +4,14 @@ import { Search, Bell, Building2, MapPin, Percent, Sparkles, ChevronRight, Messa
 import { PromoCarousel } from "../components/PromoCarousel";
 import { PropertyCard } from "../components/PropertyCard";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
-import { useProperties } from "../helpers/useProperties";
+import { useFeaturedProperties } from "../helpers/useCatalog";
 import { Input } from "../components/Input";
 import styles from "./_index.module.css";
 
 export default function HomePage(){
   const navigate=useNavigate();
   const [query,setQuery]=React.useState("");
-  const {data:properties=[],isLoading}=useProperties();
+  const {data:properties=[],isLoading}=useFeaturedProperties(3);
   const submit=(e:React.FormEvent)=>{e.preventDefault();navigate(`/catalog${query?`?q=${encodeURIComponent(query)}`:""}`)};
 
   return <div className={styles.page}>
@@ -52,7 +52,7 @@ export default function HomePage(){
 
     <section className={styles.section}>
       <div className={styles.sectionHead}><div><span>Выбор PULSE.DV</span><h2>Стоит посмотреть</h2></div><Link to="/catalog">Все <ChevronRight size={15}/></Link></div>
-      <div className={styles.propertyRail}>{!isLoading&&properties.slice(0,3).map(p=><PropertyCard key={p.id} property={p}/>)}</div>
+      <div className={styles.propertyRail}>{!isLoading&&properties.map(p=><PropertyCard key={p.id} property={p}/>)}</div>
     </section>
 
     <Link to="/selection" className={styles.concierge}>

@@ -26,7 +26,10 @@ services:
       BOT_TOKEN: ${BOT_TOKEN:-}
       MAP_2GIS_KEY: ${MAP_2GIS_KEY:-}
       CONSENT_VERSION: ${CONSENT_VERSION:-2026-09-25}
+      MEDIA_ROOT: /data/media
       TRUST_PROXY_HOPS: 1
+    volumes:
+      - media_data:/data/media
     depends_on:
       db:
         condition: service_healthy
@@ -58,6 +61,7 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      - media_data:/srv/media:ro
     depends_on:
       api:
         condition: service_healthy
@@ -65,3 +69,4 @@ volumes:
   postgres_data:
   caddy_data:
   caddy_config:
+  media_data:
