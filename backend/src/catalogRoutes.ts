@@ -121,7 +121,7 @@ export async function registerCatalogRoutes(
     return {property:await getCatalogProperty(db,id,"any")};
   });
 
-  app.post("/api/v1/control/catalog/import",{preHandler:editor,config:{rateLimit:{max:5,timeWindow:"1 minute"}}},async request=>{
+  app.post("/api/v1/control/catalog/import",{preHandler:editor,bodyLimit:25*1024*1024,config:{rateLimit:{max:5,timeWindow:"1 minute"}}},async request=>{
     const input=catalogImportSchema.parse(request.body);
     let created=0,updated=0;
     await db.transaction(async sql=>{
