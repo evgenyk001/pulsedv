@@ -428,13 +428,13 @@ export default function SelectionPage(){
           <div className={styles.financeGrid}>
             <label className={styles.financeCard}>
               <span><Banknote size={15}/>Первоначальный взнос</span>
-              <div><Input inputMode="numeric" value={downDraft} onChange={e=>editMoney("down",e.target.value)} onBlur={()=>commitMoney("down")}/><b>₽</b></div>
+              <div><Input inputMode="numeric" value={downDraft} onChange={e=>editMoney("down",e.target.value)} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
               <div className={styles.quickRow}>{[1_000_000,1_500_000,2_000_000,3_000_000].map(value=><button type="button" key={value} onClick={()=>{setDownPayment(value);setDownDraft(formatRub(value));}}>{shortRub(value)}</button>)}</div>
             </label>
 
             <label className={styles.financeCard}>
               <span><WalletCards size={15}/>Комфортный платёж</span>
-              <div><Input inputMode="numeric" value={paymentDraft} onChange={e=>editMoney("payment",e.target.value)} onBlur={()=>commitMoney("payment")}/><b>₽</b></div>
+              <div><Input inputMode="numeric" value={paymentDraft} onChange={e=>editMoney("payment",e.target.value)} onBlur={()=>commitMoney("payment")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
               <div className={styles.quickRow}>{[40_000,60_000,80_000,100_000].map(value=><button type="button" key={value} onClick={()=>{setMonthlyPayment(value);setPaymentDraft(formatRub(value));}}>{Math.round(value/1_000)} тыс.</button>)}</div>
             </label>
           </div>
