@@ -114,8 +114,11 @@ export async function registerCatalogRoutes(
     const id=z.string().min(1).max(120).parse((request.params as any).id);
     const property=catalogPropertySchema.parse(request.body);
     if(property.id!==id)return reply.code(400).send({error:"ID объекта нельзя менять этим запросом"});
-    if(!await getCatalogProperty(db,id,"any"))return reply.code(404).send({error:"Объект не найден"});
+    if(!property.revision)return reply.code(409).send({error:"Откройте карточку заново перед сохранением: версия не указана"});
     await db.transaction(async sql=>{
+      const current=(await sql.query("select revision from catalog_properties where id=$1 for update",[id])).rows[0];
+      if(!current)throw Object.assign(new Error("Объект не найден"),{statusCode:404});
+      if(Number(current.revision)!==property.revision)throw Object.assign(new Error("Карточка изменена другим сотрудником. Ваши правки сохранены в форме. Сверьте их с актуальной версией перед повторным редактированием."),{statusCode:409});
       await upsertCatalogProperty(sql,property);
       await audit(sql,request.member!.id,"catalog.update",id,{status:property.status});
     });
@@ -127,6 +130,7 @@ export async function registerCatalogRoutes(
     let created=0,updated=0;
     await db.transaction(async sql=>{
       for(const incoming of input.properties){
+        await sql.query("select id from catalog_properties where id=$1 for update",[incoming.id]);
         const exists=await getCatalogProperty(sql,incoming.id,"any");
         const property=exists?{
           ...incoming,
@@ -187,12 +191,15 @@ export async function registerCatalogRoutes(
     await writeFile(join(config.MEDIA_ROOT,folder,fileName),body);
     const url="/media/"+folder+"/"+fileName;
 
+    const oldFiles:string[]=[];
     try{
       await db.transaction(async sql=>{
+        const locked=await sql.query("update catalog_properties set updated_at=now() where id=$1 returning id",[id]);
+        if(!locked.rows.length)throw Object.assign(new Error("Объект не найден"),{statusCode:404});
         if(query.kind==="cover"){
           const old=(await sql.query("select cover_image_url from catalog_properties where id=$1 for update",[id])).rows[0]?.cover_image_url;
           await sql.query("update catalog_properties set cover_image_url=$2 where id=$1",[id,url]);
-          if(old&&old!==url)void bestEffortDelete(config,old);
+          if(old&&old!==url)oldFiles.push(old);
         }else if(query.kind==="gallery"){
           const order=Number((await sql.query("select coalesce(max(sort_order),-1)+1 as next from catalog_property_images where property_id=$1",[id])).rows[0]?.next??0);
           await sql.query("insert into catalog_property_images(id,property_id,url,alt,sort_order) values($1,$2,$3,$4,$5)",[randomUUID(),id,url,property.name,order]);
@@ -201,7 +208,7 @@ export async function registerCatalogRoutes(
           const row=(await sql.query("select image_url from catalog_property_floorplans where id=$1 and property_id=$2 for update",[query.floorplanId,id])).rows[0];
           if(!row)throw Object.assign(new Error("Планировка не найдена"),{statusCode:404});
           await sql.query("update catalog_property_floorplans set image_url=$3 where id=$1 and property_id=$2",[query.floorplanId,id,url]);
-          if(row.image_url&&row.image_url!==url)void bestEffortDelete(config,row.image_url);
+          if(row.image_url&&row.image_url!==url)oldFiles.push(row.image_url);
         }else{
           const order=Number((await sql.query("select coalesce(max(sort_order),-1)+1 as next from catalog_property_documents where property_id=$1",[id])).rows[0]?.next??0);
           const name=(query.filename||property.name+" — презентация").replace(/[\r\n]/g," ").slice(0,300);
@@ -215,6 +222,7 @@ export async function registerCatalogRoutes(
       await bestEffortDelete(config,url);
       throw error;
     }
+    for(const old of oldFiles)await bestEffortDelete(config,old);
     if(query.compact)return {ok:true,url};
     return {property:await getCatalogProperty(db,id,"any")};
   });
@@ -225,6 +233,7 @@ export async function registerCatalogRoutes(
     const kind=z.enum(["gallery","presentation","document","floorplan"]).parse((request.query as any).kind);
     let url:string|null=null;
     const deleted=await db.transaction(async sql=>{
+      await sql.query("update catalog_properties set updated_at=now() where id=$1",[id]);
       if(kind==="gallery"){
         const row=(await sql.query("delete from catalog_property_images where id=$1 and property_id=$2 returning url",[mediaId,id])).rows[0];
         url=row?.url??null;

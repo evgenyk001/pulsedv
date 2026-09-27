@@ -1,47 +1,25 @@
-import { Activity, Flame, ShieldCheck, Target } from "lucide-react";
-import { PageFrame } from "../components/PageFrame";
-import { usePulseEvents, usePulseLeads, usePulseProfiles, usePulseState, usePulseTasks } from "../data";
-
+import { ArrowUpRight, ArrowRight, Clock3, Flame, UserRound, Activity, CheckCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { PageFrame } from '../components/PageFrame';
+import { ActivityFeed } from '../components/ActivityFeed';
+import { usePulseEvents, usePulseLeads, usePulseProfiles, usePulseState, usePulseTasks } from '../data';
 export function OverviewPage(){
-  const state=usePulseState();
-  const leads=usePulseLeads();
-  const events=usePulseEvents();
-  const profiles=usePulseProfiles();
-  const tasks=usePulseTasks();
-  const sessions=new Set(events.map(event=>event.sessionId)).size;
-  const conversion=sessions?Math.round(new Set(leads.map(x=>x.sessionId).filter(Boolean)).size/sessions*100):0;
-  const hotProfiles=profiles.filter(item=>item.priority==="hot"||item.priority==="urgent");
-  const urgentTasks=tasks.filter(task=>task.status!=="done"&&task.priority==="urgent");
-
-  return <PageFrame eyebrow="ЦЕНТР УПРАВЛЕНИЯ" title="Операционная панель PULSE.DV" description="Сначала показываем то, что требует действия: горячий интерес, новые контакты и задачи с коротким сроком.">
-    <section className="metrics">
-      <article><span>Новые лиды</span><strong>{leads.filter(x=>x.status==="new").length}</strong><small>{leads.length} всего</small></article>
-      <article><span>Горячий интерес</span><strong>{hotProfiles.length}</strong><small>до заявки и после</small></article>
-      <article><span>Срочные задачи</span><strong>{urgentTasks.length}</strong><small>связаться за 5 минут</small></article>
-      <article><span>Конверсия в контакт</span><strong>{conversion}%</strong><small>{sessions} сессий</small></article>
-    </section>
-
-    <section className="attentionGrid">
-      <article className="panel">
-        <div className="panelTitle"><Flame size={20}/><div><span>ПРИОРИТЕТНАЯ ОЧЕРЕДЬ</span><h2>Нужны действия сейчас</h2></div></div>
-        {tasks.filter(task=>task.status!=="done").slice(0,5).length===0?<p>Очередь чистая. Система создаст задачу, когда у клиента появится заметный интерес и контакт.</p>:<div className="signalList">
-          {tasks.filter(task=>task.status!=="done").slice(0,5).map(task=><div key={task.id}><span className={"signalDot "+task.priority}/><b>{task.title}</b><small>{task.reason}</small></div>)}
-        </div>}
-      </article>
-
-      <article className="panel">
-        <div className="panelTitle"><Target size={20}/><div><span>ИНТЕРЕС</span><h2>Что интересует аудиторию</h2></div></div>
-        <div className="signalList">
-          {profiles.slice(0,5).map(profile=><div key={profile.id}><span className="scoreMini">{profile.score}</span><b>{profile.city||"Город не определён"}</b><small>{profile.scoreReasons[0]?.label||"Первые действия"}</small></div>)}
-          {!profiles.length&&<p>Профили появятся после первых действий пользователей.</p>}
-        </div>
-      </article>
-    </section>
-
-    <section className="panel">
-      <div className="panelTitle"><ShieldCheck size={20}/><div><span>КАК РАБОТАЕТ СИСТЕМА</span><h2>Mini App → интерес клиента → задача → менеджер</h2></div></div>
-      <p>Заявки, интересы клиента и задачи связаны между собой. Проверьте сроки связи и назначенных менеджеров. Режим подключения указан в верхней панели.</p>
-      <div className="flowLine"><span><Activity size={14}/> Действия клиента</span><b>→</b><span>Индекс интереса</span><b>→</b><span>Задача</span><b>→</b><span>Менеджер</span></div>
-    </section>
-  </PageFrame>;
+ const state=usePulseState(),leads=usePulseLeads(),events=usePulseEvents(),profiles=usePulseProfiles(),tasks=usePulseTasks();
+ const open=tasks.filter(t=>t.status!=='done').sort((a,b)=>Date.parse(a.dueAt)-Date.parse(b.dueAt));
+ const overdue=open.filter(t=>Date.parse(t.dueAt)<Date.now());
+ const active=leads.filter(l=>!['deal','closed','lost'].includes(l.status));
+ const hot=profiles.filter(p=>['hot','urgent'].includes(p.priority));
+ const unassigned=active.filter(l=>!l.manager);
+ const stages=[['new','Новые'],['contacted','Связались'],['qualified','Подбор'],['showing','Показ'],['booking','Бронь'],['deal','Сделка']];
+ return <PageFrame eyebrow="ОБЗОР КОМАНДЫ" title="Всё важное — в фокусе" description="Клиенты, обязательства и сигналы интереса в одном рабочем пространстве." action={<Link className="primaryAction" to="/leads">Открыть клиентов <ArrowUpRight size={16}/></Link>}>
+  <section className="metrics crmMetrics">
+   {[{label:'Клиенты в работе',value:active.length,detail:`${leads.filter(l=>l.status==='new').length} новых обращений`,to:'/leads',Icon:UserRound},{label:'Горячий интерес',value:hot.length,detail:'Люди, готовые к диалогу',to:'/users?filter=hot',Icon:Flame},{label:'Просроченные задачи',value:overdue.length,detail:'Требуют внимания команды',to:'/tasks?filter=overdue',Icon:Clock3},{label:'Без ответственного',value:unassigned.length,detail:'Назначьте менеджера',to:'/leads?filter=unassigned',Icon:CheckCheck}].map(({label,value,detail,to,Icon})=><Link to={to} className="metricLink" key={label}><article><div className="metricHeading"><span>{label}</span><Icon size={17}/></div><strong>{value}<ArrowUpRight size={18}/></strong><small>{detail}</small></article></Link>)}
+  </section>
+  <section className="panel pipelinePanel"><div className="sectionHeading"><div><span className="kicker">ДВИЖЕНИЕ К СДЕЛКЕ</span><h2>Клиенты по этапам</h2></div><Link to="/leads?view=board">Открыть доску <ArrowRight size={15}/></Link></div><div className="pipelineStages">{stages.map(([status,label],i)=>{const count=leads.filter(l=>l.status===status).length;return <Link key={status} to={'/leads?status='+status}><span><i style={{background:['#8495b1','#6282e6','#9a79d4','#d8a35c','#e16c78','#43a084'][i]}}/>{label}</span><b>{count}</b><div><i style={{width:Math.max(3,count/Math.max(1,leads.length)*100)+'%'}}/></div></Link>})}</div></section>
+  <div className="dashboardGrid"><section className="panel priorityPanel"><div className="sectionHeading"><div><span className="kicker">ПРИОРИТЕТНАЯ ОЧЕРЕДЬ</span><h2>Что сделать сейчас</h2></div><span className="countBadge">{open.length}</span></div>
+   {!open.length?<div className="emptyState"><CheckCheck size={28}/><strong>Нет открытых задач</strong><span>Новые задачи появятся после обращений клиентов.</span></div>:<div className="workQueue">{open.slice(0,5).map(task=>{const lead=leads.find(l=>l.id===task.leadId);const late=Date.parse(task.dueAt)<Date.now();return <Link to={lead?'/leads?lead='+lead.id:'/tasks'} key={task.id}><span className={'queueMarker '+(late?'late':'')}><Clock3 size={17}/></span><div><b>{lead?.name||'Клиент'}</b><p>{task.title}</p><small className={late?'overdue':''}>{late?'Просрочено · ':''}{new Date(task.dueAt).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</small></div><ArrowUpRight size={16}/></Link>})}</div>}
+   <Link className="panelFooterLink" to="/tasks">Все задачи <ArrowRight size={15}/></Link>
+  </section><section className="panel interestPanel"><div className="sectionHeading"><div><span className="kicker">СИГНАЛЫ ИНТЕРЕСА</span><h2>Кто выбирает квартиру</h2></div><Flame size={20}/></div><div className="interestList">{[...profiles].sort((a,b)=>b.score-a.score).slice(0,5).map(p=><Link to={'/users?session='+encodeURIComponent(p.sessionId)} key={p.id}><span className={'scoreBadge '+p.priority}><b>{p.score}</b></span><div><b>{p.city||'Город пока не указан'}</b><small>{state.properties.find(x=>x.id===p.topPropertyId)?.name||p.scoreReasons[0]?.label||'Первые действия'}</small></div><ArrowUpRight size={15}/></Link>)}{!profiles.length&&<div className="emptyState"><UserRound size={26}/><strong>Знакомимся с аудиторией</strong><span>Профили появятся после действий в мини-приложении.</span></div>}</div><Link className="panelFooterLink" to="/users">Все посетители <ArrowRight size={15}/></Link></section></div>
+  <section className="panel"><div className="sectionHeading"><div><span className="kicker">ЖИВАЯ ИСТОРИЯ</span><h2>Последние действия клиентов</h2></div><Link to="/analytics">Весь журнал <Activity size={15}/></Link></div><ActivityFeed events={events} state={state} compact/></section>
+ </PageFrame>;
 }

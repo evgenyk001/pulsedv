@@ -56,8 +56,8 @@ export function SelectPage(){
     <section className="metrics">
       <article><span>Прохождения</span><strong>{submissions.length}</strong><small>завершили PULSE Select</small></article>
       <article><span>Пользователи</span><strong>{uniqueSessions}</strong><small>уникальные сессии</small></article>
-      <article><span>Средний Match</span><strong>{averageMatch}%</strong><small>по завершённым подборам</small></article>
-      <article><span>Последний Match</span><strong>{submissions[0]?metaNumber(submissions[0],"topScore"):0}%</strong><small>{submissions[0]?new Date(submissions[0].createdAt).toLocaleString("ru-RU"):"пока нет данных"}</small></article>
+      <article><span>Среднее совпадение</span><strong>{averageMatch}%</strong><small>по завершённым подборам</small></article>
+      <article><span>Последнее совпадение</span><strong>{submissions[0]?metaNumber(submissions[0],"topScore"):0}%</strong><small>{submissions[0]?new Date(submissions[0].createdAt).toLocaleString("ru-RU"):"пока нет данных"}</small></article>
     </section>
 
     <section className="panel">
@@ -119,7 +119,7 @@ export function SelectPage(){
     <section className="tableCard liveTable">
       <div className="tableHead eventGrid"><span>Запрос клиента</span><span>Финансы</span><span>Результат</span><span>Время</span></div>
       {submissions.length===0
-        ?<div className="emptyState"><strong>Пока нет прохождений Select</strong><span>После первого завершённого подбора здесь появятся ответы клиента и итог PULSE Match.</span></div>
+        ?<div className="emptyState"><strong>Пока нет прохождений Select</strong><span>После первого завершённого подбора здесь появятся ответы клиента и процент совпадения.</span></div>
         :submissions.slice(0,40).map(event=>{
           const city=metaText(event,"city")||"—";
           const rooms=metaText(event,"rooms")||"—";
@@ -135,7 +135,7 @@ export function SelectPage(){
           return <div className="tableRow eventGrid" key={event.id}>
             <span className="nextAction"><b>{city} · {rooms==="Студия"?"Студия":rooms+" комн."}</b><small>{delivery&&delivery!=="Не важно"?"Срок: "+delivery:"Любой срок"}{preferences.length?" · "+preferences.map(id=>preferenceLabels[id as keyof typeof preferenceLabels]||id).join(", "):""}</small></span>
             <span className="nextAction"><b>{purchaseMode==="mortgage"?"Ипотека":"По стоимости"}</b><small>{finance}</small></span>
-            <span className="scoreCell"><span className="scoreBadge"><b>{score}%</b><small>PULSE MATCH</small></span><small>{resultCount} вариантов · {strongCount} сильных</small></span>
+            <span className="scoreCell"><span className="scoreBadge"><b>{score}%</b><small>СОВПАДЕНИЕ</small></span><small>{resultCount} вариантов · {strongCount} сильных</small></span>
             <span className="nextAction"><b>Посетитель {event.sessionId.slice(0,8)}…</b><small>{new Date(event.createdAt).toLocaleString("ru-RU")}</small></span>
           </div>;
         })}

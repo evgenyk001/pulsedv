@@ -103,5 +103,58 @@ test('Control preview: PULSE Select settings and activity stay connected',async(
 
  await page.goto('/pulsedv/control-center/#/select');
  await expect(page.getByText(/Посетитель .*…/).first()).toBeVisible();
- await expect(page.getByText('PULSE MATCH').last()).toBeVisible();
+ await expect(page.getByText('СОВПАДЕНИЕ').last()).toBeVisible();
+});
+
+for(const width of [390,1440])test(`Control workspace ${width}px: navigation, clients, activity and tasks`,async({page})=>{
+ await page.setViewportSize({width,height:1000});
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/pulsedv/control-center/');
+ await expect(page.getByRole('heading',{name:'Всё важное — в фокусе'})).toBeVisible();
+ await page.getByRole('link',{name:'Открыть клиентов'}).click();
+ await page.getByRole('button',{name:'Доска',exact:true}).click();
+ await expect(page.locator('.leadBoard')).toBeVisible();
+ await page.getByRole('button',{name:'Таблица',exact:true}).click();
+ if(width<761)await page.getByRole('button',{name:'Открыть меню'}).click();
+ await page.getByRole('navigation',{name:'Разделы CRM'}).getByRole('link',{name:'Задачи',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Задачи под контролем'})).toBeVisible();
+ await page.getByRole('button',{name:/Просроченные/}).click();
+ await expect(page).toHaveURL(/filter=overdue/);
+ if(width<761)await page.getByRole('button',{name:'Открыть меню'}).click();
+ await page.getByRole('navigation',{name:'Разделы CRM'}).getByRole('link',{name:'Аналитика',exact:true}).click();
+ await page.getByRole('textbox',{name:'Поиск действий'}).fill('несуществующее действие');
+ await expect(page.getByText('По этим условиям действий нет')).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+ expect(errors).toEqual([]);
+ await page.screenshot({path:`test-results/control-workspace-${width}.png`,fullPage:true});
+});
+
+test('CRM: real preview lead, editable stage, readable history and keyboard drawer',async({page})=>{
+ await page.setViewportSize({width:1440,height:1000});
+ await page.goto('/pulsedv/mini-app/');
+ await page.getByRole('button',{name:'Пропустить онбординг'}).click();
+ await page.goto('/pulsedv/mini-app/#/property/solnechniy');
+ await page.getByRole('button',{name:'Узнать наличие',exact:true}).click();
+ await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Проверка CRM');
+ await page.getByRole('textbox',{name:'Телефон',exact:true}).fill('+79991234567');
+ await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Демонстрация завершена'})).toBeVisible();
+ await page.goto('/pulsedv/control-center/');
+ await page.screenshot({path:'test-results/control-overview-with-lead.png',fullPage:true});
+ await page.getByRole('link',{name:'Открыть клиентов'}).click();
+ await page.locator('.leadRowButton').filter({hasText:'Проверка CRM'}).click();
+ const drawer=page.getByRole('dialog',{name:'Карточка клиента'});
+ await expect(drawer.getByText('Оставил заявку',{exact:true})).toBeVisible();
+ await drawer.getByRole('combobox',{name:'Статус',exact:true}).selectOption('contacted');
+ await drawer.getByRole('textbox',{name:'Следующее действие',exact:true}).fill('Позвонить и согласовать показ');
+ await drawer.getByRole('button',{name:'Сохранить карточку'}).click();
+ await expect(drawer).not.toBeVisible();
+ await expect(page.locator('.leadRowButton').filter({hasText:'Проверка CRM'})).toContainText('Связались');
+ await page.locator('.leadRowButton').filter({hasText:'Проверка CRM'}).click();
+ await page.keyboard.press('Escape');
+ await expect(drawer).not.toBeVisible();
+ await page.getByRole('navigation',{name:'Разделы CRM'}).getByRole('link',{name:'Пользователи',exact:true}).click();
+ await page.locator('.leadRowButton').first().click();
+ await expect(page.getByRole('dialog',{name:'Профиль посетителя'})).toBeVisible();
+ await expect(page.getByRole('link',{name:/ЗАЯВКА КЛИЕНТА/})).toBeVisible();
 });

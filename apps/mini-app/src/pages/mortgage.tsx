@@ -44,6 +44,8 @@ export default function MortgagePage(){
   const [downDraft,setDownDraft]=React.useState(formatRub(2_000_000));
   const [rateDraft,setRateDraft]=React.useState(String(rule?.rate??6).replace(".",","));
 
+  const [interacted,setInteracted]=React.useState(false);
+  const lastCalculation=React.useRef("");
   if(!rule)return null;
 
   const minDown=ceilStep(price*rule.minDownPct/100,MONEY_STEP);
@@ -69,7 +71,17 @@ export default function MortgagePage(){
     setRateDraft(String(rule.rate).replace(".",","));
   },[rule.rate,rule.id]);
 
+  React.useEffect(()=>{
+    if(!interacted||overProgramLimit||down<minDown||years>rule.maxYears)return;
+    const metadata={program:rule.id,price,down,years,rate,payment:Math.round(payment)};
+    const key=JSON.stringify(metadata);
+    if(lastCalculation.current===key)return;
+    const timer=setTimeout(()=>{lastCalculation.current=key;recordPulseEvent({eventType:"mortgage_calculated",entityType:"mortgage",entityId:rule.id,metadata});},800);
+    return()=>clearTimeout(timer);
+  },[interacted,overProgramLimit,down,minDown,years,rule.maxYears,rule.id,price,rate,payment]);
+
   const chooseProgram=(id:ProgramId)=>{
+    setInteracted(true);
     const next=programs.find(item=>item.id===id);
     if(!next)return;
     setProgram(id);
@@ -81,12 +93,14 @@ export default function MortgagePage(){
   };
 
   const updatePrice=(value:number)=>{
+    setInteracted(true);
     const next=clamp(snap(value,MONEY_STEP),PRICE_MIN,PRICE_MAX);
     const nextMin=ceilStep(next*rule.minDownPct/100,MONEY_STEP);
     const nextDown=clamp(down,nextMin,next-MONEY_STEP);setDown(nextDown);setDownDraft(formatRub(nextDown));
     setPrice(next);setPriceDraft(formatRub(next));
   };
   const updateDown=(value:number)=>{
+    setInteracted(true);
     const next=clamp(snap(value,MONEY_STEP),minDown,maxDown);
     setDown(next);setDownDraft(formatRub(next));
   };
@@ -97,6 +111,7 @@ export default function MortgagePage(){
     kind==="price"?updatePrice(raw):updateDown(raw);
   };
   const commitRate=()=>{
+    setInteracted(true);
     const raw=parseNumber(rateDraft);
     const next=Number.isFinite(raw)?clamp(Math.round(raw*10)/10,.1,40):rate;
     setRate(next);setRateDraft(String(next).replace(".",","));
@@ -120,7 +135,7 @@ export default function MortgagePage(){
       <div className={styles.ruleHint}><Info size={14}/><span>{rule.hint}</span></div>
       {program==="farEast"&&<div className={styles.optionRow}>
         <div><strong>Площадь новостройки свыше 64 м²</strong><span>Использовать повышенный лимит до 9 млн ₽</span></div>
-        <Switch checked={largeArea} onCheckedChange={setLargeArea}/>
+        <Switch checked={largeArea} onCheckedChange={value=>{setInteracted(true);setLargeArea(value)}}/>
       </div>}
     </section>
 
@@ -141,7 +156,7 @@ export default function MortgagePage(){
       <div className={styles.twoFields}>
         <div className={styles.field}>
           <div className={styles.label}><span>Срок</span><b>{years} лет</b></div>
-          <Slider min={5} max={rule.maxYears} step={1} value={[years]} onValueChange={values=>setYears(Math.min(values[0]??years,rule.maxYears))}/>
+          <Slider min={5} max={rule.maxYears} step={1} value={[years]} onValueChange={values=>{setInteracted(true);setYears(Math.min(values[0]??years,rule.maxYears))}}/>
         </div>
         <div className={styles.rateField}>
           <label>Ставка программы</label>
