@@ -1,3 +1,4 @@
+import { PropertyFreshness } from '../components/PropertyFreshness';
 import React from "react";
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
 import { Link, useParams } from "react-router-dom";
@@ -99,7 +100,7 @@ export default function PropertyPage(){
           {p.className&&<span>{p.className}</span>}
           {p.tags.slice(0,2).map(tag=><span key={tag}>{tag}</span>)}
         </div>
-        <h1>{p.name}</h1>
+        <h1>{p.name}</h1><PropertyFreshness id={p.id}/>
         <div className={styles.location}><MapPin size={14}/>{p.city} · {p.district}</div>
         <div className={styles.developerLine}><Building2 size={13}/>{p.developerName||"Застройщик уточняется"}</div>
       </section>

@@ -1,3 +1,4 @@
+import {reactionLabels,type Reaction} from '../../../packages/journey/model';
 import type { PulseEvent, PulseState } from "../../../packages/pulse-data";
 
 const routeNames:Record<string,string>={
@@ -7,6 +8,7 @@ const routeNames:Record<string,string>={
   "/selection":"Подбор",
   "/favorites":"Избранное",
   "/profile":"Профиль",
+  "/journey":"Мои подборки и показы",
 };
 
 export const mortgageNames:Record<string,string>={
@@ -28,6 +30,10 @@ const sourceNames:Record<string,string>={
 };
 
 const eventNames:Record<string,string>={
+  attribution:"Источник перехода",
+  comparison_view:"Открыл сравнение ЖК",
+  collection_reaction:"Ответил на подборку",
+  showing_requested:"Запросил показ",
   floorplan_view:"Просмотр планировки",
   property_view:"Просмотр карточки ЖК",
   favorite_add:"Добавление в избранное",
@@ -87,6 +93,10 @@ export function describeEvent(event:PulseEvent,state:PulseState){
   const route=(event.entityId||"").split("?")[0].replace(/\/$/,"")||"/";
 
   switch(event.eventType){
+    case 'collection_reaction':return {title:'Ответил на подборку · '+(propertyName||'ЖК'),detail:(reactionLabels[meta.reaction as Reaction]||'Ответ клиента')+(text(meta.reply)?' · '+text(meta.reply):'')};
+    case 'showing_requested':return {title:'Запросил показ · '+(propertyName||'ЖК'),detail:'Ожидает подтверждения менеджером'};
+    case 'comparison_view':return {title:'Открыл сравнение ЖК',detail:String(meta.propertyIds||'').split(',').map(id=>state.properties.find(p=>p.id===id)?.name||'ЖК из истории').join(' · ')};
+    case 'attribution':return {title:'Перешёл в приложение',detail:[meta.source==='direct'?'Прямой переход':text(meta.source),text(meta.campaign)].filter(Boolean).join(' · ')};
     case "page_view":{
       const propertyRoute=route.startsWith("/property/")?state.properties.find(item=>route.endsWith(item.id))?.name:null;
       const section=propertyRoute||routeNames[route]||"раздел приложения";

@@ -1,3 +1,4 @@
+import {reactionLabels,type Reaction} from '../journey/model';
 import type { PulseEvent, PulseState } from '../pulse-data/model';
 import { selectionMatch, type SelectionCriteria, type PreferenceId } from '../domain/propertyMatch';
 export type Dimension='city'|'property'|'rooms'|'mortgage'|'preferences';
@@ -88,6 +89,8 @@ export function buildInterestDNA(input:PulseEvent[],state:Pick<PulseState,'prope
  for(let i=1;i<events.length;i++){const e=events[i],prev=events[i-1];if(Date.parse(e.createdAt)-Date.parse(prev.createdAt)>=3*DAY)changes.push({id:'return:'+e.id,title:'Вернулся после перерыва',detail:'Перерыв '+Math.floor((Date.parse(e.createdAt)-Date.parse(prev.createdAt))/DAY)+' дн.',at:e.createdAt,eventIds:[prev.id,e.id]});}
  const lastFavorite=events.filter(e=>e.eventType==='favorite_add'&&e.entityId&&favoriteState.get(e.entityId)==='favorite_add').at(-1);
  if(lastFavorite)changes.push({id:'favorite:'+lastFavorite.id,title:'Сохранил интересующий ЖК',detail:properties.get(lastFavorite.entityId!)?.name||text(lastFavorite.metadata.propertyName)||'Объект из истории',at:lastFavorite.createdAt,eventIds:[lastFavorite.id]});
+ const feedback=events.filter(e=>e.eventType==='collection_reaction'&&typeof e.metadata.reaction==='string').at(-1);
+ if(feedback&&reactionLabels[feedback.metadata.reaction as Reaction])changes.push({id:'feedback:'+feedback.id,title:'Ответил на подборку',detail:(properties.get(feedback.entityId||'')?.name||'ЖК из подборки')+' · '+reactionLabels[feedback.metadata.reaction as Reaction],at:feedback.createdAt,eventIds:[feedback.id]});
  changes.sort((a,b)=>Date.parse(b.at)-Date.parse(a.at));
  const questions:string[]=[];
  if(!facts.some(f=>f.key==='city'))questions.push('В каком городе рассматривает покупку?');
@@ -102,6 +105,7 @@ export function buildInterestDNA(input:PulseEvent[],state:Pick<PulseState,'prope
  if(topProperty)briefParts.push('Поведенческий интерес: '+topProperty.label+' ('+topProperty.count+' учтённых сигналов).');
  if(!facts.length)briefParts.unshift('Завершённого подбора пока нет. Пожелания клиента нужно уточнить.');
  if(interests.some(i=>i.dimension==='mortgage'))briefParts.push('Ипотечные расчёты — сценарии, доступность программы не подтверждена.');
+ if(feedback&&reactionLabels[feedback.metadata.reaction as Reaction])briefParts.push('Последний ответ на подборку: '+reactionLabels[feedback.metadata.reaction as Reaction]+'. Уточните причину у клиента.');
  const nextAction=questions[0]?questions[0]+(topProperty?' Затем обсудить '+topProperty.label+'.':''):'Уточнить готовность к показу.';
  const recommendations:InterestDNA['recommendations']=[];
  if(latest){const m=latest.metadata;const min=num(m.min),max=num(m.max),down=num(m.down),payment=num(m.payment);const program=text(m.program);

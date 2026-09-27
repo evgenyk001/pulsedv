@@ -1,3 +1,4 @@
+import {attribution} from '../../../../packages/journey/attribution';
 import React from "react";
 import { useLocation } from "react-router-dom";
 import { BottomNav } from "./BottomNav";
@@ -26,6 +27,7 @@ export function AppShell({children}:{children:React.ReactNode}){
   },[control.content.onboardingEnabled]);
 
   React.useEffect(()=>{
+    if(!sessionStorage.getItem("pulse.attribution.v1")){recordPulseEvent({eventType:"attribution",metadata:attribution(window.location.search||window.location.hash.split("?")[1]||"")});sessionStorage.setItem("pulse.attribution.v1","1");}
     const tg=window.Telegram?.WebApp;
     tg?.ready?.(); tg?.expand?.(); tg?.disableVerticalSwipes?.(); tg?.setHeaderColor?.("#F3F5F8"); tg?.setBackgroundColor?.("#F3F5F8");
   },[]);

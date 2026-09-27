@@ -1,0 +1,1 @@
+export function attribution(search:string){const p=new URLSearchParams(search);const clean=(v:string|null)=>v?.replace(/[^\p{L}\p{N}_ .-]/gu,'').slice(0,100)||'';return {source:clean(p.get('utm_source'))||'direct',medium:clean(p.get('utm_medium')),campaign:clean(p.get('utm_campaign'))};}

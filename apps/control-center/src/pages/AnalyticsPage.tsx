@@ -1,3 +1,4 @@
+import {AcquisitionPanel} from '../components/AcquisitionPanel';
 import { PageFrame } from "../components/PageFrame";
 import { usePulseEvents, usePulseLeads, usePulseProfiles, usePulseState } from "../data";
 import { ActivityFeed } from "../components/ActivityFeed";
@@ -21,7 +22,7 @@ export function AnalyticsPage(){
   ];
 
   return <PageFrame eyebrow="АНАЛИТИКА ПОВЕДЕНИЯ" title="Аналитика" description="Воронка показывает путь клиента до контакта и реальные действия внутри приложения.">
-    <section className="metrics">
+    <AcquisitionPanel/><section className="metrics">
       <article><span>Сессии</span><strong>{sessions}</strong><small>визиты в приложение</small></article>
       <article><span>Тёплые и выше</span><strong>{profiles.filter(x=>x.priority!=="cold").length}</strong><small>заметный интерес</small></article>
       <article><span>Лиды</span><strong>{leads.length}</strong><small>оставили контакты</small></article>
