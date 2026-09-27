@@ -5,12 +5,12 @@ import type {PulseProperty} from '../pulse-data/model';
 import './journey.css';
 const when=(v:string)=>new Date(v).toLocaleString('ru-RU',{timeZone:'Asia/Vladivostok',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
 const iso=(v:string)=>new Date(v+'+10:00').toISOString();
-export function JourneyPanel({leadId,properties,client=false}:{leadId?:string;properties:PulseProperty[];client?:boolean}){
+export function JourneyPanel({leadId,properties,client=false,onRefreshed}:{leadId?:string;properties:PulseProperty[];client?:boolean;onRefreshed?:(items:JourneyEntry[])=>void}){
  const [entries,setEntries]=React.useState<JourneyEntry[]>([]),[error,setError]=React.useState(''),[loading,setLoading]=React.useState(true),[busy,setBusy]=React.useState(false);
  const [picked,setPicked]=React.useState<string[]>([]),[title,setTitle]=React.useState('Варианты для вас'),[notes,setNotes]=React.useState<Record<string,string>>({});
  const [step,setStep]=React.useState(''),[due,setDue]=React.useState(''),[time,setTime]=React.useState(''),[propertyId,setPropertyId]=React.useState(''),[note,setNote]=React.useState('');
  const [replies,setReplies]=React.useState<Record<string,string>>({}),[results,setResults]=React.useState<Record<string,string>>({});
- const reload=React.useCallback(async()=>{setLoading(true);try{const data=await loadJourneys(client);setEntries(data.items);setError(data.limited?'Показаны последние 1000 обращений':'');}catch(e){setError((e as Error).message)}finally{setLoading(false)}},[client,leadId]);
+ const reload=React.useCallback(async()=>{setLoading(true);try{const data=await loadJourneys(client);setEntries(data.items);onRefreshed?.(data.items);setError(data.limited?'Показаны последние 1000 обращений':'');}catch(e){setError((e as Error).message)}finally{setLoading(false)}},[client,leadId,onRefreshed]);
  React.useEffect(()=>{void reload()},[reload]);
  const run=async(j:Journey,c:JourneyCommand)=>{setBusy(true);setError('');try{await saveJourney(j,c,client);if(c.type==='collection'){setPicked([]);setNotes({})}await reload()}catch(e){setError((e as Error).message)}finally{setBusy(false)}};
  const list=leadId?entries.filter(e=>e.leadId===leadId):entries;
