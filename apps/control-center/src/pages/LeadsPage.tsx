@@ -1,7 +1,7 @@
 import { useDialog } from "../components/useDialog";
 import React from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ActivityFeed } from '../components/ActivityFeed';
+import { InterestPanel } from '../components/InterestPanel';
 import { Search, Phone, X, Save, Gauge } from 'lucide-react';
 import { PageFrame } from '../components/PageFrame';
 import { usePulseLeads, usePulseState, usePulseEvents, usePulseTasks } from '../data';
@@ -33,7 +33,7 @@ export function LeadsPage(){
   {lead&&draft&&<div className="drawerBackdrop" onClick={close}><section className="detailDrawer" role="dialog" aria-modal="true" aria-label="Карточка клиента" onClick={e=>e.stopPropagation()}><div className="drawerHeader"><div><span className="kicker">КЛИЕНТ</span><h2>{lead.name}</h2></div><button aria-label="Закрыть" onClick={close}><X/></button></div><a className="phoneLink" href={'tel:'+lead.phone.replace(/[^+\d]/g,'')}><Phone size={17}/>{lead.phone}</a><fieldset className="formGrid editorFieldset" disabled={busy}><label className="controlField"><span>Статус</span><select value={draft.status} onChange={e=>setDraft({...draft,status:e.target.value as PulseLead['status']})}>{statuses.map(s=><option key={s} value={s}>{labels[s]}</option>)}</select></label><label className="controlField"><span>Ответственный</span><select disabled={runtime.enabled&&runtime.member?.role==='manager'} value={draft.manager||''} onChange={e=>setDraft({...draft,manager:e.target.value||null})}><option value="">Не назначен</option>{runtime.snapshot.members.filter(m=>m.active).map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label><label className="controlField wide"><span>Следующее действие</span><input value={draft.nextAction} onChange={e=>setDraft({...draft,nextAction:e.target.value})}/></label><label className="controlField wide"><span>Заметка менеджера</span><textarea rows={4} value={draft.comment} onChange={e=>setDraft({...draft,comment:e.target.value})}/></label></fieldset>
   <h3>Почему такой приоритет</h3><div className="signalList">{(lead.scoreReasons||[]).map(r=><div key={r.ruleId}><b>{r.label}</b><small>{r.points>0?'+':''}{r.points}</small></div>)}</div>
   <h3>Задачи</h3>{tasks.filter(t=>t.leadId===lead.id).map(t=><p key={t.id}>{t.title} · {new Date(t.dueAt).toLocaleString('ru-RU')} · {taskStatusName(t.status)}</p>)}
-  <h3>Последние действия</h3><ActivityFeed events={events.filter(e=>e.sessionId===lead.sessionId)} state={state}/>
+  <InterestPanel sessionId={lead.sessionId} userId={lead.userId} events={events} state={state} onUseNextAction={value=>{if(!busy)setDraft({...draft,nextAction:value})}}/>
 
   {error&&<p className="errorNotice" role="alert">{error}</p>}<button className="primaryAction" disabled={busy} onClick={()=>void save()}><Save size={16}/>{busy?'Сохраняем…':'Сохранить карточку'}</button></section></div>}
  </PageFrame>;

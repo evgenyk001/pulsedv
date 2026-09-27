@@ -28,6 +28,7 @@ const sourceNames:Record<string,string>={
 };
 
 const eventNames:Record<string,string>={
+  floorplan_view:"Просмотр планировки",
   property_view:"Просмотр карточки ЖК",
   favorite_add:"Добавление в избранное",
   favorite_remove:"Удаление из избранного",
@@ -91,6 +92,8 @@ export function describeEvent(event:PulseEvent,state:PulseState){
       const section=propertyRoute||routeNames[route]||"раздел приложения";
       return {title:`Открыл «${section}»`,detail:propertyRoute?"Карточка жилого комплекса":"Переход по приложению"};
     }
+    case "floorplan_view":
+      return {title:'Рассмотрел планировку'+(rooms?' · '+(rooms==='Студия'?rooms:rooms+' комн.') :''),detail:[propertyName||text(meta.propertyName),number(meta.areaFrom)!==null?String(meta.areaFrom)+' м²':null,number(meta.price)!==null?Number(meta.price).toLocaleString('ru-RU')+' ₽':null].filter(Boolean).join(' · ')};
     case "property_view":
       return {title:`Открыл ${propertyName||"карточку ЖК"}`,detail:[city,property?.district].filter(Boolean).join(" · ")||"Просмотр объекта"};
     case "favorite_add":

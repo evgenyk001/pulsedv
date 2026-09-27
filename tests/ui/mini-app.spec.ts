@@ -145,6 +145,9 @@ test('CRM: real preview lead, editable stage, readable history and keyboard draw
  await page.locator('.leadRowButton').filter({hasText:'Проверка CRM'}).click();
  const drawer=page.getByRole('dialog',{name:'Карточка клиента'});
  await expect(drawer.getByText('Оставил заявку',{exact:true})).toBeVisible();
+ await expect(drawer.getByRole('heading',{name:'Interest DNA',exact:true})).toBeVisible();
+ await drawer.getByRole('button',{name:'Вставить в план контакта'}).click();
+ await expect(drawer.getByRole('textbox',{name:'Следующее действие',exact:true})).toHaveValue(/город/);
  await drawer.getByRole('combobox',{name:'Статус',exact:true}).selectOption('contacted');
  await drawer.getByRole('textbox',{name:'Следующее действие',exact:true}).fill('Позвонить и согласовать показ');
  await drawer.getByRole('button',{name:'Сохранить карточку'}).click();
@@ -157,4 +160,28 @@ test('CRM: real preview lead, editable stage, readable history and keyboard draw
  await page.locator('.leadRowButton').first().click();
  await expect(page.getByRole('dialog',{name:'Профиль посетителя'})).toBeVisible();
  await expect(page.getByRole('link',{name:/ЗАЯВКА КЛИЕНТА/})).toBeVisible();
+});
+
+for(const width of [390,1440])test(`Interest DNA ${width}px: facts, evidence, changed request and next step`,async({page})=>{
+ await page.setViewportSize({width,height:1000});
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:'Пропустить онбординг'}).click();
+ await page.getByRole('navigation',{name:'Основная навигация'}).getByRole('button',{name:'Подбор',exact:true}).click();
+ await page.getByRole('button',{name:/Продолжить/}).click();
+ await page.getByRole('tab',{name:'По стоимости',exact:true}).click();
+ await page.getByRole('button',{name:/Продолжить/}).click();await page.getByRole('button',{name:/Продолжить/}).click();
+ await page.getByRole('button',{name:'Собрать мой подбор',exact:true}).click();await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
+ await page.getByRole('button',{name:'Изменить запрос',exact:true}).click();
+ await page.getByRole('button',{name:'Артём',exact:true}).click();
+ await page.getByRole('button',{name:/Продолжить/}).click();await page.getByRole('button',{name:/Продолжить/}).click();await page.getByRole('button',{name:/Продолжить/}).click();
+ await page.getByRole('button',{name:'Собрать мой подбор',exact:true}).click();await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
+ await page.goto('/pulsedv/control-center/#/users');await page.locator('.leadRowButton').first().click();
+ const dna=page.getByRole('region',{name:'Interest DNA'});
+ await expect(dna.getByRole('heading',{name:'Interest DNA',exact:true})).toBeVisible();
+ await dna.getByRole('tab',{name:'Указал сам',exact:true}).click();await expect(dna.getByText('По стоимости',{exact:true})).toBeVisible();
+ await dna.getByRole('tab',{name:'Интересы',exact:true}).click();
+ const signal=dna.locator('.dnaSignal').first();await signal.locator('summary').click();await expect(signal.getByText('На чём основан вывод')).toBeVisible();
+ await dna.getByRole('tab',{name:'Что изменилось',exact:false}).click();await expect(dna.getByText('Изменил запрос: город',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+ await page.screenshot({path:`test-results/interest-dna-${width}.png`,fullPage:true});expect(errors).toEqual([]);
 });

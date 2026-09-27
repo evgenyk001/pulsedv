@@ -1,3 +1,4 @@
+import { enqueueInterestChange } from '../src/interestNotifications';
 import { upsertCatalogProperty,listCatalog } from '../src/catalogRepository';
 import { matchesBudgetAndRooms,hasSea,deliveryMatches } from '../../packages/domain/propertyMatch';
 import { test } from 'node:test';
@@ -135,6 +136,38 @@ test('SQL/API: заявки между устройствами, дедупли�
   const repo=outboxRepository(db);const claimed=await repo.claimBatch(5);assert.equal(claimed.length,1);assert.equal((await outboxRepository(db).claimBatch(5)).length,0);
   await repo.markFailed(claimed[0].id,'temporary',new Date(Date.now()-1000).toISOString());
   let sent=0;const result=await processNotificationOutbox(outboxRepository(db),{async sendMessage(){sent++;}},5);assert.equal(result.processed,1);assert.equal(sent,1);assert.equal((await outboxRepository(db).claimBatch(5)).length,0);
+ });
+ await t.test('DNA: сервер объединяет проверенные сессии, соблюдает назначение и не доверяет клиентскому userId',async()=>{
+  const second=(await app.inject({method:'POST',url:'/api/v1/auth/session',headers,payload:{source:'dna-test'}})).json();
+  const authHeaders={...headers,authorization:'Bearer '+second.accessToken};
+  const params=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id:98765,first_name:'Test'})});
+  const check=[...params.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n');
+  const secret=createHmac('sha256','WebAppData').update(config.BOT_TOKEN).digest();params.set('hash',createHmac('sha256',secret).update(check).digest('hex'));
+  assert.equal((await app.inject({method:'POST',url:'/api/v1/auth/telegram',headers:authHeaders,payload:{initData:params.toString()}})).statusCode,200);
+  const recorded=await app.inject({method:'POST',url:'/api/v1/events',headers:authHeaders,payload:{events:[{idempotencyKey:randomUUID(),eventType:'floorplan_view',entityType:'property',entityId:'solnechniy',metadata:{rooms:'2',price:8_000_000,userId:'forged',phone:'private'},occurredAt:new Date(Date.now()-1000).toISOString()}]}});
+  assert.equal(recorded.statusCode,200,recorded.body);
+  const url='/api/v1/control/interest/'+identity.sessionId;
+  assert.equal((await app.inject(url)).statusCode,401);
+  const ownerDNA=await app.inject({url,cookies:ownerCookie});assert.equal(ownerDNA.statusCode,200,ownerDNA.body);
+  assert.equal(ownerDNA.json().linked,true);assert.equal(ownerDNA.json().dna.sessionCount,2);
+  assert.ok(ownerDNA.json().events.some((e:any)=>e.sessionId===second.sessionId));
+  const managerDNA=await app.inject({url,cookies:managerCookie});assert.equal(managerDNA.statusCode,200,managerDNA.body);
+  assert.ok(managerDNA.json().events.every((e:any)=>e.sessionId===identity.sessionId));
+  assert.equal((await app.inject({url:'/api/v1/control/interest/'+second.sessionId,cookies:managerCookie})).statusCode,404);
+  assert.equal((await app.inject({url:'/api/v1/control/interest/'+randomUUID(),cookies:ownerCookie})).statusCode,404);
+  assert.ok(ownerDNA.json().events.every((e:any)=>!e.metadata.userId&&!e.metadata.phone));
+ });
+ await t.test('DNA: уведомление об изменении запроса дедуплицируется и соблюдает паузу 12 часов',async()=>{
+  await db.query("update leads set status='contacted' where id=$1",[leadId]);
+  const make=(budget:number,ago:number)=>({idempotencyKey:randomUUID(),eventType:'select_submit',entityType:'selection',metadata:{city:'Владивосток',rooms:'2',purchaseMode:'cash',min:5_000_000,max:budget},occurredAt:new Date(Date.now()-ago).toISOString()});
+  const batch={method:'POST' as const,url:'/api/v1/events',headers:first.headers,payload:{events:[make(8_000_000,100000),make(10_000_000,50000)]}};
+  const added=await app.inject(batch);assert.equal(added.statusCode,200,added.body);
+  const notifications=async()=>(await db.query("select * from outbox_events where topic='manager.interest_changed' and aggregate_id=$1",[leadId])).rows;
+  assert.equal((await notifications()).length,1);
+  assert.equal((await app.inject(batch)).statusCode,200);assert.equal((await notifications()).length,1);
+  const again=await app.inject({...batch,payload:{events:[make(11_000_000,1000)]}});assert.equal(again.statusCode,200,again.body);assert.equal((await notifications()).length,1);
+  await db.query("update leads set status='closed' where id=$1",[leadId]);
+  assert.equal(await db.transaction(sql=>enqueueInterestChange(sql,identity.sessionId,config.PUBLIC_ORIGIN)),false);
  });
  await t.test('выход отзывает серверную сессию',async()=>{assert.equal((await app.inject({method:'POST',url:'/api/v1/control/logout',headers,cookies:managerCookie,payload:{}})).statusCode,200);assert.equal((await app.inject({url:'/api/v1/control/me',cookies:managerCookie})).statusCode,401);});
 });

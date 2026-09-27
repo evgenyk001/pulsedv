@@ -8,7 +8,7 @@ export function useDialog(open:boolean,onClose:()=>void){
   const dialog=document.querySelector<HTMLElement>('[role="dialog"]');
   if(!dialog)return;
   const overflow=document.body.style.overflow;document.body.style.overflow='hidden';
-  const focusable=()=>Array.from(dialog.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')).filter(x=>x.getClientRects().length);
+  const focusable=()=>Array.from(dialog.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,[tabindex="0"]')).filter(x=>x.getClientRects().length);
   focusable()[0]?.focus();
   const key=(e:KeyboardEvent)=>{
    if(e.key==='Escape'){e.preventDefault();close.current();}

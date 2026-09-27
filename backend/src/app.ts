@@ -11,6 +11,8 @@ import { verifyTelegramInitData } from './telegramInitData';
 import { stateSchema, leadSchema, eventsSchema, safeMetadata } from './validation';
 import { audit, leadRepository, readState } from './repository';
 import { ingestEventBatch, processSessionIntent } from './leadEngineService';
+import { enqueueInterestChange } from './interestNotifications';
+import { registerInterestRoutes } from './interestRoutes';
 import { registerCatalogRoutes } from './catalogRoutes';
 import { getCatalogProperty, listCatalog } from './catalogRepository';
 
@@ -83,7 +85,9 @@ export async function createApp(db:Database,config:RuntimeConfig){
   for(const e of events)if(Date.parse(e.occurredAt)>Date.now()+60_000||Date.parse(e.occurredAt)<Date.now()-30*86400_000)throw new HttpError(400,'Событие вне допустимого временного окна');
   return db.transaction(async sql=>{
    await sessionLock(sql,identity.sessionId);
-   return ingestEventBatch(leadRepository(sql),events.map(e=>({...e,sessionId:identity.sessionId,userId:identity.userId,entityType:e.entityType??null,entityId:e.entityId??null,metadata:safeMetadata(e.metadata),createdAt:e.occurredAt})));
+   const result=await ingestEventBatch(leadRepository(sql),events.map(e=>({...e,sessionId:identity.sessionId,userId:identity.userId,entityType:e.entityType??null,entityId:e.entityId??null,metadata:safeMetadata(e.metadata),createdAt:e.occurredAt})));
+   if(result.accepted>0)await enqueueInterestChange(sql,identity.sessionId,config.PUBLIC_ORIGIN);
+   return result;
   });
  });
  app.post('/api/v1/leads',{preHandler:visitor,config:{rateLimit:{max:10,timeWindow:'1 minute'}}},async request=>{
@@ -120,6 +124,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  });
  app.get('/api/v1/control/me',{preHandler:control},async request=>({member:request.member}));
  app.post('/api/v1/control/logout',{preHandler:control},async(request,reply)=>{await db.query('delete from auth_tokens where token_hash=$1',[tokenHash(request.cookies.pulse_control!)]);reply.clearCookie('pulse_control',cookieOptions);return {ok:true};});
+ await registerInterestRoutes(app,db,control);
  app.get('/api/v1/control/snapshot',{preHandler:control},async request=>{
   const m=request.member!;const scoped=m.role==='manager';const {state:storedState,version}=await readState(db);
   const catalog=(await listCatalog(db,{status:'all',page:1,limit:2000,view:'match'})).items;
