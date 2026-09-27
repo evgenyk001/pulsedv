@@ -726,7 +726,7 @@ export default function SelectionPage(){
                 <p>{match.tradeoffs.join(" · ")}</p>
               </div>}
 
-              <button type="button" className={styles.openProperty} onClick={()=>navigate("/property/"+property.id)}>
+              <button type="button" className={styles.openProperty} onClick={()=>navigate("/property/"+property.id,{state:{returnTo:"/selection"}})}>
                 Посмотреть проект <ArrowRight size={16}/>
               </button>
             </div>

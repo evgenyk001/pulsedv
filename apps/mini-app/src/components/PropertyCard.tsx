@@ -1,5 +1,5 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Heart, Building2 } from "lucide-react";
 import { PropertyRecord } from "../helpers/propertyTypes";
 import { useFavoriteIds } from "../helpers/useFavoriteIds";
@@ -8,11 +8,12 @@ import styles from "./PropertyCard.module.css";
 type PropertyCardProps={property:PropertyRecord;compact?:boolean};
 
 export function PropertyCard({property,compact=false}:PropertyCardProps){
+  const location=useLocation();
   const {toggle,isFavorite}=useFavoriteIds();
   const saved=isFavorite(property.id);
   const image=property.coverImageUrl||property.images[0]?.url;
   return <article className={`${styles.card} ${compact?styles.compact:""}`}>
-    <Link to={`/property/${property.id}`} className={styles.link} aria-label={`Открыть ${property.name}`}>
+    <Link to={`/property/${property.id}`} state={{returnTo:location.pathname+location.search}} className={styles.link} aria-label={`Открыть ${property.name}`}>
       <div className={styles.image}>
         {image?<img src={image} alt={property.name}/>:<div className={styles.imageFallback}><Building2 size={26}/></div>}
         {property.tags[0]&&<span className={styles.badge}>{property.tags[0]}</span>}

@@ -3,7 +3,7 @@ import React from "react";
 import {propertyReturn} from "../helpers/navigationMemory";
 import {FloorplanViewer} from "../components/FloorplanViewer";
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Heart, Share2, MapPin, CalendarDays, Building2, Waves, Trees, CarFront,
   Baby, ShieldCheck, ChevronRight, Send, Sparkles, MapPinned, LayoutGrid, Ruler,
@@ -30,8 +30,8 @@ const priceLabel=(value:number)=>"от "+value.toFixed(1).replace(".",",")+" м�
 
 export default function PropertyPage(){
   const {propertyId=""}=useParams();
-  const [returnTo,setReturnTo]=React.useState(propertyReturn);
-  React.useLayoutEffect(()=>setReturnTo(propertyReturn()),[propertyId]);
+  const location=useLocation();
+  const returnTo=typeof location.state?.returnTo==="string"&&/^\/(catalog|favorites|selection|journey)?([?]|$)/.test(location.state.returnTo)?location.state.returnTo:propertyReturn();
   const {data:p,isLoading,error}=usePropertyDetail(propertyId);
   const {toggle,isFavorite}=useFavoriteIds();
   const [photoIndex,setPhotoIndex]=React.useState(0);
