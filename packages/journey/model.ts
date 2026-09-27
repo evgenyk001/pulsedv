@@ -40,7 +40,7 @@ export function applyJourney(current:Journey,command:JourneyCommand,role:'client
   j.messages=[...(j.messages||[]),{id:c.id,text:c.text.trim(),author:role,at:iso}];
  }else if(c.type==='showing_change'){
   const s=j.showings.find(s=>s.id===c.id);if(!s||!['requested','confirmed'].includes(s.status))throw new Error('Показ уже завершён или отменён');
-  if(c.action==='cancel'){s.status='cancelled';delete s.proposedAt;s.changeNote=c.note;}
+  if(c.action==='cancel'){s.status='cancelled';delete s.proposedAt;delete s.changeDecision;s.changeNote=c.note;}
   else{
    if(!c.at||!Number.isFinite(Date.parse(c.at))||Date.parse(c.at)<=now.getTime()||Date.parse(c.at)>now.getTime()+180*86400000)throw new Error('Выберите будущее время в ближайшие 180 дней');
    if(c.at===s.at)throw new Error('Выберите другое время');
@@ -58,7 +58,7 @@ export function applyJourney(current:Journey,command:JourneyCommand,role:'client
   if(c.status==='confirmed'&&Date.parse(s.at)<=now.getTime())throw new Error('Время показа уже прошло');
   if(c.status==='completed'&&!c.result.trim())throw new Error('Запишите результат показа');
   Object.assign(s,{status:c.status,result:c.result,updatedAt:iso,updatedBy:role});
-  if(["cancelled","completed"].includes(c.status))delete s.proposedAt;
+  if(["cancelled","completed"].includes(c.status)){delete s.proposedAt;delete s.changeDecision;}
  }else{
   if(!c.title.trim()||!Number.isFinite(Date.parse(c.dueAt)))throw new Error('Укажите действие и срок');
   j.nextStep={title:c.title,dueAt:c.dueAt,done:c.done};

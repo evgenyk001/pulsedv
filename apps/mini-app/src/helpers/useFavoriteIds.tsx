@@ -11,12 +11,12 @@ let task:Promise<void>|null=null;let error='';let authenticated=false;
 export function syncFavorites():Promise<void>{
  if(!runtime.enabled)return Promise.resolve();if(task)return task;
  task=(async()=>{try{
-  const batch=pending(),importIds=localStorage.getItem(MIGRATED)?undefined:readIds();
-  const result=await visitorApi<{ids:string[];authenticated:boolean}>('/me/favorites',batch.length||importIds?{method:'POST',body:JSON.stringify({changes:batch.map(({id,saved})=>({id,saved})),importIds})}:{});
+  const batch=pending().slice(0,500),importIds=localStorage.getItem(MIGRATED)?undefined:readIds();
+  const result=await visitorApi<{ids:string[];authenticated:boolean;rejectedIds?:string[]}>('/me/favorites',batch.length||importIds?{method:'POST',body:JSON.stringify({changes:batch.map(({id,saved})=>({id,saved})),importIds})}:{});
   if(importIds)localStorage.setItem(MIGRATED,'1');
   const remaining=pending().filter(c=>!batch.some(b=>b.nonce===c.nonce));localStorage.setItem(PENDING,JSON.stringify(remaining));
   const ids=new Set(result.ids);for(const c of remaining)c.saved?ids.add(c.id):ids.delete(c.id);
-  authenticated=result.authenticated;error='';save([...ids]);
+  authenticated=result.authenticated;error=result.rejectedIds?.length?'Некоторые объекты больше не опубликованы и не добавлены в избранное.':'';save([...ids]);
  }catch(e){error=(e as Error).message;window.dispatchEvent(new Event('pulse-favorites'))}
  finally{task=null}})();return task;
 }

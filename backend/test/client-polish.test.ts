@@ -29,7 +29,7 @@ test('Избранное API: изоляция, импорт один раз, о
  await change(b,[{id:'solnechniy',saved:false}]);assert.deepEqual((await get(a)).ids,['primorskiy']);
  assert.deepEqual((await get(c)).ids,[]);assert.equal((await bind(b,987654)).statusCode,409);
  const forged=await app.inject({method:'POST',url:'/api/v1/me/favorites',headers:{...headers,authorization:'Bearer '+c.accessToken},payload:{changes:[],owner:'user:123456'}});assert.equal(forged.statusCode,400);
- assert.equal((await change(c,[{id:'missing-property',saved:true}])).statusCode,409);
+ const removed=await change(c,[{id:'missing-property',saved:true}]);assert.equal(removed.statusCode,200);assert.deepEqual(removed.json().rejectedIds,['missing-property']);
 });
 test('Показы: запрос переноса сохраняет подтверждённое время, клиент не может подтвердить его сам',()=>{
  const now=new Date('2026-09-28T00:00:00Z'),id=randomUUID();let j=applyJourney(emptyJourney('lead'),{type:'showing',id,propertyId:'x',at:'2026-10-01T03:00:00Z',note:''},'client',now);

@@ -37,7 +37,7 @@ export default function Favorites(){
   return <div className={styles.page}>
     <PageHeader eyebrow="Ваш шорт-лист" title="Избранное" subtitle="Сохраняйте сильные варианты, отмечайте 2–3 проекта и сравнивайте их рядом."/>
 
-    {syncError&&<p role="alert">{syncError} Изменения сохранены на устройстве. <button onClick={()=>void retry()}>Повторить синхронизацию</button></p>}
+    {syncError&&<p role="alert">{syncError} <button onClick={()=>void retry()}>Повторить синхронизацию</button></p>}
     {authenticated&&<p role="status">{pending?"Синхронизируем избранное…":"Избранное связано с вашим аккаунтом Telegram"}</p>}
     <div className={styles.list}>
       {!isLoading&&saved.map(property=>{

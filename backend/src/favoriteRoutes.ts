@@ -28,16 +28,17 @@ export async function registerFavoriteRoutes(app:FastifyInstance,db:Database,vis
   const input=z.object({changes:z.array(z.object({id:property,saved:z.boolean()}).strict()).max(500),importIds:z.array(property).max(500).optional()}).strict().parse(r.body);
   return db.transaction(async sql=>{
    const identity=await favoriteOwner(sql,r.visitor!.sessionId);
+   const rejectedIds:string[]=[];
    const ids=new Set<string>((await sql.query('select property_ids from favorite_sets where owner=$1',[identity.owner])).rows[0]?.property_ids||[]);
    let imported=false;
    if(input.importIds){imported=!!(await sql.query('insert into favorite_imports(session_id) values($1) on conflict do nothing returning session_id',[r.visitor!.sessionId])).rows.length;}
    const additions=[...(imported?input.importIds||[]:[]),...input.changes.filter(c=>c.saved).map(c=>c.id)];
    const available=new Set((await sql.query("select id from catalog_properties where id=any($1::text[]) and status='published'",[additions])).rows.map(p=>p.id));
    if(imported)for(const id of input.importIds||[])if(available.has(id))ids.add(id);
-   for(const c of input.changes){if(c.saved&&available.has(c.id))ids.add(c.id);else if(!c.saved)ids.delete(c.id);else throw new HttpError(409,'Этот объект больше не опубликован');}
+   for(const c of input.changes){if(c.saved&&available.has(c.id))ids.add(c.id);else if(!c.saved)ids.delete(c.id);else rejectedIds.push(c.id);}
    if(ids.size>500)throw new HttpError(400,'В избранном можно сохранить до 500 ЖК');
    await sql.query('insert into favorite_sets(owner,property_ids) values($1,$2) on conflict(owner) do update set property_ids=excluded.property_ids,updated_at=now()',[identity.owner,[...ids]]);
-   return {ids:[...ids],authenticated:identity.authenticated};
+   return {ids:[...ids],authenticated:identity.authenticated,rejectedIds};
   });
  });
 }
