@@ -58,7 +58,10 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
 test('Control preview: object editor and real state changes',async({page})=>{
  await page.setViewportSize({width:1440,height:1000});await page.goto('/pulsedv/control-center/');
  await expect(page.getByText('Демонстрация · данные только в этом браузере')).toBeVisible();
- await page.getByRole('link',{name:'Объекты',exact:true}).click();await page.getByRole('button',{name:'Добавить ЖК',exact:true}).click();
+ await page.getByRole('link',{name:'Объекты',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Добавляйте десятки и сотни ЖК за один проход',exact:true})).toBeVisible();
+ await expect(page.getByText('БАЗА ОБЪЕКТОВ',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Добавить ЖК',exact:true}).click();
  await page.getByRole('textbox',{name:'Название',exact:true}).fill('Тестовый ЖК');await page.getByRole('button',{name:'Готово',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Тестовый ЖК',exact:true})).toBeVisible();
  await page.screenshot({path:'test-results/control-objects.png',fullPage:true});
