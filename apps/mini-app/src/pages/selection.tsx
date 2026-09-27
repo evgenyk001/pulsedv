@@ -72,6 +72,7 @@ const preferenceIcon=(id:PreferenceId)=>{
 };
 
 type SavedSelection={
+  step?:number;showResult?:boolean;
   city?:string;
   rooms?:string;
   delivery?:string;
@@ -170,8 +171,8 @@ export default function SelectionPage(){
     ?saved.rooms!
     :control.select.roomOptions.includes("2")?"2":control.select.roomOptions[0]??"1";
 
-  const [step,setStep]=React.useState(0);
-  const [showResult,setShowResult]=React.useState(false);
+  const [step,setStep]=React.useState(Number.isInteger(saved.step)?Math.max(0,Math.min(3,saved.step!)):0);
+  const [showResult,setShowResult]=React.useState(saved.showResult===true);
   const [matching,setMatching]=React.useState(false);
   const [showAll,setShowAll]=React.useState(false);
   const [city,setCity]=React.useState(defaultCity);
@@ -390,9 +391,11 @@ export default function SelectionPage(){
   const financeLabel=purchaseMode==="mortgage"?("до "+Math.round(monthlyPayment/1000)+" тыс./мес"):("до "+shortRub(budget[1]));
 
   const persistSelection=()=>{
-    const value:SavedSelection={city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences};
+    const value:SavedSelection={city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,step,showResult};
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(value));}catch{}
   };
+
+  React.useEffect(()=>{persistSelection()},[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,step,showResult]);
 
   const applySmartQuery=()=>{
     const raw=smartQuery.trim();

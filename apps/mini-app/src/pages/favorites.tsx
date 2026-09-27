@@ -10,18 +10,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./favorites.module.css";
 
-type CompareRow={label:string;value:(property:any)=>React.ReactNode};
-
-const compareRows:CompareRow[]=[
-  {label:"Цена от",value:property=>property.priceFrom.toFixed(1).replace(".",",")+" млн ₽"},
-  {label:"Срок сдачи",value:property=>property.delivery},
-  {label:"Класс",value:property=>property.className},
-  {label:"Застройщик",value:property=>property.developerName||"Уточняется"},
-  {label:"Планировки",value:property=>property.floorplans.length?property.floorplans.length+" вариантов":"Уточняются"},
-];
-
 export default function Favorites(){
-  const {ids}=useFavoriteIds();
+  const {ids,error:syncError,authenticated,pending,retry}=useFavoriteIds();
   const {data:saved=[],isLoading}=useFavoriteProperties(ids);
   const [compareIds,setCompareIds]=React.useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem("pulse.compare.v1")||"[]").filter((x:unknown)=>typeof x==="string").slice(0,3)}catch{return []}});
 
@@ -47,6 +37,8 @@ export default function Favorites(){
   return <div className={styles.page}>
     <PageHeader eyebrow="Ваш шорт-лист" title="Избранное" subtitle="Сохраняйте сильные варианты, отмечайте 2–3 проекта и сравнивайте их рядом."/>
 
+    {syncError&&<p role="alert">{syncError} Изменения сохранены на устройстве. <button onClick={()=>void retry()}>Повторить синхронизацию</button></p>}
+    {authenticated&&<p role="status">{pending?"Синхронизируем избранное…":"Избранное связано с вашим аккаунтом Telegram"}</p>}
     <div className={styles.list}>
       {!isLoading&&saved.map(property=>{
         const selected=compareIds.includes(property.id);
@@ -69,23 +61,7 @@ export default function Favorites(){
         <SheetContent side="bottom" className={styles.compareSheet}>
           <SheetHeader><SheetTitle>Сравнение проектов</SheetTitle><SheetDescription>Сравните условия по одинаковым параметрам. Можно оставить только различия.</SheetDescription></SheetHeader>
 
-          <ComparisonTable properties={compared}/><div className={styles.compareProjects}>
-            {compared.map((property,index)=><section className={styles.compareProjectCard} key={property.id}>
-              <div className={styles.compareProjectHead}>
-                <div className={styles.compareNumber}>{index+1}</div>
-                <div><strong>{property.name}</strong><span>{property.city} · {property.district}</span></div>
-                <Link to={"/property/"+property.id} aria-label={"Открыть "+property.name}><ChevronRight size={17}/></Link>
-              </div>
-              <div className={styles.compareFacts}>
-                {compareRows.map(row=><div key={row.label}>
-                  <span>{row.label}</span>
-                  <b>{row.value(property)}</b>
-                </div>)}
-              </div>
-            </section>)}
-          </div>
-
-          <div className={styles.compareHint}>Сравните значения сверху вниз — так различия между проектами легче увидеть на телефоне.</div>
+          <ComparisonTable properties={compared}/>
         </SheetContent>
       </Sheet>:compareButton}
     </div>}

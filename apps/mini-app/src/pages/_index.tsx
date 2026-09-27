@@ -1,3 +1,5 @@
+import {ClientUpdates} from "../components/ClientUpdates";
+import {ContinueChoice} from "../components/ContinueChoice";
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Search, Bell, Building2, MapPin, Percent, Sparkles, ChevronRight, MessageCircle, UserRound, BadgePercent, KeyRound } from "lucide-react";
@@ -21,16 +23,7 @@ export default function HomePage(){
         <div><div className={styles.brandName}>PULSE.DV</div><div className={styles.brandSub}>Новостройки Приморья</div></div>
       </div>
       <div className={styles.headerActions}>
-        <Sheet>
-          <SheetTrigger asChild><button className={styles.iconButton} aria-label="Уведомления"><Bell size={18}/><i/></button></SheetTrigger>
-          <SheetContent side="bottom" className={styles.notificationSheet}>
-            <SheetHeader><SheetTitle>Уведомления</SheetTitle><SheetDescription>Важное по вашим объектам и новым предложениям.</SheetDescription></SheetHeader>
-            <div className={styles.noticeList}>
-              <div><KeyRound size={18}/><span><b>Старт продаж</b><small>Открылись продажи новой очереди у моря.</small></span></div>
-              <div><BadgePercent size={18}/><span><b>Ставка обновилась</b><small>Есть новые ипотечные предложения.</small></span></div>
-            </div>
-          </SheetContent>
-        </Sheet>
+        <ClientUpdates className={styles.iconButton}/>
         <Link to="/profile" className={styles.profileButton} aria-label="Профиль"><UserRound size={18}/></Link>
       </div>
     </header>
@@ -41,6 +34,7 @@ export default function HomePage(){
       <button type="submit" aria-label="Найти"><ChevronRight size={17}/></button>
     </form>
 
+    <ContinueChoice/>
     <PromoCarousel/>
 
     <section className={styles.quickActions}>

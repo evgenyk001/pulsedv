@@ -1,3 +1,4 @@
+import {useClientJourneys} from "../helpers/useClientJourneys";
 import React from "react";
 import { Link } from "react-router-dom";
 import { UserRound, MessageCircle, Phone, ChevronRight, ShieldCheck, Heart, Clock3, Info, PlayCircle } from "lucide-react";
@@ -7,6 +8,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTr
 import styles from "./profile.module.css";
 
 export default function ProfilePage(){
+  const {data:journeys}=useClientJourneys();
+  const active=journeys?.items.find(e=>!["closed","lost","deal"].includes(e.status));
   const [history,setHistory]=React.useState<Array<{city:string;rooms:string;min:number;max:number;delivery:string;mortgage:boolean;sea:boolean;createdAt:number}>>([]);
   React.useEffect(()=>{
     try{
@@ -32,8 +35,8 @@ export default function ProfilePage(){
 
     <section className={styles.manager}>
       <div className={styles.managerIcon}><MessageCircle size={19}/></div>
-      <div><span>Персональный менеджер</span><strong>Команда PULSE.DV</strong><small>Ответим по ЖК, ипотеке и сделке</small></div>
-      <LeadSheet source="profile-manager"><button aria-label="Написать менеджеру"><ChevronRight size={18}/></button></LeadSheet>
+      <div><span>Персональный менеджер</span><strong>{active?.managerName||"Команда PULSE.DV"}</strong><small>Ответим по ЖК, ипотеке и сделке</small></div>
+      {active?<Link to={"/journey?lead="+active.leadId} aria-label="Открыть переписку с менеджером"><ChevronRight size={18}/></Link>:<LeadSheet source="profile-manager"><button aria-label="Оставить заявку менеджеру"><ChevronRight size={18}/></button></LeadSheet>}
     </section>
 
     <section className={styles.menu}>

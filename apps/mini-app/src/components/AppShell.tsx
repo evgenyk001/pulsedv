@@ -1,5 +1,7 @@
+import {FavoriteSync} from "../helpers/useFavoriteIds";
 import {attribution} from '../../../../packages/journey/attribution';
 import React from "react";
+import {NavigationMemory} from "../helpers/navigationMemory";
 import { useLocation } from "react-router-dom";
 import { BottomNav } from "./BottomNav";
 import { Onboarding } from "./Onboarding";
@@ -33,11 +35,11 @@ export function AppShell({children}:{children:React.ReactNode}){
   },[]);
 
   React.useEffect(()=>{
-    window.scrollTo({top:0,behavior:"instant" as ScrollBehavior});
+
     recordPulseEvent({eventType:"page_view",entityType:"route",entityId:location.pathname,metadata:{search:location.search}});
   },[location.pathname,location.search]);
 
-  return <div className={styles.viewport}>
+  return <div className={styles.viewport}><NavigationMemory/><FavoriteSync/>
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
     <main className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
       <div key={location.pathname} className={styles.routeFrame}>{children}</div>
