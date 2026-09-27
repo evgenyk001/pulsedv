@@ -6,7 +6,7 @@ export function propertyReturn(){try{const v=sessionStorage.getItem('pulse.prope
 export function NavigationMemory(){
  const location=useLocation(),kind=useNavigationType();const path=location.pathname+location.search;
  React.useLayoutEffect(()=>{
-  if(location.pathname.startsWith('/property/')&&!previous.startsWith('/property/')){try{sessionStorage.setItem('pulse.property.return',previous)}catch{}}
+  if(!location.pathname.startsWith('/property/')){try{sessionStorage.setItem('pulse.property.return',path)}catch{}}
   const restore=kind==='POP'||previous.startsWith('/property/');previous=path;
   const y=restore?positions.get(path)||0:0;
   let cancelled=false,frame=0,attempts=0;
