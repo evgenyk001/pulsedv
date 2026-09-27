@@ -158,3 +158,125 @@ button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.5}button:focus
   .documentList>div{grid-template-columns:auto 1fr auto}
   .documentList a{grid-column:2}
 }
+
+
+/* Catalog Engine · PULSE Control visual system */
+.catalogPrimaryCreate{flex:none}
+.catalogOverview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.catalogOverview article{min-height:126px;padding:18px;border:1px solid var(--line);border-radius:24px;background:rgba(255,255,255,.94);box-shadow:0 10px 30px rgba(40,49,63,.045);display:grid;grid-template-columns:auto 1fr;gap:13px;align-items:start}
+.catalogOverview article>span{width:38px;height:38px;border-radius:14px;display:grid;place-items:center;background:#fff0f1;color:var(--red);border:1px solid #ffdfe2}
+.catalogOverview article>span.success{background:#eef9f3;color:#278258;border-color:#dcf1e5}
+.catalogOverview article>span.warning{background:#fff8e9;color:#a87518;border-color:#f5e6c4}
+.catalogOverview article>span.muted{background:#f3f5f7;color:#77828e;border-color:#e8ebef}
+.catalogOverview article>div{display:flex;flex-direction:column;min-width:0}
+.catalogOverview small{font-size:9px;color:#7d8794;font-weight:700}
+.catalogOverview strong{font-size:28px;line-height:1;margin-top:8px;letter-spacing:-.04em;color:#17202c;font-variant-numeric:tabular-nums}
+.catalogOverview p{font-size:9px;color:#a0a8b2;margin:7px 0 0}
+
+.catalogImportHub{position:relative;overflow:hidden;padding:24px;border:1px solid #f0e4e5;border-radius:30px;background:linear-gradient(135deg,#fff 0%,#fff 55%,#fff5f6 135%);box-shadow:0 12px 34px rgba(61,38,42,.05)}
+.catalogImportHub:after{content:"";position:absolute;width:190px;height:190px;border-radius:50%;right:-84px;top:-104px;background:radial-gradient(circle,rgba(242,13,29,.09),rgba(242,13,29,0) 68%);pointer-events:none}
+.catalogImportIntro{max-width:650px;position:relative;z-index:1}
+.catalogImportIntro h2{font-size:19px;letter-spacing:-.025em;margin:6px 0 7px}
+.catalogImportIntro p{font-size:10.5px;color:#7c8794;line-height:1.55;margin:0}
+.catalogImportActions{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:18px}
+.catalogImportActions button,.catalogImportActions label{position:relative;min-height:74px;padding:11px 12px;border:1px solid var(--line);border-radius:20px;background:rgba(255,255,255,.86);display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;text-align:left;color:#27313d;transition:transform .17s ease,border-color .17s ease,box-shadow .17s ease}
+.catalogImportActions button{font:inherit}
+.catalogImportActions button:hover,.catalogImportActions label:hover{transform:translateY(-2px);border-color:#efcdd0;box-shadow:0 10px 24px rgba(42,49,60,.06)}
+.catalogImportActions>*>span{width:39px;height:39px;border-radius:14px;display:grid;place-items:center;background:#fff0f1;color:var(--red);border:1px solid #ffdfe2}
+.catalogImportActions>*>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.catalogImportActions b{font-size:10.5px;color:#26313d}
+.catalogImportActions small{font-size:8.5px;color:#8c96a1;line-height:1.3}
+.catalogImportActions>*>svg:last-of-type{color:#a3acb6}
+.catalogImportActions input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.catalogImportFoot{position:relative;z-index:1;margin-top:13px;display:flex;align-items:center;gap:7px;color:#8b95a0;font-size:8.5px}
+
+.catalogWorkspace{padding:22px;border:1px solid var(--line);border-radius:30px;background:#fff;box-shadow:0 12px 34px rgba(40,49,63,.045)}
+.catalogWorkspaceTop{display:flex;align-items:end;justify-content:space-between;gap:18px}
+.catalogWorkspaceTop h2{font-size:19px;letter-spacing:-.025em;margin:5px 0 0}
+.catalogSearch{width:min(380px,42vw)}
+.catalogSearch input{width:100%}
+.catalogFilters{margin-top:17px;padding-top:15px;border-top:1px solid #eef1f4;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.catalogPageMeta{display:flex;align-items:baseline;gap:6px;color:#909aa5}
+.catalogPageMeta b{font-size:12px;color:#27313d}
+.catalogPageMeta span{font-size:8.5px}
+
+.catalogObjectGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
+.catalogObjectCard{overflow:hidden;padding:0;border:1px solid var(--line);border-radius:24px;background:#fff;color:#17202c;text-align:left;box-shadow:0 7px 24px rgba(32,42,56,.045);transition:transform .17s ease,box-shadow .17s ease,border-color .17s ease}
+.catalogObjectCard:hover{transform:translateY(-3px);border-color:#e1e5e9;box-shadow:0 14px 34px rgba(32,42,56,.075)}
+.catalogObjectImage{height:154px;position:relative;overflow:hidden;background:#f3f5f7}
+.catalogObjectImage>img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease}
+.catalogObjectCard:hover .catalogObjectImage>img{transform:scale(1.018)}
+.catalogObjectImage>.statusChip{position:absolute;left:11px;top:11px;backdrop-filter:blur(12px);box-shadow:0 4px 14px rgba(26,34,45,.08)}
+.catalogObjectImage .objectPlaceholder{height:100%;display:flex;flex-direction:column;gap:7px}
+.catalogObjectImage .objectPlaceholder span{font-size:8px}
+.catalogObjectBody{padding:15px}
+.catalogObjectTitle{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start}
+.catalogObjectTitle h3{font-size:15px;letter-spacing:-.025em;margin:0}
+.catalogObjectTitle p{margin:5px 0 0;display:flex;align-items:center;gap:4px;color:#87919c;font-size:8.5px}
+.catalogObjectTitle>svg{color:#a5adb7;margin-top:2px}
+.catalogObjectFacts{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:14px;padding-top:12px;border-top:1px solid #eef1f4}
+.catalogObjectFacts span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.catalogObjectFacts small{font-size:7.5px;color:#9aa3ad}
+.catalogObjectFacts b{font-size:9.5px;color:#2d3743;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.catalogObjectDeveloper{margin-top:11px;height:26px;padding:0 8px;border-radius:999px;background:#f5f7f9;color:#78838f;display:inline-flex;align-items:center;max-width:100%;font-size:7.8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.catalogLoading>svg,.catalogWorkspace .emptyState>svg{color:#b1b9c2;margin-bottom:10px}
+
+.catalogPager{display:flex;align-items:center;justify-content:center;gap:9px;margin-top:20px;padding-top:17px;border-top:1px solid #eef1f4}
+.catalogPager button{height:38px;padding:0 13px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#4d5966;display:flex;align-items:center;gap:4px;font:inherit;font-size:9px;font-weight:720}
+.catalogPager span{min-width:50px;text-align:center;font-size:9px;color:#9099a4}
+
+.catalogDrawerHeader{align-items:flex-start}
+.catalogDrawerEyebrow{display:flex;align-items:center;gap:8px}
+.catalogDrawerEyebrow small{font-size:8px;color:#a0a8b2;max-width:390px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.catalogReadiness{padding:14px;border:1px solid #f0e5e6;border-radius:19px;background:#fff9fa}
+.catalogReadiness>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.catalogReadiness span{font-size:9px;color:#6f7a87;font-weight:700}
+.catalogReadiness b{font-size:11px;color:var(--red)}
+.catalogReadiness>div:nth-child(2){height:6px;margin-top:9px;border-radius:999px;background:#f0e3e5;overflow:hidden}
+.catalogReadiness i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#f20d1d,#fa6973);transition:width .25s ease}
+.catalogReadiness small{display:block;margin-top:8px;font-size:8px;line-height:1.4;color:#929ca7}
+
+.catalogEditor{background:#f6f8fa}
+.catalogEditor .editorStickyActions{top:-28px}
+.catalogEditorSection{padding:18px;border:1px solid var(--line);border-radius:24px;background:#fff;box-shadow:0 7px 22px rgba(40,49,63,.035)}
+.catalogEditorSectionHead{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin-bottom:15px}
+.catalogEditorSectionHead>span{width:35px;height:35px;border-radius:13px;display:grid;place-items:center;background:#fff0f1;color:var(--red);border:1px solid #ffdfe2}
+.catalogEditorSectionHead>div{display:flex;flex-direction:column;gap:3px}
+.catalogEditorSectionHead b{font-size:11.5px;color:#27313d}
+.catalogEditorSectionHead small{font-size:8.5px;color:#909aa5}
+.catalogEditorSectionHead>button{height:34px;padding:0 10px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#596673;display:flex;align-items:center;gap:5px;font-size:8.5px;font-weight:700}
+.catalogEditorStack{display:flex;flex-direction:column;gap:10px}
+.catalogEditorEmpty{padding:16px;border:1px dashed #dfe4e9;border-radius:16px;background:#fafbfc;color:#9aa3ad;font-size:8.8px;text-align:center}
+.catalogEditor .mediaUploader{background:#f8fafb;border-style:dashed}
+.catalogEditorFooter{position:sticky;bottom:-28px;z-index:4;margin:2px -10px -6px;padding:10px;border-radius:20px;background:rgba(255,255,255,.94);border:1px solid rgba(229,233,238,.96);backdrop-filter:blur(18px);display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -8px 24px rgba(35,44,56,.05)}
+.catalogEditorFooter>div{display:flex;align-items:center;gap:6px;color:#8a95a1;font-size:8.5px}
+.catalogEditorFooter .primaryAction{height:38px}
+
+@media(max-width:1100px){
+  .catalogOverview{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .catalogImportActions{grid-template-columns:1fr}
+  .catalogObjectGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  .catalogOverview{grid-template-columns:1fr 1fr;gap:8px}
+  .catalogOverview article{min-height:108px;padding:13px;grid-template-columns:1fr}
+  .catalogOverview article>span{width:32px;height:32px;border-radius:11px}
+  .catalogOverview strong{font-size:23px}
+  .catalogImportHub,.catalogWorkspace{padding:16px;border-radius:24px}
+  .catalogWorkspaceTop{align-items:stretch;flex-direction:column}
+  .catalogSearch{width:100%}
+  .catalogFilters{align-items:stretch;flex-direction:column}
+  .catalogFilters .segmented{width:100%}
+  .catalogFilters .segmented button{flex:1;white-space:nowrap}
+  .catalogObjectGrid{grid-template-columns:1fr}
+  .catalogObjectImage{height:172px}
+  .catalogEditorSection{padding:14px;border-radius:20px}
+  .catalogEditorSectionHead{grid-template-columns:auto 1fr}
+  .catalogEditorSectionHead>button{grid-column:1/-1;justify-content:center}
+  .catalogEditorFooter{bottom:-22px}
+}
+@media(max-width:430px){
+  .catalogOverview{grid-template-columns:1fr 1fr}
+  .catalogOverview article p{display:none}
+  .catalogImportActions button,.catalogImportActions label{min-height:68px}
+}
