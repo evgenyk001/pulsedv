@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import type { PulseEvent, PulseState } from '../../../../packages/pulse-data';
 import { describeEvent } from '../activityCopy';
 const categories=[['all','Все действия'],['interest','Интерес к ЖК'],['finance','Ипотека'],['contact','Контакты']] as const;
-const category=(type:string)=>/mortgage/.test(type)?'finance':/lead_|contact/.test(type)?'contact':/property|favorite|compare|select|catalog/.test(type)?'interest':'navigation';
+const category=(type:string)=>/mortgage/.test(type)?'finance':/lead_|contact/.test(type)?'contact':/property|floorplan|favorite|compare|select|catalog/.test(type)?'interest':'navigation';
 export function ActivityFeed({events,state,compact=false}:{events:PulseEvent[];state:PulseState;compact?:boolean}){
  const [query,setQuery]=React.useState('');const [filter,setFilter]=React.useState('all');const [limit,setLimit]=React.useState(compact?6:30);
  const rows=React.useMemo(()=>[...events].sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt)).map(event=>({event,...describeEvent(event,state)})).filter(row=>(filter==='all'||category(row.event.eventType)===filter)&&`${row.title} ${row.detail} ${row.event.sessionId}`.toLocaleLowerCase('ru').includes(query.toLocaleLowerCase('ru'))),[events,state,filter,query]);

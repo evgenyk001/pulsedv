@@ -513,6 +513,7 @@ export default function SelectionPage(){
         payment:monthlyPayment,
         preferences:preferences.join(","),
         purchaseMode,
+        program:purchaseMode==="mortgage"?mortgageProgram:null,
         topScore,strongCount,results:eligible.length,
         source:"pulse-select-v3",
       }

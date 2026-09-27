@@ -1,4 +1,5 @@
 import React from "react";
+import { TrackedFloorplan } from "../components/TrackedFloorplan";
 import { Link, useParams } from "react-router-dom";
 import {
   ArrowLeft, Heart, Share2, MapPin, CalendarDays, Building2, Waves, Trees, CarFront,
@@ -33,7 +34,7 @@ export default function PropertyPage(){
 
   React.useEffect(()=>{
     if(!p)return;
-    recordPulseEvent({eventType:"property_view",entityType:"property",entityId:p.id,metadata:{city:p.city,district:p.district,priceFrom:p.priceFrom}});
+    recordPulseEvent({eventType:"property_view",entityType:"property",entityId:p.id,metadata:{propertyName:p.name,city:p.city,district:p.district,priceFrom:p.priceFrom}});
   },[p?.id]);
 
   if(isLoading)return <div className={styles.loading}>Загружаем объект…</div>;
@@ -156,7 +157,7 @@ export default function PropertyPage(){
         </div>}
 
         {visiblePlans.length?<div className={styles.planRail}>
-          {visiblePlans.map((plan,index)=><article className={styles.planCard} key={plan.id||plan.roomLabel+"-"+index}>
+          {visiblePlans.map((plan,index)=><TrackedFloorplan property={p} plan={plan} className={styles.planCard} key={plan.id||plan.roomLabel+"-"+index}>
             <div className={styles.planImage}>
               {plan.imageUrl?<img src={plan.imageUrl} alt={"Планировка "+plan.roomLabel} loading="lazy"/>:<div><Ruler size={24}/><span>Планировка</span></div>}
             </div>
@@ -168,7 +169,7 @@ export default function PropertyPage(){
               <b>{plan.priceFrom!==null?priceLabel(plan.priceFrom):"Цена уточняется"}</b>
               {plan.priceFrom!==null&&<Link to={"/mortgage?price="+Math.round(plan.priceFrom*1_000_000)+"&property="+encodeURIComponent(p.id)}>Рассчитать платёж <ChevronRight size={14}/></Link>}
             </div>
-          </article>)}
+          </TrackedFloorplan>)}
         </div>:<div className={styles.emptyPlans}>Планировки появятся после загрузки данных по проекту.</div>}
       </section>
 
