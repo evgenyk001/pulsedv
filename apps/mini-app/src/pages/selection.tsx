@@ -79,6 +79,7 @@ type SavedSelection={
   budget?:[number,number];
   downPayment?:number;
   monthlyPayment?:number;
+  mortgageProgram?:"standard"|"family"|"farEast"|"it";
   preferences?:PreferenceId[];
 };
 
@@ -182,6 +183,7 @@ export default function SelectionPage(){
     formatRub(saved.budget?.[1]??FALLBACK_MAX),
   ]);
   const budgetInitialized=React.useRef(false);
+  const [mortgageProgram,setMortgageProgram]=React.useState<"standard"|"family"|"farEast"|"it">(saved.mortgageProgram??"standard");
   const [downPayment,setDownPayment]=React.useState(saved.downPayment??1_500_000);
   const [downDraft,setDownDraft]=React.useState(formatRub(saved.downPayment??1_500_000));
   const [monthlyPayment,setMonthlyPayment]=React.useState(saved.monthlyPayment??60_000);
@@ -316,8 +318,9 @@ export default function SelectionPage(){
     max:budget[1],
     downPayment,
     monthlyPayment,
+    mortgageProgram,
     preferences,
-  }),[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,preferences]);
+  }),[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences]);
 
   const rankFor=React.useCallback((next:SelectionCriteria)=>properties
     .map(property=>({property,match:selectionMatch(property,next,control.mortgagePrograms,control.select.weights)}))
@@ -387,7 +390,7 @@ export default function SelectionPage(){
   const financeLabel=purchaseMode==="mortgage"?("до "+Math.round(monthlyPayment/1000)+" тыс./мес"):("до "+shortRub(budget[1]));
 
   const persistSelection=()=>{
-    const value:SavedSelection={city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,preferences};
+    const value:SavedSelection={city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences};
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(value));}catch{}
   };
 
@@ -842,6 +845,11 @@ export default function SelectionPage(){
           ]}
         />}
 
+        {purchaseMode==="mortgage"&&<div className={styles.fieldBlock}>
+          <label>Программа для расчёта</label>
+          <div className={styles.choiceGrid}>{control.mortgagePrograms.map(item=><button type="button" key={item.id} aria-pressed={mortgageProgram===item.id} className={mortgageProgram===item.id?styles.active:""} onClick={()=>setMortgageProgram(item.id)}>{item.label}</button>)}</div>
+          <p>Льготную программу выбирайте, если подходите под её условия. Доступность подтвердит банк; взнос и лимит учитываются в подборе.</p>
+        </div>}
         {purchaseMode==="cash"?<>
           <div className={styles.moneyHero}><span>Ваш диапазон</span><strong>{shortRub(budget[0])} — {shortRub(budget[1])}</strong></div>
           <div className={styles.moneyInputs}>

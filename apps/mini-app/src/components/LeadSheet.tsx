@@ -32,7 +32,6 @@ export function LeadSheet({children,title="Получить консультац
   return <Sheet onOpenChange={(open)=>{
     if(open){
       recordPulseEvent({eventType:"lead_form_open",entityType:propertyId?"property":"funnel",entityId:propertyId||source,metadata:{source,project:project||null}});
-      if(source==="mortgage")recordPulseEvent({eventType:"mortgage_calculated",entityType:"mortgage",entityId:"calculator",metadata:{source,...context}});
     }else{if(sent){key.current=crypto.randomUUID();setName("");setPhone("");}setSent(false);setError(null)}
   }}>
     <SheetTrigger asChild>{children}</SheetTrigger>

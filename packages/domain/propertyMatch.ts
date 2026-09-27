@@ -14,6 +14,7 @@ export type SelectionCriteria={
   downPayment:number;
   monthlyPayment:number;
   preferences:PreferenceId[];
+  mortgageProgram?:MortgageProgramRule["id"];
 };
 
 export type SelectionMatch={
@@ -95,11 +96,11 @@ export function monthlyMortgagePayment(principal:number,annualRate:number,years:
   return principal*monthlyRate*factor/(factor-1);
 }
 
-export function bestMortgageFit(price:number,downPayment:number,target:number,programs:MortgageProgramRule[]){
+export function bestMortgageFit(price:number,downPayment:number,target:number,programs:MortgageProgramRule[],selectedProgram:MortgageProgramRule["id"]="standard"){
   const principal=Math.max(0,price-Math.max(0,downPayment));
   if(principal===0)return {payment:0,program:'Без кредита',fits:true};
   const estimates=programs
-    .filter(program=>principal<=program.subsidizedLimit)
+    .filter(program=>program.id===selectedProgram&&downPayment>=price*program.minDownPct/100&&principal<=Math.min(program.subsidizedLimit,program.totalLimit))
     .map(program=>({
       payment:monthlyMortgagePayment(principal,program.rate,program.maxYears),
       program:program.label,
@@ -113,7 +114,7 @@ export function bestMortgageFit(price:number,downPayment:number,target:number,pr
   };
 }
 
-function deliveryMatches(property:PulseProperty,delivery:string){
+export function deliveryMatches(property:PulseProperty,delivery:string){
   if(delivery==='Любой'||delivery==='Не важно')return true;
   if(delivery==='Сдан')return /сдан|готов|введ[её]н/i.test(property.delivery);
   return property.delivery.includes(delivery);
@@ -126,7 +127,8 @@ export function selectionMatch(
   weights:PulseSelectConfig['weights'],
 ):SelectionMatch{
   const cityOk=criteria.city==='Все'||criteria.city==='Не важно'||property.city===criteria.city;
-  const price=representativePrice(property,criteria.rooms);
+  const inBudget=criteria.purchaseMode==='cash'?matchingPlans(property,{rooms:criteria.rooms,min:criteria.min,max:criteria.max}):[];
+  const price=inBudget.length?Math.min(...inBudget.map(p=>p.priceFrom!*1_000_000)):representativePrice(property,criteria.rooms);
   const roomsOk=price!==null;
 
   let financeOk=false;
@@ -135,7 +137,7 @@ export function selectionMatch(
   if(price!==null&&criteria.purchaseMode==='cash'){
     financeOk=price>=criteria.min&&price<=criteria.max;
   }else if(price!==null){
-    const fit=bestMortgageFit(price,criteria.downPayment,criteria.monthlyPayment,programs);
+    const fit=bestMortgageFit(price,criteria.downPayment,criteria.monthlyPayment,programs,criteria.mortgageProgram);
     financeOk=fit.fits;
     mortgagePayment=fit.payment;
     mortgageProgram=fit.program;
@@ -146,13 +148,11 @@ export function selectionMatch(
   const matchedPreferences=selected.filter(id=>matchesPreference(property,id));
   const preferenceRatio=selected.length?matchedPreferences.length/selected.length:1;
 
-  const score=Math.round(
-    (cityOk?20:0)+
-    (roomsOk?20:0)+
-    (financeOk?30:0)+
-    (deliveryOk?10:0)+
-    20*preferenceRatio
-  );
+  const possible=Object.values(weights).reduce((sum,value)=>sum+value,0);
+  const score=possible>0?Math.round(100*(
+    (cityOk?weights.city:0)+(roomsOk?weights.rooms:0)+(financeOk?weights.budget:0)+
+    (deliveryOk?weights.delivery:0)+weights.preferences*preferenceRatio
+  )/possible):0;
 
   const reasons:string[]=[];
   if(cityOk&&criteria.city!=='Все'&&criteria.city!=='Не важно')reasons.push(criteria.city);

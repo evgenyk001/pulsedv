@@ -25,7 +25,7 @@ export function ContentPage(){
           <div className="formGrid">
             <label className="controlField wide"><span>Заголовок</span><input value={banner.title} onChange={e=>patchBanner(banner.id,{title:e.target.value})}/></label>
             <label className="controlField wide"><span>Текст</span><input value={banner.body} onChange={e=>patchBanner(banner.id,{body:e.target.value})}/></label>
-            <label className="controlField"><span>CTA</span><input value={banner.ctaLabel||""} onChange={e=>patchBanner(banner.id,{ctaLabel:e.target.value})}/></label>
+            <label className="controlField"><span>Текст кнопки</span><input value={banner.ctaLabel||""} onChange={e=>patchBanner(banner.id,{ctaLabel:e.target.value})}/></label>
             <label className="controlField"><span>Ссылка</span><input value={banner.actionUrl||""} onChange={e=>patchBanner(banner.id,{actionUrl:e.target.value})}/></label>
             <label className="controlField wide"><span>URL изображения</span><input value={banner.imageUrl||""} onChange={e=>patchBanner(banner.id,{imageUrl:e.target.value||null})}/></label>
           </div>

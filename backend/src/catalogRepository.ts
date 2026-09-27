@@ -25,6 +25,7 @@ export type CatalogProperty=PulseProperty&{documents?:CatalogDocument[]};
 const n=(value:unknown)=>value===null||value===undefined?null:Number(value);
 const normalizeBase=(row:any):CatalogProperty=>({
   id:String(row.id),
+  revision:Number(row.revision??1),
   name:String(row.name??""),
   city:String(row.city??""),
   district:String(row.district??""),
@@ -95,22 +96,27 @@ export async function listCatalog(sql:Sql,options:CatalogListOptions={}){
     const q="%"+options.q.trim().toLowerCase()+"%";
     where.push("lower(p.name||' '||p.city||' '||p.district||' '||p.developer_name) like "+add(q));
   }
-  if(options.city&&options.city!=="Все")where.push("p.city="+add(options.city));
-  if(options.delivery&&options.delivery!=="Любой"&&options.delivery!=="Не важно")where.push("p.delivery ilike "+add("%"+options.delivery+"%"));
+  if(options.city&&options.city!=="Все"&&options.city!=="Не важно")where.push("p.city="+add(options.city));
+  if(options.delivery&&options.delivery!=="Любой"&&options.delivery!=="Не важно")where.push(options.delivery==="Сдан"?"p.delivery ~* 'сдан|готов|введ[её]н'":"p.delivery ilike "+add("%"+options.delivery+"%"));
   if(options.ids?.length)where.push("p.id=any("+add(options.ids)+"::text[])");
-  if(options.sea)where.push("(p.tags::text ilike '%море%' or exists(select 1 from catalog_property_features f where f.property_id=p.id and f.label ilike '%море%'))");
+  if(options.sea)where.push("(p.city='Владивосток' and (concat_ws(' ',p.name,p.city,p.district,p.description,p.tags::text) ~* 'мор[еяю]|морской' or exists(select 1 from catalog_property_features f where f.property_id=p.id and f.label ~* 'мор[еяю]|морской')))" );
 
-  const minM=options.min&&options.min>1000?options.min/1_000_000:options.min;
-  const maxM=options.max&&options.max>1000?options.max/1_000_000:options.max;
-  if(options.rooms&&options.rooms!=="Все"){
-    const room=add(options.rooms);
-    const planConditions=["fp.property_id=p.id","fp.room_label="+room];
-    if(minM!==undefined)planConditions.push("fp.price_from>="+add(minM));
-    if(maxM!==undefined)planConditions.push("fp.price_from<="+add(maxM));
-    where.push("exists(select 1 from catalog_property_floorplans fp where "+planConditions.join(" and ")+")");
-  }else{
-    if(minM!==undefined)where.push("p.price_from>="+add(minM));
-    if(maxM!==undefined)where.push("p.price_from<="+add(maxM));
+  // API prices are always rubles; stored catalog prices are millions.
+  const minM=options.min===undefined?undefined:options.min/1_000_000;
+  const maxM=options.max===undefined?undefined:options.max/1_000_000;
+  const rooms=options.rooms;
+  const specific=!!rooms&&rooms!=="Все"&&rooms!=="Не важно";
+  if(specific||minM!==undefined||maxM!==undefined){
+    const planConditions=["fp.property_id=p.id","fp.price_from is not null"];
+    if(specific){
+      if(rooms==="Студия")planConditions.push("fp.room_label ilike '%студ%'");
+      else planConditions.push("coalesce(substring(fp.room_label from '[0-9]+')::int,0)"+(rooms==="3+"?">=3":"="+add(Number(rooms)||-1)));
+    }
+    const baseConditions=["not exists(select 1 from catalog_property_floorplans fp0 where fp0.property_id=p.id)"];
+    if(minM!==undefined){const v=add(minM);planConditions.push("fp.price_from>="+v);baseConditions.push("p.price_from>="+v);}
+    if(maxM!==undefined){const v=add(maxM);planConditions.push("fp.price_from<="+v);baseConditions.push("p.price_from<="+v);}
+    const plans="exists(select 1 from catalog_property_floorplans fp where "+planConditions.join(" and ")+")";
+    where.push(specific?plans:"("+plans+" or ("+baseConditions.join(" and ")+"))");
   }
 
   const clause=where.length?" where "+where.join(" and "):"";
@@ -122,7 +128,7 @@ export async function listCatalog(sql:Sql,options:CatalogListOptions={}){
   const total=Number(totalResult.rows[0]?.total??0);
   const listValues=[...values,limit,(page-1)*limit];
   const view=options.view??"card";
-  const columns=view==="full"?"p.*":`p.id,p.name,p.city,p.district,p.address,p.latitude,p.longitude,p.price_from,p.delivery,p.class_name,p.status,''::text as description,p.developer_name,p.tags,p.cover_image_url,p.sort_order`;
+  const columns=view==="full"?"p.*":`p.id,p.revision,p.name,p.city,p.district,p.address,p.latitude,p.longitude,p.price_from,p.delivery,p.class_name,p.status,p.description,p.developer_name,p.tags,p.cover_image_url,p.sort_order`;
   const rows=(await sql.query(
     "select "+columns+" from catalog_properties p"+clause+" order by "+order+" limit $"+(values.length+1)+" offset $"+(values.length+2),
     listValues

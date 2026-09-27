@@ -42,7 +42,7 @@ export const leadSchema=z.object({idempotencyKey:z.uuid(),source:text(100).min(1
 const eventTypes=['page_view','onboarding_complete','property_view','favorite_add','favorite_remove','compare_add','compare_remove','catalog_filter','mortgage_program','mortgage_calculated','select_submit','property_share','lead_form_open','contact_click','return_visit'] as const;
 export const eventsSchema=z.object({events:z.array(z.object({idempotencyKey:z.uuid(),eventType:z.enum(eventTypes),entityType:nullableText(80).optional(),entityId:nullableText(200).optional(),metadata:z.record(z.string(),z.unknown()).default({}),occurredAt:z.iso.datetime()})).min(1).max(100)});
 export function safeMetadata(input:Record<string,unknown>){
- const allowed=['city','district','priceFrom','min','max','rooms','delivery','sea','mortgage','topScore','strongCount','program','price','down','years','rate','payment','results','source','purchaseMode','preferences'];
+ const allowed=['city','district','priceFrom','min','max','rooms','delivery','sea','mortgage','topScore','strongCount','program','price','down','years','rate','payment','results','source','purchaseMode','preferences','method','outcome'];
  return Object.fromEntries(Object.entries(input).filter(([key,value])=>allowed.includes(key)&&(typeof value==='boolean'||typeof value==='number'&&Number.isFinite(value)||typeof value==='string'&&value.length<=150)));
 }
 
@@ -52,7 +52,7 @@ const mediaUrl=z.string().max(2048).refine(value=>{
 },'Нужна HTTPS-ссылка или внутренний /media/ путь');
 
 export const catalogPropertySchema=z.object({
- id,
+ id,revision:z.number().int().positive().optional(),
  name:text().min(1),
  city:text(100).min(1),
  district:text(100),

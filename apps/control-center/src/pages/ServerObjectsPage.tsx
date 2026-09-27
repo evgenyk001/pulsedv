@@ -1,3 +1,4 @@
+import { useDialog } from "../components/useDialog";
 import React from "react";
 import {
   Archive,Building2,CheckCircle2,ChevronLeft,ChevronRight,Clock3,Download,FileSpreadsheet,
@@ -112,6 +113,8 @@ export function ServerObjectsPage(){
   const [error,setError]=React.useState("");
   const [notice,setNotice]=React.useState("");
 
+  useDialog(!!selected,()=>{if(!busy&&(!dirty||window.confirm("Закрыть карточку без сохранения правок?")))setSelected(null)});
+  React.useEffect(()=>{if(!dirty)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn)},[dirty]);
   const loadCounts=React.useCallback(async()=>{
     const [all,published,draft,archived]=await Promise.all([
       listAdminCatalog({page:1,limit:1,status:"all"}),
@@ -122,13 +125,15 @@ export function ServerObjectsPage(){
     setCounts({all:all.total,published:published.total,draft:draft.total,archived:archived.total});
   },[]);
 
+  const loadSequence=React.useRef(0);
   const load=React.useCallback(async()=>{
+    const sequence=++loadSequence.current;
     setLoading(true);setError("");
     try{
       const result=await listAdminCatalog({page,limit:24,q:deferredQuery||undefined,status});
-      setData({items:result.items,total:result.total,hasMore:result.hasMore});
+      if(sequence===loadSequence.current)setData({items:result.items,total:result.total,hasMore:result.hasMore});
     }catch(e){setError(e instanceof Error?e.message:"Не удалось загрузить каталог")}
-    finally{setLoading(false)}
+    finally{if(sequence===loadSequence.current)setLoading(false)}
   },[page,status,deferredQuery]);
 
   React.useEffect(()=>{void load()},[load]);
@@ -145,6 +150,7 @@ export function ServerObjectsPage(){
   };
 
   const patch=(change:Partial<PulseProperty>)=>{
+    if(busy)return;
     setSelected(current=>current?{...current,...change}:current);
     setDirty(true);
   };
@@ -177,7 +183,7 @@ export function ServerObjectsPage(){
     setBusy(true);setError("");
     try{
       let current=base;
-      for(const file of Array.from(files))current=await uploadAdminMedia(current.id,file,kind,floorplanId);
+      for(const file of Array.from(files)){current=await uploadAdminMedia(current.id,file,kind,floorplanId);setSelected(current);setDirty(false);}
       setSelected(current);setDirty(false);await reload();setNotice("Файлы загружены");
     }catch(e){setError(e instanceof Error?e.message:"Не удалось загрузить файл")}
     finally{setBusy(false)}
@@ -370,9 +376,11 @@ export function ServerObjectsPage(){
     {p&&<div className="drawerBackdrop"><section className="detailDrawer wideDrawer catalogEditor" role="dialog" aria-modal="true" aria-label="Редактор объекта" onClick={e=>e.stopPropagation()}>
       <div className="drawerHeader catalogDrawerHeader">
         <div><div className="catalogDrawerEyebrow"><span className={"statusChip "+p.status}>{p.status==="published"?"Опубликован":p.status==="draft"?"Черновик":"Архив"}</span><small>{p.id}</small></div><h2>{p.name}</h2></div>
-        <button aria-label="Закрыть редактор" onClick={()=>setSelected(null)}><X/></button>
+        <button aria-label="Закрыть редактор" disabled={busy} onClick={()=>{if(!dirty||window.confirm("Закрыть карточку и отменить несохранённые правки?"))setSelected(null)}}><X/></button>
       </div>
 
+      {error&&<div className="errorNotice" role="alert">{error}<button className="secondaryAction" disabled={busy} onClick={()=>{if(window.confirm("Загрузить актуальную карточку? Несохранённые правки в форме будут отменены."))void open(p.id)}}>Загрузить актуальную версию</button></div>}
+      <fieldset className="editorFieldset" disabled={busy}>
       <div className="catalogReadiness">
         <div><span>Готовность карточки</span><b>{ready}%</b></div>
         <div><i style={{width:ready+"%"}}/></div>
@@ -443,7 +451,7 @@ export function ServerObjectsPage(){
         {!p.documents?.length&&<div className="catalogEditorEmpty">Презентаций пока нет.</div>}
       </section>
 
-      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>PostgreSQL + media volume</span></div><button className="primaryAction" disabled={!dirty||busy} onClick={()=>void save()}><Save size={16}/>Сохранить объект</button></div>
-    </section></div>}
+      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Данные и файлы сохранены на сервере</span></div><button className="primaryAction" disabled={!dirty||busy} onClick={()=>void save()}><Save size={16}/>Сохранить объект</button></div>
+    </fieldset></section></div>}
   </PageFrame>;
 }

@@ -9,7 +9,7 @@ const routeNames:Record<string,string>={
   "/profile":"Профиль",
 };
 
-const mortgageNames:Record<string,string>={
+export const mortgageNames:Record<string,string>={
   family:"Семейная ипотека",
   farEast:"Дальневосточная ипотека",
   it:"IT-ипотека",
@@ -17,6 +17,8 @@ const mortgageNames:Record<string,string>={
 };
 
 const sourceNames:Record<string,string>={
+  presentation:"Презентация ЖК",
+  app:"Мини-приложение",
   property:"Карточка ЖК",
   mortgage:"Ипотека",
   selection:"Подбор",
@@ -81,7 +83,7 @@ export function describeEvent(event:PulseEvent,state:PulseState){
   const min=number(meta.min);
   const max=number(meta.max);
   const program=text(meta.program)||event.entityId;
-  const route=event.entityId||"";
+  const route=(event.entityId||"").split("?")[0].replace(/\/$/,"")||"/";
 
   switch(event.eventType){
     case "page_view":{
@@ -102,7 +104,8 @@ export function describeEvent(event:PulseEvent,state:PulseState){
     case "catalog_filter":{
       const parts=[
         city,
-        rooms&&rooms!=="Все"?`${rooms} комн.`:null,
+        min!=null&&max!=null?`Бюджет ${min.toLocaleString("ru-RU")}–${max.toLocaleString("ru-RU")} ₽`:null,
+        rooms&&rooms!=="Все"?(rooms==="Студия"?rooms:`${rooms} комн.`):null,
         delivery&&delivery!=="Любой"?`сдача ${delivery}`:null,
         yesNo(meta.sea)==="да"?"вид на море":null,
         results!=null?`${results} вариантов`:null,
@@ -114,7 +117,8 @@ export function describeEvent(event:PulseEvent,state:PulseState){
     case "mortgage_calculated":{
       const rate=number(meta.rate);
       const years=number(meta.years);
-      const parts=[rate!=null?`ставка ${rate}%`:null,years!=null?`${years} лет`:null].filter(Boolean);
+      const rub=(v:unknown)=>typeof v==='number'?Math.round(v).toLocaleString('ru-RU')+' ₽':null;
+      const parts=[mortgageNames[program||''],rub(meta.price)?`Стоимость ${rub(meta.price)}`:null,rub(meta.down)?`взнос ${rub(meta.down)}`:null,rub(meta.payment)?`платёж ${rub(meta.payment)}/мес`:null,rate!=null?`ставка ${rate}%`:null,years!=null?`${years} лет`:null].filter(Boolean);
       return {title:"Рассчитал ипотеку",detail:parts.join(" · ")||"Оценил ежемесячный платёж"};
     }
     case "select_submit":{
@@ -123,7 +127,8 @@ export function describeEvent(event:PulseEvent,state:PulseState){
       const down=number(meta.down);
       const purchaseMode=text(meta.purchaseMode);
       const match=number(meta.topScore);
-      const preferences=text(meta.preferences);
+      const preferenceNames:Record<string,string>={sea:'вид на море',family:'для семьи',parking:'парковка',center:'ближе к центру',courtyard:'благоустроенный двор',finish:'с отделкой'};
+      const preferences=text(meta.preferences)?.split(',').map(x=>preferenceNames[x.trim()]||x.trim()).join(', ');
       const finance=purchaseMode==="mortgage"&&payment!=null
         ?`до ${payment.toLocaleString("ru-RU")} ₽/мес${down!=null?` · взнос ${down.toLocaleString("ru-RU")} ₽`:""}`
         :budget;
@@ -133,13 +138,15 @@ export function describeEvent(event:PulseEvent,state:PulseState){
         finance,
         delivery&&delivery!=="Не важно"?`срок ${delivery}`:null,
         preferences?`приоритеты: ${preferences}`:null,
-        match!=null?`Match ${match}%`:null,
+        match!=null?`Совпадение ${match}%`:null,
         results!=null?`${results} вариантов`:null,
       ].filter(Boolean);
       return {title:"Завершил PULSE Select",detail:parts.join(" · ")||"Получил персональную подборку"};
     }
     case "property_share":
-      return {title:`Поделился ${propertyName||"объектом"}`,detail:"Отправил ссылку на ЖК"};
+      return meta.outcome==='completed'
+        ?{title:meta.method==='clipboard'?`Скопировал ссылку на ${propertyName||"ЖК"}`:`Поделился ${propertyName||"объектом"}`,detail:meta.method==='clipboard'?"Ссылка сохранена в буфер обмена":"Завершил действие в меню отправки"}
+        :{title:`Нажал «Поделиться»${propertyName?' · '+propertyName:''}`,detail:"Для старой записи результат отправки неизвестен"};
     case "lead_form_open":
       return {title:`Открыл форму консультации${propertyName?` по ${propertyName}`:""}`,detail:"Высокий интерес к контакту с менеджером"};
     case "contact_click":

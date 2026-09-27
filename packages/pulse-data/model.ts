@@ -3,6 +3,7 @@ import { DEFAULT_LEAD_ENGINE_CONFIG, scoreLeadEvents, type LeadEngineConfig, typ
 export type PropertyStatus="draft"|"published"|"archived";
 
 export type PulseProperty={
+  revision?:number;
   id:string; name:string; city:string; district:string; address:string|null;
   latitude:number|null; longitude:number|null; priceFrom:number; delivery:string;
   className:string; status:PropertyStatus; description:string; developerName:string;

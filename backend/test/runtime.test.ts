@@ -1,3 +1,5 @@
+import { upsertCatalogProperty,listCatalog } from '../src/catalogRepository';
+import { matchesBudgetAndRooms,hasSea,deliveryMatches } from '../../packages/domain/propertyMatch';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID, createHmac } from 'node:crypto';
@@ -48,6 +50,16 @@ test('SQL/API: заявки между устройствами, дедупли�
   assert.equal((await app.inject({url:'/api/v1/control/catalog',cookies:managerCookie})).statusCode,403);
  });
 
+ await t.test('единые фильтры каталога: планы, студии, 3+, море и сдача',async()=>{
+ const fixtures=[{...DEFAULT_STATE.properties[0],id:'test-filter-a',city:'Владивосток',description:'Морской воздух',tags:[],features:[],delivery:'Дом введён',priceFrom:5,floorplans:[{roomLabel:'3-комнатная',priceFrom:9,areaFrom:70,areaTo:80,imageUrl:null,sortOrder:0}]},{...DEFAULT_STATE.properties[0],id:'test-filter-b',city:'Артём',description:'У моря',tags:[],features:[],delivery:'2028',priceFrom:4,floorplans:[{roomLabel:'Студия',priceFrom:4,areaFrom:20,areaTo:30,imageUrl:null,sortOrder:0}]},{...DEFAULT_STATE.properties[0],id:'test-filter-c',priceFrom:8,delivery:'Сдан',floorplans:[]}];
+ for(const p of fixtures)await db.transaction(sql=>upsertCatalogProperty(sql,{...p,images:[]}));
+ for(const filters of [{rooms:'Все',min:8_000_000,max:10_000_000},{rooms:'3+',min:0,max:10_000_000},{rooms:'Студия',min:0,max:10_000_000},{rooms:'Не важно',min:0,max:10_000_000},{rooms:'Все',min:0,max:100_000_000,sea:true},{rooms:'Все',min:0,max:100_000_000,delivery:'Сдан'}]){
+  const expected=fixtures.filter(p=>matchesBudgetAndRooms(p,filters)&&(!filters.sea||hasSea(p))&&(!filters.delivery||deliveryMatches(p,filters.delivery))).map(p=>p.id).sort();
+  const result=await listCatalog(db,{...filters,ids:fixtures.map(p=>p.id),view:'match'});
+  assert.deepEqual(result.items.map(p=>p.id).sort(),expected,JSON.stringify(filters));
+ }
+ await db.query("delete from catalog_properties where id=any($1::text[])",[fixtures.map(p=>p.id)]);
+ });
  await t.test('фото каталога загружается в persistent media storage',async()=>{
   const uploaded=await app.inject({
    method:'POST',url:'/api/v1/control/catalog/solnechniy/media?kind=gallery&filename=test.png',
@@ -56,6 +68,22 @@ test('SQL/API: заявки между устройствами, дедупли�
   assert.equal(uploaded.statusCode,200,uploaded.body);
   const image=uploaded.json().property.images.find((item:any)=>String(item.url).startsWith('/media/images/'));
   assert.ok(image?.url);
+ });
+ await t.test('каталог: устаревшая версия не затирает правки и загруженное медиа',async()=>{
+  const url='/api/v1/control/catalog/solnechniy';
+  const read=async()=>(await app.inject({url,cookies:ownerCookie})).json().property;
+  const original=await read();
+  const saved=await app.inject({method:'PUT',url,headers,cookies:ownerCookie,payload:{...original,name:'Новое название ЖК'}});
+  assert.equal(saved.statusCode,200,saved.body);assert.ok(saved.json().property.revision>original.revision);
+  const stale=await app.inject({method:'PUT',url,headers,cookies:ownerCookie,payload:{...original,description:'Устаревшая правка'}});
+  assert.equal(stale.statusCode,409,stale.body);assert.equal((await read()).name,'Новое название ЖК');
+  const current=await read();
+  const uploaded=await app.inject({method:'POST',url:url+'/media?kind=gallery',headers:{origin:config.PUBLIC_ORIGIN,'content-type':'image/png'},cookies:ownerCookie,payload:Buffer.from([137,80,78,71,13,10,26,10])});
+  assert.equal(uploaded.statusCode,200,uploaded.body);
+  assert.equal((await app.inject({method:'PUT',url,headers,cookies:ownerCookie,payload:current})).statusCode,409);
+  assert.equal((await read()).images.length,current.images.length+1);
+  const {revision,...withoutVersion}=await read();
+  assert.equal((await app.inject({method:'PUT',url,headers,cookies:ownerCookie,payload:withoutVersion})).statusCode,409);
  });
  await t.test('сессия выдана сервером; подмена пользователя/события отклоняется',async()=>{
   identity=(await app.inject({method:'POST',url:'/api/v1/auth/session',headers,payload:{source:'test'}})).json();other=(await app.inject({method:'POST',url:'/api/v1/auth/session',headers,payload:{source:'other-device'}})).json();assert.ok(identity.accessToken);assert.notEqual(identity.sessionId,other.sessionId);

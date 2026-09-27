@@ -1,6 +1,6 @@
 import { getPulseState } from "../../../../packages/pulse-data";
 import { api, runtime } from "../../../../packages/pulse-data/runtime";
-import { hasSea, matchesBudgetAndRooms } from "../../../../packages/domain/propertyMatch";
+import { hasSea, matchesBudgetAndRooms, deliveryMatches } from "../../../../packages/domain/propertyMatch";
 import type { PropertyRecord } from "./propertyTypes";
 
 export type CatalogSort="popular"|"priceAsc"|"priceDesc";
@@ -37,8 +37,8 @@ function localPage(filters:CatalogFilters):CatalogPageResult{
   let items=all.filter(property=>{
     if(ids&&!ids.has(property.id))return false;
     if(q&&!(property.name+" "+property.city+" "+property.district+" "+property.developerName).toLowerCase().includes(q))return false;
-    if(filters.city&&filters.city!=="Все"&&property.city!==filters.city)return false;
-    if(filters.delivery&&filters.delivery!=="Любой"&&filters.delivery!=="Не важно"&&!property.delivery.includes(filters.delivery))return false;
+    if(filters.city&&filters.city!=="Все"&&filters.city!=="Не важно"&&property.city!==filters.city)return false;
+    if(filters.delivery&&filters.delivery!=="Любой"&&filters.delivery!=="Не важно"&&!deliveryMatches(property,filters.delivery))return false;
     if(filters.sea&&!hasSea(property))return false;
     if((filters.rooms&&filters.rooms!=="Все")||filters.min!==undefined||filters.max!==undefined){
       if(!matchesBudgetAndRooms(property,{rooms:filters.rooms||"Все",min:filters.min??0,max:filters.max??Number.MAX_SAFE_INTEGER}))return false;
@@ -62,7 +62,7 @@ export async function getCatalogPage(filters:CatalogFilters={}):Promise<CatalogP
 export async function getCatalogMeta():Promise<CatalogMeta>{
   if(!runtime.enabled){
     const items=getPulseState().properties.filter(property=>property.status==="published");
-    const prices=items.map(property=>property.priceFrom*1_000_000).filter(Number.isFinite);
+    const prices=items.flatMap(property=>[property.priceFrom,...property.floorplans.map(plan=>plan.priceFrom).filter((price):price is number=>price!==null)]).map(price=>price*1_000_000).filter(Number.isFinite);
     const counts=new Map<string,number>();
     for(const property of items)counts.set(property.city,(counts.get(property.city)||0)+1);
     return{

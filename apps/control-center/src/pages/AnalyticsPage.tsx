@@ -1,6 +1,6 @@
 import { PageFrame } from "../components/PageFrame";
 import { usePulseEvents, usePulseLeads, usePulseProfiles, usePulseState } from "../data";
-import { describeEvent } from "../activityCopy";
+import { ActivityFeed } from "../components/ActivityFeed";
 
 export function AnalyticsPage(){
   const events=usePulseEvents();
@@ -60,12 +60,6 @@ export function AnalyticsPage(){
       </article>
     </section>
 
-    <section className="tableCard liveTable">
-      <div className="tableHead eventGrid"><span>Действие клиента</span><span>Контекст</span><span>Пользователь</span><span>Время</span></div>
-      {events.slice(0,80).map(event=>{
-        const copy=describeEvent(event,state);
-        return <div className="tableRow eventGrid" key={event.id}><b>{copy.title}</b><span>{copy.detail}</span><span>Посетитель {event.sessionId.slice(0,8)}…</span><span>{new Date(event.createdAt).toLocaleString("ru-RU")}</span></div>
-      })}
-    </section>
+    <section className="panel"><div className="sectionHeading"><div><span className="kicker">ДЕЙСТВИЯ И КОНТЕКСТ</span><h2>Журнал активности</h2></div><span className="countBadge">{events.length}</span></div><ActivityFeed events={events} state={state}/></section>
   </PageFrame>;
 }

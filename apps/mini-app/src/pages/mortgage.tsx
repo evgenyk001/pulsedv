@@ -44,6 +44,8 @@ export default function MortgagePage(){
   const [downDraft,setDownDraft]=React.useState(formatRub(2_000_000));
   const [rateDraft,setRateDraft]=React.useState(String(rule?.rate??6).replace(".",","));
 
+  const [interacted,setInteracted]=React.useState(false);
+  const lastCalculation=React.useRef("");
   if(!rule)return null;
 
   const minDown=ceilStep(price*rule.minDownPct/100,MONEY_STEP);
@@ -68,6 +70,15 @@ export default function MortgagePage(){
     setRate(rule.rate);
     setRateDraft(String(rule.rate).replace(".",","));
   },[rule.rate,rule.id]);
+
+  React.useEffect(()=>{
+    if(!interacted||overProgramLimit||down<minDown||years>rule.maxYears)return;
+    const metadata={program:rule.id,price,down,years,rate,payment:Math.round(payment)};
+    const key=JSON.stringify(metadata);
+    if(lastCalculation.current===key)return;
+    const timer=setTimeout(()=>{lastCalculation.current=key;recordPulseEvent({eventType:"mortgage_calculated",entityType:"mortgage",entityId:rule.id,metadata});},800);
+    return()=>clearTimeout(timer);
+  },[interacted,overProgramLimit,down,minDown,years,rule.maxYears,rule.id,price,rate,payment]);
 
   const chooseProgram=(id:ProgramId)=>{
     const next=programs.find(item=>item.id===id);
@@ -102,7 +113,7 @@ export default function MortgagePage(){
     setRate(next);setRateDraft(String(next).replace(".",","));
   };
 
-  return <div className={styles.page}>
+  return <div className={styles.page} onChangeCapture={()=>setInteracted(true)} onPointerDownCapture={()=>setInteracted(true)} onKeyDownCapture={()=>setInteracted(true)}>
     <PageHeader eyebrow="Финансовый сценарий" title="Ипотека" subtitle="Предварительный расчёт по правилам, которыми управляет PULSE Control." action={<div className={styles.headerIcon}><Calculator size={20}/></div>}/>
 
     <section className={styles.programSection}>

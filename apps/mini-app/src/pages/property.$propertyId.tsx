@@ -54,12 +54,15 @@ export default function PropertyPage(){
     .sort((a,b)=>(a.priceFrom??Infinity)-(b.priceFrom??Infinity)||a.sortOrder-b.sortOrder);
 
   const share=async()=>{
-    recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city}});
-    if(navigator.share){
-      await navigator.share({title:p.name,text:p.name+" — "+p.city+", "+p.district,url:window.location.href}).catch(()=>{});
-    }else{
-      await navigator.clipboard?.writeText(window.location.href);
-    }
+    try{
+      if(navigator.share){
+        await navigator.share({title:p.name,text:p.name+" — "+p.city+", "+p.district,url:window.location.href});
+        recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city,method:"share",outcome:"completed"}});
+      }else if(navigator.clipboard){
+        await navigator.clipboard.writeText(window.location.href);
+        recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city,method:"clipboard",outcome:"completed"}});
+      }
+    }catch{/* Cancellation or denied clipboard access is not a completed action. */}
   };
 
   const onGalleryScroll=(event:React.UIEvent<HTMLDivElement>)=>{
