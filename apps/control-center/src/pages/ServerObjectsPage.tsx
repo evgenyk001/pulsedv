@@ -132,7 +132,7 @@ export function ServerObjectsPage(){
     try{
       const result=await listAdminCatalog({page,limit:24,q:deferredQuery||undefined,status});
       if(sequence===loadSequence.current)setData({items:result.items,total:result.total,hasMore:result.hasMore});
-    }catch(e){setError(e instanceof Error?e.message:"Не удалось загрузить каталог")}
+    }catch(e){if(sequence===loadSequence.current)setError(e instanceof Error?e.message:"Не удалось загрузить каталог")}
     finally{if(sequence===loadSequence.current)setLoading(false)}
   },[page,status,deferredQuery]);
 

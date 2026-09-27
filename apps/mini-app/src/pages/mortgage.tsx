@@ -81,6 +81,7 @@ export default function MortgagePage(){
   },[interacted,overProgramLimit,down,minDown,years,rule.maxYears,rule.id,price,rate,payment]);
 
   const chooseProgram=(id:ProgramId)=>{
+    setInteracted(true);
     const next=programs.find(item=>item.id===id);
     if(!next)return;
     setProgram(id);
@@ -92,12 +93,14 @@ export default function MortgagePage(){
   };
 
   const updatePrice=(value:number)=>{
+    setInteracted(true);
     const next=clamp(snap(value,MONEY_STEP),PRICE_MIN,PRICE_MAX);
     const nextMin=ceilStep(next*rule.minDownPct/100,MONEY_STEP);
     const nextDown=clamp(down,nextMin,next-MONEY_STEP);setDown(nextDown);setDownDraft(formatRub(nextDown));
     setPrice(next);setPriceDraft(formatRub(next));
   };
   const updateDown=(value:number)=>{
+    setInteracted(true);
     const next=clamp(snap(value,MONEY_STEP),minDown,maxDown);
     setDown(next);setDownDraft(formatRub(next));
   };
@@ -108,12 +111,13 @@ export default function MortgagePage(){
     kind==="price"?updatePrice(raw):updateDown(raw);
   };
   const commitRate=()=>{
+    setInteracted(true);
     const raw=parseNumber(rateDraft);
     const next=Number.isFinite(raw)?clamp(Math.round(raw*10)/10,.1,40):rate;
     setRate(next);setRateDraft(String(next).replace(".",","));
   };
 
-  return <div className={styles.page} onChangeCapture={()=>setInteracted(true)} onPointerDownCapture={()=>setInteracted(true)} onKeyDownCapture={()=>setInteracted(true)}>
+  return <div className={styles.page}>
     <PageHeader eyebrow="Финансовый сценарий" title="Ипотека" subtitle="Предварительный расчёт по правилам, которыми управляет PULSE Control." action={<div className={styles.headerIcon}><Calculator size={20}/></div>}/>
 
     <section className={styles.programSection}>
@@ -131,7 +135,7 @@ export default function MortgagePage(){
       <div className={styles.ruleHint}><Info size={14}/><span>{rule.hint}</span></div>
       {program==="farEast"&&<div className={styles.optionRow}>
         <div><strong>Площадь новостройки свыше 64 м²</strong><span>Использовать повышенный лимит до 9 млн ₽</span></div>
-        <Switch checked={largeArea} onCheckedChange={setLargeArea}/>
+        <Switch checked={largeArea} onCheckedChange={value=>{setInteracted(true);setLargeArea(value)}}/>
       </div>}
     </section>
 
@@ -152,7 +156,7 @@ export default function MortgagePage(){
       <div className={styles.twoFields}>
         <div className={styles.field}>
           <div className={styles.label}><span>Срок</span><b>{years} лет</b></div>
-          <Slider min={5} max={rule.maxYears} step={1} value={[years]} onValueChange={values=>setYears(Math.min(values[0]??years,rule.maxYears))}/>
+          <Slider min={5} max={rule.maxYears} step={1} value={[years]} onValueChange={values=>{setInteracted(true);setYears(Math.min(values[0]??years,rule.maxYears))}}/>
         </div>
         <div className={styles.rateField}>
           <label>Ставка программы</label>
