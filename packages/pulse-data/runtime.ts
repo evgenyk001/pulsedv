@@ -1,3 +1,4 @@
+import { attribution } from '../journey/attribution';
 import { DEFAULT_STATE, type PulseState, type PulseLead, type PulseTask, type PulseEvent, type PulseVisitorProfile } from './model';
 export type TeamMember={id:string;name:string;email:string;role:'owner'|'admin'|'manager';active:boolean;cities:string[];telegramUserId:string|null};
 export type Delivery={id:string;topic:string;attempts:number;lastError:string|null;processedAt:string|null;deadAt:string|null;createdAt:string};
@@ -28,7 +29,7 @@ async function session():Promise<Session>{
  sessionPromise=(async()=>{
   let stored:Session|null=null;try{stored=JSON.parse(localStorage.getItem(SESSION)||'null');}catch{}
   if(stored&&Date.parse(stored.expiresAt)>Date.now()+60_000)return stored;
-  const value=await api<Session>('/auth/session',{method:'POST',body:JSON.stringify({source:'mini-app'})});
+  const value=await api<Session>('/auth/session',{method:'POST',body:JSON.stringify(attribution(window.location.search||window.location.hash.split('?')[1]||''))});
   try{localStorage.setItem(SESSION,JSON.stringify(value));}catch{}
   return value;
  })();try{return await sessionPromise;}catch(error){sessionPromise=null;throw error;}

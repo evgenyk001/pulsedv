@@ -12,6 +12,7 @@ import { stateSchema, leadSchema, eventsSchema, safeMetadata } from './validatio
 import { audit, leadRepository, readState } from './repository';
 import { ingestEventBatch, processSessionIntent } from './leadEngineService';
 import { enqueueInterestChange } from './interestNotifications';
+import { registerJourneyRoutes } from './journeyRoutes';
 import { registerInterestRoutes } from './interestRoutes';
 import { registerCatalogRoutes } from './catalogRoutes';
 import { getCatalogProperty, listCatalog } from './catalogRepository';
@@ -62,8 +63,8 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);return {version,consentVersion:config.CONSENT_VERSION,state:{...state,properties:[],banners:state.banners.filter(b=>b.enabled)}};});
  app.get('/api/v1/public/map',async()=>{if(!config.MAP_2GIS_KEY)throw new HttpError(503,'Карта временно недоступна');return {provider:'2gis',key:config.MAP_2GIS_KEY};});
  app.post('/api/v1/auth/session',{config:{rateLimit:{max:20,timeWindow:'1 minute'}}},async request=>{
-  const input=z.object({source:z.string().max(100).optional()}).parse(request.body);
-  return db.transaction(async sql=>{const id=randomUUID();await sql.query('insert into sessions(id,source) values($1,$2)',[id,input.source||'web']);const auth=await issueToken(sql,'visitor',id);return {sessionId:id,accessToken:auth.token,expiresAt:auth.expiresAt};});
+  const input=z.object({source:z.string().max(100).optional(),medium:z.string().max(100).optional(),campaign:z.string().max(100).optional()}).parse(request.body);
+  return db.transaction(async sql=>{const id=randomUUID();await sql.query('insert into sessions(id,source,medium,campaign) values($1,$2,$3,$4)',[id,input.source||'direct',input.medium||null,input.campaign||null]);const auth=await issueToken(sql,'visitor',id);return {sessionId:id,accessToken:auth.token,expiresAt:auth.expiresAt};});
  });
  app.post('/api/v1/auth/telegram',{preHandler:visitor,config:{rateLimit:{max:20,timeWindow:'1 minute'}}},async request=>{
   const input=z.object({initData:z.string().min(1).max(15000)}).strict().parse(request.body);
@@ -125,6 +126,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.get('/api/v1/control/me',{preHandler:control},async request=>({member:request.member}));
  app.post('/api/v1/control/logout',{preHandler:control},async(request,reply)=>{await db.query('delete from auth_tokens where token_hash=$1',[tokenHash(request.cookies.pulse_control!)]);reply.clearCookie('pulse_control',cookieOptions);return {ok:true};});
  await registerInterestRoutes(app,db,control);
+ await registerJourneyRoutes(app,db,control,visitor,editor,config.PUBLIC_ORIGIN);
  app.get('/api/v1/control/snapshot',{preHandler:control},async request=>{
   const m=request.member!;const scoped=m.role==='manager';const {state:storedState,version}=await readState(db);
   const catalog=(await listCatalog(db,{status:'all',page:1,limit:2000,view:'match'})).items;
@@ -154,6 +156,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    if(new Date(current.updated_at).getTime()!==Date.parse(patch.expectedUpdatedAt))throw new HttpError(409,'Заявка изменена другим сотрудником. Обновите данные');
    if(patch.manager&&!(await sql.query('select id from team_members where id=$1 and active=true',[patch.manager])).rows.length)throw new HttpError(400,'Менеджер недоступен');
    for(const [key,value] of Object.entries(patch)){if(key==='expectedUpdatedAt')continue;const column={status:'status',manager:'manager_id',comment:'comment',nextAction:'next_action'}[key]!;await sql.query(`update leads set ${column}=$2 where id=$1`,[id,value]);}
+   if(patch.status&&patch.status!==current.status)await sql.query('insert into lead_stage_events(lead_id,status) values($1,$2)',[id,patch.status]);
    if(patch.manager!==undefined)await sql.query("update crm_tasks set assigned_to=$2 where lead_id=$1 and status<>'done'",[id,patch.manager]);
    if(patch.status&&['deal','closed','lost'].includes(patch.status))await sql.query("update crm_tasks set status='done' where lead_id=$1 and status<>'done'",[id]);
    await audit(sql,member.id,'lead.update',id,{fields:Object.keys(patch).filter(k=>k!=='expectedUpdatedAt')});return {ok:true};

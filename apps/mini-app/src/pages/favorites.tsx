@@ -1,3 +1,4 @@
+import {ComparisonTable} from '../components/ComparisonTable';
 import React from "react";
 import { Link } from "react-router-dom";
 import { Heart, ChevronRight, Sparkles, GitCompareArrows, Check } from "lucide-react";
@@ -22,12 +23,13 @@ const compareRows:CompareRow[]=[
 export default function Favorites(){
   const {ids}=useFavoriteIds();
   const {data:saved=[],isLoading}=useFavoriteProperties(ids);
-  const [compareIds,setCompareIds]=React.useState<string[]>([]);
+  const [compareIds,setCompareIds]=React.useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem("pulse.compare.v1")||"[]").filter((x:unknown)=>typeof x==="string").slice(0,3)}catch{return []}});
 
   React.useEffect(()=>{
-    setCompareIds(current=>current.filter(id=>saved.some(property=>property.id===id)));
+    setCompareIds(current=>current.filter(id=>ids.includes(id)));
   },[ids.join("|")]);
 
+  React.useEffect(()=>{localStorage.setItem("pulse.compare.v1",JSON.stringify(compareIds))},[compareIds]);
   const toggleCompare=(id:string)=>{
     const removing=compareIds.includes(id);
     if(!removing&&compareIds.length>=3)return;
@@ -37,7 +39,7 @@ export default function Favorites(){
 
   const compared=saved.filter(property=>compareIds.includes(property.id));
 
-  const compareButton=<button className={styles.compareCta} disabled={compareIds.length<2}>
+  const compareButton=<button className={styles.compareCta} disabled={compareIds.length<2} onClick={()=>recordPulseEvent({eventType:"comparison_view",metadata:{propertyIds:compareIds.join(",")}})}>
     <GitCompareArrows size={17}/>
     Сравнить {compareIds.length>0?compareIds.length:""}
   </button>;
@@ -65,9 +67,9 @@ export default function Favorites(){
       {compareIds.length>=2?<Sheet>
         <SheetTrigger asChild>{compareButton}</SheetTrigger>
         <SheetContent side="bottom" className={styles.compareSheet}>
-          <SheetHeader><SheetTitle>Сравнение проектов</SheetTitle><SheetDescription>Без таблицы и горизонтального скролла — параметры каждого ЖК видны сразу.</SheetDescription></SheetHeader>
+          <SheetHeader><SheetTitle>Сравнение проектов</SheetTitle><SheetDescription>Сравните условия по одинаковым параметрам. Можно оставить только различия.</SheetDescription></SheetHeader>
 
-          <div className={styles.compareProjects}>
+          <ComparisonTable properties={compared}/><div className={styles.compareProjects}>
             {compared.map((property,index)=><section className={styles.compareProjectCard} key={property.id}>
               <div className={styles.compareProjectHead}>
                 <div className={styles.compareNumber}>{index+1}</div>

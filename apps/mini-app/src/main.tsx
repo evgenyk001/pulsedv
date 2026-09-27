@@ -1,3 +1,4 @@
+import JourneyPage from './pages/journey';
 import { configureRuntime } from "../../../packages/pulse-data/runtime";
 import { RuntimeGate } from "./components/RuntimeGate";
 import React from "react";
@@ -31,6 +32,7 @@ function App(){
           <Route path="/mortgage" element={<MortgagePage/>}/>
           <Route path="/selection" element={<SelectionPage/>}/>
           <Route path="/favorites" element={<FavoritesPage/>}/>
+          <Route path="/journey" element={<JourneyPage/>}/>
           <Route path="/profile" element={<ProfilePage/>}/>
           <Route path="/property/:propertyId" element={<PropertyPage/>}/>
           <Route path="*" element={<HomePage/>}/>

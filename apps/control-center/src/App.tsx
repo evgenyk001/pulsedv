@@ -1,3 +1,4 @@
+import { JourneyPage } from './pages/JourneyPage';
 import { runtime } from "../../../packages/pulse-data/runtime";
 import React from "react";
 import { usePulseLeads, usePulseTasks } from "./data";
@@ -21,6 +22,7 @@ const sections=[
   {to:"/",label:"Обзор",icon:LayoutDashboard,end:true},
   {to:"/leads",label:"Лиды",icon:Handshake},
   {to:"/users",label:"Пользователи",icon:UsersRound},
+  {to:"/journey",label:"Подборки и показы",icon:Handshake},
   {to:"/tasks",label:"Задачи",icon:ListChecks},
   {to:"/objects",label:"Объекты",icon:Building2},
   {to:"/mortgage",label:"Ипотека",icon:BadgePercent},
@@ -46,7 +48,7 @@ export function App(){
       </div>
       <div className="navCaption">РАБОЧЕЕ ПРОСТРАНСТВО</div>
       <nav aria-label="Разделы CRM">
-        {sections.filter(section=>!runtime.enabled||runtime.member?.role!=="manager"||["/","/leads","/users","/tasks","/analytics"].includes(section.to)).map(({to,label,icon:Icon,end})=>
+        {sections.filter(section=>!runtime.enabled||runtime.member?.role!=="manager"||["/","/leads","/users","/tasks","/analytics","/journey"].includes(section.to)).map(({to,label,icon:Icon,end})=>
           <NavLink key={to} to={to} end={end} className={({isActive})=>isActive?"active":undefined}>
             <Icon size={18}/><span>{label}</span>{to==="/tasks"&&overdue>0&&<em>{overdue}</em>}{to==="/leads"&&leads.some(l=>l.status==="new")&&<em>{leads.filter(l=>l.status==="new").length}</em>}
           </NavLink>
@@ -64,6 +66,7 @@ export function App(){
         <Route path="/" element={<OverviewPage/>}/>
         <Route path="/leads" element={<LeadsPage/>}/>
         <Route path="/users" element={<UsersPage/>}/>
+        <Route path="/journey" element={<JourneyPage/>}/>
         <Route path="/tasks" element={<TasksPage/>}/>
         <Route path="/objects" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<ObjectsPage/>}/>
         <Route path="/mortgage" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<MortgagePage/>}/>

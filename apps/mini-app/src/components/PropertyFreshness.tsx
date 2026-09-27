@@ -1,0 +1,4 @@
+import React from 'react';
+import {loadVerifications} from '../../../../packages/journey/client';
+import {staleVerification,type Verification} from '../../../../packages/journey/model';
+export function PropertyFreshness({id}:{id:string}){const [value,setValue]=React.useState<Verification>();React.useEffect(()=>{let live=true;loadVerifications().then(rows=>{if(live)setValue(rows.find(r=>r.propertyId===id))}).catch(()=>{});return()=>{live=false}},[id]);return <p style={{fontSize:12,color:'#6b7280',lineHeight:1.5}}>{value?'Цена и наличие проверены '+new Date(value.checkedAt).toLocaleDateString('ru-RU')+'. ':'Дата проверки не указана. '}{staleVerification(value)?'Цена ориентировочная — актуальные условия уточнит менеджер.':'Наличие конкретной квартиры подтвердит менеджер.'}{value?.note&&' '+value.note}</p>}
