@@ -10,7 +10,7 @@ import {getCatalogProperty} from './catalogRepository';
 import type {RuntimeConfig} from './config';
 import {applyJourney,clientJourney,emptyJourney,type Journey} from '../../packages/journey/model';
 const short=z.string().trim().min(1).max(200),note=z.string().trim().max(2000),id=z.uuid();
-const attachmentSchema=z.object({kind:z.enum(['image','file']),name:z.string().min(1).max(180),url:z.string().min(1).max(500),mimeType:z.string().min(1).max(120),size:z.number().int().min(1).max(25*1024*1024)}).strict();
+const attachmentSchema=z.object({kind:z.enum(['image','file']),name:z.string().min(1).max(180),url:z.string().regex(/^\/media\/chat\/[A-Za-z0-9._-]+$/).max(500),mimeType:z.string().min(1).max(120),size:z.number().int().min(1).max(25*1024*1024)}).strict();
 export const journeyCommand=z.discriminatedUnion('type',[
  z.object({type:z.literal('collection'),id,title:short,items:z.array(z.object({propertyId:short,note})).min(1).max(10),published:z.boolean()}),
  z.object({type:z.literal('reaction'),collectionId:id,propertyId:short,reaction:z.enum(['liked','expensive','location','question','none']),reply:note}),
