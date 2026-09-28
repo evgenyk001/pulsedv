@@ -9,7 +9,7 @@ export function usePromoBanners(){
   React.useEffect(()=>subscribePulseState(()=>client.invalidateQueries({queryKey:["promo-banners"]})),[client]);
   return useQuery<PromoBanner[]>({
     queryKey:["promo-banners"],
-    queryFn:async()=>getPulseState().banners.filter(banner=>banner.enabled).sort((a,b)=>a.sortOrder-b.sortOrder),
+    queryFn:async()=>{const now=Date.now();return getPulseState().banners.filter(banner=>banner.enabled&&(!banner.startsAt||Date.parse(banner.startsAt)<=now)&&(!banner.endsAt||Date.parse(banner.endsAt)>now)).sort((a,b)=>a.sortOrder-b.sortOrder)},
     staleTime:Infinity
   });
 }
