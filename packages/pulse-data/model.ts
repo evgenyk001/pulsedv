@@ -14,9 +14,11 @@ export type PulseProperty={
   documents?:{id?:string;kind:"presentation"|"document";name:string;url:string;mimeType:string|null;sizeBytes:number|null;sortOrder:number}[];
 };
 
+export type PulseBannerKind="promo"|"giveaway"|"partner";
 export type PulseBanner={
   id:string; title:string; body:string; imageUrl:string|null; ctaLabel:string|null;
   actionUrl:string|null; city:string|null; audience:string|null; enabled:boolean; sortOrder:number;
+  kind?:PulseBannerKind; eyebrow?:string|null; startsAt?:string|null; endsAt?:string|null;
 };
 
 export type MortgageProgramRule={
