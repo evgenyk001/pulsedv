@@ -68,6 +68,28 @@ test('Control preview: object editor and real state changes',async({page})=>{
 });
 
 
+test('Control content: banner campaigns can be created, enabled and linked',async({page})=>{
+ await page.setViewportSize({width:1440,height:1000});
+ await page.goto('/pulsedv/control-center/#/content');
+ await page.getByRole('button',{name:'Новый баннер',exact:true}).click();
+ const card=page.locator('.bannerCampaignCard').last();
+ await card.getByLabel('Тип кампании').selectOption('partner');
+ await card.getByLabel('Метка над заголовком').fill('Партнёр PULSE.DV');
+ await card.getByLabel('Заголовок').fill('Тестовая партнёрская кампания');
+ await card.getByLabel('Описание').fill('Проверяем управляемый баннер без правки клиентского кода.');
+ await card.getByLabel('Куда ведёт').selectOption('external');
+ await card.getByLabel('HTTPS-ссылка').fill('https://example.com/promo');
+ await card.getByLabel('Текст кнопки').fill('Открыть предложение');
+ await card.getByLabel(/Показывать Тестовая партнёрская кампания/).check();
+ const cards=page.locator('.bannerCampaignCard');
+ for(let index=0;index<await cards.count()-1;index++){const toggle=cards.nth(index).getByRole('checkbox',{name:/Показывать/});if(await toggle.isChecked())await toggle.uncheck();}
+ await page.goto('/pulsedv/mini-app/');
+ const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
+ const banner=page.getByRole('link',{name:'Тестовая партнёрская кампания'});
+ await expect(banner).toBeVisible();await expect(banner).toHaveAttribute('href','https://example.com/promo');
+ await expect(page.getByText('Открыть предложение',{exact:true})).toBeVisible();
+});
+
 test('Control preview: PULSE Select settings and activity stay connected',async({page})=>{
  await page.setViewportSize({width:1280,height:900});
  await page.goto('/pulsedv/control-center/');
