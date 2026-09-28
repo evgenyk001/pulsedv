@@ -33,3 +33,5 @@
 .page a:focus-visible,.page button:focus-visible,.conversation a:focus-visible,.conversation button:focus-visible,.conversation summary:focus-visible,.conversation textarea:focus-visible,.conversation input:focus-visible,.conversation select:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
 @media(max-width:360px){.conversation{padding-left:10px;padding-right:10px}.tabs button{font-size:10px;gap:3px}.tabs button svg{width:14px}.chatHeader{gap:7px}.chatHeader h1{font-size:13px}.chatHeader .avatar{width:35px;height:35px}.subject{padding:9px 11px}.empty{padding:22px 18px}.pageHeader h1{font-size:26px}}
 @media(prefers-reduced-motion:reduce){.primary,.secondary,.iconButton{transition:none}}
+
+.startActions{display:grid;gap:10px}.empty .benefits{margin-bottom:0}
