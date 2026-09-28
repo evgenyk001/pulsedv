@@ -70,6 +70,22 @@ test('SQL/API: заявки между устройствами, дедупли�
   const image=uploaded.json().property.images.find((item:any)=>String(item.url).startsWith('/media/images/'));
   assert.ok(image?.url);
  });
+ await t.test('баннерные кампании: загрузка изображения, расписание и публичная выдача',async()=>{
+  const uploaded=await app.inject({
+   method:'POST',url:'/api/v1/control/content/banner-media?filename=campaign.png',
+   headers:{origin:config.PUBLIC_ORIGIN,'content-type':'image/png'},cookies:ownerCookie,payload:Buffer.from([137,80,78,71,13,10,26,10])
+  });
+  assert.equal(uploaded.statusCode,200,uploaded.body);assert.match(uploaded.json().imageUrl,/^\/media\/banners\//);
+  assert.equal((await app.inject({method:'POST',url:'/api/v1/control/content/banner-media',headers:{origin:config.PUBLIC_ORIGIN,'content-type':'image/png'},cookies:managerCookie,payload:Buffer.from([1])})).statusCode,403);
+  const snapshot=(await app.inject({url:'/api/v1/control/snapshot',cookies:ownerCookie})).json();
+  const live={id:'campaign-live',title:'Живая кампания',body:'Показывается сейчас',imageUrl:uploaded.json().imageUrl,ctaLabel:'Подробнее',actionUrl:'https://example.com',city:null,audience:null,enabled:true,sortOrder:1,kind:'partner',eyebrow:'Партнёр',startsAt:new Date(Date.now()-60_000).toISOString(),endsAt:new Date(Date.now()+60_000).toISOString()};
+  const future={...live,id:'campaign-future',title:'Будущая кампания',sortOrder:2,startsAt:new Date(Date.now()+3600_000).toISOString(),endsAt:new Date(Date.now()+7200_000).toISOString()};
+  const expired={...live,id:'campaign-expired',title:'Завершённая кампания',sortOrder:3,startsAt:new Date(Date.now()-7200_000).toISOString(),endsAt:new Date(Date.now()-3600_000).toISOString()};
+  const saved=await app.inject({method:'PUT',url:'/api/v1/control/state',headers,cookies:ownerCookie,payload:{state:{...snapshot.state,properties:[],banners:[live,future,expired]},version:snapshot.version}});
+  assert.equal(saved.statusCode,200,saved.body);
+  const publicState=(await app.inject('/api/v1/public/state')).json().state;
+  assert.deepEqual(publicState.banners.map((item:any)=>item.id),['campaign-live']);
+ });
  await t.test('каталог: устаревшая версия не затирает правки и загруженное медиа',async()=>{
   const url='/api/v1/control/catalog/solnechniy';
   const read=async()=>(await app.inject({url,cookies:ownerCookie})).json().property;
