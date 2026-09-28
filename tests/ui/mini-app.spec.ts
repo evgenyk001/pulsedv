@@ -244,7 +244,7 @@ test('Клиент: конкретная планировка, переход п
  await page.getByText('Изменить или отменить показ',{exact:true}).click();await page.getByRole('button',{name:'Отменить показ',exact:true}).click();await expect(page.getByText('Отменён',{exact:true})).toBeVisible();
  await page.goto('/pulsedv/control-center/#/leads');await page.locator('.leadRowButton').filter({hasText:'Тест планировки'}).click();
  await expect(page.getByLabel('Заметка менеджера')).toHaveValue(/Интересует планировка: 1/);
- await page.getByText(/Переписка по обращению/).click();await expect(page.getByText('Хочу уточнить этаж',{exact:true})).toBeVisible();
+ await expect(page.getByText(/Переписка по обращению/)).toBeVisible();await expect(page.getByText('Хочу уточнить этаж',{exact:true})).toBeVisible();
  await page.getByLabel('Сообщение',{exact:true}).fill('Уточняю наличие');await page.getByRole('button',{name:'Отправить сообщение'}).click();
  await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:/Уведомления, новых/}).click();await expect(page.getByRole('link',{name:/Сообщение от менеджера/})).toBeVisible();
 });
@@ -304,7 +304,7 @@ for(const width of [320,390])test(`Переписка ${width}px: чернови
  await page.getByRole('button',{name:'Отправить сообщение'}).click();
  await expect(page.getByRole('article',{name:'Ваше сообщение'})).toHaveCount(1);await expect(page.getByLabel('Сообщение',{exact:true})).toHaveValue('');
  await page.getByRole('button',{name:'Добавить вложение'}).click();await page.getByLabel('Выбрать файл').setInputFiles({name:'plan.pdf',mimeType:'application/pdf',buffer:Buffer.from('%PDF-1.4\n')});await expect(page.getByText('plan.pdf',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Отправить сообщение'}).click();await expect(page.getByRole('link',{name:/plan.pdf/})).toBeVisible();
- const manager=await context.newPage();await manager.goto('/pulsedv/control-center/#/leads');await manager.locator('.leadRowButton').filter({hasText:'Тест мессенджера '+width}).click();await manager.getByText(/Переписка по обращению/).click();await expect(manager.getByText(/Нужна квартира для семьи/)).toBeVisible();await expect(manager.getByRole('button',{name:'Добавить вложение'})).toBeVisible();await expect(page.getByLabel('Прочитано')).toHaveCount(2,{timeout:20000});await manager.getByLabel('Сообщение',{exact:true}).fill('Подготовлю варианты под ваш бюджет. Какой район удобнее?');await manager.getByRole('button',{name:'Отправить сообщение'}).click();
+ const manager=await context.newPage();await manager.goto('/pulsedv/control-center/#/leads');await manager.locator('.leadRowButton').filter({hasText:'Тест мессенджера '+width}).click();await expect(manager.getByText(/Переписка по обращению/)).toBeVisible();await expect(manager.getByText(/Нужна квартира для семьи/)).toBeVisible();await expect(manager.getByRole('button',{name:'Добавить вложение'})).toBeVisible();await expect(page.getByLabel('Прочитано')).toHaveCount(2,{timeout:20000});await manager.getByLabel('Сообщение',{exact:true}).fill('Подготовлю варианты под ваш бюджет. Какой район удобнее?');await manager.getByRole('button',{name:'Отправить сообщение'}).click();
  await expect(page.getByRole('article',{name:'Сообщение менеджера'})).toBeVisible({timeout:20000});
  await page.screenshot({path:`test-results/chat-conversation-${width}.png`,animations:'disabled'});
  await page.setViewportSize({width,height:470});
