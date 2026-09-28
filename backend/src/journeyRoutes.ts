@@ -4,20 +4,26 @@ import type {Database,Sql} from './database';
 import {HttpError} from './security';
 import {audit} from './repository';
 import {randomUUID} from 'node:crypto';
+import {mkdir,writeFile} from 'node:fs/promises';
+import {join} from 'node:path';
 import {getCatalogProperty} from './catalogRepository';
+import type {RuntimeConfig} from './config';
 import {applyJourney,clientJourney,emptyJourney,type Journey} from '../../packages/journey/model';
 const short=z.string().trim().min(1).max(200),note=z.string().trim().max(2000),id=z.uuid();
+const attachmentSchema=z.object({kind:z.enum(['image','file']),name:z.string().min(1).max(180),url:z.string().regex(/^\/media\/chat\/[A-Za-z0-9._-]+$/).max(500),mimeType:z.string().min(1).max(120),size:z.number().int().min(1).max(25*1024*1024)}).strict();
 export const journeyCommand=z.discriminatedUnion('type',[
  z.object({type:z.literal('collection'),id,title:short,items:z.array(z.object({propertyId:short,note})).min(1).max(10),published:z.boolean()}),
  z.object({type:z.literal('reaction'),collectionId:id,propertyId:short,reaction:z.enum(['liked','expensive','location','question','none']),reply:note}),
  z.object({type:z.literal('showing'),id,propertyId:short,at:z.iso.datetime(),note}),
  z.object({type:z.literal('showing_status'),id,status:z.enum(['requested','confirmed','completed','cancelled']),result:note}),
- z.object({type:z.literal('message'),id,text:note.min(1)}),
+ z.object({type:z.literal('message'),id,text:z.string().trim().max(2000).default(''),attachment:attachmentSchema.optional()}),
  z.object({type:z.literal('showing_change'),id,action:z.enum(['cancel','reschedule']),at:z.iso.datetime().optional(),note}),
  z.object({type:z.literal('showing_reschedule'),id,accept:z.boolean()}),
  z.object({type:z.literal('next_step'),title:short,dueAt:z.iso.datetime(),done:z.boolean()})
 ]);
-export async function registerJourneyRoutes(app:FastifyInstance,db:Database,control:(r:FastifyRequest)=>Promise<void>,visitor:(r:FastifyRequest)=>Promise<void>,editor:(r:FastifyRequest)=>Promise<void>,origin:string){
+export async function registerJourneyRoutes(app:FastifyInstance,db:Database,control:(r:FastifyRequest)=>Promise<void>,visitor:(r:FastifyRequest)=>Promise<void>,editor:(r:FastifyRequest)=>Promise<void>,origin:string,config:RuntimeConfig){
+ const attachmentTypes:Record<string,{ext:string;kind:'image'|'file';max:number}>={'image/jpeg':{ext:'jpg',kind:'image',max:15*1024*1024},'image/png':{ext:'png',kind:'image',max:15*1024*1024},'image/webp':{ext:'webp',kind:'image',max:15*1024*1024},'application/pdf':{ext:'pdf',kind:'file',max:25*1024*1024}};
+ for(const type of Object.keys(attachmentTypes))if(!app.hasContentTypeParser(type))app.addContentTypeParser(type,{parseAs:'buffer'},(_request,body,done)=>done(null,body));
  async function leadAccess(sql:Sql,r:FastifyRequest,leadId:string,client:boolean,lock=false){
   const l=(await sql.query('select * from leads where id=$1'+(lock?' for update':''),[leadId])).rows[0];
   const allowed=l&&(client?(l.session_id===r.visitor!.sessionId||!!r.visitor!.userId&&l.user_id===r.visitor!.userId):(r.member!.role!=='manager'||l.manager_id===r.member!.id));
@@ -25,6 +31,24 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
  }
  for(const client of [false,true]){
   const prefix=client?'/api/v1/me':'/api/v1/control';const auth=client?visitor:control;
+  app.post(prefix+'/journeys/:id/attachments',{preHandler:auth,bodyLimit:26*1024*1024,config:{rateLimit:{max:30,timeWindow:'1 minute'}}},async(r,reply)=>{
+   const leadId=id.parse((r.params as any).id);await db.transaction(sql=>leadAccess(sql,r,leadId,client,false));
+   const type=(r.headers['content-type']||'').split(';')[0].trim().toLowerCase();const spec=attachmentTypes[type];
+   if(!spec)return reply.code(415).send({error:'Можно отправить JPG, PNG, WebP или PDF'});
+   const body=r.body;if(!Buffer.isBuffer(body)||!body.length)return reply.code(400).send({error:'Файл пустой'});if(body.length>spec.max)return reply.code(413).send({error:spec.kind==='image'?'Фото больше 15 МБ':'PDF больше 25 МБ'});
+   const query=z.object({filename:z.string().max(180).optional()}).strict().parse(r.query);const name=(query.filename||'Файл').replace(/[\r\n]/g,' ').trim().slice(0,180)||'Файл';
+   const folder='chat';const fileName=randomUUID()+'.'+spec.ext;await mkdir(join(config.MEDIA_ROOT,folder),{recursive:true});await writeFile(join(config.MEDIA_ROOT,folder,fileName),body);
+   if(!client&&r.member)await audit(db,r.member.id,'journey.attachment.upload',leadId,{mimeType:type,size:body.length});
+   return {attachment:{kind:spec.kind,name,url:'/media/'+folder+'/'+fileName,mimeType:type,size:body.length}};
+  });
+  app.post(prefix+'/journeys/:id/read',{preHandler:auth},async r=>{
+   const leadId=id.parse((r.params as any).id);const input=z.object({messageIds:z.array(id).min(1).max(100)}).strict().parse(r.body);
+   return db.transaction(async sql=>{await leadAccess(sql,r,leadId,client,true);const row=(await sql.query('select document from client_journeys where lead_id=$1',[leadId])).rows[0];const current:Journey=row?.document||emptyJourney(leadId);const target=client?'manager':'client';const ids=new Set(input.messageIds);const now=new Date().toISOString();let changed=false;
+    current.messages=(current.messages||[]).map(m=>{if(ids.has(m.id)&&m.author===target&&!m.readAt){changed=true;return {...m,readAt:now}}return m});
+    if(changed)await sql.query('update client_journeys set document=$2::jsonb,updated_at=now() where lead_id=$1',[leadId,JSON.stringify(current)]);
+    return {journey:client?clientJourney(current):current};
+   });
+  });
   app.get(prefix+'/journeys',{preHandler:auth},async r=>{
    const values=client?[r.visitor!.sessionId,r.visitor!.userId]:r.member!.role==='manager'?[r.member!.id]:[];
    const where=client?'where l.session_id=$1 or ($2::uuid is not null and l.user_id=$2)':r.member!.role==='manager'?'where l.manager_id=$1':'';

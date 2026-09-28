@@ -34,7 +34,9 @@ export async function createApp(db:Database,config:RuntimeConfig){
   if(!['GET','HEAD','OPTIONS'].includes(request.method)){
    if(request.headers.origin&&request.headers.origin!==config.PUBLIC_ORIGIN)throw new HttpError(403,'Недопустимый источник запроса');
    const contentType=request.headers['content-type']||'';
-   const mediaUpload=request.url.startsWith('/api/v1/control/catalog/')&&request.url.includes('/media');
+   const catalogMediaUpload=request.url.startsWith('/api/v1/control/catalog/')&&request.url.includes('/media');
+   const journeyAttachmentUpload=(request.url.startsWith('/api/v1/control/journeys/')||request.url.startsWith('/api/v1/me/journeys/'))&&request.url.includes('/attachments');
+   const mediaUpload=catalogMediaUpload||journeyAttachmentUpload;
    const allowedMedia=mediaUpload&&(['image/jpeg','image/png','image/webp','application/pdf'].some(type=>contentType.startsWith(type)));
    if(!contentType.startsWith('application/json')&&!allowedMedia)throw new HttpError(415,mediaUpload?'Нужен JPG, PNG, WebP или PDF':'Требуется application/json');
   }
@@ -130,7 +132,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.post('/api/v1/control/logout',{preHandler:control},async(request,reply)=>{await db.query('delete from auth_tokens where token_hash=$1',[tokenHash(request.cookies.pulse_control!)]);reply.clearCookie('pulse_control',cookieOptions);return {ok:true};});
  await registerInterestRoutes(app,db,control);
  await registerFavoriteRoutes(app,db,visitor);
- await registerJourneyRoutes(app,db,control,visitor,editor,config.PUBLIC_ORIGIN);
+ await registerJourneyRoutes(app,db,control,visitor,editor,config.PUBLIC_ORIGIN,config);
  app.get('/api/v1/control/snapshot',{preHandler:control},async request=>{
   const m=request.member!;const scoped=m.role==='manager';const {state:storedState,version}=await readState(db);
   const catalog=(await listCatalog(db,{status:'all',page:1,limit:2000,view:'match'})).items;

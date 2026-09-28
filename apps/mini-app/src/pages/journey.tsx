@@ -1,7 +1,7 @@
 import React from 'react';
 import {Link, useSearchParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
-import {ArrowLeft, ArrowRight, MessageCircle, CalendarDays, Sparkles, Plus, RefreshCw, ChevronRight} from 'lucide-react';
+import {ArrowLeft, ArrowRight, MessageCircle, CalendarDays, Sparkles, Plus, RefreshCw, ChevronRight, UserRound} from 'lucide-react';
 import {useClientJourneys} from '../helpers/useClientJourneys';
 import {getPropertiesByIds} from '../helpers/catalogApi';
 import {LeadSheet} from '../components/LeadSheet';
@@ -19,7 +19,7 @@ export default function JourneyPage(){
  const selected=items.find(e=>e.leadId===leadId);
  if(leadId&&selected)return <ClientConversation key={leadId} entry={selected} properties={properties} query={query} catalogError={!!catalog.error} onRetryCatalog={()=>void catalog.refetch()}/>;
  return <div className={styles.page}>
-  <nav className={styles.navigation} aria-label="Навигация по обращениям"><Link to="/"><ArrowLeft size={18}/>На главную</Link><Link to="/profile">Профиль</Link></nav>
+  <nav className={styles.navigation} aria-label="Навигация по обращениям"><Link className={styles.iconButton} to="/" aria-label="На главную"><ArrowLeft size={21}/></Link><Link className={styles.iconButton} to="/profile" aria-label="Профиль"><UserRound size={20}/></Link></nav>
   <header className={styles.pageHeader}><span>НА СВЯЗИ С PULSE.DV</span><div><h1>Мои подборки<br/>и показы</h1><button className={styles.iconButton} aria-label="Обновить обращения" disabled={query.isFetching} onClick={()=>void query.refetch()}><RefreshCw size={19}/></button></div><p>Ваши диалоги, варианты квартир и встречи — в одном месте.</p></header>
   {query.isLoading?<div className={styles.loading} role="status">Загружаем обращения…</div>:query.error?<div className={styles.empty}><MessageCircle size={32}/><h2>Не удалось загрузить диалоги</h2><p>Проверьте подключение. Ваши сообщения сохраняются в обращении.</p><button className={styles.secondary} onClick={()=>void query.refetch()}>Попробовать ещё раз</button></div>:leadId?<div className={styles.empty}><MessageCircle size={32}/><h2>Обращение недоступно</h2><p>Возможно, оно создано в другом браузере или аккаунте.</p><Link className={styles.primary} to="/journey">Все мои обращения</Link></div>:!items.length?<section className={styles.empty}>
    <span className={styles.emptyIcon}><MessageCircle size={30}/></span><h2>Найдём квартиру вместе</h2><p>Начните диалог с командой. Поможем сравнить варианты и организовать просмотр.</p>

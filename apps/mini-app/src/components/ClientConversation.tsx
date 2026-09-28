@@ -1,9 +1,9 @@
 import React from 'react';
 import {Link,useSearchParams} from 'react-router-dom';
 import {useQueryClient} from '@tanstack/react-query';
-import {ArrowLeft, ArrowDown, ArrowUp, CalendarDays, Check, ChevronRight, MessageCircle, RefreshCw, Sparkles, Building2} from 'lucide-react';
-import {saveJourney,type JourneyEntry} from '../../../../packages/journey/client';
-import {type JourneyCommand,type Reaction,reactionLabels,showingLabels} from '../../../../packages/journey/model';
+import {ArrowLeft, ArrowDown, ArrowUp, CalendarDays, Check, CheckCheck, ChevronRight, FileText, Image as ImageIcon, MessageCircle, Paperclip, RefreshCw, Sparkles, Building2, X} from 'lucide-react';
+import {markJourneyRead,saveJourney,uploadJourneyAttachment,type JourneyEntry} from '../../../../packages/journey/client';
+import {type JourneyAttachment,type JourneyCommand,type Reaction,reactionLabels,showingLabels} from '../../../../packages/journey/model';
 import {ShowingChange} from '../../../../packages/journey/ShowingChange';
 import {runtime} from '../../../../packages/pulse-data/runtime';
 import type {PulseProperty} from '../../../../packages/pulse-data/model';
@@ -22,12 +22,13 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
  const cache=useQueryClient();const j=entry.journey;
  const closed=['deal','closed','lost'].includes(entry.status);
  const [draft,setDraft]=React.useState(()=>draftFor(entry.leadId));
- const [busy,setBusy]=React.useState(false),[error,setError]=React.useState(''),[notice,setNotice]=React.useState('');
+ const [busy,setBusy]=React.useState(false),[uploading,setUploading]=React.useState(false),[error,setError]=React.useState(''),[notice,setNotice]=React.useState('');
+ const [attachmentOpen,setAttachmentOpen]=React.useState(false),[pendingFile,setPendingFile]=React.useState<File|null>(null),[previewUrl,setPreviewUrl]=React.useState('');
  const locked=React.useRef(false),messageId=React.useRef(crypto.randomUUID());
  const [replies,setReplies]=React.useState<Record<string,string>>({});
  const [propertyId,setPropertyId]=React.useState(''),[at,setAt]=React.useState(''),[note,setNote]=React.useState('');
  const [newBelow,setNewBelow]=React.useState(false);
- const root=React.useRef<HTMLDivElement>(null),log=React.useRef<HTMLDivElement>(null),nearBottom=React.useRef(true),input=React.useRef<HTMLTextAreaElement>(null);
+ const root=React.useRef<HTMLDivElement>(null),log=React.useRef<HTMLDivElement>(null),nearBottom=React.useRef(true),input=React.useRef<HTMLTextAreaElement>(null),imageInput=React.useRef<HTMLInputElement>(null),fileInput=React.useRef<HTMLInputElement>(null);
  const options=properties.filter(p=>p.id===entry.propertyId||j.collections.some(c=>c.items.some(i=>i.propertyId===p.id)));
  const property=(id:string)=>properties.find(p=>p.id===id);
  const subject=entry.propertyId?property(entry.propertyId)?.name:'Помощь с покупкой';
@@ -37,6 +38,9 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
  React.useLayoutEffect(()=>{if(input.current){input.current.style.height='auto';input.current.style.height=Math.min(112,input.current.scrollHeight)+'px'}},[draft,tab]);
  React.useEffect(()=>{try{if(draft)sessionStorage.setItem('pulse.chat-draft.'+entry.leadId,draft);else sessionStorage.removeItem('pulse.chat-draft.'+entry.leadId)}catch{}},[draft,entry.leadId]);
  React.useEffect(()=>{if(tab!=='chat')return;try{const previous=JSON.parse(localStorage.getItem('pulse.read-updates.v1')||'[]');const ids=(j.messages||[]).filter(m=>m.author==='manager').map(m=>'message:'+m.id);localStorage.setItem('pulse.read-updates.v1',JSON.stringify([...new Set([...ids,...(Array.isArray(previous)?previous:[])])].slice(0,500)))}catch{}},[j.messages,tab]);
+ const unreadManager=(j.messages||[]).filter(m=>m.author==='manager'&&!m.readAt).map(m=>m.id).join(',');
+ React.useEffect(()=>{if(tab!=='chat'||!unreadManager)return;let cancelled=false;void markJourneyRead(j,unreadManager.split(','),true).then(result=>{if(cancelled)return;cache.setQueryData(['my-journeys'],(old:{items:JourneyEntry[];limited:boolean}|undefined)=>old?{...old,items:old.items.map(e=>e.leadId===entry.leadId?{...e,journey:result.journey}:e)}:old)}).catch(()=>{});return()=>{cancelled=true}},[tab,unreadManager,entry.leadId]);
+ React.useEffect(()=>()=>{if(previewUrl)URL.revokeObjectURL(previewUrl)},[previewUrl]);
  const run=async(command:JourneyCommand):Promise<boolean>=>{
   if(locked.current)return false;locked.current=true;setBusy(true);setError('');setNotice('');
   try{
@@ -51,7 +55,11 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
    setError(e instanceof Error?e.message:'Не удалось сохранить. Попробуйте ещё раз.');return false;
   }finally{locked.current=false;setBusy(false)}
  };
- const send=async(e:React.FormEvent)=>{e.preventDefault();if(!draft.trim()||closed)return;const text=draft.trim();if(await run({type:'message',id:messageId.current,text})){setDraft('');messageId.current=crypto.randomUUID();nearBottom.current=true;requestAnimationFrame(scrollEnd);input.current?.focus()}};
+ const clearAttachment=()=>{if(previewUrl)URL.revokeObjectURL(previewUrl);setPreviewUrl('');setPendingFile(null);setAttachmentOpen(false)};
+ const chooseFile=(file:File|undefined)=>{if(!file)return;const type=file.type.toLowerCase();if(!['image/jpeg','image/png','image/webp','application/pdf'].includes(type)){setError('Можно отправить JPG, PNG, WebP или PDF');return}clearAttachment();setPendingFile(file);if(type.startsWith('image/'))setPreviewUrl(URL.createObjectURL(file));setError('');messageId.current=crypto.randomUUID()};
+ const send=async(e:React.FormEvent)=>{e.preventDefault();if((!draft.trim()&&!pendingFile)||closed||uploading)return;const text=draft.trim();let attachment:JourneyAttachment|undefined;
+  if(pendingFile){setUploading(true);setError('');try{attachment=await uploadJourneyAttachment(entry.leadId,pendingFile,true)}catch(e){setError(e instanceof Error?e.message:'Не удалось загрузить вложение');setUploading(false);return}setUploading(false)}
+  if(await run({type:'message',id:messageId.current,text,attachment})){setDraft('');clearAttachment();messageId.current=crypto.randomUUID();nearBottom.current=true;requestAnimationFrame(scrollEnd);input.current?.focus()}};
  const setTab=(value:string)=>{setParams({lead:entry.leadId,...(value==='chat'?{}:{tab:value})},{replace:true});setError('');setNotice('')};
  const requestShowing=async(e:React.FormEvent)=>{e.preventDefault();const date=Date.parse(at+'+10:00');if(!Number.isFinite(date)||date<=Date.now()){setError('Выберите дату и время в будущем');return}if(await run({type:'showing',id:crypto.randomUUID(),propertyId,at:new Date(date).toISOString(),note})){setAt('');setNote('')}};
  const limitReached=(j.messages?.length||0)>=100;
@@ -70,11 +78,19 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
     {(j.messages||[]).map((m,index,all)=>{
      const day=new Date(m.at).toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
      const previous=index?new Date(all[index-1].at).toLocaleDateString('ru-RU',{day:'numeric',month:'long'}):'';
-     return <React.Fragment key={m.id}>{day!==previous&&<div className={styles.dateDivider}>{day}</div>}<article className={m.author==='client'?styles.outgoing:styles.incoming} aria-label={m.author==='client'?'Ваше сообщение':'Сообщение менеджера'}>{m.author==='manager'&&<strong>{entry.managerName||'Команда PULSE.DV'}</strong>}<p>{m.text}</p><footer><time dateTime={m.at}>{clock(m.at)}</time>{m.author==='client'&&<Check size={13} aria-label={runtime.enabled?'Отправлено':'Сохранено в демонстрации'}/>}</footer></article></React.Fragment>;
+     return <React.Fragment key={m.id}>{day!==previous&&<div className={styles.dateDivider}>{day}</div>}<article className={m.author==='client'?styles.outgoing:styles.incoming} aria-label={m.author==='client'?'Ваше сообщение':'Сообщение менеджера'}>{m.author==='manager'&&<strong>{entry.managerName||'Команда PULSE.DV'}</strong>}{m.attachment&&(m.attachment.kind==='image'?<a className={styles.messageImage} href={m.attachment.url} target="_blank" rel="noreferrer"><img src={m.attachment.url} alt={m.attachment.name}/></a>:<a className={styles.fileAttachment} href={m.attachment.url} target="_blank" rel="noreferrer"><FileText size={20}/><span><b>{m.attachment.name}</b><small>{Math.max(1,Math.round(m.attachment.size/1024))} КБ</small></span></a>)}{m.text&&<p>{m.text}</p>}<footer><time dateTime={m.at}>{clock(m.at)}</time>{m.author==='client'&&(m.readAt?<CheckCheck className={styles.readReceipt} size={15} aria-label="Прочитано"/>:<Check size={13} aria-label={runtime.enabled?'Отправлено':'Сохранено в демонстрации'}/>)}</footer></article></React.Fragment>;
     })}
    </div>
    {newBelow&&<button className={styles.newMessages} onClick={scrollEnd}><ArrowDown size={16}/>К последним сообщениям</button>}
-   {closed||limitReached?<div className={styles.closed}>{closed?'Обращение завершено. Переписка сохранена.':'Достигнут лимит сообщений в этом обращении.'}<Link to="/journey">К моим обращениям<ChevronRight size={14}/></Link></div>:<form className={styles.composer} onSubmit={send}><label className={styles.srOnly} htmlFor="client-message">Сообщение</label><textarea ref={input} id="client-message" rows={1} placeholder="Написать сообщение…" maxLength={2000} value={draft} readOnly={busy} onChange={e=>{setDraft(e.target.value);messageId.current=crypto.randomUUID()}} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)&&!e.nativeEvent.isComposing){e.preventDefault();e.currentTarget.form?.requestSubmit()}}}/><button aria-label="Отправить сообщение" type="submit" disabled={busy||!draft.trim()}><ArrowUp size={21}/></button>{(busy||draft.length>1800)&&<small role="status">{busy?'Отправляем…':draft.length+' / 2000'}</small>}</form>}
+   {closed||limitReached?<div className={styles.closed}>{closed?'Обращение завершено. Переписка сохранена.':'Достигнут лимит сообщений в этом обращении.'}<Link to="/journey">К моим обращениям<ChevronRight size={14}/></Link></div>:<form className={styles.composer} onSubmit={send}>
+    <input ref={imageInput} className={styles.srOnly} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Выбрать фото" onChange={e=>{chooseFile(e.target.files?.[0]);e.currentTarget.value=''}}/>
+    <input ref={fileInput} className={styles.srOnly} type="file" accept="application/pdf" aria-label="Выбрать файл" onChange={e=>{chooseFile(e.target.files?.[0]);e.currentTarget.value=''}}/>
+    {attachmentOpen&&<div className={styles.attachmentMenu} role="menu"><button type="button" role="menuitem" onClick={()=>imageInput.current?.click()}><ImageIcon size={18}/>Фото</button><button type="button" role="menuitem" onClick={()=>fileInput.current?.click()}><FileText size={18}/>Файл PDF</button></div>}
+    {pendingFile&&<div className={styles.pendingAttachment}>{previewUrl?<img src={previewUrl} alt="Предпросмотр вложения"/>:<FileText size={21}/>}<span><b>{pendingFile.name}</b><small>{Math.max(1,Math.round(pendingFile.size/1024))} КБ</small></span><button type="button" aria-label="Убрать вложение" onClick={clearAttachment}><X size={16}/></button></div>}
+    <button className={styles.attachButton} aria-label="Добавить вложение" type="button" aria-expanded={attachmentOpen} onClick={()=>setAttachmentOpen(v=>!v)}><Paperclip size={20}/></button>
+    <label className={styles.srOnly} htmlFor="client-message">Сообщение</label><textarea ref={input} id="client-message" rows={1} placeholder="Написать сообщение…" maxLength={2000} value={draft} readOnly={busy||uploading} onChange={e=>{setDraft(e.target.value);messageId.current=crypto.randomUUID()}} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)&&!e.nativeEvent.isComposing){e.preventDefault();e.currentTarget.form?.requestSubmit()}}}/>
+    <button className={styles.sendButton} aria-label="Отправить сообщение" type="submit" disabled={busy||uploading||(!draft.trim()&&!pendingFile)}><ArrowUp size={21}/></button>{(busy||uploading||draft.length>1800)&&<small role="status">{uploading?'Загружаем вложение…':busy?'Отправляем…':draft.length+' / 2000'}</small>}
+   </form>}
   </section>:<section id={'panel-'+tab} role="tabpanel" aria-labelledby={'tab-'+tab} className={styles.detailsPanel}>
    {tab==='collections'?<>{!j.collections.length&&<div className={styles.sectionEmpty}><Sparkles size={30}/><h2>Здесь будет ваша подборка</h2><p>Расскажите менеджеру о бюджете и пожеланиях в переписке.</p><button className={styles.secondary} onClick={()=>setTab('chat')}>Написать менеджеру</button></div>}{j.collections.map(c=><section key={c.id} className={styles.collection}><header><span><Sparkles size={17}/>{c.items.length} вариантов</span><h2>{c.title}</h2></header>{c.items.map(i=>{const p=property(i.propertyId),key=c.id+':'+i.propertyId;return <article className={styles.propertyCard} key={i.propertyId}><Link className={styles.propertyLink} to={'/property/'+encodeURIComponent(i.propertyId)}>{p?.coverImageUrl?<img src={p.coverImageUrl} alt="" onError={e=>{e.currentTarget.style.display='none'}}/>:<span><Building2 size={27}/></span>}<div><h3>{p?.name||'Сведения о ЖК уточняются'}</h3>{p&&<><small>{p.city} · {p.district}</small><b>от {(p.priceFrom/1000000).toLocaleString('ru-RU',{maximumFractionDigits:1})} млн ₽</b></>}</div><ChevronRight size={17}/></Link>{i.note&&<p className={styles.propertyNote}>{i.note}</p>}<label>Ваше мнение<select disabled={busy||closed} value={i.reaction} onChange={e=>void run({type:'reaction',collectionId:c.id,propertyId:i.propertyId,reaction:e.target.value as Reaction,reply:i.reply})}>{Object.entries(reactionLabels).map(([value,label])=><option value={value} key={value}>{label}</option>)}</select></label><details><summary>Комментарий к варианту{i.reply?' · сохранён':''}</summary><label><span className={styles.srOnly}>Комментарий к варианту</span><textarea maxLength={2000} disabled={closed||busy} value={replies[key]??i.reply} placeholder="Что нравится или смущает?" onChange={e=>setReplies({...replies,[key]:e.target.value})}/></label><button className={styles.secondary} disabled={busy||closed} onClick={()=>void run({type:'reaction',collectionId:c.id,propertyId:i.propertyId,reaction:i.reaction,reply:replies[key]??i.reply})}>Сохранить ответ</button></details></article>})}</section>)}</>:<>
     <div className={styles.sectionHeading}><CalendarDays size={21}/><div><h2>Ваши показы</h2><small>Дата и время — по Владивостоку</small></div></div>
