@@ -147,11 +147,9 @@ export function BottomNav(){
     const sign=direction===0?0:Math.sign(direction);
     triggerMorph(sign);
     setVelocity(sign*.18);
-    window.setTimeout(()=>{
-      setPillX(index*segmentWidth);
-      haptic();
-      if(items[index].path!==location.pathname)navigate(items[index].path);
-    },52);
+    setPillX(index*segmentWidth);
+    haptic();
+    if(items[index].path!==location.pathname)navigate(items[index].path);
     window.setTimeout(()=>setVelocity(0),260);
   };
 

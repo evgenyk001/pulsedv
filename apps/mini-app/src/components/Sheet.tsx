@@ -159,7 +159,7 @@ const SheetContent = React.forwardRef<
     >
       {side==="bottom"&&<div className={styles.grabZone} aria-hidden="true"><span className={styles.grabber}/></div>}
       {children}
-      <SheetPrimitive.Close ref={closeRef} className={styles.close}>
+      <SheetPrimitive.Close ref={closeRef} aria-label="Закрыть" className={styles.close}>
         <X className={styles.closeIcon} />
       </SheetPrimitive.Close>
     </SheetPrimitive.Content>

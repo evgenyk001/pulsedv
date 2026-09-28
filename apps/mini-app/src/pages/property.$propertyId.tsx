@@ -1,7 +1,9 @@
 import { PropertyFreshness } from '../components/PropertyFreshness';
 import React from "react";
+import {propertyReturn} from "../helpers/navigationMemory";
+import {FloorplanViewer} from "../components/FloorplanViewer";
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Heart, Share2, MapPin, CalendarDays, Building2, Waves, Trees, CarFront,
   Baby, ShieldCheck, ChevronRight, Send, Sparkles, MapPinned, LayoutGrid, Ruler,
@@ -28,6 +30,8 @@ const priceLabel=(value:number)=>"от "+value.toFixed(1).replace(".",",")+" м�
 
 export default function PropertyPage(){
   const {propertyId=""}=useParams();
+  const location=useLocation();
+  const returnTo=typeof location.state?.returnTo==="string"&&/^\/(catalog|favorites|selection|journey)?([?]|$)/.test(location.state.returnTo)?location.state.returnTo:propertyReturn();
   const {data:p,isLoading,error}=usePropertyDetail(propertyId);
   const {toggle,isFavorite}=useFavoriteIds();
   const [photoIndex,setPhotoIndex]=React.useState(0);
@@ -35,6 +39,7 @@ export default function PropertyPage(){
 
   React.useEffect(()=>{
     if(!p)return;
+    try{localStorage.setItem("pulse.last-property",JSON.stringify({id:p.id,name:p.name,at:Date.now()}))}catch{}
     recordPulseEvent({eventType:"property_view",entityType:"property",entityId:p.id,metadata:{propertyName:p.name,city:p.city,district:p.district,priceFrom:p.priceFrom}});
   },[p?.id]);
 
@@ -42,6 +47,7 @@ export default function PropertyPage(){
   if(error||!p)return <div className={styles.notFound}><strong>Объект не найден</strong><Link to="/catalog">Вернуться в каталог</Link></div>;
 
   const favorite=isFavorite(p.id);
+  const developer=p.developerName&&p.developerName!=="Партнёр PULSE.DV"?p.developerName:"";
   const gallery=[
     ...(p.coverImageUrl?[p.coverImageUrl]:[]),
     ...[...p.images].sort((a,b)=>a.sortOrder-b.sortOrder).map(x=>x.url).filter(url=>url!==p.coverImageUrl),
@@ -83,7 +89,7 @@ export default function PropertyPage(){
           :<div className={styles.heroSlide}><div className={styles.heroFallback}><ImageIcon size={34}/><span>Фото проекта готовится</span></div></div>}
       </div>
       <div className={styles.fade}/>
-      <Link to="/catalog" className={styles.back} aria-label="Назад"><ArrowLeft size={19}/></Link>
+      <Link to={returnTo} className={styles.back} aria-label="Назад"><ArrowLeft size={19}/></Link>
       <div className={styles.actions}>
         <button onClick={()=>toggle(p.id)} className={favorite?styles.favorited:""} aria-label={favorite?"Убрать из избранного":"В избранное"}><Heart size={18} fill={favorite?"currentColor":"none"}/></button>
         <button onClick={share} aria-label="Поделиться"><Share2 size={18}/></button>
@@ -102,7 +108,7 @@ export default function PropertyPage(){
         </div>
         <h1>{p.name}</h1><PropertyFreshness id={p.id}/>
         <div className={styles.location}><MapPin size={14}/>{p.city} · {p.district}</div>
-        <div className={styles.developerLine}><Building2 size={13}/>{p.developerName||"Застройщик уточняется"}</div>
+        <div className={styles.developerLine}><Building2 size={13}/>{developer||"Застройщик уточняется"}</div>
       </section>
 
       <section className={styles.priceCard}>
@@ -160,7 +166,7 @@ export default function PropertyPage(){
         {visiblePlans.length?<div className={styles.planRail}>
           {visiblePlans.map((plan,index)=><TrackedFloorplan property={p} plan={plan} className={styles.planCard} key={plan.id||plan.roomLabel+"-"+index}>
             <div className={styles.planImage}>
-              {plan.imageUrl?<img src={plan.imageUrl} alt={"Планировка "+plan.roomLabel} loading="lazy"/>:<div><Ruler size={24}/><span>Планировка</span></div>}
+              <FloorplanViewer property={p} plan={plan}/>
             </div>
             <div className={styles.planCopy}>
               <span>{plan.roomLabel==="Студия"?"Студия":plan.roomLabel+" комн."}</span>
@@ -178,7 +184,7 @@ export default function PropertyPage(){
         <div className={styles.sectionHead}><div><span>ХАРАКТЕРИСТИКИ</span><h2>Детали проекта</h2></div></div>
         <div className={styles.specs}>
           <div><span>Адрес</span><strong>{p.address||p.city+" · "+p.district}</strong></div>
-          <div><span>Застройщик</span><strong>{p.developerName||"Уточняется"}</strong></div>
+          <div><span>Застройщик</span><strong>{developer||"Уточняется"}</strong></div>
           <div><span>Класс</span><strong>{p.className||"Уточняется"}</strong></div>
           <div><span>Срок сдачи</span><strong>{p.delivery||"Уточняется"}</strong></div>
           <div><span>Цена от</span><strong>{priceLabel(p.priceFrom).replace("от ","")}</strong></div>
@@ -201,12 +207,12 @@ export default function PropertyPage(){
         <SheetTrigger asChild>
           <button className={styles.developer}>
             <div className={styles.devIcon}><Building2 size={20}/></div>
-            <div><span>Застройщик</span><strong>{p.developerName||"Информация уточняется"}</strong><small><ShieldCheck size={12}/> Данные проекта в базе PULSE.DV</small></div>
+            <div><span>Застройщик</span><strong>{developer||"Информация уточняется"}</strong><small><ShieldCheck size={12}/> Данные проекта в базе PULSE.DV</small></div>
             <ChevronRight size={18}/>
           </button>
         </SheetTrigger>
         <SheetContent side="bottom" className={styles.developerSheet}>
-          <SheetHeader><SheetTitle>{p.developerName||"О проекте"}</SheetTitle><SheetDescription>Перед бронированием менеджер PULSE.DV уточнит актуальные цены, наличие квартир и условия покупки.</SheetDescription></SheetHeader>
+          <SheetHeader><SheetTitle>{developer||"О проекте"}</SheetTitle><SheetDescription>Перед бронированием менеджер PULSE.DV уточнит актуальные цены, наличие квартир и условия покупки.</SheetDescription></SheetHeader>
           <div className={styles.developerInfo}><ShieldCheck size={22}/><span><strong>Проверим перед сделкой</strong><small>Данные в приложении используются для подбора. Коммерческие условия могут меняться.</small></span></div>
         </SheetContent>
       </Sheet>

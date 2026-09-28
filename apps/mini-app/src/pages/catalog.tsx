@@ -84,14 +84,6 @@ export default function CatalogPage(){
     setPriceRange(range);setPriceDraft([formatRub(range[0]),formatRub(range[1])]);priceInitialized.current=true;
   },[bounds]);
 
-  React.useEffect(()=>{
-    const next=new URLSearchParams(params);
-    const current=next.get("q")||"";
-    if(current===deferredQuery)return;
-    deferredQuery?next.set("q",deferredQuery):next.delete("q");
-    setParams(next,{replace:true});
-  },[deferredQuery]);
-
   const serverFilters=React.useMemo(()=>({
     limit:20,
     q:params.get("q")||undefined,
@@ -140,7 +132,7 @@ export default function CatalogPage(){
   const isLoading=pulseMode?pulseQuery.isLoading:view==="map"?mapQuery.isLoading:listQuery.isLoading;
   const error=pulseMode?pulseQuery.error:view==="map"?mapQuery.error:listQuery.error;
 
-  const onQuery=(value:string)=>setQuery(value);
+  const onQuery=(value:string)=>{setQuery(value);const next=new URLSearchParams(params);value?next.set("q",value):next.delete("q");setParams(next,{replace:true});};
 
   const setView=(nextView:"list"|"map")=>{
     const next=new URLSearchParams(params);

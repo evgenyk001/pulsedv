@@ -200,3 +200,51 @@ for(const width of [390,1440])test(`Journey ${width}px: manager collection, clie
  await page.goto('/pulsedv/control-center/#/journey');await expect(page.getByRole('heading',{name:'Календарь показов'})).toBeVisible();await expect(page.getByText('Понравился двор',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);expect(errors).toEqual([]);await page.screenshot({path:`test-results/journey-${width}.png`,fullPage:true});
 });
+
+test('Клиент: поиск и избранное сохраняют контекст возврата, уведомления без заглушек',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:'Пропустить онбординг'}).click();
+ await page.getByRole('button',{name:'Уведомления',exact:true}).click();
+ await expect(page.getByRole('dialog').getByText('Старт продаж',{exact:true})).toHaveCount(0);
+ await expect(page.getByText(/Новых обновлений пока нет/)).toBeVisible();
+ await page.keyboard.press('Escape');
+ await page.getByRole('navigation').getByRole('button',{name:'Каталог',exact:true}).click();
+ await page.getByRole('textbox',{name:'Поиск'}).fill('Солнечный');
+ await page.getByRole('link',{name:'Открыть ЖК Солнечный'}).click();
+ await page.getByRole('link',{name:'Назад',exact:true}).click();
+ await expect(page.getByRole('textbox',{name:'Поиск'})).toHaveValue('Солнечный');
+ await expect(page.getByRole('link',{name:/Открыть ЖК/})).toHaveCount(1);
+ await page.getByRole('button',{name:'Добавить в избранное'}).click();
+ await page.getByRole('navigation').getByRole('button',{name:'Избранное',exact:true}).click();
+ await page.getByRole('link',{name:'Открыть ЖК Солнечный'}).click();await page.getByRole('link',{name:'Назад',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Избранное',exact:true})).toBeVisible();
+ await page.getByRole('navigation').getByRole('button',{name:'Главная',exact:true}).click();await expect(page.getByRole('heading',{name:'Продолжить выбор'})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
+});
+
+test('Клиент: конкретная планировка, переход после заявки, сообщение и отмена показа',async({page})=>{
+ test.setTimeout(90000);
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:'Пропустить онбординг'}).click();
+ await page.getByRole('link',{name:'Открыть ЖК Приморский'}).click();
+ await page.getByRole('button',{name:'Открыть планировку 1',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'ЖК Приморский · 1 комн.'})).toBeVisible();
+ await page.getByRole('button',{name:'Интересует эта планировка',exact:true}).click();
+ await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Тест планировки');
+ await page.getByRole('textbox',{name:'Телефон'}).fill('+79990000005');
+ await page.getByRole('button',{name:'Отправить заявку'}).click();
+ await page.getByRole('link',{name:'Открыть моё обращение →'}).click();
+ await expect(page.getByRole('heading',{name:'Мои подборки и показы'})).toBeVisible();
+ await page.getByText('Переписка по обращению',{exact:true}).click();
+ await page.getByLabel('Сообщение',{exact:true}).fill('Хочу уточнить этаж');await page.getByRole('button',{name:'Отправить сообщение'}).click();
+ await expect(page.getByText('Хочу уточнить этаж',{exact:true})).toBeVisible();
+ await page.getByText('Запросить время показа',{exact:true}).click();await page.getByLabel('ЖК',{exact:true}).selectOption('primorskiy');
+ const future=new Date(Date.now()+3*86400000).toISOString().slice(0,16);
+ await page.getByLabel('Дата и время (Владивосток)',{exact:true}).fill(future);await page.getByRole('button',{name:'Запросить показ',exact:true}).click();
+ await page.getByText('Изменить или отменить показ',{exact:true}).click();await page.getByRole('button',{name:'Отменить показ',exact:true}).click();await expect(page.getByText(/· Отменён/)).toBeVisible();
+ await page.goto('/pulsedv/control-center/#/leads');await page.locator('.leadRowButton').filter({hasText:'Тест планировки'}).click();
+ await expect(page.getByLabel('Заметка менеджера')).toHaveValue(/Интересует планировка: 1/);
+ await page.getByText(/Переписка по обращению/).click();await expect(page.getByText('Хочу уточнить этаж',{exact:true})).toBeVisible();
+ await page.getByLabel('Сообщение',{exact:true}).fill('Уточняю наличие');await page.getByRole('button',{name:'Отправить сообщение'}).click();
+ await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:/Уведомления, новых/}).click();await expect(page.getByRole('link',{name:/Сообщение от менеджера/})).toBeVisible();
+});

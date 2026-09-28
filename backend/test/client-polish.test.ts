@@ -1,0 +1,50 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID,createHmac} from 'node:crypto';
+import {testDatabase} from './database';
+import {migrate} from '../src/migrate';
+import {createApp} from '../src/app';
+import {readConfig} from '../src/config';
+import {upsertCatalogProperty} from '../src/catalogRepository';
+import {DEFAULT_STATE} from '../../packages/pulse-data/model';
+import {applyJourney,emptyJourney,clientJourney} from '../../packages/journey/model';
+import {clientUpdates} from '../../packages/journey/updates';
+function signed(userId:number,token:string){const p=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id:userId,first_name:'Test'})});const secret=createHmac('sha256','WebAppData').update(token).digest();p.set('hash',createHmac('sha256',secret).update([...p.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n')).digest('hex'));return p.toString()}
+test('Избранное API: изоляция, импорт один раз, объединение Telegram и удаление между устройствами',async t=>{
+ const db=await testDatabase();await migrate(db);const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',BOT_TOKEN:'test-token'});const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close()});
+ for(const p of DEFAULT_STATE.properties)await db.transaction(sql=>upsertCatalogProperty(sql,p));
+ const headers={'content-type':'application/json',origin:config.PUBLIC_ORIGIN};
+ const session=async()=>(await app.inject({method:'POST',url:'/api/v1/auth/session',headers,payload:{}})).json();
+ const a=await session(),b=await session(),c=await session();
+ const get=async(s:any)=>(await app.inject({url:'/api/v1/me/favorites',headers:{authorization:'Bearer '+s.accessToken}})).json();
+ const change=(s:any,changes:any[],importIds?:string[])=>app.inject({method:'POST',url:'/api/v1/me/favorites',headers:{...headers,authorization:'Bearer '+s.accessToken},payload:{changes,importIds}});
+ const bind=(s:any,id:number)=>app.inject({method:'POST',url:'/api/v1/auth/telegram',headers:{...headers,authorization:'Bearer '+s.accessToken},payload:{initData:signed(id,config.BOT_TOKEN)}});
+ assert.equal((await app.inject('/api/v1/me/favorites')).statusCode,401);
+ assert.equal((await change(a,[],['primorskiy'])).statusCode,200);
+ assert.deepEqual((await get(b)).ids,[]);
+ await change(a,[{id:'primorskiy',saved:false}]);await change(a,[],['primorskiy']);assert.deepEqual((await get(a)).ids,[]);
+ await change(a,[{id:'solnechniy',saved:true}]);await change(b,[{id:'primorskiy',saved:true}]);
+ assert.equal((await bind(a,123456)).statusCode,200);assert.equal((await bind(b,123456)).statusCode,200);
+ assert.deepEqual((await get(a)).ids.sort(),['primorskiy','solnechniy']);assert.equal((await get(b)).authenticated,true);
+ await change(b,[{id:'solnechniy',saved:false}]);assert.deepEqual((await get(a)).ids,['primorskiy']);
+ assert.deepEqual((await get(c)).ids,[]);assert.equal((await bind(b,987654)).statusCode,409);
+ const forged=await app.inject({method:'POST',url:'/api/v1/me/favorites',headers:{...headers,authorization:'Bearer '+c.accessToken},payload:{changes:[],owner:'user:123456'}});assert.equal(forged.statusCode,400);
+ const removed=await change(c,[{id:'missing-property',saved:true}]);assert.equal(removed.statusCode,200);assert.deepEqual(removed.json().rejectedIds,['missing-property']);
+});
+test('Показы: запрос переноса сохраняет подтверждённое время, клиент не может подтвердить его сам',()=>{
+ const now=new Date('2026-09-28T00:00:00Z'),id=randomUUID();let j=applyJourney(emptyJourney('lead'),{type:'showing',id,propertyId:'x',at:'2026-10-01T03:00:00Z',note:''},'client',now);
+ j=applyJourney(j,{type:'showing_status',id,status:'confirmed',result:''},'manager',now);
+ j=applyJourney(j,{type:'showing_change',id,action:'reschedule',at:'2026-10-02T03:00:00Z',note:'Другой день'},'client',now);
+ assert.equal(j.showings[0].at,'2026-10-01T03:00:00Z');assert.equal(j.showings[0].status,'confirmed');
+ assert.throws(()=>applyJourney(j,{type:'showing_reschedule',id,accept:true},'client',now));
+ j=applyJourney(j,{type:'showing_reschedule',id,accept:true},'manager',now);assert.equal(j.showings[0].at,'2026-10-02T03:00:00Z');assert.equal(j.showings[0].proposedAt,undefined);
+ j=applyJourney(j,{type:'showing_change',id,action:'cancel',note:'Планы изменились'},'client',now);assert.equal(j.showings[0].status,'cancelled');
+ assert.throws(()=>applyJourney(j,{type:'showing_change',id,action:'reschedule',at:'2026-10-03T03:00:00Z',note:''},'client',now));
+});
+test('Обновления: только опубликованные подборки и реальные ответы менеджера',()=>{
+ const now=new Date('2026-09-28T00:00:00Z');let j=emptyJourney('lead');
+ j=applyJourney(j,{type:'collection',id:'c',title:'Моя подборка',items:[{propertyId:'x',note:''}],published:false},'manager',now);
+ j=applyJourney(j,{type:'message',id:'a',text:'Вопрос клиента'},'client',now);
+ const entries=()=>[{leadId:'lead',status:'new',propertyId:'x',createdAt:now.toISOString(),journey:clientJourney(j)}];assert.equal(clientUpdates(entries()).length,0);
+ j=applyJourney(j,{type:'message',id:'b',text:'Ответ менеджера'},'manager',now);const updates=clientUpdates(entries());assert.equal(updates.length,1);assert.equal(updates[0].title,'Сообщение от менеджера');assert.equal(clientJourney(j).messages?.length,2);
+});

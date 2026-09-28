@@ -12,6 +12,9 @@ export const journeyCommand=z.discriminatedUnion('type',[
  z.object({type:z.literal('reaction'),collectionId:id,propertyId:short,reaction:z.enum(['liked','expensive','location','question','none']),reply:note}),
  z.object({type:z.literal('showing'),id,propertyId:short,at:z.iso.datetime(),note}),
  z.object({type:z.literal('showing_status'),id,status:z.enum(['requested','confirmed','completed','cancelled']),result:note}),
+ z.object({type:z.literal('message'),id,text:note.min(1)}),
+ z.object({type:z.literal('showing_change'),id,action:z.enum(['cancel','reschedule']),at:z.iso.datetime().optional(),note}),
+ z.object({type:z.literal('showing_reschedule'),id,accept:z.boolean()}),
  z.object({type:z.literal('next_step'),title:short,dueAt:z.iso.datetime(),done:z.boolean()})
 ]);
 export async function registerJourneyRoutes(app:FastifyInstance,db:Database,control:(r:FastifyRequest)=>Promise<void>,visitor:(r:FastifyRequest)=>Promise<void>,editor:(r:FastifyRequest)=>Promise<void>,origin:string){
@@ -25,8 +28,8 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
   app.get(prefix+'/journeys',{preHandler:auth},async r=>{
    const values=client?[r.visitor!.sessionId,r.visitor!.userId]:r.member!.role==='manager'?[r.member!.id]:[];
    const where=client?'where l.session_id=$1 or ($2::uuid is not null and l.user_id=$2)':r.member!.role==='manager'?'where l.manager_id=$1':'';
-   const rows=(await db.query(`select l.id,l.status,l.property_id,l.created_at,j.document from leads l left join client_journeys j on j.lead_id=l.id ${where} order by l.created_at desc limit 1001`,values)).rows;
-   return {limited:rows.length>1000,items:rows.slice(0,1000).map(l=>({leadId:l.id,status:l.status,propertyId:l.property_id,createdAt:l.created_at,journey:client?clientJourney(l.document||emptyJourney(l.id)):l.document||emptyJourney(l.id)}))};
+   const rows=(await db.query(`select l.id,l.status,l.property_id,l.created_at,m.name as manager_name,j.document from leads l left join team_members m on m.id=l.manager_id and m.active=true left join client_journeys j on j.lead_id=l.id ${where} order by l.created_at desc limit 1001`,values)).rows;
+   return {limited:rows.length>1000,items:rows.slice(0,1000).map(l=>({leadId:l.id,status:l.status,propertyId:l.property_id,createdAt:l.created_at,managerName:l.manager_name||null,journey:client?clientJourney(l.document||emptyJourney(l.id)):l.document||emptyJourney(l.id)}))};
   });
   app.post(prefix+'/journeys/:id',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);const input=z.object({revision:z.number().int().nonnegative(),command:journeyCommand}).strict().parse(r.body);
@@ -40,18 +43,19 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
     for(const propertyId of propertyIds)if(!await getCatalogProperty(sql,propertyId,'published'))throw new HttpError(400,'Объект больше не опубликован');
     if(c.type==='showing'&&client&&!current.collections.some((s:any)=>s.published&&s.items.some((i:any)=>i.propertyId===c.propertyId))&&l.property_id!==c.propertyId)throw new HttpError(400,'Выберите объект из своей подборки');
     let next:Journey;try{next=applyJourney(current,c,client?'client':'manager');}catch(e){throw new HttpError(400,(e as Error).message);}
-    if(c.type==='showing_status'&&c.status==='confirmed'&&!l.manager_id)throw new HttpError(400,'Сначала назначьте ответственного менеджера');
-    if(c.type==='showing_status'&&c.status==='confirmed'&&l.manager_id){
+    const confirms=c.type==='showing_status'&&c.status==='confirmed'||c.type==='showing_reschedule'&&c.accept;
+    if(confirms&&!l.manager_id)throw new HttpError(400,'Сначала назначьте ответственного менеджера');
+    if(confirms&&l.manager_id){
      await sql.query('select id from team_members where id=$1 for update',[l.manager_id]);
-     const slot=next.showings.find(s=>s.id===c.id)!;
-     const conflict=(await sql.query(`select j.lead_id from client_journeys j join leads l on l.id=j.lead_id, jsonb_array_elements(j.document->'showings') s where l.manager_id=$1 and s->>'status'='confirmed' and s->>'id'<>$2 and abs(extract(epoch from ((s->>'at')::timestamptz-$3::timestamptz)))<3600 limit 1`,[l.manager_id,c.id,slot.at])).rows.length;
+     const slot=next.showings.find(s=>s.id===('id' in c?c.id:''))!;
+     const conflict=(await sql.query(`select j.lead_id from client_journeys j join leads l on l.id=j.lead_id, jsonb_array_elements(j.document->'showings') s where l.manager_id=$1 and s->>'status'='confirmed' and s->>'id'<>$2 and abs(extract(epoch from ((s->>'at')::timestamptz-$3::timestamptz)))<3600 limit 1`,[l.manager_id,slot.id,slot.at])).rows.length;
      if(conflict)throw new HttpError(409,'У менеджера уже есть показ в пределах часа');
     }
     await sql.query(`insert into client_journeys(lead_id,revision,document) values($1,$2,$3::jsonb) on conflict(lead_id) do update set revision=excluded.revision,document=excluded.document,updated_at=now()`,[leadId,next.revision,JSON.stringify(next)]);
     
-    if(client)await sql.query('insert into user_events(idempotency_key,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at) values($1,$2,$3,$4,$5,$6,$7::jsonb,now())',[randomUUID(),r.visitor!.sessionId,r.visitor!.userId,c.type==='reaction'?'collection_reaction':'showing_requested','property',c.type==='reaction'||c.type==='showing'?c.propertyId:null,JSON.stringify(c.type==='reaction'?{reaction:c.reaction,reply:c.reply.slice(0,150)}:{})]);
+    if(client)await sql.query('insert into user_events(idempotency_key,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at) values($1,$2,$3,$4,$5,$6,$7::jsonb,now())',[randomUUID(),r.visitor!.sessionId,r.visitor!.userId,c.type==='reaction'?'collection_reaction':c.type==='message'?'client_message':c.type==='showing_change'?(c.action==='cancel'?'showing_cancelled':'showing_reschedule_requested'):'showing_requested','property',c.type==='reaction'||c.type==='showing'?c.propertyId:null,JSON.stringify(c.type==='reaction'?{reaction:c.reaction,reply:c.reply.slice(0,150)}:{})]);
     const recipient=client?l.manager_id:l.user_id;
-    if(recipient&&(client||c.type==='collection'&&c.published||c.type==='showing_status'))await sql.query('insert into outbox_events(topic,aggregate_type,aggregate_id,payload) values($1,$2,$3,$4::jsonb)',[client?'manager.journey':'user.journey','lead',leadId,JSON.stringify({[client?'managerId':'userId']:recipient,title:'Обновление по подбору',body:client?'Клиент ответил на подборку или запросил показ.':'Менеджер обновил вашу подборку или показ.',deepLink:origin+(client?'/pulsedv/control-center/#/leads?lead='+leadId:'/pulsedv/mini-app/#/journey')})]);
+    if(recipient&&(client||c.type==='collection'&&c.published||['showing_status','showing_reschedule','message'].includes(c.type)))await sql.query('insert into outbox_events(topic,aggregate_type,aggregate_id,payload) values($1,$2,$3,$4::jsonb)',[client?'manager.journey':'user.journey','lead',leadId,JSON.stringify({[client?'managerId':'userId']:recipient,title:'Обновление по подбору',body:client?'Клиент обновил обращение: ответ, сообщение или изменение показа.':'Менеджер обновил ваше обращение. Откройте подборки, показы и сообщения.',deepLink:origin+(client?'/pulsedv/control-center/#/leads?lead='+leadId:'/pulsedv/mini-app/#/journey')})]);
     if(!client)await audit(sql,r.member!.id,'journey.'+c.type,leadId,{revision:next.revision});
     return {journey:client?clientJourney(next):next};
    });

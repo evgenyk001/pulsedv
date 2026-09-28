@@ -1,7 +1,7 @@
 import {api,visitorApi,runtime} from '../pulse-data/runtime';
 import {listPulseLeads,recordPulseEvent} from '../pulse-data';
 import {applyJourney,clientJourney,emptyJourney,type Journey,type JourneyCommand,type Verification} from './model';
-export type JourneyEntry={leadId:string;status:string;propertyId:string|null;createdAt:string;journey:Journey};
+export type JourneyEntry={leadId:string;status:string;propertyId:string|null;createdAt:string;managerName?:string|null;journey:Journey};
 const KEY='pulse.dv.journeys.v1';
 function read():Record<string,Journey>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return {}}}
 export async function loadJourneys(client=false):Promise<{items:JourneyEntry[];limited:boolean}>{
@@ -15,7 +15,7 @@ export async function saveJourney(journey:Journey,command:JourneyCommand,client=
  if(current.revision!==journey.revision)throw new Error('Карточка изменилась. Обновите данные');
  data[journey.leadId]=applyJourney(current,command,client?'client':'manager');
  localStorage.setItem(KEY,JSON.stringify(data));window.dispatchEvent(new Event('pulse:journey'));
- if(client)recordPulseEvent({eventType:command.type==='reaction'?'collection_reaction':'showing_requested',entityType:'property',entityId:command.type==='reaction'||command.type==='showing'?command.propertyId:null,metadata:command.type==='reaction'?{reaction:command.reaction,reply:command.reply.slice(0,150)}:{}});
+ if(client)recordPulseEvent({eventType:command.type==='reaction'?'collection_reaction':command.type==='message'?'client_message':command.type==='showing_change'?(command.action==='cancel'?'showing_cancelled':'showing_reschedule_requested'):'showing_requested',entityType:'property',entityId:command.type==='reaction'||command.type==='showing'?command.propertyId:null,metadata:command.type==='reaction'?{reaction:command.reaction,reply:command.reply.slice(0,150)}:{}});
  return {journey:client?clientJourney(data[journey.leadId]):data[journey.leadId]};
 }
 export async function loadVerifications():Promise<Verification[]>{if(runtime.enabled)return (await api('/public/verifications')).items;try{return JSON.parse(localStorage.getItem('pulse.dv.verifications.v1')||'[]')}catch{return []}}

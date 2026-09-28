@@ -6,5 +6,5 @@ export async function postLead(payload:LeadPayload){
  if(payload.name.trim().length<2)throw new Error('Укажите имя');
  if(!/^\+[1-9]\d{9,14}$/.test(phone))throw new Error('Проверьте номер телефона');
  if(runtime.enabled)return createRemoteLead({...payload,name:payload.name.trim(),phone});
- const {idempotencyKey,...input}=payload;addPulseLead({...input,name:payload.name.trim(),phone});return {ok:true,preview:true};
+ const {idempotencyKey,...input}=payload;const lead=addPulseLead({...input,name:payload.name.trim(),phone});return {ok:true,preview:true,id:lead.id};
 }
