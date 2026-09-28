@@ -15,7 +15,8 @@ export function AppShell({children}:{children:React.ReactNode}){
   const location=useLocation();
   const control=usePulseControlState();
   const [showOnboarding,setShowOnboarding]=React.useState(false);
-  const hideNav=location.pathname.startsWith("/property/");
+  const chatRoute=location.pathname==="/journey"&&new URLSearchParams(location.search).has("lead");
+  const hideNav=location.pathname.startsWith("/property/")||chatRoute;
 
   React.useEffect(()=>{
     const version=control.content.onboardingVersion;
@@ -42,7 +43,7 @@ export function AppShell({children}:{children:React.ReactNode}){
   return <div className={styles.viewport}><NavigationMemory/><FavoriteSync/>
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
     <main onClickCapture={e=>{const a=(e.target as Element).closest?.("a");if(a?.getAttribute("href")?.includes("#/property/")){try{sessionStorage.setItem("pulse.property.return",location.pathname+location.search)}catch{}}}} className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
-      <div key={location.pathname} className={styles.routeFrame}>{children}</div>
+      <div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:""}`}>{children}</div>
     </main>
     {!hideNav&&<BottomNav/>}
     {showOnboarding&&!hideNav&&control.content.onboardingEnabled&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}

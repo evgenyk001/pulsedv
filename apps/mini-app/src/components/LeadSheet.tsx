@@ -2,8 +2,8 @@ import {Link} from "react-router-dom";
 import {useQueryClient} from "@tanstack/react-query";
 import { runtime } from "../../../../packages/pulse-data/runtime";
 import React from "react";
-import { CheckCircle2, Send } from "lucide-react";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./Sheet";
+import { CheckCircle2, Send, ArrowRight, X } from "lucide-react";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "./Sheet";
 import { Input } from "./Input";
 import { postLead } from "../endpoints/leads_POST.schema";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
@@ -42,7 +42,8 @@ export function LeadSheet({children,title="Получить консультац
   }}>
     <SheetTrigger asChild>{children}</SheetTrigger>
     <SheetContent side="bottom" className={styles.sheet}>
-      {sent?<div className={styles.success}><CheckCircle2 size={38}/><h2>{runtime.enabled?"Заявка принята":"Демонстрация завершена"}</h2><p>{runtime.enabled?"Менеджер PULSE.DV свяжется с вами и уточнит детали"+(project?" по "+project:"")+".":"Это демонстрационный режим. Заявка не отправлена менеджеру."}</p><Link className={styles.submit} to={"/journey"+(leadId?"?lead="+leadId:"")}>Открыть моё обращение →</Link></div>:<>
+      <SheetClose className={styles.dismiss} aria-label="Закрыть заявку"><X size={18}/></SheetClose>
+      {sent?<div className={styles.success}><CheckCircle2 size={38}/><h2>{runtime.enabled?"Заявка принята":"Обращение создано"}</h2><p>{runtime.enabled?"Менеджер PULSE.DV свяжется с вами и уточнит детали"+(project?" по "+project:"")+".":"Это демонстрационный режим. Заявка не отправлена менеджеру."}</p><Link className={styles.submit} to={"/journey"+(leadId?"?lead="+leadId:"")}>Открыть моё обращение <ArrowRight size={17}/></Link></div>:<>
         <SheetHeader><SheetTitle>{title}</SheetTitle><SheetDescription>{project?(project+". "):""}Оставьте контакт — всё остальное обсудим без спешки.</SheetDescription></SheetHeader>
         <form className={styles.form} onSubmit={submit}>
           <label><span>Как к вам обращаться</span><Input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Имя" autoComplete="given-name" maxLength={100} required/></label>
