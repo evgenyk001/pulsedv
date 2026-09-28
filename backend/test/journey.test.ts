@@ -66,6 +66,10 @@ test('Journey API: доступ, конфликт версий, публикац
  assert.equal((await post(secondPath,{type:'showing_status',id:secondShow.id,status:'confirmed',result:''},1)).statusCode,409);
  response=await post(path,{type:'showing_status',id:show.id,status:'completed',result:'Клиент выбирает этаж'},5);assert.equal(response.statusCode,200,response.body);
  assert.equal((await mine()).showings[0].result,'');
+ const messageId=randomUUID();response=await post(path,{type:'message',id:messageId,text:'Документы по квартире',attachment:{kind:'file',name:'offer.pdf',url:'/media/chat/test.pdf',mimeType:'application/pdf',size:1024}},6);assert.equal(response.statusCode,200,response.body);
+ let clientJourneyState=await mine();assert.equal(clientJourneyState.messages[0].attachment.name,'offer.pdf');assert.equal(clientJourneyState.messages[0].readAt,undefined);
+ response=await app.inject({method:'POST',url:clientPath+'/read',headers:auth,payload:{messageIds:[messageId]}});assert.equal(response.statusCode,200,response.body);assert.ok(response.json().journey.messages[0].readAt);
+ const managerJourney=(await app.inject({url:'/api/v1/control/journeys',cookies})).json().items.find((x:any)=>x.leadId===lead.id).journey;assert.ok(managerJourney.messages[0].readAt);
  const acquisition=await app.inject({url:'/api/v1/control/acquisition',cookies});assert.equal(acquisition.statusCode,200,acquisition.body);const row=acquisition.json().items.find((r:any)=>r.source==='telegram');assert.equal(row.contacts,1);assert.equal(row.showings,1);
  const verify=()=>app.inject({method:'POST',url:'/api/v1/control/verifications/primorskiy',headers,cookies,payload:{note:'Сверено с застройщиком',revision:0}});
  response=await verify();assert.equal(response.statusCode,200,response.body);assert.equal((await verify()).statusCode,409);
