@@ -2,7 +2,7 @@ import React from 'react';
 import {CalendarDays,Check,CheckCheck,ChevronRight,FileText,Image as ImageIcon,MessageCircle,Paperclip,RefreshCw,Send,Sparkles,X} from 'lucide-react';
 import {ShowingChange} from './ShowingChange';
 import {loadJourneys,markJourneyRead,saveJourney,uploadJourneyAttachment,type JourneyEntry} from './client';
-import {reactionLabels,showingLabels,type Journey,type JourneyAttachment,type JourneyCommand} from './model';
+import {reactionLabels,showingLabels,type JourneyAttachment,type JourneyCommand} from './model';
 import type {PulseProperty} from '../pulse-data/model';
 import './controlJourney.css';
 
