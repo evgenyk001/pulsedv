@@ -27,9 +27,10 @@ const fallbackSlides:Slide[] = [
   { id:"select",image:asset("/_cdn/static/7493f319-d413-4d3d-90e4-66b4a2ee6ecd.png"),eyebrow:"PULSE Select",title:"Не листайте сотни квартир вручную",text:"Ответьте на несколько вопросов — покажем подходящие ЖК.",cta:"Начать подбор",to:"/selection",kind:"promo",icon:Sparkles }
 ];
 
-function BannerLink({to,className,children,label}:{to:string;className:string;children:React.ReactNode;label:string}){
-  if(/^https?:\/\//i.test(to))return <a href={to} target="_blank" rel="noreferrer" className={className} aria-label={label}>{children}</a>;
-  return <Link to={to||"/catalog"} className={className} aria-label={label}>{children}</Link>;
+function BannerLink({to,className,children,label,onActivate}:{to:string|null;className:string;children:React.ReactNode;label:string;onActivate:()=>void}){
+  if(!to)return <div className={className} aria-label={label}>{children}</div>;
+  if(/^https?:\/\//i.test(to))return <a href={to} target="_blank" rel="noreferrer" className={className} aria-label={label} onClick={onActivate}>{children}</a>;
+  return <Link to={to} className={className} aria-label={label} onClick={onActivate}>{children}</Link>;
 }
 
 export function PromoCarousel(){
