@@ -35,3 +35,5 @@
 @media(prefers-reduced-motion:reduce){.primary,.secondary,.iconButton{transition:none}}
 
 .startActions{display:grid;gap:10px}.empty .benefits{margin-bottom:0}
+
+.composer:focus-within{border-color:rgba(242,13,29,.28);box-shadow:var(--app-card-shadow),0 0 0 3px var(--brand-soft)}.composer textarea:focus-visible{outline:none}

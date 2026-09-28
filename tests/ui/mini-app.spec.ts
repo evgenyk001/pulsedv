@@ -308,6 +308,7 @@ for(const width of [320,390])test(`Переписка ${width}px: чернови
  await page.setViewportSize({width,height:470});
  await page.getByLabel('Сообщение',{exact:true}).fill('Рассматриваем центр');
  await expect(page.getByRole('button',{name:'Отправить сообщение'})).toBeInViewport();
+ await expect(page.getByRole('article',{name:'Сообщение менеджера'})).toBeInViewport();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  await page.screenshot({path:`test-results/chat-short-${width}.png`,animations:'disabled'});
  await page.getByRole('link',{name:'Все мои обращения',exact:true}).click();
