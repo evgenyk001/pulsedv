@@ -1,15 +1,34 @@
-import {Link,useSearchParams} from "react-router-dom";
 import React from 'react';
-import {ArrowLeft, ArrowRight, MessageCircle, ListChecks, CalendarDays, Sparkles} from 'lucide-react';
-import {JourneyPanel} from '../../../../packages/journey/JourneyPanel';
-import {type JourneyEntry} from '../../../../packages/journey/client';
+import {Link, useSearchParams} from 'react-router-dom';
+import {useQuery} from '@tanstack/react-query';
+import {ArrowLeft, ArrowRight, MessageCircle, CalendarDays, Sparkles, Plus, RefreshCw, ChevronRight} from 'lucide-react';
+import {useClientJourneys} from '../helpers/useClientJourneys';
 import {getPropertiesByIds} from '../helpers/catalogApi';
 import {LeadSheet} from '../components/LeadSheet';
-import type {PulseProperty} from '../../../../packages/pulse-data/model';
-import '../components/clientPolish.css';
+import {ClientConversation, journeyStatus, journeyDate} from '../components/ClientConversation';
+import styles from './journey.module.css';
+
 export default function JourneyPage(){
  const [params]=useSearchParams();
- const [properties,setProperties]=React.useState<PulseProperty[]>([]),[error,setError]=React.useState('');
- const refreshProperties=React.useCallback((items:JourneyEntry[])=>{setError('');getPropertiesByIds([...new Set(items.flatMap(e=>[e.propertyId,...e.journey.collections.flatMap(c=>c.items.map(i=>i.propertyId)),...e.journey.showings.map(s=>s.propertyId)]).filter((x):x is string=>!!x))]).then(setProperties).catch(e=>setError(e.message))},[]);
- return <div className="pulseJourneyPage"><nav className="pulseJourneyNav" aria-label="Навигация по обращениям"><Link to="/"><ArrowLeft size={18}/>На главную</Link><Link to="/profile">Профиль</Link></nav>{error&&<p role="alert">Не удалось загрузить сведения о проектах. Нажмите «Обновить», чтобы повторить.</p>}{params.get('lead')&&<Link className="pulseAllJourneys" to="/journey">Все мои обращения<ArrowRight size={16}/></Link>}<JourneyPanel client leadId={params.get('lead')||undefined} properties={properties} onRefreshed={refreshProperties} emptyState={params.get('lead')?<div className="pulseJourneyEmpty"><h3>Обращение недоступно</h3><p>Возможно, оно было создано в другом браузере или аккаунте.</p><Link className="pulseClientAction" to="/journey">Все мои обращения</Link></div>:<div className="pulseJourneyEmpty"><span className="pulseEmptyIcon"><MessageCircle size={30}/></span><h3>Найдём квартиру вместе</h3><p>Расскажите, что ищете. Здесь вы сможете обсуждать варианты с менеджером и договариваться о просмотрах.</p><div className="pulseJourneyBenefits"><span><Sparkles size={18}/><b>Подборки под вас</b><small>Сравнивайте и отмечайте подходящее</small></span><span><MessageCircle size={18}/><b>Прямая связь</b><small>Все вопросы в одном обращении</small></span><span><CalendarDays size={18}/><b>Удобные показы</b><small>Согласовывайте дату и время</small></span></div><LeadSheet title="Помочь с выбором квартиры" source="journey"><button className="pulseClientAction">Обсудить покупку<ArrowRight size={17}/></button></LeadSheet><Link className="pulseSecondaryAction" to="/catalog"><ListChecks size={17}/>Пока посмотрю каталог</Link></div>}/></div>;
+ const query=useClientJourneys(params.get('lead')?10000:30000);
+ const items=query.data?.items||[];
+ const ids=[...new Set(items.flatMap(e=>[e.propertyId,...e.journey.collections.flatMap(c=>c.items.map(i=>i.propertyId)),...e.journey.showings.map(s=>s.propertyId)]).filter((id):id is string=>!!id))].sort();
+ const catalog=useQuery({queryKey:['journey-properties',ids],queryFn:()=>getPropertiesByIds(ids),enabled:ids.length>0,staleTime:60000});
+ const properties=catalog.data||[];
+ const leadId=params.get('lead');
+ const selected=items.find(e=>e.leadId===leadId);
+ if(leadId&&selected)return <ClientConversation key={leadId} entry={selected} properties={properties} query={query} catalogError={!!catalog.error} onRetryCatalog={()=>void catalog.refetch()}/>;
+ return <div className={styles.page}>
+  <nav className={styles.navigation} aria-label="Навигация по обращениям"><Link to="/"><ArrowLeft size={18}/>На главную</Link><Link to="/profile">Профиль</Link></nav>
+  <header className={styles.pageHeader}><span>НА СВЯЗИ С PULSE.DV</span><div><h1>Мои подборки<br/>и показы</h1><button className={styles.iconButton} aria-label="Обновить обращения" disabled={query.isFetching} onClick={()=>void query.refetch()}><RefreshCw size={19}/></button></div><p>Ваши диалоги, варианты квартир и встречи — в одном месте.</p></header>
+  {query.isLoading?<div className={styles.loading} role="status">Загружаем обращения…</div>:query.error?<div className={styles.empty}><MessageCircle size={32}/><h2>Не удалось загрузить диалоги</h2><p>Проверьте подключение. Ваши сообщения сохраняются в обращении.</p><button className={styles.secondary} onClick={()=>void query.refetch()}>Попробовать ещё раз</button></div>:leadId?<div className={styles.empty}><MessageCircle size={32}/><h2>Обращение недоступно</h2><p>Возможно, оно создано в другом браузере или аккаунте.</p><Link className={styles.primary} to="/journey">Все мои обращения</Link></div>:!items.length?<section className={styles.empty}>
+   <span className={styles.emptyIcon}><MessageCircle size={30}/></span><h2>Найдём квартиру вместе</h2><p>Начните диалог с командой. Поможем сравнить варианты и организовать просмотр.</p>
+   <div className={styles.benefits}><span><Sparkles size={18}/><b>Подборки под вас</b><small>Сохраняйте подходящие варианты</small></span><span><MessageCircle size={18}/><b>Личная переписка</b><small>Вопросы и ответы всегда рядом</small></span><span><CalendarDays size={18}/><b>Удобные показы</b><small>Выбирайте время вместе с менеджером</small></span></div>
+
+  </section>:<><div className={styles.inbox} aria-label="Мои диалоги">{[...items].sort((a,b)=>Date.parse(b.journey.messages?.at(-1)?.at||b.createdAt)-Date.parse(a.journey.messages?.at(-1)?.at||a.createdAt)).map(e=>{
+   const last=e.journey.messages?.at(-1);const property=properties.find(p=>p.id===e.propertyId);const closed=['deal','closed','lost'].includes(e.status);
+   return <Link className={styles.dialogRow} key={e.leadId} to={'/journey?lead='+e.leadId}><span className={styles.avatar}>{e.managerName?e.managerName.trim().split(/\s+/).map(n=>n[0]).slice(0,2).join(''):<MessageCircle size={22}/>}</span><span className={styles.dialogCopy}><span className={styles.dialogTitle}><strong>{e.managerName||'Команда PULSE.DV'}</strong><time>{journeyDate(last?.at||e.createdAt,true)}</time></span><b>{property?.name||'Помощь с покупкой'}</b><small>{last?(last.author==='client'?'Вы: ':'')+last.text:closed?'Обращение завершено':'Начните переписку — расскажите, что ищете'}</small><span className={styles.status}>{journeyStatus(e.status)}</span></span><ChevronRight size={16}/></Link>;
+  })}</div></>}
+  {!leadId&&!query.isLoading&&!query.error&&<div className={styles.startActions}><LeadSheet title="Помочь с выбором квартиры" source="journey"><button className={items.length?styles.secondary:styles.primary}>{items.length?<><Plus size={18}/>Обсудить другую покупку</>:<>Обсудить покупку<ArrowRight size={17}/></>}</button></LeadSheet>{!items.length&&<Link className={styles.secondary} to="/catalog">Пока посмотрю каталог</Link>}</div>}
+ </div>;
 }
