@@ -218,7 +218,7 @@ test('Клиент: поиск и избранное сохраняют конт
  await page.getByRole('navigation').getByRole('button',{name:'Избранное',exact:true}).click();
  await page.getByRole('link',{name:'Открыть ЖК Солнечный'}).click();await page.getByRole('link',{name:'Назад',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Избранное',exact:true})).toBeVisible();
- await page.getByRole('navigation').getByRole('button',{name:'Главная',exact:true}).click();await expect(page.getByRole('heading',{name:'Продолжить выбор'})).toBeVisible();
+ await page.getByRole('navigation').getByRole('button',{name:'Главная',exact:true}).click();await expect(page.getByRole('region',{name:'Продолжить выбор'})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
 
@@ -247,4 +247,35 @@ test('Клиент: конкретная планировка, переход п
  await page.getByText(/Переписка по обращению/).click();await expect(page.getByText('Хочу уточнить этаж',{exact:true})).toBeVisible();
  await page.getByLabel('Сообщение',{exact:true}).fill('Уточняю наличие');await page.getByRole('button',{name:'Отправить сообщение'}).click();
  await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:/Уведомления, новых/}).click();await expect(page.getByRole('link',{name:/Сообщение от менеджера/})).toBeVisible();
+});
+
+test('Клиент: понятные уведомления, пустые обращения и скрываемое продолжение',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:'Пропустить онбординг'}).click();
+ await page.getByRole('button',{name:'Уведомления',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Вы ничего не пропустили'})).toBeVisible();
+ await page.getByRole('button',{name:'Закрыть уведомления',exact:true}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
+ await page.getByRole('button',{name:'Уведомления',exact:true}).click();
+ await page.screenshot({path:'test-results/client-notifications.png'});
+ await page.getByRole('link',{name:'Помощь с покупкой',exact:true}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
+ await expect(page.getByRole('heading',{name:'Найдём квартиру вместе'})).toBeVisible();
+ await page.screenshot({path:'test-results/client-journey-empty.png',fullPage:true});
+ await page.getByRole('button',{name:'Обсудить покупку'}).click();
+ await expect(page.getByRole('textbox',{name:'Телефон'})).toBeVisible();
+ await page.keyboard.press('Escape');
+ await page.getByRole('link',{name:'Пока посмотрю каталог'}).click();
+ await expect(page.getByRole('textbox',{name:'Поиск'})).toBeVisible();
+ await page.getByRole('navigation').getByRole('button',{name:'Подбор',exact:true}).click();
+ await page.getByRole('navigation').getByRole('button',{name:'Главная',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Продолжить выбор'})).toHaveCount(0);
+ await page.getByRole('link',{name:'Открыть ЖК Приморский'}).click();
+ await page.getByRole('link',{name:'Назад',exact:true}).click();
+ await page.getByRole('navigation').getByRole('button',{name:'Главная',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Продолжить выбор'})).toBeVisible();
+ await page.screenshot({path:'test-results/client-resume.png',fullPage:true});
+ await page.getByRole('button',{name:'Скрыть продолжение выбора'}).click();
+ await page.reload();await expect(page.getByRole('region',{name:'Продолжить выбор'})).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
 });
