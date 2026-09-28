@@ -46,7 +46,7 @@ test('Journey API: доступ, конфликт версий, публикац
  assert.equal((await app.inject('/api/v1/control/journeys')).statusCode,401);
  assert.equal((await app.inject({method:'POST',url:path,headers,cookies:otherCookies,payload:{revision:0,command:collection}})).statusCode,404);
  let response=await post(path,collection,0);assert.equal(response.statusCode,200,response.body);
- const mine=async()=>(await app.inject({url:'/api/v1/me/journeys',headers:auth})).json().items[0].journey;
+ const mine=async()=>(await app.inject({url:'/api/v1/me/journeys',headers:auth})).json().items.find((x:any)=>x.leadId===lead.id).journey;
  assert.equal((await mine()).collections.length,0);
  assert.equal((await app.inject({url:'/api/v1/me/journeys',headers:unauthorized})).json().items.length,0);
  assert.equal((await post(path,collection,0)).statusCode,409);
