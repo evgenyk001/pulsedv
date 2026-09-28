@@ -16,7 +16,7 @@ export const journeyCommand=z.discriminatedUnion('type',[
  z.object({type:z.literal('reaction'),collectionId:id,propertyId:short,reaction:z.enum(['liked','expensive','location','question','none']),reply:note}),
  z.object({type:z.literal('showing'),id,propertyId:short,at:z.iso.datetime(),note}),
  z.object({type:z.literal('showing_status'),id,status:z.enum(['requested','confirmed','completed','cancelled']),result:note}),
- z.object({type:z.literal('message'),id,text:z.string().trim().max(2000).default(''),attachment:attachmentSchema.optional()}).refine(v=>!!v.text||!!v.attachment,{message:'Добавьте сообщение или вложение'}),
+ z.object({type:z.literal('message'),id,text:z.string().trim().max(2000).default(''),attachment:attachmentSchema.optional()}),
  z.object({type:z.literal('showing_change'),id,action:z.enum(['cancel','reschedule']),at:z.iso.datetime().optional(),note}),
  z.object({type:z.literal('showing_reschedule'),id,accept:z.boolean()}),
  z.object({type:z.literal('next_step'),title:short,dueAt:z.iso.datetime(),done:z.boolean()})
