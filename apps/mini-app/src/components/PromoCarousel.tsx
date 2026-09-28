@@ -4,6 +4,7 @@ import { ArrowUpRight, Building2, Percent, Sparkles, X, type LucideIcon } from "
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "./Carousel";
 import Autoplay from "embla-carousel-autoplay";
 import { usePromoBanners } from "../helpers/usePromoBanners";
+import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./PromoCarousel.module.css";
 
 type Slide={
@@ -13,21 +14,23 @@ type Slide={
   title:string;
   text:string;
   cta:string;
-  to:string;
+  to:string|null;
+  kind:"promo"|"giveaway"|"partner";
   icon:LucideIcon;
 };
 
 const asset=(path:string)=>`${import.meta.env.BASE_URL}${path.startsWith("/")?path.slice(1):path}`;
 
 const fallbackSlides:Slide[] = [
-  { id:"projects",image:asset("/_cdn/static/938f9be1-5061-411a-ac1d-f1362819f38b.png"),eyebrow:"Новостройки Приморья",title:"Квартира, которую хочется показывать друзьям",text:"Проекты Владивостока, Артёма и Уссурийска в одном каталоге.",cta:"Смотреть проекты",to:"/catalog",icon:Building2 },
-  { id:"mortgage",image:asset("/_cdn/static/2f66fed6-2933-4ec7-8a98-583896cd9e5f.png"),eyebrow:"Семейная ипотека",title:"Сначала платёж. Потом — подходящие квартиры",text:"Подберём проекты под комфортный ежемесячный платёж.",cta:"Рассчитать",to:"/mortgage",icon:Percent },
-  { id:"select",image:asset("/_cdn/static/7493f319-d413-4d3d-90e4-66b4a2ee6ecd.png"),eyebrow:"PULSE Select",title:"Не листайте сотни квартир вручную",text:"Ответьте на несколько вопросов — покажем подходящие ЖК.",cta:"Начать подбор",to:"/selection",icon:Sparkles }
+  { id:"projects",image:asset("/_cdn/static/938f9be1-5061-411a-ac1d-f1362819f38b.png"),eyebrow:"Новостройки Приморья",title:"Квартира, которую хочется показывать друзьям",text:"Проекты Владивостока, Артёма и Уссурийска в одном каталоге.",cta:"Смотреть проекты",to:"/catalog",kind:"promo",icon:Building2 },
+  { id:"mortgage",image:asset("/_cdn/static/2f66fed6-2933-4ec7-8a98-583896cd9e5f.png"),eyebrow:"Семейная ипотека",title:"Сначала платёж. Потом — подходящие квартиры",text:"Подберём проекты под комфортный ежемесячный платёж.",cta:"Рассчитать",to:"/mortgage",kind:"promo",icon:Percent },
+  { id:"select",image:asset("/_cdn/static/7493f319-d413-4d3d-90e4-66b4a2ee6ecd.png"),eyebrow:"PULSE Select",title:"Не листайте сотни квартир вручную",text:"Ответьте на несколько вопросов — покажем подходящие ЖК.",cta:"Начать подбор",to:"/selection",kind:"promo",icon:Sparkles }
 ];
 
-function BannerLink({to,className,children,label}:{to:string;className:string;children:React.ReactNode;label:string}){
-  if(/^https?:\/\//i.test(to))return <a href={to} target="_blank" rel="noreferrer" className={className} aria-label={label}>{children}</a>;
-  return <Link to={to||"/catalog"} className={className} aria-label={label}>{children}</Link>;
+function BannerLink({to,className,children,label,onActivate}:{to:string|null;className:string;children:React.ReactNode;label:string;onActivate:()=>void}){
+  if(!to)return <div className={className} aria-label={label}>{children}</div>;
+  if(/^https?:\/\//i.test(to))return <a href={to} target="_blank" rel="noreferrer" className={className} aria-label={label} onClick={onActivate}>{children}</a>;
+  return <Link to={to} className={className} aria-label={label} onClick={onActivate}>{children}</Link>;
 }
 
 export function PromoCarousel(){
@@ -36,17 +39,19 @@ export function PromoCarousel(){
   const slides=React.useMemo<Slide[]>(()=>managed.length?managed.map((banner,index)=>({
     id:banner.id,
     image:banner.imageUrl||fallbackSlides[index%fallbackSlides.length].image,
-    eyebrow:banner.city||banner.audience||"PULSE.DV",
+    eyebrow:banner.eyebrow||banner.city||banner.audience||(banner.kind==="partner"?"Партнёр PULSE.DV":banner.kind==="giveaway"?"Розыгрыш":"PULSE.DV"),
     title:banner.title,
     text:banner.body,
     cta:banner.ctaLabel||"Подробнее",
-    to:banner.actionUrl||"/catalog",
-    icon:Sparkles,
+    to:banner.actionUrl||null,
+    kind:banner.kind||"promo",
+    icon:banner.kind==="giveaway"?Sparkles:banner.kind==="partner"?ArrowUpRight:Sparkles,
   })):[],[managed]);
 
   const [api,setApi]=React.useState<CarouselApi>();
   const [selected,setSelected]=React.useState(0);
   const autoplay=React.useRef(Autoplay({delay:5200,stopOnInteraction:false,stopOnMouseEnter:true}));
+  const impressed=React.useRef(new Set<string>());
 
   React.useEffect(()=>{
     if(!api)return;
@@ -59,6 +64,12 @@ export function PromoCarousel(){
     if(selected>=slides.length)setSelected(0);
   },[slides.length,selected]);
 
+  React.useEffect(()=>{
+    const slide=slides[selected];if(!slide||impressed.current.has(slide.id))return;
+    impressed.current.add(slide.id);
+    recordPulseEvent({eventType:"banner_impression",entityType:"banner",entityId:slide.id,metadata:{kind:slide.kind,position:selected+1}});
+  },[selected,slides]);
+
   const dismiss=()=>{
     sessionStorage.setItem("pulse_promo_hidden","1");
     setHidden(true);
@@ -70,8 +81,8 @@ export function PromoCarousel(){
     <button type="button" className={styles.dismiss} onClick={dismiss} aria-label="Скрыть баннеры на эту сессию"><X size={15}/></button>
     <Carousel opts={{loop:slides.length>1,align:"start",duration:30}} plugins={[autoplay.current]} setApi={setApi} className={styles.carousel}>
       <CarouselContent>
-        {slides.map(({id,image,eyebrow,title,text,cta,to,icon:Icon},index)=><CarouselItem key={id} className={styles.slide}>
-          <BannerLink to={to} className={styles.bannerLink} label={title}>
+        {slides.map(({id,image,eyebrow,title,text,cta,to,kind,icon:Icon},index)=><CarouselItem key={id} className={styles.slide}>
+          <BannerLink to={to} className={styles.bannerLink} label={title} onActivate={()=>recordPulseEvent({eventType:"banner_click",entityType:"banner",entityId:id,metadata:{kind,position:index+1,target:to}})}>
             <article className={styles.banner+" "+(selected===index?styles.bannerActive:"")}>
               <img src={image} alt=""/>
               <div className={styles.overlay}/>
@@ -80,7 +91,7 @@ export function PromoCarousel(){
                 <div className={styles.eyebrow}><span><Icon size={13}/></span>{eyebrow}</div>
                 <h1>{title}</h1>
                 <p>{text}</p>
-                <div className={styles.cta}>{cta}<ArrowUpRight size={16}/></div>
+                {to&&<div className={styles.cta}>{cta}<ArrowUpRight size={16}/></div>}
               </div>
               <div className={styles.index}>{String(index+1).padStart(2,"0")}<span>/</span>{String(slides.length).padStart(2,"0")}</div>
             </article>

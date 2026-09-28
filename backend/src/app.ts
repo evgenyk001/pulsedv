@@ -16,6 +16,7 @@ import { enqueueInterestChange } from './interestNotifications';
 import { registerJourneyRoutes } from './journeyRoutes';
 import { registerInterestRoutes } from './interestRoutes';
 import { registerCatalogRoutes } from './catalogRoutes';
+import { registerContentRoutes } from './contentRoutes';
 import { getCatalogProperty, listCatalog } from './catalogRepository';
 
 type Member={id:string;name:string;email:string;role:'owner'|'admin'|'manager';active:boolean};
@@ -36,7 +37,8 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const contentType=request.headers['content-type']||'';
    const catalogMediaUpload=request.url.startsWith('/api/v1/control/catalog/')&&request.url.includes('/media');
    const journeyAttachmentUpload=(request.url.startsWith('/api/v1/control/journeys/')||request.url.startsWith('/api/v1/me/journeys/'))&&request.url.includes('/attachments');
-   const mediaUpload=catalogMediaUpload||journeyAttachmentUpload;
+   const bannerMediaUpload=request.url.startsWith('/api/v1/control/content/banner-media');
+   const mediaUpload=catalogMediaUpload||journeyAttachmentUpload||bannerMediaUpload;
    const allowedMedia=mediaUpload&&(['image/jpeg','image/png','image/webp','application/pdf'].some(type=>contentType.startsWith(type)));
    if(!contentType.startsWith('application/json')&&!allowedMedia)throw new HttpError(415,mediaUpload?'Нужен JPG, PNG, WebP или PDF':'Требуется application/json');
   }
@@ -63,7 +65,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  const cookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1/control',maxAge:8*3600};
  app.get('/health',async()=>({status:'ok'}));
  app.get('/ready',async()=>{await db.query('select 1');await readState(db);return {status:'ready'};});
- app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);return {version,consentVersion:config.CONSENT_VERSION,state:{...state,properties:[],banners:state.banners.filter(b=>b.enabled)}};});
+ app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);const now=Date.now();const banners=state.banners.filter(b=>b.enabled&&(!b.startsAt||Date.parse(b.startsAt)<=now)&&(!b.endsAt||Date.parse(b.endsAt)>now));return {version,consentVersion:config.CONSENT_VERSION,state:{...state,properties:[],banners}};});
  app.get('/api/v1/public/map',async()=>{if(!config.MAP_2GIS_KEY)throw new HttpError(503,'Карта временно недоступна');return {provider:'2gis',key:config.MAP_2GIS_KEY};});
  app.post('/api/v1/auth/session',{config:{rateLimit:{max:20,timeWindow:'1 minute'}}},async request=>{
   const input=z.object({source:z.string().max(100).optional(),medium:z.string().max(100).optional(),campaign:z.string().max(100).optional()}).parse(request.body);
@@ -189,5 +191,6 @@ export async function createApp(db:Database,config:RuntimeConfig){
  });
  app.get('/api/v1/control/audit',{preHandler:editor},async()=>({items:(await db.query('select a.id,a.action,a.entity_id,a.details,a.created_at,m.name from audit_log a left join team_members m on m.id=a.member_id order by a.id desc limit 100')).rows.map(camelRow)}));
  await registerCatalogRoutes(app,{db,config,control,editor,owner});
+ await registerContentRoutes(app,{db,config,editor});
  return app;
 }

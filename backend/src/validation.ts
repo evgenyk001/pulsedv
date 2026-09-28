@@ -17,9 +17,15 @@ const property=z.object({
  for(const plan of p.floorplans)if(plan.areaFrom&&plan.areaTo&&plan.areaFrom>plan.areaTo)ctx.addIssue({code:'custom',message:'Минимальная площадь больше максимальной'});
 });
 const actionUrl=nullableText(2048).refine(value=>!value||(/^\/(?!\/)/.test(value))||value.startsWith('https://'),'Недопустимая ссылка');
+const banner=z.object({
+ id,title:text(250).min(1),body:text(1000),imageUrl:image,ctaLabel:nullableText(100),actionUrl,
+ city:nullableText(100),audience:nullableText(),enabled:z.boolean(),sortOrder:z.number().int(),
+ kind:z.enum(['promo','giveaway','partner']).optional(),eyebrow:nullableText(120).optional(),
+ startsAt:z.iso.datetime({offset:true}).nullable().optional(),endsAt:z.iso.datetime({offset:true}).nullable().optional()
+}).superRefine((value,ctx)=>{if(value.startsAt&&value.endsAt&&Date.parse(value.startsAt)>=Date.parse(value.endsAt))ctx.addIssue({code:'custom',message:'Дата окончания должна быть позже даты начала',path:['endsAt']})});
 export const stateSchema=z.object({
  properties:z.array(property).max(2000),
- banners:z.array(z.object({id,title:text(250),body:text(1000),imageUrl:image,ctaLabel:nullableText(100),actionUrl,city:nullableText(100),audience:nullableText(),enabled:z.boolean(),sortOrder:z.number().int()})).max(100),
+ banners:z.array(banner).max(100),
  mortgagePrograms:z.array(z.object({id:z.enum(['family','farEast','it','standard']),label:text(100),rate:z.number().min(0).max(60),maxYears:z.number().int().min(1).max(40),minDownPct:z.number().min(0).max(99),subsidizedLimit:z.number().positive(),totalLimit:z.number().positive(),blended:z.boolean(),hint:text(2000)})).min(1).max(4),
  select:z.object({
   cities:z.array(text(100).min(1)).min(1).max(30),
