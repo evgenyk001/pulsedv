@@ -34,7 +34,6 @@ export default function HomePage(){
       <button type="submit" aria-label="Найти"><ChevronRight size={17}/></button>
     </form>
 
-    <ContinueChoice/>
     <PromoCarousel/>
 
     <section className={styles.quickActions}>
@@ -43,6 +42,8 @@ export default function HomePage(){
       <Link to="/mortgage"><span><Percent size={18}/></span><div><b>Ипотека</b><small>Расчёт платежа</small></div><ChevronRight size={16}/></Link>
       <Link to="/selection"><span><Sparkles size={18}/></span><div><b>PULSE Select</b><small>Подбор под вас</small></div><ChevronRight size={16}/></Link>
     </section>
+
+    <ContinueChoice/>
 
     <section className={styles.section}>
       <div className={styles.sectionHead}><div><span>Выбор PULSE.DV</span><h2>Стоит посмотреть</h2></div><Link to="/catalog">Все <ChevronRight size={15}/></Link></div>
