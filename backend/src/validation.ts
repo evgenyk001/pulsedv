@@ -21,7 +21,7 @@ const banner=z.object({
  id,title:text(250).min(1),body:text(1000),imageUrl:image,ctaLabel:nullableText(100),actionUrl,
  city:nullableText(100),audience:nullableText(),enabled:z.boolean(),sortOrder:z.number().int(),
  kind:z.enum(['promo','giveaway','partner']).optional(),eyebrow:nullableText(120).optional(),
- startsAt:z.string().datetime({offset:true}).nullable().optional(),endsAt:z.string().datetime({offset:true}).nullable().optional()
+ startsAt:z.iso.datetime({offset:true}).nullable().optional(),endsAt:z.iso.datetime({offset:true}).nullable().optional()
 }).superRefine((value,ctx)=>{if(value.startsAt&&value.endsAt&&Date.parse(value.startsAt)>=Date.parse(value.endsAt))ctx.addIssue({code:'custom',message:'Дата окончания должна быть позже даты начала',path:['endsAt']})});
 export const stateSchema=z.object({
  properties:z.array(property).max(2000),
