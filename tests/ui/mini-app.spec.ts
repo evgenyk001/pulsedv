@@ -271,6 +271,7 @@ test('Клиент: понятные уведомления, пустые обр
  await page.getByRole('navigation').getByRole('button',{name:'Главная',exact:true}).click();
  await expect(page.getByRole('region',{name:'Продолжить выбор'})).toHaveCount(0);
  await page.getByRole('link',{name:'Открыть ЖК Приморский'}).click();
+ await page.getByRole('link',{name:'Назад',exact:true}).click();
  await page.getByRole('navigation').getByRole('button',{name:'Главная',exact:true}).click();
  await expect(page.getByRole('region',{name:'Продолжить выбор'})).toBeVisible();
  await page.screenshot({path:'test-results/client-resume.png',fullPage:true});
