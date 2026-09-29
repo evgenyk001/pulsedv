@@ -29,8 +29,7 @@ export function LeadSheet({children,title="Получить консультац
     setSending(true);setError(null);
     try{
       const requestContext=context?{...context,...(project?{propertyName:project}:{})}:project?{propertyName:project}:undefined;
-      const managerComment=source==="floorplan"&&context?`Интересует планировка ${context.rooms||""}${context.areaFrom?" · "+context.areaFrom+(context.areaTo&&context.areaTo!==context.areaFrom?"–"+context.areaTo:"")+" м²":""}${context.price?" · от "+Math.round(Number(context.price)).toLocaleString("ru-RU")+" ₽":""}.`:project&&!context?("Заявка по "+project):null;
-      const result=await postLead({idempotencyKey:key.current,source,propertyId:propertyId||null,name,phone,consent,comment:managerComment,context:requestContext});
+      const result=await postLead({idempotencyKey:key.current,source,propertyId:propertyId||null,name,phone,consent,comment:null,context:requestContext});
       setLeadId(result.id);
       void cache.invalidateQueries({queryKey:["my-journeys"]});
       setSent(true);
