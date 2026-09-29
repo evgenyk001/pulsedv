@@ -20,6 +20,7 @@ export function LeadSheet({children,title="Получить консультац
   const [name,setName]=React.useState("");
   const [phone,setPhone]=React.useState("");
   const [sending,setSending]=React.useState(false);
+  const [consent,setConsent]=React.useState(false);
   const [error,setError]=React.useState<string|null>(null);
 
   const submit=async(e:React.FormEvent)=>{
@@ -27,7 +28,7 @@ export function LeadSheet({children,title="Получить консультац
     if(locked.current)return;locked.current=true;
     setSending(true);setError(null);
     try{
-      const result=await postLead({idempotencyKey:key.current,source,propertyId:propertyId||null,name,phone,comment:source==="floorplan"&&context?`Интересует планировка: ${context.rooms}; площадь ${context.areaFrom??"уточняется"}${context.areaTo?"–"+context.areaTo:""} м²; цена ${context.price??"уточняется"} ₽; код планировки ${context.floorplanId??"не указан"}.`:context?JSON.stringify(context):project?("Заявка по "+project):null});
+      const result=await postLead({idempotencyKey:key.current,source,propertyId:propertyId||null,name,phone,consent,comment:source==="floorplan"&&context?`Интересует планировка: ${context.rooms}; площадь ${context.areaFrom??"уточняется"}${context.areaTo?"–"+context.areaTo:""} м²; цена ${context.price??"уточняется"} ₽; код планировки ${context.floorplanId??"не указан"}.`:context?JSON.stringify(context):project?("Заявка по "+project):null});
       setLeadId(result.id);
       void cache.invalidateQueries({queryKey:["my-journeys"]});
       setSent(true);
@@ -38,7 +39,7 @@ export function LeadSheet({children,title="Получить консультац
   return <Sheet onOpenChange={(open)=>{
     if(open){
       recordPulseEvent({eventType:"lead_form_open",entityType:propertyId?"property":"funnel",entityId:propertyId||source,metadata:{source,project:project||null}});
-    }else{if(sent){key.current=crypto.randomUUID();setName("");setPhone("");}setSent(false);setError(null)}
+    }else{if(sent){key.current=crypto.randomUUID();setName("");setPhone("");}setConsent(false);setSent(false);setError(null)}
   }}>
     <SheetTrigger asChild>{children}</SheetTrigger>
     <SheetContent side="bottom" className={styles.sheet}>
@@ -48,9 +49,10 @@ export function LeadSheet({children,title="Получить консультац
         <form className={styles.form} onSubmit={submit}>
           <label><span>Как к вам обращаться</span><Input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Имя" autoComplete="given-name" maxLength={100} required/></label>
           <label><span>Телефон</span><Input value={phone} onChange={(e)=>setPhone(e.target.value)} placeholder="+7 999 000-00-00" type="tel" inputMode="tel" autoComplete="tel" maxLength={24} required/></label>
+          <label className={styles.consentRow}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} required/><span>Я даю <Link to="/personal-data-consent">согласие на обработку персональных данных</Link> для обработки моего обращения и подбора недвижимости.</span></label>
           {error&&<div className={styles.error}>{error}</div>}
-          <button className={styles.submit} type="submit" disabled={sending}>{sending?"Отправляем…":"Отправить заявку"} <Send size={16}/></button>
-          <small>{runtime.enabled?"Нажимая кнопку, вы соглашаетесь на обработку контактных данных.":"Демонстрационный режим: заявка сохранится только в этом браузере и не будет отправлена менеджеру."}</small>
+          <button className={styles.submit} type="submit" disabled={sending||!consent}>{sending?"Отправляем…":"Отправить заявку"} <Send size={16}/></button>
+          <small>{runtime.enabled?<><Link to="/privacy">Политика обработки персональных данных</Link></>:"Демонстрационный режим: заявка сохранится только в этом браузере и не будет отправлена менеджеру."}</small>
         </form>
       </>}
     </SheetContent>
