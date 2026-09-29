@@ -66,7 +66,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  const visitorCookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1',maxAge:30*86400};
  app.get('/health',async()=>({status:'ok'}));
  app.get('/ready',async()=>{await db.query('select 1');await readState(db);return {status:'ready'};});
- app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);const now=Date.now();const banners=state.banners.filter(b=>b.enabled&&(!b.startsAt||Date.parse(b.startsAt)<=now)&&(!b.endsAt||Date.parse(b.endsAt)>now));return {version,consentVersion:config.CONSENT_VERSION,state:{...state,properties:[],banners}};});
+ app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);const now=Date.now();const banners=state.banners.filter(b=>b.enabled&&(!b.startsAt||Date.parse(b.startsAt)<=now)&&(!b.endsAt||Date.parse(b.endsAt)>now));const {leadEngine:_privateLeadEngine,...publicState}=state;return {version,consentVersion:config.CONSENT_VERSION,state:{...publicState,properties:[],banners}};});
  app.get('/api/v1/public/map',async()=>{if(!config.MAP_2GIS_KEY)throw new HttpError(503,'Карта временно недоступна');return {provider:'2gis',key:config.MAP_2GIS_KEY};});
  app.post('/api/v1/auth/session',{config:{rateLimit:{max:12,timeWindow:'1 minute'}}},async(request,reply)=>{
   const input=z.object({source:z.string().max(100).optional(),medium:z.string().max(100).optional(),campaign:z.string().max(100).optional()}).parse(request.body);
