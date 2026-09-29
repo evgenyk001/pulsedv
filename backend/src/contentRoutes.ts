@@ -15,6 +15,13 @@ const mediaSpec:Record<string,{ext:string;max:number}>={
   "image/webp":{ext:"webp",max:15*1024*1024},
 };
 
+function validImage(type:string,body:Buffer){
+  if(type==="image/jpeg")return body.length>=3&&body[0]===0xff&&body[1]===0xd8&&body[2]===0xff;
+  if(type==="image/png")return body.length>=8&&body.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+  if(type==="image/webp")return body.length>=12&&body.subarray(0,4).toString()==="RIFF"&&body.subarray(8,12).toString()==="WEBP";
+  return false;
+}
+
 export async function registerContentRoutes(
   app:FastifyInstance,
   deps:{db:Database;config:RuntimeConfig;editor:Guard}
@@ -36,6 +43,7 @@ export async function registerContentRoutes(
     const body=request.body;
     if(!Buffer.isBuffer(body)||body.length===0)return reply.code(400).send({error:"Файл пустой"});
     if(body.length>spec.max)return reply.code(413).send({error:"Изображение должно быть меньше 15 МБ"});
+    if(!validImage(type,body))return reply.code(400).send({error:"Содержимое файла не соответствует формату изображения"});
     const query=z.object({filename:z.string().max(180).optional()}).strict().parse(request.query);
     const folder="banners";
     const fileName=randomUUID()+"."+spec.ext;
