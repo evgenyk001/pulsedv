@@ -52,7 +52,6 @@ export default function CatalogPage(){
 
   const routeQuery=params.get("q")||"";
   const [query,setQuery]=useState(routeQuery);
-  const queryRef=React.useRef(query);
   React.useEffect(()=>{
     queryRef.current=routeQuery;
     setQuery(current=>current===routeQuery?current:routeQuery);
