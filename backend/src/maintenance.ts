@@ -17,6 +17,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
  const result=await db.transaction(async sql=>{
   await sql.query('delete from auth_tokens where expires_at<=now()');
   await sql.query('delete from control_login_challenges where expires_at<now()-interval \'1 day\' or consumed_at is not null and consumed_at<now()-interval \'1 day\'');
+  await sql.query("delete from outbox_events where topic='manager.security_code' and created_at<now()-interval '10 minutes'");
 
   const old=(await sql.query("select l.id,j.document from leads l left join client_journeys j on j.lead_id=l.id where l.status in ('closed','lost') and l.updated_at<$1 and l.phone<>'Удалено' order by l.updated_at limit 500",[clientCutoff])).rows;
   const leadIds=old.map(row=>String(row.id));
