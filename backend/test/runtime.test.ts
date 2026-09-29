@@ -39,6 +39,7 @@ test('SQL/API: заявки между устройствами, дедупли�
   const verified=await app.inject({method:'POST',url:'/api/v1/control/login/verify',headers,payload:{challengeId,code:queued.payload.code}});assert.equal(verified.statusCode,200,verified.body);
   const cookie=verified.cookies.find((x:any)=>x.name==='pulse_control')?.value;assert.ok(cookie);assert.equal(verified.json().member.mfaEnabled,true);
   const disabled=await app.inject({method:'POST',url:'/api/v1/control/mfa',headers,cookies:{pulse_control:cookie},payload:{enabled:false,currentPassword:'long-test-password'}});assert.equal(disabled.statusCode,200,disabled.body);assert.equal(disabled.json().member.mfaEnabled,false);
+  await db.query("delete from outbox_events where topic='manager.security_code'");
  });
  await t.test('старый PULSE Select config получает новые настройки без миграции документа',async()=>{
   await db.query("update app_config set document=document #- '{select,smartQueryEnabled}' #- '{select,whatIfEnabled}' #- '{select,maxPreferences}' #- '{select,preferenceEnabled}'");
