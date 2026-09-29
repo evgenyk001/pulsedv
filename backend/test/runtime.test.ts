@@ -34,7 +34,7 @@ test('SQL/API: заявки между устройствами, дедупли�
   assert.equal(firstStep.statusCode,200,firstStep.body);assert.equal(firstStep.json().mfaRequired,true);assert.ok(firstStep.json().challengeId);assert.equal(firstStep.cookies.find((x:any)=>x.name==='pulse_control'),undefined);
   const challengeId=firstStep.json().challengeId;
   const queued=(await db.query("select payload from outbox_events where topic='manager.security_code' and aggregate_id=$1 order by created_at desc limit 1",[owner.id])).rows[0];assert.match(String(queued?.payload?.code),/^\d{6}$/);
-  const wrong=await app.inject({method:'POST',url:'/api/v1/control/login/verify',headers,payload:{challengeId,code:'000000'}});if(queued.payload.code!=='000000')assert.equal(wrong.statusCode,401);
+  const wrongCode=queued.payload.code==='000000'?'111111':'000000';const wrong=await app.inject({method:'POST',url:'/api/v1/control/login/verify',headers,payload:{challengeId,code:wrongCode}});assert.equal(wrong.statusCode,401);
   const verified=await app.inject({method:'POST',url:'/api/v1/control/login/verify',headers,payload:{challengeId,code:queued.payload.code}});assert.equal(verified.statusCode,200,verified.body);
   const cookie=verified.cookies.find((x:any)=>x.name==='pulse_control')?.value;assert.ok(cookie);assert.equal(verified.json().member.mfaEnabled,true);
   const disabled=await app.inject({method:'POST',url:'/api/v1/control/mfa',headers,cookies:{pulse_control:cookie},payload:{enabled:false,currentPassword:'long-test-password'}});assert.equal(disabled.statusCode,200,disabled.body);assert.equal(disabled.json().member.mfaEnabled,false);
