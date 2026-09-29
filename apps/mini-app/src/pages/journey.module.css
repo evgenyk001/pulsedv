@@ -47,3 +47,6 @@
 .startActions{display:grid;gap:10px}.empty .benefits{margin-bottom:0}
 
 .composer:focus-within{border-color:rgba(242,13,29,.28);box-shadow:var(--app-card-shadow),0 0 0 3px var(--brand-soft)}.composer textarea:focus-visible{outline:none}
+
+.fieldError{display:block;margin-top:6px;color:#b42335!important;font-size:10px!important;line-height:1.4}
+:global(.journeyFieldError){display:block;margin-top:6px;color:#b42335;font-size:10px;line-height:1.4}
