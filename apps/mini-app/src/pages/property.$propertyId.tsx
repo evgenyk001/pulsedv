@@ -33,7 +33,7 @@ export default function PropertyPage(){
   const location=useLocation();
   const stateReturn=typeof location.state?.returnTo==="string"&&/^\/(catalog|favorites|selection|journey)?([?]|$)/.test(location.state.returnTo)?location.state.returnTo:null;
   const rememberedReturn=propertyReturn();
-  const returnTo=stateReturn??rememberedReturn;
+  const returnTo=rememberedReturn!=="/catalog"||!stateReturn?rememberedReturn:stateReturn;
   const {data:p,isLoading,error}=usePropertyDetail(propertyId);
   const {toggle,isFavorite}=useFavoriteIds();
   const [photoIndex,setPhotoIndex]=React.useState(0);
