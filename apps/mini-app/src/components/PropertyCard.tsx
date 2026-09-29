@@ -12,8 +12,9 @@ export function PropertyCard({property,compact=false,returnTo}:PropertyCardProps
   const {toggle,isFavorite}=useFavoriteIds();
   const saved=isFavorite(property.id);
   const image=property.coverImageUrl||property.images[0]?.url;
+  const rememberReturn=()=>{try{const hash=window.location.hash.replace(/^#/,'');const value=/^\/(catalog|favorites|selection|journey)([?]|$)/.test(hash)?hash:(returnTo??location.pathname+location.search);sessionStorage.setItem('pulse.property.return',value)}catch{}};
   return <article className={`${styles.card} ${compact?styles.compact:""}`}>
-    <Link to={`/property/${property.id}`} state={{returnTo:returnTo??location.pathname+location.search}} className={styles.link} aria-label={`Открыть ${property.name}`}>
+    <Link to={`/property/${property.id}`} state={{returnTo:returnTo??location.pathname+location.search}} onClick={rememberReturn} className={styles.link} aria-label={`Открыть ${property.name}`}>
       <div className={styles.image}>
         {image?<img src={image} alt={property.name}/>:<div className={styles.imageFallback}><Building2 size={26}/></div>}
         {property.tags[0]&&<span className={styles.badge}>{property.tags[0]}</span>}
