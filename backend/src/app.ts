@@ -148,15 +148,16 @@ export async function createApp(db:Database,config:RuntimeConfig){
   });
  });
  app.post('/api/v1/control/mfa',{preHandler:control,config:{rateLimit:{max:5,timeWindow:'1 minute'}}},async(request)=>{
-  const input=z.object({enabled:z.boolean(),currentPassword:z.string().min(1).max(200)}).strict().parse(request.body);
+  const input=z.object({enabled:z.boolean(),currentPassword:z.string().min(1).max(200),telegramUserId:z.string().regex(/^\d{1,16}$/).optional()}).strict().parse(request.body);
   return db.transaction(async sql=>{
    const row=(await sql.query('select * from team_members where id=$1 for update',[request.member!.id])).rows[0];
    if(!row||!await checkPassword(input.currentPassword,row.password_hash))throw new HttpError(400,'Текущий пароль не совпадает');
-   if(input.enabled&&(!config.BOT_TOKEN||!row.telegram_user_id))throw new HttpError(400,'Сначала подключите Telegram ID и настройте бота');
-   await sql.query('update team_members set mfa_enabled=$2 where id=$1',[row.id,input.enabled]);
+   const telegramUserId=input.telegramUserId??row.telegram_user_id?.toString()??null;
+   if(input.enabled&&(!config.BOT_TOKEN||!telegramUserId))throw new HttpError(400,'Укажите Telegram ID и убедитесь, что бот настроен');
+   await sql.query('update team_members set mfa_enabled=$2,telegram_user_id=coalesce($3::bigint,telegram_user_id) where id=$1',[row.id,input.enabled,telegramUserId]);
    if(!input.enabled)await sql.query('update control_login_challenges set consumed_at=now() where member_id=$1 and consumed_at is null',[row.id]);
    await audit(sql,row.id,input.enabled?'mfa.enable':'mfa.disable',row.id);
-   return {member:memberView({...row,mfa_enabled:input.enabled})};
+   return {member:memberView({...row,mfa_enabled:input.enabled,telegram_user_id:telegramUserId})};
   });
  });
  app.post('/api/v1/control/password',{preHandler:control,config:{rateLimit:{max:5,timeWindow:'1 minute'}}},async(request,reply)=>{
