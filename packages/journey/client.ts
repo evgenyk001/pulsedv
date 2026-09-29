@@ -1,19 +1,19 @@
 import {api,visitorApi,runtime} from '../pulse-data/runtime';
 import {listPulseLeads,recordPulseEvent} from '../pulse-data';
 import {applyJourney,clientJourney,emptyJourney,type Journey,type JourneyAttachment,type JourneyCommand,type Verification} from './model';
-export type JourneyEntry={leadId:string;status:string;propertyId:string|null;createdAt:string;managerName?:string|null;journey:Journey};
+export type JourneyEntry={leadId:string;leadName?:string;status:string;propertyId:string|null;createdAt:string;managerName?:string|null;journey:Journey};
 const KEY='pulse.dv.journeys.v1';
 function read():Record<string,Journey>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return {}}}
 export async function loadJourneys(client=false):Promise<{items:JourneyEntry[];limited:boolean}>{
  if(runtime.enabled)return (client?visitorApi:api)((client?'/me':'/control')+'/journeys');
  const data=read();const session=sessionStorage.getItem('pulse.dv.session.v1');
- return {limited:false,items:listPulseLeads().filter(l=>!client||l.sessionId===session).map(l=>({leadId:l.id,status:l.status,propertyId:l.propertyId,createdAt:l.createdAt,journey:client?clientJourney(data[l.id]||emptyJourney(l.id)):data[l.id]||emptyJourney(l.id)}))};
+ return {limited:false,items:listPulseLeads().filter(l=>!client||l.sessionId===session).map(l=>({leadId:l.id,leadName:l.name,status:l.status,propertyId:l.propertyId,createdAt:l.createdAt,journey:client?clientJourney(data[l.id]||emptyJourney(l.id)):data[l.id]||emptyJourney(l.id)}))};
 }
 export async function loadJourney(leadId:string,client=false):Promise<JourneyEntry|null>{
  if(runtime.enabled)return ((await (client?visitorApi:api)<{entry:JourneyEntry}>((client?'/me':'/control')+'/journeys/'+encodeURIComponent(leadId))).entry)||null;
  const lead=listPulseLeads().find(item=>item.id===leadId);if(!lead)return null;
  const journey=read()[leadId]||emptyJourney(leadId);
- return {leadId,status:lead.status,propertyId:lead.propertyId,createdAt:lead.createdAt,journey:client?clientJourney(journey):journey};
+ return {leadId,leadName:lead.name,status:lead.status,propertyId:lead.propertyId,createdAt:lead.createdAt,journey:client?clientJourney(journey):journey};
 }
 export async function saveJourney(journey:Journey,command:JourneyCommand,client=false){
  if(runtime.enabled)return (client?visitorApi:api)((client?'/me':'/control')+'/journeys/'+journey.leadId,{method:'POST',body:JSON.stringify({revision:journey.revision,command})});
