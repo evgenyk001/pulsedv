@@ -3,13 +3,13 @@ import React from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Clock3, Flame, ArrowUpRight, Search } from 'lucide-react';
 import { PageFrame } from '../components/PageFrame';
-import { usePulseLeads, usePulseTasks } from '../data';
+import { useControlPaging, usePulseLeads, usePulseTasks } from '../data';
 import { priorityName } from '../activityCopy';
 import { updatePulseTask, type PulseTask } from '../../../../packages/pulse-data';
 import { runtime, updateRemote } from '../../../../packages/pulse-data/runtime';
 const columns:{status:PulseTask['status'];title:string}[]=[{status:'today',title:'Запланировано'},{status:'in_progress',title:'В работе'},{status:'waiting',title:'Ожидает ответа'},{status:'done',title:'Завершено'}];
 export function TasksPage(){
- const tasks=usePulseTasks(),leads=usePulseLeads();const [params,setParams]=useSearchParams();
+ const tasks=usePulseTasks(),leads=usePulseLeads();const paging=useControlPaging('tasks');const [params,setParams]=useSearchParams();
  const [query,setQuery]=React.useState(''),[busy,setBusy]=React.useState<string|null>(null),[error,setError]=React.useState('');
  const overdueOnly=params.get('filter')==='overdue';
  const visible=tasks.filter(t=>(!overdueOnly||(t.status!=='done'&&Date.parse(t.dueAt)<Date.now()))&&[t.title,t.reason,leads.find(l=>l.id===t.leadId)?.name].join(' ').toLowerCase().includes(query.toLowerCase()));
