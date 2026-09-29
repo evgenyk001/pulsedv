@@ -31,7 +31,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  await app.register(rateLimit,{max:180,timeWindow:'1 minute'});
  const dummyPassword=await hashPassword('dummy-non-account-password');
  app.addHook('onRequest',async(request,reply)=>{
-  reply.header('X-Content-Type-Options','nosniff').header('Cache-Control','no-store');
+  reply.header('X-Content-Type-Options','nosniff').header('Referrer-Policy','no-referrer').header('Cache-Control','no-store');
   if(!['GET','HEAD','OPTIONS'].includes(request.method)){
    if(request.headers.origin&&request.headers.origin!==config.PUBLIC_ORIGIN)throw new HttpError(403,'Недопустимый источник запроса');
    const contentType=request.headers['content-type']||'';
@@ -57,19 +57,25 @@ export async function createApp(db:Database,config:RuntimeConfig){
  async function editor(request:FastifyRequest){await control(request);if(request.member!.role==='manager')throw new HttpError(403,'Нужны права администратора');}
  async function owner(request:FastifyRequest){await control(request);if(request.member!.role!=='owner')throw new HttpError(403,'Нужны права владельца');}
  async function visitor(request:FastifyRequest){
-  const token=request.headers.authorization?.replace(/^Bearer /,'');if(!token)throw new HttpError(401,'Сессия не создана');
+  const token=request.headers.authorization?.replace(/^Bearer /,'')||request.cookies.pulse_visitor;if(!token)throw new HttpError(401,'Сессия не создана');
   const row=(await db.query("select s.id,s.user_id from auth_tokens t join sessions s on s.id=t.session_id where t.token_hash=$1 and t.kind='visitor' and t.expires_at>now()",[tokenHash(token)])).rows[0];
   if(!row)throw new HttpError(401,'Сессия истекла');request.visitor={sessionId:row.id,userId:row.user_id};
  }
  const sessionLock=async(sql:Sql,id:string)=>{await sql.query('select id from sessions where id=$1 for update',[id]);};
  const cookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1/control',maxAge:8*3600};
+ const visitorCookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1',maxAge:30*86400};
  app.get('/health',async()=>({status:'ok'}));
  app.get('/ready',async()=>{await db.query('select 1');await readState(db);return {status:'ready'};});
  app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);const now=Date.now();const banners=state.banners.filter(b=>b.enabled&&(!b.startsAt||Date.parse(b.startsAt)<=now)&&(!b.endsAt||Date.parse(b.endsAt)>now));return {version,consentVersion:config.CONSENT_VERSION,state:{...state,properties:[],banners}};});
  app.get('/api/v1/public/map',async()=>{if(!config.MAP_2GIS_KEY)throw new HttpError(503,'Карта временно недоступна');return {provider:'2gis',key:config.MAP_2GIS_KEY};});
- app.post('/api/v1/auth/session',{config:{rateLimit:{max:20,timeWindow:'1 minute'}}},async request=>{
+ app.post('/api/v1/auth/session',{config:{rateLimit:{max:12,timeWindow:'1 minute'}}},async(request,reply)=>{
   const input=z.object({source:z.string().max(100).optional(),medium:z.string().max(100).optional(),campaign:z.string().max(100).optional()}).parse(request.body);
-  return db.transaction(async sql=>{const id=randomUUID();await sql.query('insert into sessions(id,source,medium,campaign) values($1,$2,$3,$4)',[id,input.source||'direct',input.medium||null,input.campaign||null]);const auth=await issueToken(sql,'visitor',id);return {sessionId:id,accessToken:auth.token,expiresAt:auth.expiresAt};});
+  const result=await db.transaction(async sql=>{const id=randomUUID();await sql.query('insert into sessions(id,source,medium,campaign) values($1,$2,$3,$4)',[id,input.source||'direct',input.medium||null,input.campaign||null]);const auth=await issueToken(sql,'visitor',id);return {sessionId:id,accessToken:auth.token,expiresAt:auth.expiresAt};});
+  reply.setCookie('pulse_visitor',result.accessToken,visitorCookieOptions);return result;
+ });
+ app.post('/api/v1/auth/cookie',{preHandler:visitor,config:{rateLimit:{max:30,timeWindow:'1 minute'}}},async(request,reply)=>{
+  const token=request.headers.authorization?.replace(/^Bearer /,'')||request.cookies.pulse_visitor;if(!token)throw new HttpError(401,'Сессия не создана');
+  reply.setCookie('pulse_visitor',token,visitorCookieOptions);return {ok:true};
  });
  app.post('/api/v1/auth/telegram',{preHandler:visitor,config:{rateLimit:{max:20,timeWindow:'1 minute'}}},async request=>{
   const input=z.object({initData:z.string().min(1).max(15000)}).strict().parse(request.body);
