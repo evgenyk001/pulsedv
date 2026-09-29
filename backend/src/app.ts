@@ -231,28 +231,28 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
   const where=scoped?'where manager_id=$1':'';const values=scoped?[m.id]:[];
   const total=Number((await db.query(`select count(*)::int as total from leads ${where}`,values)).rows[0]?.total||0);
-  const rows=(await db.query(`select * from leads ${where} order by score desc,created_at desc limit ${values.length+1} offset ${values.length+2}`,[...values,q.limit,offset])).rows.map(row=>{const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;return lead;});
+  const rows=(await db.query(`select * from leads ${where} order by score desc,created_at desc limit $${values.length+1} offset $${values.length+2}`,[...values,q.limit,offset])).rows.map(row=>{const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;return lead;});
   return {items:rows,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
  });
  app.get('/api/v1/control/tasks',{preHandler:control},async request=>{
   const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
   const where=scoped?'where assigned_to=$1':'';const values=scoped?[m.id]:[];
   const total=Number((await db.query(`select count(*)::int as total from crm_tasks ${where}`,values)).rows[0]?.total||0);
-  const items=(await db.query(`select * from crm_tasks ${where} order by due_at limit ${values.length+1} offset ${values.length+2}`,[...values,q.limit,offset])).rows.map(camelRow);
+  const items=(await db.query(`select * from crm_tasks ${where} order by due_at limit $${values.length+1} offset $${values.length+2}`,[...values,q.limit,offset])).rows.map(camelRow);
   return {items,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
  });
  app.get('/api/v1/control/events',{preHandler:control},async request=>{
   const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
   const where=scoped?'where session_id in(select session_id from leads where manager_id=$1)':'';const values=scoped?[m.id]:[];
   const total=Number((await db.query(`select count(*)::int as total from user_events ${where}`,values)).rows[0]?.total||0);
-  const items=(await db.query(`select id,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at as created_at from user_events ${where} order by occurred_at desc limit ${values.length+1} offset ${values.length+2}`,[...values,q.limit,offset])).rows.map(camelRow);
+  const items=(await db.query(`select id,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at as created_at from user_events ${where} order by occurred_at desc limit $${values.length+1} offset $${values.length+2}`,[...values,q.limit,offset])).rows.map(camelRow);
   return {items,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
  });
  app.get('/api/v1/control/profiles',{preHandler:control},async request=>{
   const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
   const where=scoped?'where session_id in(select session_id from leads where manager_id=$1)':'';const values=scoped?[m.id]:[];
   const total=Number((await db.query(`select count(*)::int as total from visitor_profiles ${where}`,values)).rows[0]?.total||0);
-  const items=(await db.query(`select * from visitor_profiles ${where} order by score desc,last_seen_at desc limit ${values.length+1} offset ${values.length+2}`,[...values,q.limit,offset])).rows.map(camelRow);
+  const items=(await db.query(`select * from visitor_profiles ${where} order by score desc,last_seen_at desc limit $${values.length+1} offset $${values.length+2}`,[...values,q.limit,offset])).rows.map(camelRow);
   return {items,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
  });
 
