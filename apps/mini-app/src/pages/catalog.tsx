@@ -41,7 +41,7 @@ const sortLabels:Record<SortMode,string>={
 
 export default function CatalogPage(){
   const [params,setParams]=useSearchParams();
-  const searchInput=React.useRef<HTMLInputElement>(null);
+  const queryRef=React.useRef(params.get("q")||"");
   const control=usePulseControlState();
   const {data:bounds}=usePriceBounds();
   const minBound=bounds?.minPriceRub??FALLBACK_MIN;
@@ -221,7 +221,7 @@ export default function CatalogPage(){
 
     <div className={styles.search}>
       <Search size={18}/>
-      <Input ref={searchInput} value={query} onChange={(e)=>onQuery(e.target.value)} placeholder="ЖК, район, застройщик" aria-label="Поиск"/>
+      <Input value={query} onChange={(e)=>onQuery(e.target.value)} placeholder="ЖК, район, застройщик" aria-label="Поиск"/>
       <Sheet>
         <SheetTrigger asChild><button aria-label="Фильтры"><SlidersHorizontal size={18}/></button></SheetTrigger>
         <SheetContent side="bottom" className={styles.filterSheet}>
