@@ -22,6 +22,8 @@ test('Путь клиента: черновики, реакция, перехо�
  j=applyJourney(j,{type:'reaction',collectionId:collection.id,propertyId:'primorskiy',reaction:'expensive',reply:'Уточним бюджет'},'client',now);
  assert.equal(j.collections[0].items[0].reaction,'expensive');
  assert.throws(()=>applyJourney(j,{type:'next_step',title:'Позвонить',dueAt:now.toISOString(),done:false},'client',now));
+ assert.throws(()=>applyJourney(j,{type:'next_step',title:'Позвонить',dueAt:new Date(now.getTime()-60_000).toISOString(),done:false},'manager',now));
+ j=applyJourney(j,{type:'next_step',title:'Позвонить',dueAt:new Date(now.getTime()+60_000).toISOString(),done:false},'manager',now);
  const show={type:'showing' as const,id:randomUUID(),propertyId:'primorskiy',at:'2026-09-28T00:00:00Z',note:''};
  j=applyJourney(j,show,'client',now);assert.throws(()=>applyJourney(j,{...show,id:randomUUID()},'client',now));
  assert.throws(()=>applyJourney(j,{type:'showing_status',id:show.id,status:'completed',result:'Понравилось'},'manager',now));

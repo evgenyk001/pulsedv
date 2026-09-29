@@ -108,10 +108,16 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const input=leadSchema.parse(request.body);if(input.consentVersion!==config.CONSENT_VERSION)throw new HttpError(409,'Условия обработки данных обновились. Обновите страницу');
   return db.transaction(async sql=>{
    const session=request.visitor!;await sessionLock(sql,session.sessionId);
-   const existing=(await sql.query('select id,name,phone,source,property_id,comment from leads where session_id=$1 and idempotency_key=$2',[session.sessionId,input.idempotencyKey])).rows[0];
-   if(existing){if(existing.name!==input.name||existing.phone!==input.phone||existing.source!==input.source||existing.property_id!==(input.propertyId??null)||existing.comment!==(input.comment??null))throw new HttpError(409,'Ключ заявки уже использован');return {ok:true,id:existing.id,duplicate:true};}
+   const requestContext=safeMetadata(input.context??{});
+   const existing=(await sql.query('select id,name,phone,source,property_id,comment,request_context from leads where session_id=$1 and idempotency_key=$2',[session.sessionId,input.idempotencyKey])).rows[0];
+   if(existing){
+    const oldContext=JSON.stringify(Object.entries(existing.request_context??{}).sort(([a],[b])=>a.localeCompare(b)));
+    const newContext=JSON.stringify(Object.entries(requestContext).sort(([a],[b])=>a.localeCompare(b)));
+    if(existing.name!==input.name||existing.phone!==input.phone||existing.source!==input.source||existing.property_id!==(input.propertyId??null)||existing.comment!==(input.comment??null)||oldContext!==newContext)throw new HttpError(409,'Ключ заявки уже использован');
+    return {ok:true,id:existing.id,duplicate:true};
+   }
    if(input.propertyId&&!await getCatalogProperty(sql,input.propertyId,'published'))throw new HttpError(400,'Объект больше не опубликован');
-   const row=(await sql.query('insert into leads(session_id,user_id,idempotency_key,source,property_id,name,phone,comment,consent_at,consent_version) values($1,$2,$3,$4,$5,$6,$7,$8,now(),$9) returning id',[session.sessionId,session.userId,input.idempotencyKey,input.source,input.propertyId??null,input.name,input.phone,input.comment??null,config.CONSENT_VERSION])).rows[0];
+   const row=(await sql.query('insert into leads(session_id,user_id,idempotency_key,source,property_id,name,phone,comment,request_context,consent_at,consent_version) values($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,now(),$10) returning id',[session.sessionId,session.userId,input.idempotencyKey,input.source,input.propertyId??null,input.name,input.phone,input.comment??null,JSON.stringify(requestContext),config.CONSENT_VERSION])).rows[0];
    const repo=leadRepository(sql);
    await repo.insertEvents([{idempotencyKey:'lead:'+row.id,sessionId:session.sessionId,userId:session.userId,eventType:'lead_created',entityType:'lead',entityId:row.id,metadata:{source:input.source},createdAt:new Date().toISOString()}]);
    const processed=await processSessionIntent(repo,session.sessionId);

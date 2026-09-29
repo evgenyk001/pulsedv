@@ -62,7 +62,7 @@ export type PulseState={
 };
 
 export type PulseLead={
-  id:string; source:string; propertyId:string|null; name:string; phone:string; comment:string|null;
+  id:string; source:string; propertyId:string|null; name:string; phone:string; comment:string|null; requestContext?:Record<string,unknown>;
   status:"new"|"contacted"|"qualified"|"showing"|"booking"|"deal"|"closed"|"lost";
   manager:string|null; createdAt:string; updatedAt:string;
   sessionId?:string|null; userId?:string|null; score?:number; priority?:LeadPriority;

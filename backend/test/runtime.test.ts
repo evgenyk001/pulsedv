@@ -125,12 +125,12 @@ test('SQL/API: заявки между устройствами, дедупли�
   const response=await app.inject(request);assert.equal(response.statusCode,200,response.body);assert.equal(response.json().accepted,1);assert.equal((await app.inject(request)).json().duplicates,1);assert.equal((await db.query('select metadata from user_events')).rows[0].metadata.phone,undefined);
  });
  await t.test('реальная заявка видна в другой авторизованной сессии, повтор не создаёт дубль',async()=>{
-  const payload={idempotencyKey:randomUUID(),name:'Тестовый клиент',phone:'8 (999) 123-45-67',source:'property',propertyId:'solnechniy',comment:null,consent:true,consentVersion:config.CONSENT_VERSION};
+  const payload={idempotencyKey:randomUUID(),name:'Тестовый клиент',phone:'8 (999) 123-45-67',source:'mortgage',propertyId:'solnechniy',comment:null,context:{program:'family',price:5_400_000,down:2_000_000,years:25,rate:6,payment:21_906},consent:true,consentVersion:config.CONSENT_VERSION};
   first={method:'POST' as const,url:'/api/v1/leads',headers:{...headers,authorization:'Bearer '+identity.accessToken},payload};
   const result=await app.inject(first);assert.equal(result.statusCode,200,result.body);leadId=result.json().id;
   const repeat=await app.inject(first);assert.equal(repeat.json().id,leadId);assert.equal(repeat.json().duplicate,true);
   assert.equal((await app.inject({...first,payload:{...payload,name:'Другой клиент'}})).statusCode,409);
-  const snapshot=await app.inject({url:'/api/v1/control/snapshot',cookies:ownerCookie});assert.equal(snapshot.statusCode,200,snapshot.body);const data=snapshot.json();assert.equal(data.leads.length,1);assert.equal(data.leads[0].phone,'+79991234567');assert.equal(data.tasks.length,1);assert.equal(data.notifications.length,1);
+  const snapshot=await app.inject({url:'/api/v1/control/snapshot',cookies:ownerCookie});assert.equal(snapshot.statusCode,200,snapshot.body);const data=snapshot.json();assert.equal(data.leads.length,1);assert.equal(data.leads[0].phone,'+79991234567');assert.equal(data.leads[0].comment,null);assert.equal(data.leads[0].requestContext.program,'family');assert.equal(data.leads[0].requestContext.payment,21906);assert.equal(data.tasks.length,1);assert.equal(data.notifications.length,1);
  });
  await t.test('права менеджера ограничены назначением, изменение отражается в задачах',async()=>{
   await db.query('update leads set manager_id=$2 where id=$1',[leadId,owner.id]);await db.query('update crm_tasks set assigned_to=$2 where lead_id=$1',[leadId,owner.id]);
@@ -215,7 +215,7 @@ test('retention: старые закрытые лиды и идентифика�
  await db.query("insert into favorite_sets(owner,property_ids) values($1,'{}'),($2,'{}')",['session:'+sessionId,'user:'+userId]);
  const dir=join(mediaRoot,'private','chat',leadId);await mkdir(dir,{recursive:true});await writeFile(join(dir,file),'%PDF-old');
  const result=await runSecurityMaintenance(db,config);assert.equal(result.anonymizedLeads,1);assert.equal(result.deletedSessions,1);assert.equal(result.deletedUsers,1);
- const lead=(await db.query('select * from leads where id=$1',[leadId])).rows[0];assert.equal(lead.name,'Удалено');assert.equal(lead.phone,'Удалено');assert.equal(lead.user_id,null);assert.equal(lead.session_id,null);
+ const lead=(await db.query('select * from leads where id=$1',[leadId])).rows[0];assert.equal(lead.name,'Удалено');assert.equal(lead.phone,'Удалено');assert.deepEqual(lead.request_context,{});assert.equal(lead.user_id,null);assert.equal(lead.session_id,null);
  assert.equal((await db.query('select * from client_journeys where lead_id=$1',[leadId])).rows.length,0);
  assert.equal((await db.query('select * from sessions where id=$1',[sessionId])).rows.length,0);assert.equal((await db.query('select * from app_users where id=$1',[userId])).rows.length,0);
  await assert.rejects(access(join(dir,file)));
