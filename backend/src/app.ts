@@ -219,7 +219,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  };
  app.get('/api/v1/control/bootstrap',{preHandler:control},async request=>{
   const m=request.member!;const {state:storedState,version}=await readState(db);
-  const catalog=(await listCatalog(db,{status:'all',page:1,limit:2000,view:'card'})).items;
+  const catalog=(await listCatalog(db,{status:'all',page:1,limit:2000,view:'match'})).items;
   const [members,notifications,counts]=await Promise.all([controlMembers(m),controlNotifications(m),controlCounts(m)]);
   return {state:{...storedState,properties:catalog},version,members,notifications,counts};
  });
