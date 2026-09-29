@@ -103,6 +103,11 @@ export async function loadMoreControlResource(kind:ControlResource){
  const meta=runtime.pages[kind];if(meta.loading||!meta.hasMore)return;
  return refreshControlResource(kind,Math.max(1,meta.page+1),true);
 }
+export async function refreshLoadedControlData(){
+ await refreshControl();
+ const active=(Object.keys(runtime.pages) as ControlResource[]).filter(kind=>runtime.pages[kind].page>0);
+ await Promise.all(active.map(kind=>refreshControlResource(kind)));
+}
 export type LoginResult={member?:TeamMember;mfaRequired?:boolean;challengeId?:string;expiresAt?:string};
 export async function login(email:string,password:string){
  const result=await api<LoginResult>('/control/login',{method:'POST',body:JSON.stringify({email,password})});
