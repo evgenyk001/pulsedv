@@ -43,7 +43,7 @@ export async function visitorApi<T=any>(path:string,options:RequestInit={}):Prom
  }
 }
 export async function initializePublic(){
- const data=await api('/public/state');runtime.snapshot={...empty,state:data.state,version:data.version};runtime.consentVersion=data.consentVersion;runtime.ready=true;runtime.error=null;notify();
+ const data=await api('/public/state');runtime.snapshot={...empty,state:{...empty.state,...data.state},version:data.version};runtime.consentVersion=data.consentVersion;runtime.ready=true;runtime.error=null;notify();
  await session();
  if(!visitorCookieBound){await visitorApi('/auth/cookie',{method:'POST',body:'{}'});visitorCookieBound=true;}
  const initData=(window as any).Telegram?.WebApp?.initData;
