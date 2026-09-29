@@ -129,6 +129,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const challengeId=randomUUID(),code=generateMfaCode(),expiresAt=new Date(Date.now()+5*60_000).toISOString();
    await db.transaction(async sql=>{
     await sql.query('update control_login_challenges set consumed_at=now() where member_id=$1 and consumed_at is null',[row.id]);
+    await sql.query("delete from outbox_events where topic='manager.security_code' and aggregate_id=$1 and processed_at is null",[row.id]);
     await sql.query('insert into control_login_challenges(id,member_id,code_hash,expires_at) values($1,$2,$3,$4)',[challengeId,row.id,mfaCodeHash(config.BOT_TOKEN,challengeId,code),expiresAt]);
     await sql.query("insert into outbox_events(topic,aggregate_type,aggregate_id,payload) values('manager.security_code','member',$1,$2::jsonb)",[row.id,JSON.stringify({managerId:row.id,code})]);
    });
