@@ -1,6 +1,6 @@
 import { attribution } from '../journey/attribution';
 import { DEFAULT_STATE, type PulseState, type PulseLead, type PulseTask, type PulseEvent, type PulseVisitorProfile } from './model';
-export type TeamMember={id:string;name:string;email:string;role:'owner'|'admin'|'manager';active:boolean;cities:string[];telegramUserId:string|null};
+export type TeamMember={id:string;name:string;email:string;role:'owner'|'admin'|'manager';active:boolean;cities:string[];telegramUserId:string|null;mfaEnabled:boolean};
 export type Delivery={id:string;topic:string;attempts:number;lastError:string|null;processedAt:string|null;deadAt:string|null;createdAt:string};
 export type Snapshot={state:PulseState;version:number;leads:PulseLead[];tasks:PulseTask[];events:PulseEvent[];profiles:PulseVisitorProfile[];members:TeamMember[];notifications:Delivery[];limited:boolean};
 const empty:Snapshot={state:{...DEFAULT_STATE,properties:[],banners:[]},version:0,leads:[],tasks:[],events:[],profiles:[],members:[],notifications:[],limited:false};
@@ -56,7 +56,20 @@ export async function refreshControl(){
   runtime.snapshot=data;runtime.ready=true;runtime.lastSync=new Date().toISOString();runtime.error=null;notify();
  }catch(error){if(error instanceof ApiError&&error.status===401){runtime.member=null;runtime.ready=false;runtime.snapshot={...empty};runtime.dirty=false;}runtimeError(error);throw error;}
 }
-export async function login(email:string,password:string){const result=await api('/control/login',{method:'POST',body:JSON.stringify({email,password})});runtime.member=result.member;await refreshControl();}
+export type LoginResult={member?:TeamMember;mfaRequired?:boolean;challengeId?:string;expiresAt?:string};
+export async function login(email:string,password:string){
+ const result=await api<LoginResult>('/control/login',{method:'POST',body:JSON.stringify({email,password})});
+ if(result.mfaRequired)return result;
+ runtime.member=result.member??null;if(runtime.member)await refreshControl();return result;
+}
+export async function verifyLogin(challengeId:string,code:string){
+ const result=await api<{member:TeamMember}>('/control/login/verify',{method:'POST',body:JSON.stringify({challengeId,code})});
+ runtime.member=result.member;await refreshControl();return result;
+}
+export async function setMfa(enabled:boolean,currentPassword:string){
+ const result=await api<{member:TeamMember}>('/control/mfa',{method:'POST',body:JSON.stringify({enabled,currentPassword})});
+ runtime.member=result.member;notify();return result;
+}
 export async function restoreLogin(){const data=await api('/control/me');runtime.member=data.member;await refreshControl();}
 export async function logout(){await api('/control/logout',{method:'POST',body:'{}'});runtime.member=null;runtime.snapshot={...empty};runtime.ready=false;runtime.dirty=false;notify();}
 export function stageState(state:PulseState){runtime.snapshot={...runtime.snapshot,state};runtime.dirty=true;notify();}
