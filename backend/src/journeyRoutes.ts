@@ -91,7 +91,11 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
    const values=client?[r.visitor!.sessionId,r.visitor!.userId]:r.member!.role==='manager'?[r.member!.id]:[];
    const where=client?'where l.session_id=$1 or ($2::uuid is not null and l.user_id=$2)':r.member!.role==='manager'?'where l.manager_id=$1':'';
    const rows=(await db.query(`select l.id,l.status,l.property_id,l.created_at,m.name as manager_name,j.document from leads l left join team_members m on m.id=l.manager_id and m.active=true left join client_journeys j on j.lead_id=l.id ${where} order by l.created_at desc limit 1001`,values)).rows;
-   return {limited:rows.length>1000,items:rows.slice(0,1000).map(l=>({leadId:l.id,status:l.status,propertyId:l.property_id,createdAt:l.created_at,managerName:l.manager_name||null,journey:client?clientJourney(l.document||emptyJourney(l.id)):l.document||emptyJourney(l.id)}))};
+   return {limited:rows.length>1000,items:rows.slice(0,1000).map(l=>{const full=l.document||emptyJourney(l.id);const journey=client?clientJourney(full):{...emptyJourney(l.id),revision:full.revision,showings:full.showings||[],nextStep:full.nextStep??null};return {leadId:l.id,status:l.status,propertyId:l.property_id,createdAt:l.created_at,managerName:l.manager_name||null,journey};})};
+  });
+  app.get(prefix+'/journeys/:id',{preHandler:auth},async r=>{
+   const leadId=id.parse((r.params as any).id);
+   return db.transaction(async sql=>{await leadAccess(sql,r,leadId,client,false);const row=(await sql.query('select document from client_journeys where lead_id=$1',[leadId])).rows[0];const journey:Journey=row?.document||emptyJourney(leadId);return {journey:client?clientJourney(journey):journey};});
   });
   app.post(prefix+'/journeys/:id',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);const input=z.object({revision:z.number().int().nonnegative(),command:journeyCommand}).strict().parse(r.body);
