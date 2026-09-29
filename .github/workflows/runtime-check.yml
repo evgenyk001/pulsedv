@@ -43,3 +43,5 @@ jobs:
         run: |
           docker build -f deploy/Dockerfile.api -t pulse-api-test .
           docker build -f deploy/Dockerfile.web -t pulse-web-test .
+          docker run --rm --entrypoint sh pulse-web-test -c 'test -f /srv/index.html && test -f /srv/style.css && test -f /srv/mini-app/index.html && test -f /srv/control-center/index.html'
+          docker run --rm -e SITE_DOMAIN=example.com --entrypoint caddy pulse-web-test validate --config /etc/caddy/Caddyfile
