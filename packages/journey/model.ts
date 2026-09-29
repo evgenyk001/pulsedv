@@ -68,7 +68,9 @@ export function applyJourney(current:Journey,command:JourneyCommand,role:'client
   Object.assign(s,{status:c.status,result:c.result,updatedAt:iso,updatedBy:role});
   if(["cancelled","completed"].includes(c.status)){delete s.proposedAt;delete s.changeDecision;}
  }else{
-  if(!c.title.trim()||!Number.isFinite(Date.parse(c.dueAt)))throw new Error('Укажите действие и срок');
+  const dueAt=Date.parse(c.dueAt);
+  if(!c.title.trim()||!Number.isFinite(dueAt))throw new Error('Укажите действие и срок');
+  if(!c.done&&dueAt<=now.getTime())throw new Error('Следующее действие нужно запланировать на будущее');
   j.nextStep={title:c.title,dueAt:c.dueAt,done:c.done};
  }
  j.revision++;return j;
