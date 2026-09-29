@@ -41,6 +41,7 @@ const sortLabels:Record<SortMode,string>={
 
 export default function CatalogPage(){
   const [params,setParams]=useSearchParams();
+  const searchInput=React.useRef<HTMLInputElement>(null);
   const control=usePulseControlState();
   const {data:bounds}=usePriceBounds();
   const minBound=bounds?.minPriceRub??FALLBACK_MIN;
@@ -133,6 +134,7 @@ export default function CatalogPage(){
 
   const onQuery=(value:string)=>{const next=new URLSearchParams(params);value?next.set("q",value):next.delete("q");setParams(next,{replace:true});};
   const catalogReturnTo=React.useMemo(()=>{const next=new URLSearchParams(params);query?next.set("q",query):next.delete("q");const search=next.toString();return "/catalog"+(search?"?"+search:"")},[params,query]);
+  const liveCatalogReturnTo=React.useCallback(()=>{const next=new URLSearchParams(params);const live=searchInput.current?.value??query;live?next.set("q",live):next.delete("q");const search=next.toString();return "/catalog"+(search?"?"+search:"")},[params,query]);
 
   const setView=(nextView:"list"|"map")=>{
     const next=new URLSearchParams(params);
@@ -212,7 +214,7 @@ export default function CatalogPage(){
 
     <div className={styles.search}>
       <Search size={18}/>
-      <Input value={query} onChange={(e)=>onQuery(e.target.value)} placeholder="ЖК, район, застройщик" aria-label="Поиск"/>
+      <Input ref={searchInput} value={query} onChange={(e)=>onQuery(e.target.value)} placeholder="ЖК, район, застройщик" aria-label="Поиск"/>
       <Sheet>
         <SheetTrigger asChild><button aria-label="Фильтры"><SlidersHorizontal size={18}/></button></SheetTrigger>
         <SheetContent side="bottom" className={styles.filterSheet}>
@@ -256,7 +258,7 @@ export default function CatalogPage(){
     {view==="list"?<div className={styles.list}>
       {isLoading&&<div className={styles.empty}><strong>Загружаем каталог</strong><span>Объекты появятся через секунду.</span></div>}
       {error&&<div className={styles.empty}><strong>Не удалось загрузить каталог</strong><span>Проверьте соединение и попробуйте снова.</span></div>}
-      {!isLoading&&!error&&visible.map(property=><PropertyCard key={property.id} property={property} compact returnTo={catalogReturnTo}/>)}
+      {!isLoading&&!error&&visible.map(property=><PropertyCard key={property.id} property={property} compact returnTo={catalogReturnTo} resolveReturnTo={liveCatalogReturnTo}/>)}
       {!isLoading&&!error&&visible.length===0&&<div className={styles.empty}><strong>Ничего не нашли</strong><span>Попробуйте изменить фильтры или город.</span><button onClick={resetFilters}>Сбросить фильтры</button></div>}
       {!pulseMode&&listQuery.hasNextPage&&<button className={styles.loadMore} disabled={listQuery.isFetchingNextPage} onClick={()=>void listQuery.fetchNextPage()}>
         {listQuery.isFetchingNextPage?"Загружаем…":`Показать ещё · ${Math.max(0,total-visible.length)}`}
