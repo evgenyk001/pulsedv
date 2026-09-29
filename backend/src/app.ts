@@ -182,6 +182,80 @@ export async function createApp(db:Database,config:RuntimeConfig){
  await registerInterestRoutes(app,db,control);
  await registerFavoriteRoutes(app,db,visitor);
  await registerJourneyRoutes(app,db,control,visitor,editor,config.PUBLIC_ORIGIN,config);
+
+ const pageQuery=z.object({page:z.coerce.number().int().min(1).default(1),limit:z.coerce.number().int().min(1).max(1000).default(250)}).strict();
+ const controlMembers=async(m:Member)=>{
+  const scoped=m.role==='manager';
+  return (await db.query(scoped?'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members where id=$1':'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members order by name',scoped?[m.id]:[])).rows.map(memberView);
+ };
+ const controlNotifications=async(m:Member)=>m.role==='manager'?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
+ const controlCounts=async(m:Member)=>{
+  const scoped=m.role==='manager';
+  const leadValues=scoped?[m.id]:[];
+  const leadWhere=scoped?'where manager_id=$1':'';
+  const taskWhere=scoped?'where assigned_to=$1':'';
+  const profileWhere=scoped?'where session_id in(select session_id from leads where manager_id=$1)':'';
+  const [leadRow,taskRow,profileRow]=await Promise.all([
+   db.query(`select count(*)::int as total,
+    count(*) filter(where status not in ('deal','closed','lost'))::int as active,
+    count(*) filter(where status='new')::int as new,
+    count(*) filter(where manager_id is null and status not in ('deal','closed','lost'))::int as unassigned,
+    count(*) filter(where status='new')::int as stage_new,
+    count(*) filter(where status='contacted')::int as stage_contacted,
+    count(*) filter(where status='qualified')::int as stage_qualified,
+    count(*) filter(where status='showing')::int as stage_showing,
+    count(*) filter(where status='booking')::int as stage_booking,
+    count(*) filter(where status='deal')::int as stage_deal,
+    count(*) filter(where status='closed')::int as stage_closed,
+    count(*) filter(where status='lost')::int as stage_lost
+    from leads ${leadWhere}`,leadValues),
+   db.query(`select count(*) filter(where status<>'done')::int as open,
+    count(*) filter(where status<>'done' and due_at<now())::int as overdue
+    from crm_tasks ${taskWhere}`,leadValues),
+   db.query(`select count(*) filter(where priority in ('hot','urgent'))::int as hot from visitor_profiles ${profileWhere}`,leadValues),
+  ]);
+  const l=leadRow.rows[0]||{},t=taskRow.rows[0]||{},p=profileRow.rows[0]||{};
+  return {leadsTotal:Number(l.total||0),activeLeads:Number(l.active||0),newLeads:Number(l.new||0),unassignedLeads:Number(l.unassigned||0),openTasks:Number(t.open||0),overdueTasks:Number(t.overdue||0),hotProfiles:Number(p.hot||0),leadStages:{new:Number(l.stage_new||0),contacted:Number(l.stage_contacted||0),qualified:Number(l.stage_qualified||0),showing:Number(l.stage_showing||0),booking:Number(l.stage_booking||0),deal:Number(l.stage_deal||0),closed:Number(l.stage_closed||0),lost:Number(l.stage_lost||0)}};
+ };
+ app.get('/api/v1/control/bootstrap',{preHandler:control},async request=>{
+  const m=request.member!;const {state:storedState,version}=await readState(db);
+  const catalog=(await listCatalog(db,{status:'all',page:1,limit:2000,view:'card'})).items;
+  const [members,notifications,counts]=await Promise.all([controlMembers(m),controlNotifications(m),controlCounts(m)]);
+  return {state:{...storedState,properties:catalog},version,members,notifications,counts};
+ });
+ app.get('/api/v1/control/pulse',{preHandler:control},async request=>{
+  const [counts,notifications]=await Promise.all([controlCounts(request.member!),controlNotifications(request.member!)]);
+  return {counts,notifications};
+ });
+ app.get('/api/v1/control/leads',{preHandler:control},async request=>{
+  const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
+  const where=scoped?'where manager_id=$1':'';const values=scoped?[m.id]:[];
+  const total=Number((await db.query(`select count(*)::int as total from leads ${where}`,values)).rows[0]?.total||0);
+  const rows=(await db.query(`select * from leads ${where} order by score desc,created_at desc limit ${values.length+1} offset ${values.length+2}`,[...values,q.limit,offset])).rows.map(row=>{const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;return lead;});
+  return {items:rows,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
+ });
+ app.get('/api/v1/control/tasks',{preHandler:control},async request=>{
+  const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
+  const where=scoped?'where assigned_to=$1':'';const values=scoped?[m.id]:[];
+  const total=Number((await db.query(`select count(*)::int as total from crm_tasks ${where}`,values)).rows[0]?.total||0);
+  const items=(await db.query(`select * from crm_tasks ${where} order by due_at limit ${values.length+1} offset ${values.length+2}`,[...values,q.limit,offset])).rows.map(camelRow);
+  return {items,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
+ });
+ app.get('/api/v1/control/events',{preHandler:control},async request=>{
+  const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
+  const where=scoped?'where session_id in(select session_id from leads where manager_id=$1)':'';const values=scoped?[m.id]:[];
+  const total=Number((await db.query(`select count(*)::int as total from user_events ${where}`,values)).rows[0]?.total||0);
+  const items=(await db.query(`select id,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at as created_at from user_events ${where} order by occurred_at desc limit ${values.length+1} offset ${values.length+2}`,[...values,q.limit,offset])).rows.map(camelRow);
+  return {items,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
+ });
+ app.get('/api/v1/control/profiles',{preHandler:control},async request=>{
+  const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
+  const where=scoped?'where session_id in(select session_id from leads where manager_id=$1)':'';const values=scoped?[m.id]:[];
+  const total=Number((await db.query(`select count(*)::int as total from visitor_profiles ${where}`,values)).rows[0]?.total||0);
+  const items=(await db.query(`select * from visitor_profiles ${where} order by score desc,last_seen_at desc limit ${values.length+1} offset ${values.length+2}`,[...values,q.limit,offset])).rows.map(camelRow);
+  return {items,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
+ });
+
  app.get('/api/v1/control/snapshot',{preHandler:control},async request=>{
   const m=request.member!;const scoped=m.role==='manager';const {state:storedState,version}=await readState(db);
   const catalog=(await listCatalog(db,{status:'all',page:1,limit:2000,view:'match'})).items;
