@@ -42,6 +42,7 @@ export default function ProfilePage(){
     <section className={styles.menu}>
       <Link to="/journey"><Clock3 size={18}/><span><b>Мои подборки и показы</b><small>Варианты от менеджера и встречи</small></span><ChevronRight size={17}/></Link>
       <Link to="/favorites"><Heart size={18}/><span><b>Избранное</b><small>Ваш шорт-лист объектов</small></span><ChevronRight size={17}/></Link>
+      <Link to="/privacy"><ShieldCheck size={18}/><span><b>Персональные данные</b><small>Политика и согласие на обработку</small></span><ChevronRight size={17}/></Link>
       <Sheet>
         <SheetTrigger asChild><button><Clock3 size={18}/><span><b>История подборов</b><small>Последние параметры поиска</small></span><ChevronRight size={17}/></button></SheetTrigger>
         <SheetContent side="bottom" className={styles.infoSheet}><SheetHeader><SheetTitle>История подборов</SheetTitle><SheetDescription>Последние сценарии, к которым можно вернуться.</SheetDescription></SheetHeader>

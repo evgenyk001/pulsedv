@@ -7,7 +7,7 @@ const schema=z.object({
   BOT_TOKEN:z.string().default(''),
   MAP_2GIS_KEY:z.string().default(''),
   TRUST_PROXY_HOPS:z.coerce.number().int().min(0).max(3).default(0),
-  CONSENT_VERSION:z.string().default('2026-09-25'),
+  CONSENT_VERSION:z.string().default('2026-09-29'),
   MEDIA_ROOT:z.string().min(1).default('/data/media'),
   CLIENT_DATA_RETENTION_DAYS:z.coerce.number().int().min(30).max(3650).default(365),
   ANALYTICS_RETENTION_DAYS:z.coerce.number().int().min(30).max(3650).default(180),

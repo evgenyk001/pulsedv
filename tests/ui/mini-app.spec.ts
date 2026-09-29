@@ -68,6 +68,18 @@ test('Control preview: object editor and real state changes',async({page})=>{
 });
 
 
+test('Privacy: policy and separate consent are public and linked from profile',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/pulsedv/mini-app/');const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
+ await page.goto('/pulsedv/mini-app/#/profile');
+ await page.getByRole('link',{name:/Персональные данные/}).click();
+ await expect(page.getByRole('heading',{name:'Политика обработки персональных данных'})).toBeVisible();
+ await expect(page.getByText(/имя и номер телефона/)).toBeVisible();
+ await page.getByRole('link',{name:'Согласие на обработку персональных данных',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Согласие на обработку персональных данных'})).toBeVisible();
+ await expect(page.getByText(/для обработки моего обращения, связи со мной и подбора недвижимости/)).toBeVisible();
+});
+
 test('Control content: banner campaigns can be created, enabled and linked',async({page})=>{
  await page.setViewportSize({width:1440,height:1000});
  await page.goto('/pulsedv/control-center/#/content');
@@ -159,6 +171,8 @@ test('CRM: real preview lead, editable stage, readable history and keyboard draw
  await page.getByRole('button',{name:'Узнать наличие',exact:true}).click();
  await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Проверка CRM');
  await page.getByRole('textbox',{name:'Телефон',exact:true}).fill('+79991234567');
+ await expect(page.getByRole('button',{name:'Отправить заявку',exact:true})).toBeDisabled();
+ await page.getByRole('checkbox',{name:/Я даю согласие/}).check();
  await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Обращение создано'})).toBeVisible();
  await page.goto('/pulsedv/control-center/');
@@ -211,7 +225,7 @@ for(const width of [390,1440])test(`Interest DNA ${width}px: facts, evidence, ch
 for(const width of [390,1440])test(`Journey ${width}px: manager collection, client feedback, showing and next step`,async({page})=>{
  test.setTimeout(90000);await page.setViewportSize({width,height:1000});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/pulsedv/mini-app/?utm_source=test&utm_campaign=journey');await page.getByRole('button',{name:'Пропустить онбординг'}).click();
- await page.goto('/pulsedv/mini-app/#/property/solnechniy');await page.getByRole('button',{name:'Узнать наличие',exact:true}).click();await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Тест сопровождения');await page.getByRole('textbox',{name:'Телефон',exact:true}).fill('+79990000001');await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();await expect(page.getByRole('heading',{name:'Обращение создано'})).toBeVisible();
+ await page.goto('/pulsedv/mini-app/#/property/solnechniy');await page.getByRole('button',{name:'Узнать наличие',exact:true}).click();await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Тест сопровождения');await page.getByRole('textbox',{name:'Телефон',exact:true}).fill('+79990000001');await page.getByRole('checkbox',{name:/Я даю согласие/}).check();await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();await expect(page.getByRole('heading',{name:'Обращение создано'})).toBeVisible();
  await page.goto('/pulsedv/control-center/#/leads');await page.locator('.leadRowButton').filter({hasText:'Тест сопровождения'}).click();
  const panel=page.getByRole('region',{name:'Подборки и показы',exact:true});
  await panel.getByRole('tab',{name:/Подборки/}).focus();await page.keyboard.press('Enter');
@@ -255,6 +269,7 @@ test('Клиент: конкретная планировка, переход п
  await page.getByRole('button',{name:'Интересует эта планировка',exact:true}).click();
  await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Тест планировки');
  await page.getByRole('textbox',{name:'Телефон'}).fill('+79990000005');
+ await page.getByRole('checkbox',{name:/Я даю согласие/}).check();
  await page.getByRole('button',{name:'Отправить заявку'}).click();
  await page.getByRole('link',{name:'Открыть моё обращение'}).click();
  await expect(page.getByRole('log',{name:'Переписка по обращению'})).toBeVisible();
@@ -308,7 +323,7 @@ for(const width of [320,390])test(`Переписка ${width}px: чернови
  await page.setViewportSize({width,height:844});
  await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:'Пропустить онбординг'}).click();
  await page.goto('/pulsedv/mini-app/#/journey');await page.getByRole('button',{name:'Обсудить покупку'}).click();
- await page.getByLabel('Как к вам обращаться').fill('Тест мессенджера '+width);await page.getByLabel('Телефон',{exact:true}).fill('+79990000320');await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();
+ await page.getByLabel('Как к вам обращаться').fill('Тест мессенджера '+width);await page.getByLabel('Телефон',{exact:true}).fill('+79990000320');await page.getByRole('checkbox',{name:/Я даю согласие/}).check();await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Обращение создано'})).toBeVisible();
  await page.screenshot({path:`test-results/chat-success-${width}.png`,animations:'disabled'});
  await page.getByRole('link',{name:'Открыть моё обращение'}).click();
