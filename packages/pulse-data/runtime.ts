@@ -66,8 +66,8 @@ export async function verifyLogin(challengeId:string,code:string){
  const result=await api<{member:TeamMember}>('/control/login/verify',{method:'POST',body:JSON.stringify({challengeId,code})});
  runtime.member=result.member;await refreshControl();return result;
 }
-export async function setMfa(enabled:boolean,currentPassword:string){
- const result=await api<{member:TeamMember}>('/control/mfa',{method:'POST',body:JSON.stringify({enabled,currentPassword})});
+export async function setMfa(enabled:boolean,currentPassword:string,telegramUserId?:string){
+ const result=await api<{member:TeamMember}>('/control/mfa',{method:'POST',body:JSON.stringify({enabled,currentPassword,...(telegramUserId?{telegramUserId}:{})})});
  runtime.member=result.member;notify();return result;
 }
 export async function restoreLogin(){const data=await api('/control/me');runtime.member=data.member;await refreshControl();}
