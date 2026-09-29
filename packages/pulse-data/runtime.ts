@@ -91,8 +91,11 @@ export async function refreshControlResource(kind:ControlResource,page=1,append=
    }else if(page===1&&current.length>limit){
     const ids=new Set(data.items.map(item=>item.id));items=[...data.items,...current.filter(item=>!ids.has(item.id))];
    }else items=data.items;
-   runtime.snapshot={...runtime.snapshot,[kind]:items,limited:items.length<data.total};
-   runtime.pages[kind]={page:Math.max(page,append?runtime.pages[kind].page:1),limit:data.limit,total:data.total,hasMore:items.length<data.total,loading:false};
+   const previousPage=runtime.pages[kind].page;
+   const nextPage=append?Math.max(previousPage,page):page===1&&current.length>limit?Math.max(1,previousPage):page;
+   runtime.pages[kind]={page:nextPage,limit:data.limit,total:data.total,hasMore:items.length<data.total,loading:false};
+   const limited=(Object.keys(runtime.pages) as ControlResource[]).some(resource=>runtime.pages[resource].hasMore);
+   runtime.snapshot={...runtime.snapshot,[kind]:items,limited};
    runtime.lastSync=new Date().toISOString();runtime.error=null;notify([kind]);
   }catch(error){runtime.pages[kind]={...runtime.pages[kind],loading:false};runtimeError(error);throw error;}
   finally{resourceLoads.delete(key);}
