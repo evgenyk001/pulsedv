@@ -50,12 +50,7 @@ export default function CatalogPage(){
   const initialMin=parsePriceParam(params.get("min"));
   const initialMax=parsePriceParam(params.get("max"));
 
-  const routeQuery=params.get("q")||"";
-  const [query,setQuery]=useState(routeQuery);
-  React.useEffect(()=>{
-    queryRef.current=routeQuery;
-    setQuery(current=>current===routeQuery?current:routeQuery);
-  },[routeQuery]);
+  const [query,setQuery]=useState(params.get("q")||"");
   const [city,setCity]=useState(params.get("city")||"Все");
   const [priceRange,setPriceRange]=useState<[number,number]>([initialMin??FALLBACK_MIN,initialMax??FALLBACK_MAX]);
   const [priceDraft,setPriceDraft]=useState<[string,string]>([formatRub(initialMin??FALLBACK_MIN),formatRub(initialMax??FALLBACK_MAX)]);
