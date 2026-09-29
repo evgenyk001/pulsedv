@@ -50,7 +50,13 @@ export default function CatalogPage(){
   const initialMin=parsePriceParam(params.get("min"));
   const initialMax=parsePriceParam(params.get("max"));
 
-  const query=params.get("q")||"";
+  const [query,setQuery]=useState(params.get("q")||"");
+  const queryRef=React.useRef(query);
+  React.useEffect(()=>{
+    const routeQuery=params.get("q")||"";
+    queryRef.current=routeQuery;
+    setQuery(current=>current===routeQuery?current:routeQuery);
+  },[params]);
   const [city,setCity]=useState(params.get("city")||"Все");
   const [priceRange,setPriceRange]=useState<[number,number]>([initialMin??FALLBACK_MIN,initialMax??FALLBACK_MAX]);
   const [priceDraft,setPriceDraft]=useState<[string,string]>([formatRub(initialMin??FALLBACK_MIN),formatRub(initialMax??FALLBACK_MAX)]);
@@ -132,9 +138,9 @@ export default function CatalogPage(){
   const isLoading=pulseMode?pulseQuery.isLoading:view==="map"?mapQuery.isLoading:listQuery.isLoading;
   const error=pulseMode?pulseQuery.error:view==="map"?mapQuery.error:listQuery.error;
 
-  const onQuery=(value:string)=>{const next=new URLSearchParams(params);value?next.set("q",value):next.delete("q");setParams(next,{replace:true});};
+  const onQuery=(value:string)=>{queryRef.current=value;setQuery(value);const next=new URLSearchParams(params);value?next.set("q",value):next.delete("q");setParams(next,{replace:true});};
   const catalogReturnTo=React.useMemo(()=>{const next=new URLSearchParams(params);query?next.set("q",query):next.delete("q");const search=next.toString();return "/catalog"+(search?"?"+search:"")},[params,query]);
-  const liveCatalogReturnTo=React.useCallback(()=>{const next=new URLSearchParams(params);const live=searchInput.current?.value??query;live?next.set("q",live):next.delete("q");const search=next.toString();return "/catalog"+(search?"?"+search:"")},[params,query]);
+  const liveCatalogReturnTo=React.useCallback(()=>{const next=new URLSearchParams(params);const live=queryRef.current;live?next.set("q",live):next.delete("q");const search=next.toString();return "/catalog"+(search?"?"+search:"")},[params]);
 
   const setView=(nextView:"list"|"map")=>{
     const next=new URLSearchParams(params);
@@ -197,6 +203,7 @@ export default function CatalogPage(){
     setDelivery("Любой");
     setRooms("Все");
     setSea(false);
+    queryRef.current="";setQuery("");
     const next=new URLSearchParams(params);
     next.delete("city");next.delete("min");next.delete("max");next.delete("delivery");next.delete("rooms");next.delete("sea");next.delete("mortgage");next.delete("q");
     setParams(next,{replace:true});
