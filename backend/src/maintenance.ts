@@ -30,7 +30,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
    await sql.query('delete from client_journeys where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query('delete from crm_tasks where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query('delete from lead_score_history where lead_id=any($1::uuid[])',[leadIds]);
-   await sql.query("update leads set user_id=null,session_id=null,idempotency_key=null,name='Удалено',phone='Удалено',comment=null,manager_id=null,score=0,priority='cold',score_reasons='[]'::jsonb,top_property_id=null,city=null,mortgage_program=null,next_action=null where id=any($1::uuid[])",[leadIds]);
+   await sql.query("update leads set user_id=null,session_id=null,idempotency_key=null,name='Удалено',phone='Удалено',comment=null,request_context='{}'::jsonb,manager_id=null,score=0,priority='cold',score_reasons='[]'::jsonb,top_property_id=null,city=null,mortgage_program=null,next_action=null where id=any($1::uuid[])",[leadIds]);
   }
 
   const sessionRows=(await sql.query("select s.id from sessions s where s.last_seen_at<$1 and not exists(select 1 from leads l where l.session_id=s.id) limit 2000",[clientCutoff])).rows;
