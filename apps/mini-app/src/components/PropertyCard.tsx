@@ -17,7 +17,8 @@ export function PropertyCard({property,compact=false,returnTo}:PropertyCardProps
     if(location.pathname==="/catalog"){
       const input=document.querySelector<HTMLInputElement>('input[aria-label="Поиск"]');
       const params=new URLSearchParams(location.search);
-      const live=input?.value??"";
+      const stored=sessionStorage.getItem("pulse.catalog.query");
+      const live=stored??input?.value??"";
       live?params.set("q",live):params.delete("q");
       const search=params.toString();
       value="/catalog"+(search?"?"+search:"");
