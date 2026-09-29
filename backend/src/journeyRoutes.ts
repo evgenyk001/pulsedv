@@ -4,13 +4,13 @@ import type {Database,Sql} from './database';
 import {HttpError} from './security';
 import {audit} from './repository';
 import {randomUUID} from 'node:crypto';
-import {mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {getCatalogProperty} from './catalogRepository';
 import type {RuntimeConfig} from './config';
 import {applyJourney,clientJourney,emptyJourney,type Journey} from '../../packages/journey/model';
 const short=z.string().trim().min(1).max(200),note=z.string().trim().max(2000),id=z.uuid();
-const attachmentSchema=z.object({kind:z.enum(['image','file']),name:z.string().min(1).max(180),url:z.string().regex(/^\/media\/chat\/[A-Za-z0-9._-]+$/).max(500),mimeType:z.string().min(1).max(120),size:z.number().int().min(1).max(25*1024*1024)}).strict();
+const attachmentSchema=z.object({kind:z.enum(['image','file']),name:z.string().min(1).max(180),url:z.string().regex(/^\/api\/v1\/journey-media\/[0-9a-f-]{36}\/[A-Za-z0-9._-]+$/).max(500),mimeType:z.enum(['image/jpeg','image/png','image/webp','application/pdf']),size:z.number().int().min(1).max(25*1024*1024)}).strict();
 export const journeyCommand=z.discriminatedUnion('type',[
  z.object({type:z.literal('collection'),id,title:short,items:z.array(z.object({propertyId:short,note})).min(1).max(10),published:z.boolean()}),
  z.object({type:z.literal('reaction'),collectionId:id,propertyId:short,reaction:z.enum(['liked','expensive','location','question','none']),reply:note}),
@@ -23,23 +23,61 @@ export const journeyCommand=z.discriminatedUnion('type',[
 ]);
 export async function registerJourneyRoutes(app:FastifyInstance,db:Database,control:(r:FastifyRequest)=>Promise<void>,visitor:(r:FastifyRequest)=>Promise<void>,editor:(r:FastifyRequest)=>Promise<void>,origin:string,config:RuntimeConfig){
  const attachmentTypes:Record<string,{ext:string;kind:'image'|'file';max:number}>={'image/jpeg':{ext:'jpg',kind:'image',max:15*1024*1024},'image/png':{ext:'png',kind:'image',max:15*1024*1024},'image/webp':{ext:'webp',kind:'image',max:15*1024*1024},'application/pdf':{ext:'pdf',kind:'file',max:25*1024*1024}};
+ const validSignature=(type:string,body:Buffer)=>{
+  if(type==='image/jpeg')return body.length>=3&&body[0]===0xff&&body[1]===0xd8&&body[2]===0xff;
+  if(type==='image/png')return body.length>=8&&body.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+  if(type==='image/webp')return body.length>=12&&body.subarray(0,4).toString()==='RIFF'&&body.subarray(8,12).toString()==='WEBP';
+  if(type==='application/pdf')return body.length>=5&&body.subarray(0,5).toString()==='%PDF-';
+  return false;
+ };
+ const fileMime=(file:string)=>file.endsWith('.jpg')?'image/jpeg':file.endsWith('.png')?'image/png':file.endsWith('.webp')?'image/webp':file.endsWith('.pdf')?'application/pdf':null;
+ const disposition=(name:string)=>"inline; filename*=UTF-8''"+encodeURIComponent(name.replace(/[\r\n]/g,' ').slice(0,180)||'file');
+
  for(const type of Object.keys(attachmentTypes))if(!app.hasContentTypeParser(type))app.addContentTypeParser(type,{parseAs:'buffer'},(_request,body,done)=>done(null,body));
  async function leadAccess(sql:Sql,r:FastifyRequest,leadId:string,client:boolean,lock=false){
   const l=(await sql.query('select * from leads where id=$1'+(lock?' for update':''),[leadId])).rows[0];
   const allowed=l&&(client?(l.session_id===r.visitor!.sessionId||!!r.visitor!.userId&&l.user_id===r.visitor!.userId):(r.member!.role!=='manager'||l.manager_id===r.member!.id));
   if(!allowed)throw new HttpError(404,'Клиент недоступен');return l;
  }
+ const authenticateMedia=async(r:FastifyRequest)=>{
+  if(r.cookies.pulse_control){await control(r);return false}
+  await visitor(r);return true;
+ };
+ const sendAttachment=async(r:FastifyRequest,reply:any,leadId:string,url:string,path:string,fileName:string)=>{
+  const client=await authenticateMedia(r);
+  const attachment=await db.transaction(async sql=>{
+   await leadAccess(sql,r,leadId,client,false);
+   const document=(await sql.query('select document from client_journeys where lead_id=$1',[leadId])).rows[0]?.document as Journey|undefined;
+   return document?.messages?.map(m=>m.attachment).find(a=>a?.url===url)||null;
+  });
+  if(!attachment)throw new HttpError(404,'Файл недоступен');
+  const mime=fileMime(fileName);if(!mime)throw new HttpError(404,'Файл недоступен');
+  let body:Buffer;try{body=await readFile(path)}catch{throw new HttpError(404,'Файл недоступен')}
+  return reply.type(mime).header('Cache-Control','private, no-store').header('Content-Disposition',disposition(attachment.name)).send(body);
+ };
+ app.get('/api/v1/journey-media/:leadId/:file',async(r,reply)=>{
+  const leadId=id.parse((r.params as any).leadId);const file=z.string().regex(/^[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/).parse((r.params as any).file);
+  const url='/api/v1/journey-media/'+leadId+'/'+file;
+  return sendAttachment(r,reply,leadId,url,join(config.MEDIA_ROOT,'private','chat',leadId,file),file);
+ });
+ // Legacy URLs from earlier chat messages are now authenticated instead of publicly served.
+ app.get('/media/chat/:file',async(r,reply)=>{
+  const file=z.string().regex(/^[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/).parse((r.params as any).file);const url='/media/chat/'+file;
+  const row=(await db.query("select lead_id from client_journeys j where exists(select 1 from jsonb_array_elements(coalesce(j.document->'messages','[]'::jsonb)) m where m->'attachment'->>'url'=$1) limit 1",[url])).rows[0];
+  if(!row)throw new HttpError(404,'Файл недоступен');
+  return sendAttachment(r,reply,row.lead_id,url,join(config.MEDIA_ROOT,'chat',file),file);
+ });
  for(const client of [false,true]){
   const prefix=client?'/api/v1/me':'/api/v1/control';const auth=client?visitor:control;
   app.post(prefix+'/journeys/:id/attachments',{preHandler:auth,bodyLimit:26*1024*1024,config:{rateLimit:{max:30,timeWindow:'1 minute'}}},async(r,reply)=>{
    const leadId=id.parse((r.params as any).id);await db.transaction(sql=>leadAccess(sql,r,leadId,client,false));
    const type=(r.headers['content-type']||'').split(';')[0].trim().toLowerCase();const spec=attachmentTypes[type];
    if(!spec)return reply.code(415).send({error:'Можно отправить JPG, PNG, WebP или PDF'});
-   const body=r.body;if(!Buffer.isBuffer(body)||!body.length)return reply.code(400).send({error:'Файл пустой'});if(body.length>spec.max)return reply.code(413).send({error:spec.kind==='image'?'Фото больше 15 МБ':'PDF больше 25 МБ'});
+   const body=r.body;if(!Buffer.isBuffer(body)||!body.length)return reply.code(400).send({error:'Файл пустой'});if(body.length>spec.max)return reply.code(413).send({error:spec.kind==='image'?'Фото больше 15 МБ':'PDF больше 25 МБ'});if(!validSignature(type,body))return reply.code(400).send({error:'Содержимое файла не соответствует его типу'});
    const query=z.object({filename:z.string().max(180).optional()}).strict().parse(r.query);const name=(query.filename||'Файл').replace(/[\r\n]/g,' ').trim().slice(0,180)||'Файл';
-   const folder='chat';const fileName=randomUUID()+'.'+spec.ext;await mkdir(join(config.MEDIA_ROOT,folder),{recursive:true});await writeFile(join(config.MEDIA_ROOT,folder,fileName),body);
+   const folder=join('private','chat',leadId);const fileName=randomUUID()+'.'+spec.ext;await mkdir(join(config.MEDIA_ROOT,folder),{recursive:true});await writeFile(join(config.MEDIA_ROOT,folder,fileName),body);
    if(!client&&r.member)await audit(db,r.member.id,'journey.attachment.upload',leadId,{mimeType:type,size:body.length});
-   return {attachment:{kind:spec.kind,name,url:'/media/'+folder+'/'+fileName,mimeType:type,size:body.length}};
+   return {attachment:{kind:spec.kind,name,url:'/api/v1/journey-media/'+leadId+'/'+fileName,mimeType:type,size:body.length}};
   });
   app.post(prefix+'/journeys/:id/read',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);const input=z.object({messageIds:z.array(id).min(1).max(100)}).strict().parse(r.body);

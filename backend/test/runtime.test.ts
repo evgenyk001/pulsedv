@@ -36,7 +36,7 @@ test('SQL/API: заявки между устройствами, дедупли�
  await t.test('каталог отделён от config: импорт, пагинация, detail и RBAC',async()=>{
   const doc={...DEFAULT_STATE,properties:[]};
   const response=await app.inject({method:'PUT',url:'/api/v1/control/state',headers,cookies:ownerCookie,payload:{state:doc,version:1}});assert.equal(response.statusCode,200,response.body);
-  assert.equal((await app.inject('/api/v1/public/state')).json().state.properties.length,0);
+  const publicState=(await app.inject('/api/v1/public/state')).json().state;assert.equal(publicState.properties.length,0);assert.equal(publicState.leadEngine,undefined);
   assert.equal((await app.inject({method:'PUT',url:'/api/v1/control/state',headers,cookies:ownerCookie,payload:{state:doc,version:1}})).statusCode,409);
   assert.equal((await app.inject({method:'PUT',url:'/api/v1/control/state',headers,cookies:managerCookie,payload:{state:doc,version:2}})).statusCode,403);
 
@@ -103,7 +103,7 @@ test('SQL/API: заявки между устройствами, дедупли�
   assert.equal((await app.inject({method:'PUT',url,headers,cookies:ownerCookie,payload:withoutVersion})).statusCode,409);
  });
  await t.test('сессия выдана сервером; подмена пользователя/события отклоняется',async()=>{
-  identity=(await app.inject({method:'POST',url:'/api/v1/auth/session',headers,payload:{source:'test'}})).json();other=(await app.inject({method:'POST',url:'/api/v1/auth/session',headers,payload:{source:'other-device'}})).json();assert.ok(identity.accessToken);assert.notEqual(identity.sessionId,other.sessionId);
+  const identityResponse=await app.inject({method:'POST',url:'/api/v1/auth/session',headers,payload:{source:'test'}});identity=identityResponse.json();other=(await app.inject({method:'POST',url:'/api/v1/auth/session',headers,payload:{source:'other-device'}})).json();assert.ok(identity.accessToken);assert.notEqual(identity.sessionId,other.sessionId);assert.ok(identityResponse.headers['set-cookie']?.toString().includes('HttpOnly'));assert.ok(identityResponse.headers['set-cookie']?.toString().includes('SameSite=Strict'));
   const r=await app.inject({method:'POST',url:'/api/v1/events',headers:{...headers,authorization:'Bearer '+identity.accessToken},payload:{events:[{idempotencyKey:randomUUID(),eventType:'lead_created',occurredAt:new Date().toISOString()}]}});assert.equal(r.statusCode,400);
  });
  await t.test('событие записывается один раз и не принимает телефон в metadata',async()=>{
@@ -125,7 +125,7 @@ test('SQL/API: заявки между устройствами, дедупли�
   const lead=(await app.inject({url:'/api/v1/control/snapshot',cookies:ownerCookie})).json().leads[0];
   assert.equal((await app.inject({method:'PATCH',url:'/api/v1/control/leads/'+leadId,headers,cookies:managerCookie,payload:{status:'contacted',expectedUpdatedAt:lead.updatedAt}})).statusCode,403);
   const assigned=await app.inject({method:'PATCH',url:'/api/v1/control/leads/'+leadId,headers,cookies:ownerCookie,payload:{manager:manager.id,expectedUpdatedAt:lead.updatedAt}});assert.equal(assigned.statusCode,200,assigned.body);
-  const snapshot=(await app.inject({url:'/api/v1/control/snapshot',cookies:managerCookie})).json();assert.equal(snapshot.leads.length,1);assert.equal(snapshot.tasks.length,1);
+  const snapshot=(await app.inject({url:'/api/v1/control/snapshot',cookies:managerCookie})).json();assert.equal(snapshot.leads.length,1);assert.equal(snapshot.tasks.length,1);assert.equal(snapshot.members.length,1);assert.equal(snapshot.members[0].id,manager.id);
   const stale=await app.inject({method:'PATCH',url:'/api/v1/control/leads/'+leadId,headers,cookies:ownerCookie,payload:{status:'lost',expectedUpdatedAt:lead.updatedAt}});assert.equal(stale.statusCode,409);
  });
  await t.test('закрытие заявки завершает задачи; последующие сигналы не создают новые',async()=>{

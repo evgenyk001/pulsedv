@@ -41,6 +41,14 @@ const mediaSpec:Record<string,{ext:string;group:"image"|"pdf"}>={
   "application/pdf":{ext:"pdf",group:"pdf"},
 };
 
+function validMedia(type:string,body:Buffer){
+  if(type==="image/jpeg")return body.length>=3&&body[0]===0xff&&body[1]===0xd8&&body[2]===0xff;
+  if(type==="image/png")return body.length>=8&&body.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
+  if(type==="image/webp")return body.length>=12&&body.subarray(0,4).toString()==="RIFF"&&body.subarray(8,12).toString()==="WEBP";
+  if(type==="application/pdf")return body.length>=5&&body.subarray(0,5).toString()==="%PDF-";
+  return false;
+}
+
 function internalMediaPath(url:string){
   if(!url.startsWith("/media/"))return null;
   const relative=url.slice("/media/".length);
@@ -184,6 +192,7 @@ export async function registerCatalogRoutes(
     if(!Buffer.isBuffer(body)||body.length===0)return reply.code(400).send({error:"Файл пустой"});
     if(spec.group==="image"&&body.length>15*1024*1024)return reply.code(413).send({error:"Изображение больше 15 МБ"});
     if(spec.group==="pdf"&&body.length>50*1024*1024)return reply.code(413).send({error:"PDF больше 50 МБ"});
+    if(!validMedia(type,body))return reply.code(400).send({error:"Содержимое файла не соответствует заявленному формату"});
 
     const folder=spec.group==="image"?"images":"documents";
     const fileName=randomUUID()+"."+spec.ext;
