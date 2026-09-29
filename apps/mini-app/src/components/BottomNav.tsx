@@ -135,7 +135,7 @@ export function BottomNav(){
     setVelocity(dragRef.current.velocity*.22);
     setPillX(index*segmentWidth);
     if(index!==dragRef.current.previewIndex)haptic();
-    if(items[index].path!==location.pathname)navigate(items[index].path);
+    if(items[index].path!==location.pathname)navigate(items[index].path,{flushSync:true});
     window.setTimeout(()=>setVelocity(0),240);
     window.setTimeout(()=>{dragRef.current.moved=false},90);
   };
@@ -149,7 +149,7 @@ export function BottomNav(){
     setVelocity(sign*.18);
     setPillX(index*segmentWidth);
     haptic();
-    if(items[index].path!==location.pathname)navigate(items[index].path);
+    if(items[index].path!==location.pathname)navigate(items[index].path,{flushSync:true});
     window.setTimeout(()=>setVelocity(0),260);
   };
 

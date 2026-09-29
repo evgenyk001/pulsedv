@@ -1,7 +1,7 @@
 import { JourneyPage } from './pages/JourneyPage';
 import { runtime } from "../../../packages/pulse-data/runtime";
+import { useRuntime } from "./RuntimeShell";
 import React from "react";
-import { usePulseLeads, usePulseTasks } from "./data";
 import { NavLink, Route, Routes, useLocation, Link } from "react-router-dom";
 import {
   Menu, X, ArrowUpRight, Bell, LayoutDashboard, Handshake, UsersRound, Building2, BadgePercent,
@@ -35,8 +35,9 @@ const sections=[
 export function App(){
   const [menu,setMenu]=React.useState(false);
   const location=useLocation();
-  const tasks=usePulseTasks();const leads=usePulseLeads();
-  const overdue=tasks.filter(t=>t.status!=="done"&&Date.parse(t.dueAt)<Date.now()).length;
+  const current=useRuntime();
+  const overdue=current.counts.overdueTasks;
+  const newLeads=current.counts.newLeads;
   React.useEffect(()=>setMenu(false),[location.pathname]);
   React.useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close)},[]);
   return <div className={"control"+(menu?" menuOpen":"")}>
@@ -50,7 +51,7 @@ export function App(){
       <nav aria-label="Разделы CRM">
         {sections.filter(section=>!runtime.enabled||runtime.member?.role!=="manager"||["/","/leads","/users","/tasks","/analytics","/journey"].includes(section.to)).map(({to,label,icon:Icon,end})=>
           <NavLink key={to} to={to} end={end} className={({isActive})=>isActive?"active":undefined}>
-            <Icon size={18}/><span>{label}</span>{to==="/tasks"&&overdue>0&&<em>{overdue}</em>}{to==="/leads"&&leads.some(l=>l.status==="new")&&<em>{leads.filter(l=>l.status==="new").length}</em>}
+            <Icon size={18}/><span>{label}</span>{to==="/tasks"&&overdue>0&&<em>{overdue}</em>}{to==="/leads"&&newLeads>0&&<em>{newLeads}</em>}
           </NavLink>
         )}
       </nav>

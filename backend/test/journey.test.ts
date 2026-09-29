@@ -79,9 +79,10 @@ test('Journey API: доступ, конфликт версий, публикац
  assert.equal((await app.inject({url:attachment.url,headers:unauthorized})).statusCode,404);
  assert.equal((await app.inject({url:attachment.url,cookies})).statusCode,200);
  const visitorCookie=(await app.inject({method:'POST',url:'/api/v1/auth/cookie',headers:auth,payload:{}})).cookies.find(cookie=>cookie.name==='pulse_visitor')?.value;assert.ok(visitorCookie);
- const privateDownload=await app.inject({url:attachment.url,cookies:{pulse_visitor:visitorCookie!}});assert.equal(privateDownload.statusCode,200);assert.equal(privateDownload.headers['cache-control'],'private, no-store');
+ const privateDownload=await app.inject({url:attachment.url,cookies:{pulse_visitor:visitorCookie!}});assert.equal(privateDownload.statusCode,200);assert.equal(privateDownload.headers['cache-control'],'private, no-store');assert.equal(Number(privateDownload.headers['content-length']),attachment.size);
  response=await app.inject({method:'POST',url:clientPath+'/read',headers:auth,payload:{messageIds:[messageId]}});assert.equal(response.statusCode,200,response.body);assert.ok(response.json().journey.messages[0].readAt);
- const managerJourney=(await app.inject({url:'/api/v1/control/journeys',cookies})).json().items.find((x:any)=>x.leadId===lead.id).journey;assert.ok(managerJourney.messages[0].readAt);
+ const managerList=(await app.inject({url:'/api/v1/control/journeys',cookies})).json().items;const summary=managerList.find((x:any)=>x.leadId===lead.id).journey;assert.equal(summary.messages.length,0);assert.equal(summary.collections.length,0);assert.equal(summary.showings.length,1);
+ const managerJourney=(await app.inject({url:path,cookies})).json().entry.journey;assert.ok(managerJourney.messages[0].readAt);
  const acquisition=await app.inject({url:'/api/v1/control/acquisition',cookies});assert.equal(acquisition.statusCode,200,acquisition.body);const row=acquisition.json().items.find((r:any)=>r.source==='telegram');assert.equal(row.contacts,1);assert.equal(row.showings,1);
  const verify=()=>app.inject({method:'POST',url:'/api/v1/control/verifications/primorskiy',headers,cookies,payload:{note:'Сверено с застройщиком',revision:0}});
  response=await verify();assert.equal(response.statusCode,200,response.body);assert.equal((await verify()).statusCode,409);

@@ -329,3 +329,6 @@ main{padding:0 28px 36px}.workspaceBar{min-height:70px;display:flex;align-items:
  .leadRequestContext>div{display:grid;grid-template-columns:1fr}
  .leadRequestContext>div b{border-radius:12px}
 }
+
+.pagedLoadMore{display:flex;align-items:center;justify-content:center;gap:12px;margin:14px 0 6px}.pagedLoadMore span{font-size:11px;color:#8a95a5}.pagedLoadMore .secondaryAction{width:auto}
+@media(max-width:760px){.pagedLoadMore{flex-direction:column}.pagedLoadMore .secondaryAction{width:100%;justify-content:center}}

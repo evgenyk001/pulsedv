@@ -1,7 +1,7 @@
 import React from 'react';
 import {CalendarDays,Check,CheckCheck,ChevronRight,FileText,Image as ImageIcon,MessageCircle,Paperclip,RefreshCw,Send,Sparkles,X} from 'lucide-react';
 import {ShowingChange} from './ShowingChange';
-import {loadJourneys,markJourneyRead,saveJourney,uploadJourneyAttachment,type JourneyEntry} from './client';
+import {loadJourney,markJourneyRead,saveJourney,uploadJourneyAttachment,type JourneyEntry} from './client';
 import {reactionLabels,showingLabels,type JourneyAttachment,type JourneyCommand} from './model';
 import {isFutureVladivostokInput,vladivostokInputNow,vladivostokInputToIso} from './time';
 import type {PulseProperty} from '../pulse-data/model';
@@ -19,7 +19,7 @@ export function ControlJourneyPanel({leadId,properties}:{leadId:string;propertie
  const [step,setStep]=React.useState(''),[due,setDue]=React.useState('');
  const [attachmentOpen,setAttachmentOpen]=React.useState(false),[pendingFile,setPendingFile]=React.useState<File|null>(null),[previewUrl,setPreviewUrl]=React.useState('');
  const imageInput=React.useRef<HTMLInputElement>(null),fileInput=React.useRef<HTMLInputElement>(null),log=React.useRef<HTMLDivElement>(null);
- const reload=React.useCallback(async(silent=false)=>{if(!silent)setLoading(true);try{const data=await loadJourneys(false);setEntry(data.items.find(item=>item.leadId===leadId)||null);setError('')}catch(e){setError(e instanceof Error?e.message:'Не удалось обновить обращение')}finally{if(!silent)setLoading(false)}},[leadId]);
+ const reload=React.useCallback(async(silent=false)=>{if(!silent)setLoading(true);try{setEntry(await loadJourney(leadId,false));setError('')}catch(e){setError(e instanceof Error?e.message:'Не удалось обновить обращение')}finally{if(!silent)setLoading(false)}},[leadId]);
  React.useEffect(()=>{void reload();const timer=setInterval(()=>{if(!document.hidden)void reload(true)},10000);return()=>clearInterval(timer)},[reload]);
  React.useEffect(()=>()=>{if(previewUrl)URL.revokeObjectURL(previewUrl)},[previewUrl]);
  const j=entry?.journey;

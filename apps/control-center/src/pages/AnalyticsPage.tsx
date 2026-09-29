@@ -1,31 +1,60 @@
+import React from "react";
 import {AcquisitionPanel} from '../components/AcquisitionPanel';
 import { PageFrame } from "../components/PageFrame";
-import { usePulseEvents, usePulseLeads, usePulseProfiles, usePulseState } from "../data";
+import { useControlPaging, usePulseEvents, usePulseLeads, usePulseProfiles, usePulseState } from "../data";
 import { ActivityFeed } from "../components/ActivityFeed";
+import { api, runtime } from "../../../../packages/pulse-data/runtime";
+
+type Summary={
+  sessions:number;leadSessions:number;leadsTotal:number;
+  eventCounts:Record<string,number>;uniqueSessions:Record<string,number>;
+  priorities:{cold:number;warm:number;hot:number;urgent:number};
+};
 
 export function AnalyticsPage(){
   const events=usePulseEvents();
   const leads=usePulseLeads();
   const profiles=usePulseProfiles();
   const state=usePulseState();
-  const sessions=new Set(events.map(event=>event.sessionId)).size;
-  const conversion=sessions?Math.round(new Set(leads.map(x=>x.sessionId).filter(Boolean)).size/sessions*100):0;
-  const count=(type:string)=>events.filter(event=>event.eventType===type).length;
-  const uniqueSessions=(type:string)=>new Set(events.filter(event=>event.eventType===type).map(event=>event.sessionId)).size;
+  const paging=useControlPaging("events");
+  const [remote,setRemote]=React.useState<Summary|null>(null);
+
+  React.useEffect(()=>{
+    if(!runtime.enabled)return;
+    let live=true;
+    const load=()=>api<Summary>("/control/analytics-summary").then(value=>{if(live)setRemote(value)}).catch(()=>{});
+    void load();const id=window.setInterval(()=>{if(!document.hidden)void load()},30000);
+    return()=>{live=false;window.clearInterval(id)};
+  },[]);
+
+  const fallbackSessions=new Set(events.map(event=>event.sessionId)).size;
+  const fallbackLeadSessions=new Set(leads.map(x=>x.sessionId).filter(Boolean)).size;
+  const count=(type:string)=>remote?.eventCounts[type]??events.filter(event=>event.eventType===type).length;
+  const uniqueSessions=(type:string)=>remote?.uniqueSessions[type]??new Set(events.filter(event=>event.eventType===type).map(event=>event.sessionId)).size;
+  const sessions=remote?.sessions??fallbackSessions;
+  const leadSessions=remote?.leadSessions??fallbackLeadSessions;
+  const leadsTotal=remote?.leadsTotal??leads.length;
+  const priorities=remote?.priorities??{
+    cold:profiles.filter(x=>x.priority==="cold").length,
+    warm:profiles.filter(x=>x.priority==="warm").length,
+    hot:profiles.filter(x=>x.priority==="hot").length,
+    urgent:profiles.filter(x=>x.priority==="urgent").length,
+  };
+  const conversion=sessions?Math.round(leadSessions/sessions*100):0;
   const funnel=[
     {label:"Сессии",value:sessions,base:sessions},
     {label:"Открыли ЖК",value:uniqueSessions("property_view"),base:sessions},
     {label:"Добавили в избранное",value:uniqueSessions("favorite_add"),base:sessions},
     {label:"Прошли PULSE Select",value:uniqueSessions("select_submit"),base:sessions},
     {label:"Открыли форму",value:uniqueSessions("lead_form_open"),base:sessions},
-    {label:"Оставили контакт",value:new Set(leads.map(x=>x.sessionId).filter(Boolean)).size,base:sessions},
+    {label:"Оставили контакт",value:leadSessions,base:sessions},
   ];
 
   return <PageFrame eyebrow="АНАЛИТИКА ПОВЕДЕНИЯ" title="Аналитика" description="Воронка показывает путь клиента до контакта и реальные действия внутри приложения.">
     <AcquisitionPanel/><section className="metrics">
       <article><span>Сессии</span><strong>{sessions}</strong><small>визиты в приложение</small></article>
-      <article><span>Тёплые и выше</span><strong>{profiles.filter(x=>x.priority!=="cold").length}</strong><small>заметный интерес</small></article>
-      <article><span>Лиды</span><strong>{leads.length}</strong><small>оставили контакты</small></article>
+      <article><span>Тёплые и выше</span><strong>{priorities.warm+priorities.hot+priorities.urgent}</strong><small>заметный интерес</small></article>
+      <article><span>Лиды</span><strong>{leadsTotal}</strong><small>оставили контакты</small></article>
       <article><span>Конверсия</span><strong>{conversion}%</strong><small>контакты / сессии</small></article>
     </section>
 
@@ -53,14 +82,14 @@ export function AnalyticsPage(){
       </article>
       <article className="panel"><div className="kicker">КАЧЕСТВО ИНТЕРЕСА</div><h2>Температура аудитории</h2>
         <div className="signalList compact">
-          <div><b>Холодные</b><small>{profiles.filter(x=>x.priority==="cold").length}</small></div>
-          <div><b>Тёплые</b><small>{profiles.filter(x=>x.priority==="warm").length}</small></div>
-          <div><b>Горячие</b><small>{profiles.filter(x=>x.priority==="hot").length}</small></div>
-          <div><b>Срочные</b><small>{profiles.filter(x=>x.priority==="urgent").length}</small></div>
+          <div><b>Холодные</b><small>{priorities.cold}</small></div>
+          <div><b>Тёплые</b><small>{priorities.warm}</small></div>
+          <div><b>Горячие</b><small>{priorities.hot}</small></div>
+          <div><b>Срочные</b><small>{priorities.urgent}</small></div>
         </div>
       </article>
     </section>
 
-    <section className="panel"><div className="sectionHeading"><div><span className="kicker">ДЕЙСТВИЯ И КОНТЕКСТ</span><h2>Журнал активности</h2></div><span className="countBadge">{events.length}</span></div><ActivityFeed events={events} state={state}/></section>
+    <section className="panel"><div className="sectionHeading"><div><span className="kicker">ДЕЙСТВИЯ И КОНТЕКСТ</span><h2>Журнал активности</h2></div><span className="countBadge">{paging.total||events.length}</span></div><ActivityFeed events={events} state={state}/>{runtime.enabled&&paging.hasMore&&<div className="pagedLoadMore"><span>Загружено {events.length} из {paging.total}</span><button className="secondaryAction" disabled={paging.loading} onClick={()=>void paging.loadMore()}>{paging.loading?'Загружаем…':'Показать ещё'}</button></div>}</section>
   </PageFrame>;
 }

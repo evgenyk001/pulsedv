@@ -9,6 +9,12 @@ export async function loadJourneys(client=false):Promise<{items:JourneyEntry[];l
  const data=read();const session=sessionStorage.getItem('pulse.dv.session.v1');
  return {limited:false,items:listPulseLeads().filter(l=>!client||l.sessionId===session).map(l=>({leadId:l.id,status:l.status,propertyId:l.propertyId,createdAt:l.createdAt,journey:client?clientJourney(data[l.id]||emptyJourney(l.id)):data[l.id]||emptyJourney(l.id)}))};
 }
+export async function loadJourney(leadId:string,client=false):Promise<JourneyEntry|null>{
+ if(runtime.enabled)return ((await (client?visitorApi:api)<{entry:JourneyEntry}>((client?'/me':'/control')+'/journeys/'+encodeURIComponent(leadId))).entry)||null;
+ const lead=listPulseLeads().find(item=>item.id===leadId);if(!lead)return null;
+ const journey=read()[leadId]||emptyJourney(leadId);
+ return {leadId,status:lead.status,propertyId:lead.propertyId,createdAt:lead.createdAt,journey:client?clientJourney(journey):journey};
+}
 export async function saveJourney(journey:Journey,command:JourneyCommand,client=false){
  if(runtime.enabled)return (client?visitorApi:api)((client?'/me':'/control')+'/journeys/'+journey.leadId,{method:'POST',body:JSON.stringify({revision:journey.revision,command})});
  const data=read();const current=data[journey.leadId]||emptyJourney(journey.leadId);

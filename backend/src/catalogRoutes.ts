@@ -8,6 +8,7 @@ import type { RuntimeConfig } from "./config";
 import { audit } from "./repository";
 import { catalogImportSchema, catalogPropertySchema } from "./validation";
 import { catalogMeta, getCatalogProperty, listCatalog, removeCatalogProperty, upsertCatalogProperty } from "./catalogRepository";
+import { BinaryBodyError, readBinaryBody, registerBinaryParsers } from "./binaryBody";
 
 type Guard=(request:FastifyRequest)=>Promise<void>;
 
@@ -69,10 +70,7 @@ export async function registerCatalogRoutes(
 ){
   const {db,config,editor,owner}=deps;
 
-  for(const type of Object.keys(mediaSpec)){
-    if(app.hasContentTypeParser(type))continue;
-    app.addContentTypeParser(type,{parseAs:"buffer"},(_request,body,done)=>done(null,body));
-  }
+  registerBinaryParsers(app,Object.keys(mediaSpec));
 
   app.get("/api/v1/public/catalog/meta",async()=>catalogMeta(db,"published"));
 
@@ -188,10 +186,8 @@ export async function registerCatalogRoutes(
     const expectsPdf=query.kind==="presentation"||query.kind==="document";
     if(expectsPdf&&spec.group!=="pdf")return reply.code(400).send({error:"Для презентации нужен PDF"});
     if(!expectsPdf&&spec.group!=="image")return reply.code(400).send({error:"Для изображения нужен JPG, PNG или WebP"});
-    const body=request.body;
-    if(!Buffer.isBuffer(body)||body.length===0)return reply.code(400).send({error:"Файл пустой"});
-    if(spec.group==="image"&&body.length>15*1024*1024)return reply.code(413).send({error:"Изображение больше 15 МБ"});
-    if(spec.group==="pdf"&&body.length>50*1024*1024)return reply.code(413).send({error:"PDF больше 50 МБ"});
+    const max=spec.group==="image"?15*1024*1024:50*1024*1024;
+    let body:Buffer;try{body=await readBinaryBody(request.body,max)}catch(error){if(error instanceof BinaryBodyError)return reply.code(error.statusCode).send({error:error.statusCode===413?(spec.group==="image"?"Изображение больше 15 МБ":"PDF больше 50 МБ"):"Файл пустой"});throw error}
     if(!validMedia(type,body))return reply.code(400).send({error:"Содержимое файла не соответствует заявленному формату"});
 
     const folder=spec.group==="image"?"images":"documents";

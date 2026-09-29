@@ -1,6 +1,6 @@
 import React from 'react';
 import { LogOut, RefreshCw, Save, ShieldCheck } from 'lucide-react';
-import { runtime, subscribeRuntime, restoreLogin, login, verifyLogin, setMfa, logout, refreshControl, saveState, discardState, api } from '../../../packages/pulse-data/runtime';
+import { runtime, subscribeRuntime, restoreLogin, login, verifyLogin, setMfa, logout, refreshControl, refreshControlPulse, refreshLoadedControlData, saveState, discardState, api } from '../../../packages/pulse-data/runtime';
 
 export function useRuntime(){const [,render]=React.useReducer(x=>x+1,0);React.useEffect(()=>subscribeRuntime(render),[]);return runtime;}
 
@@ -12,7 +12,7 @@ export function RuntimeShell({children}:{children:React.ReactNode}){
  const [challengeId,setChallengeId]=React.useState('');const [mfaCode,setMfaCode]=React.useState('');const [challengeExpires,setChallengeExpires]=React.useState('');
 
  React.useEffect(()=>{if(current.enabled)void restoreLogin().catch(()=>{}).finally(()=>setChecking(false));},[]);
- React.useEffect(()=>{if(!current.enabled||!current.member)return;const id=window.setInterval(()=>{if(!document.hidden)void refreshControl().catch(()=>{});},30000);return()=>window.clearInterval(id);},[current.member?.id]);
+ React.useEffect(()=>{if(!current.enabled||!current.member)return;const id=window.setInterval(()=>{if(!document.hidden)void refreshControlPulse().catch(()=>{});},30000);return()=>window.clearInterval(id);},[current.member?.id]);
  React.useEffect(()=>{const guard=(event:BeforeUnloadEvent)=>{if(current.dirty){event.preventDefault();event.returnValue='';}};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard);},[]);
  React.useEffect(()=>{if(showPassword)setTelegramId(current.member?.telegramUserId||'');},[showPassword,current.member?.telegramUserId]);
 
@@ -44,7 +44,7 @@ export function RuntimeShell({children}:{children:React.ReactNode}){
  return <>
   <div className="runtimeBar">
    <span><i className={current.enabled?'liveDot':'previewDot'}/>{current.enabled?(current.member?.name+' · '+(current.member?.role==='owner'?'Владелец':current.member?.role==='admin'?'Администратор':'Менеджер')):'Демонстрация · данные только в этом браузере'}</span>
-   <div>{current.enabled&&<><button style={{width:"auto",padding:"0 9px"}} onClick={()=>{setShowPassword(!showPassword);setError('');setMfaPassword('');}}>Защита</button><small>{current.lastSync?'Обновлено '+new Date(current.lastSync).toLocaleTimeString('ru-RU'):''}</small><button aria-label="Обновить данные" onClick={()=>void refreshControl().catch(()=>{})}><RefreshCw size={16}/></button><button aria-label="Выйти" onClick={()=>{if(!current.dirty||window.confirm('Выйти и потерять несохранённые настройки?'))void logout().catch(e=>setError(e.message));}}><LogOut size={16}/></button></>}</div>
+   <div>{current.enabled&&<><button style={{width:"auto",padding:"0 9px"}} onClick={()=>{setShowPassword(!showPassword);setError('');setMfaPassword('');}}>Защита</button><small>{current.lastSync?'Обновлено '+new Date(current.lastSync).toLocaleTimeString('ru-RU'):''}</small><button aria-label="Обновить данные" onClick={()=>void refreshLoadedControlData().catch(()=>{})}><RefreshCw size={16}/></button><button aria-label="Выйти" onClick={()=>{if(!current.dirty||window.confirm('Выйти и потерять несохранённые настройки?'))void logout().catch(e=>setError(e.message));}}><LogOut size={16}/></button></>}</div>
   </div>
   {current.error&&<div className="runtimeError" role="alert">{current.error}</div>}
   {current.snapshot.limited&&<div className="runtimeError">Показаны последние записи. Статистика списка ограничена загруженной выборкой.</div>}

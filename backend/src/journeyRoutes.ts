@@ -4,11 +4,13 @@ import type {Database,Sql} from './database';
 import {HttpError} from './security';
 import {audit} from './repository';
 import {randomUUID} from 'node:crypto';
-import {mkdir,readFile,writeFile} from 'node:fs/promises';
+import {createReadStream} from 'node:fs';
+import {mkdir,rename,stat,unlink} from 'node:fs/promises';
 import {join} from 'node:path';
 import {getCatalogProperty} from './catalogRepository';
 import type {RuntimeConfig} from './config';
 import {applyJourney,clientJourney,emptyJourney,type Journey} from '../../packages/journey/model';
+import {BinaryBodyError,registerBinaryParsers,streamBinaryBodyToFile} from './binaryBody';
 const short=z.string().trim().min(1).max(200),note=z.string().trim().max(2000),id=z.uuid();
 const attachmentSchema=z.object({kind:z.enum(['image','file']),name:z.string().min(1).max(180),url:z.string().regex(/^\/api\/v1\/journey-media\/[0-9a-f-]{36}\/[A-Za-z0-9._-]+$/).max(500),mimeType:z.enum(['image/jpeg','image/png','image/webp','application/pdf']),size:z.number().int().min(1).max(25*1024*1024)}).strict();
 export const journeyCommand=z.discriminatedUnion('type',[
@@ -33,7 +35,7 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
  const fileMime=(file:string)=>file.endsWith('.jpg')?'image/jpeg':file.endsWith('.png')?'image/png':file.endsWith('.webp')?'image/webp':file.endsWith('.pdf')?'application/pdf':null;
  const disposition=(name:string)=>"inline; filename*=UTF-8''"+encodeURIComponent(name.replace(/[\r\n]/g,' ').slice(0,180)||'file');
 
- for(const type of Object.keys(attachmentTypes))if(!app.hasContentTypeParser(type))app.addContentTypeParser(type,{parseAs:'buffer'},(_request,body,done)=>done(null,body));
+ registerBinaryParsers(app,Object.keys(attachmentTypes));
  async function leadAccess(sql:Sql,r:FastifyRequest,leadId:string,client:boolean,lock=false){
   const l=(await sql.query('select * from leads where id=$1'+(lock?' for update':''),[leadId])).rows[0];
   const allowed=l&&(client?(l.session_id===r.visitor!.sessionId||!!r.visitor!.userId&&l.user_id===r.visitor!.userId):(r.member!.role!=='manager'||l.manager_id===r.member!.id));
@@ -52,8 +54,8 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
   });
   if(!attachment)throw new HttpError(404,'Файл недоступен');
   const mime=fileMime(fileName);if(!mime)throw new HttpError(404,'Файл недоступен');
-  let body:Buffer;try{body=await readFile(path)}catch{throw new HttpError(404,'Файл недоступен')}
-  return reply.type(mime).header('Cache-Control','private, no-store').header('Content-Disposition',disposition(attachment.name)).send(body);
+  let info;try{info=await stat(path)}catch{throw new HttpError(404,'Файл недоступен')}
+  return reply.type(mime).header('Cache-Control','private, no-store').header('Content-Length',String(info.size)).header('Content-Disposition',disposition(attachment.name)).send(createReadStream(path));
  };
  app.get('/api/v1/journey-media/:leadId/:file',async(r,reply)=>{
   const leadId=id.parse((r.params as any).leadId);const file=z.string().regex(/^[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/).parse((r.params as any).file);
@@ -73,11 +75,13 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
    const leadId=id.parse((r.params as any).id);await db.transaction(sql=>leadAccess(sql,r,leadId,client,false));
    const type=(r.headers['content-type']||'').split(';')[0].trim().toLowerCase();const spec=attachmentTypes[type];
    if(!spec)return reply.code(415).send({error:'Можно отправить JPG, PNG, WebP или PDF'});
-   const body=r.body;if(!Buffer.isBuffer(body)||!body.length)return reply.code(400).send({error:'Файл пустой'});if(body.length>spec.max)return reply.code(413).send({error:spec.kind==='image'?'Фото больше 15 МБ':'PDF больше 25 МБ'});if(!validSignature(type,body))return reply.code(400).send({error:'Содержимое файла не соответствует его типу'});
    const query=z.object({filename:z.string().max(180).optional()}).strict().parse(r.query);const name=(query.filename||'Файл').replace(/[\r\n]/g,' ').trim().slice(0,180)||'Файл';
-   const folder=join('private','chat',leadId);const fileName=randomUUID()+'.'+spec.ext;await mkdir(join(config.MEDIA_ROOT,folder),{recursive:true});await writeFile(join(config.MEDIA_ROOT,folder,fileName),body);
-   if(!client&&r.member)await audit(db,r.member.id,'journey.attachment.upload',leadId,{mimeType:type,size:body.length});
-   return {attachment:{kind:spec.kind,name,url:'/api/v1/journey-media/'+leadId+'/'+fileName,mimeType:type,size:body.length}};
+   const folder=join('private','chat',leadId);const fileName=randomUUID()+'.'+spec.ext;const directory=join(config.MEDIA_ROOT,folder);await mkdir(directory,{recursive:true});const finalPath=join(directory,fileName),tempPath=finalPath+'.upload-'+randomUUID();
+   let streamed:{size:number;head:Buffer};try{streamed=await streamBinaryBodyToFile(r.body,tempPath,spec.max)}catch(error){if(error instanceof BinaryBodyError)return reply.code(error.statusCode).send({error:error.statusCode===413?(spec.kind==='image'?'Фото больше 15 МБ':'PDF больше 25 МБ'):'Файл пустой'});throw error}
+   if(!validSignature(type,streamed.head)){await unlink(tempPath).catch(()=>{});return reply.code(400).send({error:'Содержимое файла не соответствует его типу'})}
+   try{await rename(tempPath,finalPath)}catch(error){await unlink(tempPath).catch(()=>{});throw error}
+   if(!client&&r.member)await audit(db,r.member.id,'journey.attachment.upload',leadId,{mimeType:type,size:streamed.size});
+   return {attachment:{kind:spec.kind,name,url:'/api/v1/journey-media/'+leadId+'/'+fileName,mimeType:type,size:streamed.size}};
   });
   app.post(prefix+'/journeys/:id/read',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);const input=z.object({messageIds:z.array(id).min(1).max(100)}).strict().parse(r.body);
@@ -88,10 +92,19 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
    });
   });
   app.get(prefix+'/journeys',{preHandler:auth},async r=>{
-   const values=client?[r.visitor!.sessionId,r.visitor!.userId]:r.member!.role==='manager'?[r.member!.id]:[];
-   const where=client?'where l.session_id=$1 or ($2::uuid is not null and l.user_id=$2)':r.member!.role==='manager'?'where l.manager_id=$1':'';
-   const rows=(await db.query(`select l.id,l.status,l.property_id,l.created_at,m.name as manager_name,j.document from leads l left join team_members m on m.id=l.manager_id and m.active=true left join client_journeys j on j.lead_id=l.id ${where} order by l.created_at desc limit 1001`,values)).rows;
-   return {limited:rows.length>1000,items:rows.slice(0,1000).map(l=>({leadId:l.id,status:l.status,propertyId:l.property_id,createdAt:l.created_at,managerName:l.manager_name||null,journey:client?clientJourney(l.document||emptyJourney(l.id)):l.document||emptyJourney(l.id)}))};
+   if(client){
+    const values=[r.visitor!.sessionId,r.visitor!.userId];
+    const rows=(await db.query(`select l.id,l.status,l.property_id,l.created_at,m.name as manager_name,j.document from leads l left join team_members m on m.id=l.manager_id and m.active=true left join client_journeys j on j.lead_id=l.id where l.session_id=$1 or ($2::uuid is not null and l.user_id=$2) order by l.created_at desc limit 1001`,values)).rows;
+    return {limited:rows.length>1000,items:rows.slice(0,1000).map(l=>({leadId:l.id,status:l.status,propertyId:l.property_id,createdAt:l.created_at,managerName:l.manager_name||null,journey:clientJourney(l.document||emptyJourney(l.id))}))};
+   }
+   const values=r.member!.role==='manager'?[r.member!.id]:[];
+   const where=r.member!.role==='manager'?'where l.manager_id=$1':'';
+   const rows=(await db.query(`select l.id,l.status,l.property_id,l.created_at,m.name as manager_name,coalesce((j.document->>'revision')::int,0) as revision,coalesce(j.document->'showings','[]'::jsonb) as showings,j.document->'nextStep' as next_step from leads l left join team_members m on m.id=l.manager_id and m.active=true left join client_journeys j on j.lead_id=l.id ${where} order by l.created_at desc limit 1001`,values)).rows;
+   return {limited:rows.length>1000,items:rows.slice(0,1000).map(l=>({leadId:l.id,status:l.status,propertyId:l.property_id,createdAt:l.created_at,managerName:l.manager_name||null,journey:{...emptyJourney(l.id),revision:Number(l.revision||0),collections:[],showings:Array.isArray(l.showings)?l.showings:[],nextStep:l.next_step??null,messages:[]}}))};
+  });
+  app.get(prefix+'/journeys/:id',{preHandler:auth},async r=>{
+   const leadId=id.parse((r.params as any).id);
+   return db.transaction(async sql=>{const lead=await leadAccess(sql,r,leadId,client,false);const row=(await sql.query('select document from client_journeys where lead_id=$1',[leadId])).rows[0];const journey:Journey=row?.document||emptyJourney(leadId);const managerName=lead.manager_id?(await sql.query('select name from team_members where id=$1 and active=true',[lead.manager_id])).rows[0]?.name||null:null;return {entry:{leadId,status:lead.status,propertyId:lead.property_id,createdAt:lead.created_at,managerName,journey:client?clientJourney(journey):journey}};});
   });
   app.post(prefix+'/journeys/:id',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);const input=z.object({revision:z.number().int().nonnegative(),command:journeyCommand}).strict().parse(r.body);

@@ -132,6 +132,15 @@ test('SQL/API: заявки между устройствами, дедупли�
   assert.equal((await app.inject({...first,payload:{...payload,name:'Другой клиент'}})).statusCode,409);
   const snapshot=await app.inject({url:'/api/v1/control/snapshot',cookies:ownerCookie});assert.equal(snapshot.statusCode,200,snapshot.body);const data=snapshot.json();assert.equal(data.leads.length,1);assert.equal(data.leads[0].phone,'+79991234567');assert.equal(data.leads[0].comment,null);assert.equal(data.leads[0].requestContext.program,'family');assert.equal(data.leads[0].requestContext.payment,21906);assert.equal(data.tasks.length,1);assert.equal(data.notifications.length,1);
  });
+ await t.test('Control масштабируется через bootstrap, pulse и paged resources',async()=>{
+  const bootstrap=await app.inject({url:'/api/v1/control/bootstrap',cookies:ownerCookie});assert.equal(bootstrap.statusCode,200,bootstrap.body);const boot=bootstrap.json();assert.ok(Array.isArray(boot.state.properties));assert.equal(boot.leads,undefined);assert.equal(boot.tasks,undefined);assert.equal(boot.counts.leadsTotal,1);
+  const pulse=await app.inject({url:'/api/v1/control/pulse',cookies:ownerCookie});assert.equal(pulse.statusCode,200,pulse.body);assert.equal(pulse.json().counts.leadsTotal,1);
+  const pagedLeads=await app.inject({url:'/api/v1/control/leads?page=1&limit=1',cookies:ownerCookie});assert.equal(pagedLeads.statusCode,200,pagedLeads.body);assert.equal(pagedLeads.json().items.length,1);assert.equal(pagedLeads.json().total,1);assert.equal(pagedLeads.json().hasMore,false);
+  const pagedTasks=await app.inject({url:'/api/v1/control/tasks?page=1&limit=1',cookies:ownerCookie});assert.equal(pagedTasks.statusCode,200,pagedTasks.body);assert.equal(pagedTasks.json().items.length,1);
+  const pagedEvents=await app.inject({url:'/api/v1/control/events?page=1&limit=1',cookies:ownerCookie});assert.equal(pagedEvents.statusCode,200,pagedEvents.body);assert.equal(pagedEvents.json().items.length,1);assert.ok(pagedEvents.json().total>=1);
+  const pagedProfiles=await app.inject({url:'/api/v1/control/profiles?page=1&limit=1',cookies:ownerCookie});assert.equal(pagedProfiles.statusCode,200,pagedProfiles.body);assert.equal(pagedProfiles.json().items.length,1);
+  const analytics=await app.inject({url:'/api/v1/control/analytics-summary',cookies:ownerCookie});assert.equal(analytics.statusCode,200,analytics.body);assert.equal(analytics.json().leadsTotal,1);assert.ok(Number.isInteger(analytics.json().sessions));
+ });
  await t.test('права менеджера ограничены назначением, изменение отражается в задачах',async()=>{
   await db.query('update leads set manager_id=$2 where id=$1',[leadId,owner.id]);await db.query('update crm_tasks set assigned_to=$2 where lead_id=$1',[leadId,owner.id]);
   assert.equal((await app.inject({url:'/api/v1/control/snapshot',cookies:managerCookie})).json().leads.length,0);

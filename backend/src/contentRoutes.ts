@@ -6,6 +6,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Database } from "./database";
 import type { RuntimeConfig } from "./config";
 import { audit } from "./repository";
+import { BinaryBodyError, readBinaryBody, registerBinaryParsers } from "./binaryBody";
 
 type Guard=(request:FastifyRequest)=>Promise<void>;
 
@@ -27,10 +28,7 @@ export async function registerContentRoutes(
   deps:{db:Database;config:RuntimeConfig;editor:Guard}
 ){
   const {db,config,editor}=deps;
-  for(const type of Object.keys(mediaSpec)){
-    if(app.hasContentTypeParser(type))continue;
-    app.addContentTypeParser(type,{parseAs:"buffer"},(_request,body,done)=>done(null,body));
-  }
+  registerBinaryParsers(app,Object.keys(mediaSpec));
 
   app.post("/api/v1/control/content/banner-media",{
     preHandler:editor,
@@ -40,9 +38,7 @@ export async function registerContentRoutes(
     const type=(request.headers["content-type"]||"").split(";")[0].trim().toLowerCase();
     const spec=mediaSpec[type];
     if(!spec)return reply.code(415).send({error:"Разрешены JPG, PNG и WebP"});
-    const body=request.body;
-    if(!Buffer.isBuffer(body)||body.length===0)return reply.code(400).send({error:"Файл пустой"});
-    if(body.length>spec.max)return reply.code(413).send({error:"Изображение должно быть меньше 15 МБ"});
+    let body:Buffer;try{body=await readBinaryBody(request.body,spec.max)}catch(error){if(error instanceof BinaryBodyError)return reply.code(error.statusCode).send({error:error.statusCode===413?"Изображение должно быть меньше 15 МБ":"Файл пустой"});throw error}
     if(!validImage(type,body))return reply.code(400).send({error:"Содержимое файла не соответствует формату изображения"});
     const query=z.object({filename:z.string().max(180).optional()}).strict().parse(request.query);
     const folder="banners";
