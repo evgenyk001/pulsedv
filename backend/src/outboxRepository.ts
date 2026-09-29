@@ -10,7 +10,7 @@ export function outboxRepository(db:Database):NotificationOutboxRepository{
    return result.rows.map(row=>{leases.set(row.id,token);return {id:row.id,topic:row.topic,aggregateType:row.aggregate_type,aggregateId:row.aggregate_id,payload:row.payload,attempts:row.attempts};});},
   async managerTelegramUserId(id){const row=(await db.query('select telegram_user_id from team_members where id=$1 and active=true',[id])).rows[0];return row?.telegram_user_id?.toString()??null;},
   async userTelegramUserId(id){const row=(await db.query('select telegram_user_id from app_users where id=$1',[id])).rows[0];return row?.telegram_user_id?.toString()??null;},
-  async markProcessed(id){await db.query('update outbox_events set processed_at=now(),locked_until=null,lock_token=null,last_error=null where id=$1 and lock_token=$2',[id,leases.get(id)]);leases.delete(id);},
+  async markProcessed(id){await db.query("update outbox_events set processed_at=now(),locked_until=null,lock_token=null,last_error=null,payload=case when topic='manager.security_code' then '{}'::jsonb else payload end where id=$1 and lock_token=$2",[id,leases.get(id)]);leases.delete(id);},
   async markFailed(id,error,next){await db.query('update outbox_events set last_error=$2,available_at=$3,locked_until=null,lock_token=null,dead_at=case when attempts>=8 then now() else null end where id=$1 and lock_token=$4',[id,error.slice(0,500),next,leases.get(id)]);leases.delete(id);}
  };
 }

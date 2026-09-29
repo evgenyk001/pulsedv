@@ -24,6 +24,7 @@ function asString(value:unknown){
 }
 
 function managerText(event:OutboxRecord){
+  if(event.topic==="manager.security_code")return `PULSE.DV · подтверждение входа\nКод: ${asString(event.payload.code)??"—"}\nНикому не сообщайте этот код. Он действует 5 минут.`;
   if(event.topic==="manager.interest_changed"||event.topic==="manager.journey")return `PULSE.DV · Изменение интереса\n${asString(event.payload.title)??"Клиент уточнил запрос"}\n${asString(event.payload.body)??"Откройте карточку клиента"}`;
   const score=event.payload.score??"—";
   const priority=event.payload.priority??"new";

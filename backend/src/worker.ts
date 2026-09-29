@@ -3,11 +3,13 @@ import { readConfig } from './config';
 import { postgresDatabase } from './database';
 import { processNotificationOutbox } from './notificationWorker';
 import { outboxRepository } from './outboxRepository';
-const config=readConfig();const db=postgresDatabase(config.DATABASE_URL);const abort=new AbortController();
+import { runSecurityMaintenance } from './maintenance';
+const config=readConfig();const db=postgresDatabase(config.DATABASE_URL);const abort=new AbortController();let nextMaintenance=0;
 process.on('SIGTERM',()=>abort.abort());process.on('SIGINT',()=>abort.abort());
 try{
  while(!abort.signal.aborted){
   try{
+   if(Date.now()>=nextMaintenance){const result=await runSecurityMaintenance(db,config);console.log('Security maintenance completed',result);nextMaintenance=Date.now()+6*3600_000;}
    // Leave pending messages untouched until Telegram is configured.
    if(config.BOT_TOKEN)await processNotificationOutbox(outboxRepository(db),{async sendMessage(input){
     const response=await fetch(`https://api.telegram.org/bot${config.BOT_TOKEN}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(10000),body:JSON.stringify({chat_id:input.chatId,text:input.text,...(input.deepLink?.startsWith(config.PUBLIC_ORIGIN+'/')?{reply_markup:{inline_keyboard:[[{text:'Открыть PULSE Control',url:input.deepLink}]]}}:{})})});

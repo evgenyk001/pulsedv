@@ -9,6 +9,10 @@ const schema=z.object({
   TRUST_PROXY_HOPS:z.coerce.number().int().min(0).max(3).default(0),
   CONSENT_VERSION:z.string().default('2026-09-25'),
   MEDIA_ROOT:z.string().min(1).default('/data/media'),
+  CLIENT_DATA_RETENTION_DAYS:z.coerce.number().int().min(30).max(3650).default(365),
+  ANALYTICS_RETENTION_DAYS:z.coerce.number().int().min(30).max(3650).default(180),
+  AUDIT_RETENTION_DAYS:z.coerce.number().int().min(30).max(3650).default(365),
+  OUTBOX_RETENTION_DAYS:z.coerce.number().int().min(7).max(3650).default(30),
 });
 export type RuntimeConfig=z.infer<typeof schema>;
 export function readConfig(env:NodeJS.ProcessEnv=process.env){

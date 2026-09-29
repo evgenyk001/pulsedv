@@ -7,7 +7,7 @@ import { z, ZodError } from 'zod';
 import type { Database, Sql } from './database';
 import { camelRow } from './database';
 import type { RuntimeConfig } from './config';
-import { HttpError, tokenHash, checkPassword, hashPassword, issueToken } from './security';
+import { HttpError, tokenHash, checkPassword, hashPassword, issueToken, generateMfaCode, mfaCodeHash, checkMfaCode } from './security';
 import { verifyTelegramInitData } from './telegramInitData';
 import { stateSchema, leadSchema, eventsSchema, safeMetadata } from './validation';
 import { audit, leadRepository, readState } from './repository';
@@ -23,7 +23,7 @@ type Member={id:string;name:string;email:string;role:'owner'|'admin'|'manager';a
 type Visitor={sessionId:string;userId:string|null};
 declare module 'fastify' {interface FastifyRequest {member?:Member;visitor?:Visitor}}
 const uuid=(value:unknown)=>z.uuid().parse(value);
-const memberView=(row:any)=>({id:row.id,name:row.name,email:row.email,role:row.role,active:row.active,cities:row.cities,telegramUserId:row.telegram_user_id?.toString()??null});
+const memberView=(row:any)=>({id:row.id,name:row.name,email:row.email,role:row.role,active:row.active,cities:row.cities,telegramUserId:row.telegram_user_id?.toString()??null,mfaEnabled:!!row.mfa_enabled});
 
 export async function createApp(db:Database,config:RuntimeConfig){
  const app=Fastify({bodyLimit:1_500_000,trustProxy:config.TRUST_PROXY_HOPS?(_address:string,hop:number)=>hop<config.TRUST_PROXY_HOPS:false,logger:config.NODE_ENV!=='test'?{redact:['req.headers.authorization','req.headers.cookie','res.headers["set-cookie"]']}:false});
@@ -124,7 +124,42 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const row=(await db.query('select * from team_members where lower(email)=$1 and active=true',[email.trim().toLowerCase()])).rows[0];
   const valid=await checkPassword(password,row?.password_hash||dummyPassword);
   if(!row||!valid)throw new HttpError(401,'Неверный email или пароль');
-  const auth=await issueToken(db,'control',row.id);reply.setCookie('pulse_control',auth.token,cookieOptions);await audit(db,row.id,'login',row.id);return {member:memberView(row)};
+  if(row.mfa_enabled){
+   if(!config.BOT_TOKEN||!row.telegram_user_id)throw new HttpError(503,'Двухэтапный вход настроен не полностью. Обратитесь к владельцу');
+   const challengeId=randomUUID(),code=generateMfaCode(),expiresAt=new Date(Date.now()+5*60_000).toISOString();
+   await db.transaction(async sql=>{
+    await sql.query('update control_login_challenges set consumed_at=now() where member_id=$1 and consumed_at is null',[row.id]);
+    await sql.query("delete from outbox_events where topic='manager.security_code' and aggregate_id=$1 and processed_at is null",[row.id]);
+    await sql.query('insert into control_login_challenges(id,member_id,code_hash,expires_at) values($1,$2,$3,$4)',[challengeId,row.id,mfaCodeHash(config.BOT_TOKEN,challengeId,code),expiresAt]);
+    await sql.query("insert into outbox_events(topic,aggregate_type,aggregate_id,payload) values('manager.security_code','member',$1,$2::jsonb)",[row.id,JSON.stringify({managerId:row.id,code})]);
+   });
+   return {mfaRequired:true,challengeId,expiresAt};
+  }
+  const auth=await issueToken(db,'control',row.id);reply.setCookie('pulse_control',auth.token,cookieOptions);await audit(db,row.id,'login',row.id);return {member:memberView(row),mfaRequired:false};
+ });
+ app.post('/api/v1/control/login/verify',{config:{rateLimit:{max:8,timeWindow:'1 minute'}}},async(request,reply)=>{
+  if(!config.BOT_TOKEN)throw new HttpError(503,'Telegram пока не настроен');
+  const input=z.object({challengeId:z.uuid(),code:z.string().regex(/^\d{6}$/)}).strict().parse(request.body);
+  return db.transaction(async sql=>{
+   const row=(await sql.query('select c.*,m.* from control_login_challenges c join team_members m on m.id=c.member_id where c.id=$1 for update',[input.challengeId])).rows[0];
+   if(!row||!row.active||row.consumed_at||new Date(row.expires_at).getTime()<=Date.now()||row.attempts>=5)throw new HttpError(401,'Код недействителен или истёк');
+   if(!checkMfaCode(config.BOT_TOKEN,input.challengeId,input.code,row.code_hash)){await sql.query('update control_login_challenges set attempts=attempts+1 where id=$1',[input.challengeId]);throw new HttpError(401,'Неверный код');}
+   await sql.query('update control_login_challenges set consumed_at=now() where id=$1',[input.challengeId]);
+   const auth=await issueToken(sql,'control',row.member_id);reply.setCookie('pulse_control',auth.token,cookieOptions);await audit(sql,row.member_id,'login.mfa',row.member_id);return {member:memberView(row)};
+  });
+ });
+ app.post('/api/v1/control/mfa',{preHandler:control,config:{rateLimit:{max:5,timeWindow:'1 minute'}}},async(request)=>{
+  const input=z.object({enabled:z.boolean(),currentPassword:z.string().min(1).max(200),telegramUserId:z.string().regex(/^\d{1,16}$/).optional()}).strict().parse(request.body);
+  return db.transaction(async sql=>{
+   const row=(await sql.query('select * from team_members where id=$1 for update',[request.member!.id])).rows[0];
+   if(!row||!await checkPassword(input.currentPassword,row.password_hash))throw new HttpError(400,'Текущий пароль не совпадает');
+   const telegramUserId=input.telegramUserId??row.telegram_user_id?.toString()??null;
+   if(input.enabled&&(!config.BOT_TOKEN||!telegramUserId))throw new HttpError(400,'Укажите Telegram ID и убедитесь, что бот настроен');
+   await sql.query('update team_members set mfa_enabled=$2,telegram_user_id=coalesce($3::bigint,telegram_user_id) where id=$1',[row.id,input.enabled,telegramUserId]);
+   if(!input.enabled)await sql.query('update control_login_challenges set consumed_at=now() where member_id=$1 and consumed_at is null',[row.id]);
+   await audit(sql,row.id,input.enabled?'mfa.enable':'mfa.disable',row.id);
+   return {member:memberView({...row,mfa_enabled:input.enabled,telegram_user_id:telegramUserId})};
+  });
  });
  app.post('/api/v1/control/password',{preHandler:control,config:{rateLimit:{max:5,timeWindow:'1 minute'}}},async(request,reply)=>{
   const input=z.object({currentPassword:z.string().max(200),newPassword:z.string().min(14).max(200)}).strict().parse(request.body);
@@ -149,7 +184,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const tasks=(await db.query(`select * from crm_tasks ${scoped?'where assigned_to=$1':''} order by due_at limit 1000`,scoped?[m.id]:[])).rows.map(camelRow);
   const events=(await db.query(`select id,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at as created_at from user_events ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by occurred_at desc limit 2000`,scoped?[m.id]:[])).rows.map(camelRow);
   const profiles=(await db.query(`select * from visitor_profiles ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by score desc limit 1000`,scoped?[m.id]:[])).rows.map(camelRow);
-  const members=(await db.query(scoped?'select id,name,email,role,active,cities,telegram_user_id from team_members where id=$1':'select id,name,email,role,active,cities,telegram_user_id from team_members order by name',scoped?[m.id]:[])).rows.map(memberView);
+  const members=(await db.query(scoped?'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members where id=$1':'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members order by name',scoped?[m.id]:[])).rows.map(memberView);
   const notifications=scoped?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
   return {state,version,leads,tasks,events,profiles,members,notifications,limited:leads.length===1000||events.length===2000||profiles.length===1000||tasks.length===1000};
  });

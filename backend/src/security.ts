@@ -1,4 +1,4 @@
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual, createHash } from 'node:crypto';
+import { randomBytes, randomInt, scrypt as scryptCallback, timingSafeEqual, createHash, createHmac } from 'node:crypto';
 import { promisify } from 'node:util';
 import type { Sql } from './database';
 const scrypt=promisify(scryptCallback);
@@ -16,3 +16,13 @@ export async function issueToken(sql:Sql,kind:'visitor'|'control',id:string){
   return {token,expiresAt};
 }
 export class HttpError extends Error {constructor(public statusCode:number,message:string){super(message);}}
+
+export function generateMfaCode(){return String(randomInt(0,1_000_000)).padStart(6,'0');}
+export function mfaCodeHash(secret:string,challengeId:string,code:string){
+  return createHmac('sha256',secret).update(challengeId+':'+code).digest('hex');
+}
+export function checkMfaCode(secret:string,challengeId:string,code:string,stored:string){
+  const actual=Buffer.from(mfaCodeHash(secret,challengeId,code),'hex');
+  const expected=Buffer.from(stored,'hex');
+  return actual.length===expected.length&&timingSafeEqual(actual,expected);
+}
