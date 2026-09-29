@@ -258,6 +258,7 @@ test('Клиент: поиск и избранное сохраняют конт
  await expect(page.getByText(/Новых обновлений пока нет/)).toBeVisible();
  await page.keyboard.press('Escape');
  await page.getByRole('navigation').getByRole('button',{name:'Каталог',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Новостройки',exact:true})).toBeVisible();
  await page.getByRole('textbox',{name:'Поиск'}).fill('Солнечный');
  await page.getByRole('link',{name:'Открыть ЖК Солнечный'}).click();
  await page.getByRole('link',{name:'Назад',exact:true}).click();
