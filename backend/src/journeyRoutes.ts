@@ -95,7 +95,7 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
   });
   app.get(prefix+'/journeys/:id',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);
-   return db.transaction(async sql=>{await leadAccess(sql,r,leadId,client,false);const row=(await sql.query('select document from client_journeys where lead_id=$1',[leadId])).rows[0];const journey:Journey=row?.document||emptyJourney(leadId);return {journey:client?clientJourney(journey):journey};});
+   return db.transaction(async sql=>{const lead=await leadAccess(sql,r,leadId,client,false);const row=(await sql.query('select document from client_journeys where lead_id=$1',[leadId])).rows[0];const journey:Journey=row?.document||emptyJourney(leadId);const managerName=lead.manager_id?(await sql.query('select name from team_members where id=$1 and active=true',[lead.manager_id])).rows[0]?.name||null:null;return {entry:{leadId,status:lead.status,propertyId:lead.property_id,createdAt:lead.created_at,managerName,journey:client?clientJourney(journey):journey}};});
   });
   app.post(prefix+'/journeys/:id',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);const input=z.object({revision:z.number().int().nonnegative(),command:journeyCommand}).strict().parse(r.body);
