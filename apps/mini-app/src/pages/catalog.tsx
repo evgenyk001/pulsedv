@@ -50,6 +50,10 @@ export default function CatalogPage(){
   const initialMax=parsePriceParam(params.get("max"));
 
   const [query,setQuery]=useState(params.get("q")||"");
+  React.useEffect(()=>{
+    const routeQuery=params.get("q")||"";
+    setQuery(current=>current===routeQuery?current:routeQuery);
+  },[params]);
   const deferredQuery=React.useDeferredValue(query);
   const [city,setCity]=useState(params.get("city")||"Все");
   const [priceRange,setPriceRange]=useState<[number,number]>([initialMin??FALLBACK_MIN,initialMax??FALLBACK_MAX]);
