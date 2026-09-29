@@ -1,6 +1,9 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {applyJourney,emptyJourney,clientJourney} from '../../packages/journey/model';
 import {attribution} from '../../packages/journey/attribution';
 import {testDatabase} from './database';
@@ -29,7 +32,7 @@ test('Путь клиента: черновики, реакция, перехо�
  assert.deepEqual(attribution('?utm_source=telegram&utm_campaign=autumn'),{source:'telegram',medium:'',campaign:'autumn'});
 });
 test('Journey API: доступ, конфликт версий, публикация, показы, аналитика и проверки каталога',async t=>{
- const db=await testDatabase();await migrate(db);const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080'});const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close()});
+ const db=await testDatabase();await migrate(db);const mediaRoot=await mkdtemp(join(tmpdir(),'pulse-journey-media-'));const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',MEDIA_ROOT:mediaRoot});const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close();await rm(mediaRoot,{recursive:true,force:true})});
  const manager=(await db.query("insert into team_members(name,email,password_hash,role) values('Owner','owner@test.local',$1,'owner') returning id",[await hashPassword('long-test-password')])).rows[0];
  const other=(await db.query("insert into team_members(name,email,password_hash,role) values('Other','other@test.local',$1,'manager') returning id",[await hashPassword('long-test-password')])).rows[0];
  const headers={'content-type':'application/json',origin:config.PUBLIC_ORIGIN};
@@ -66,8 +69,15 @@ test('Journey API: доступ, конфликт версий, публикац
  assert.equal((await post(secondPath,{type:'showing_status',id:secondShow.id,status:'confirmed',result:''},1)).statusCode,409);
  response=await post(path,{type:'showing_status',id:show.id,status:'completed',result:'Клиент выбирает этаж'},5);assert.equal(response.statusCode,200,response.body);
  assert.equal((await mine()).showings[0].result,'');
- const messageId=randomUUID();response=await post(path,{type:'message',id:messageId,text:'Документы по квартире',attachment:{kind:'file',name:'offer.pdf',url:'/media/chat/test.pdf',mimeType:'application/pdf',size:1024}},6);assert.equal(response.statusCode,200,response.body);
+ const uploaded=await app.inject({method:'POST',url:path+'/attachments?filename=offer.pdf',headers:{origin:config.PUBLIC_ORIGIN,'content-type':'application/pdf'},cookies,payload:Buffer.from('%PDF-1.4\nsecurity-test')});assert.equal(uploaded.statusCode,200,uploaded.body);
+ const attachment=uploaded.json().attachment;assert.match(attachment.url,new RegExp('^/api/v1/journey-media/'+lead.id+'/'));
+ const messageId=randomUUID();response=await post(path,{type:'message',id:messageId,text:'Документы по квартире',attachment},6);assert.equal(response.statusCode,200,response.body);
  let clientJourneyState=await mine();assert.equal(clientJourneyState.messages[0].attachment.name,'offer.pdf');assert.equal(clientJourneyState.messages[0].readAt,undefined);
+ assert.equal((await app.inject(attachment.url)).statusCode,401);
+ assert.equal((await app.inject({url:attachment.url,headers:unauthorized})).statusCode,404);
+ assert.equal((await app.inject({url:attachment.url,cookies})).statusCode,200);
+ const visitorCookie=(await app.inject({method:'POST',url:'/api/v1/auth/cookie',headers:auth,payload:{}})).cookies.find(cookie=>cookie.name==='pulse_visitor')?.value;assert.ok(visitorCookie);
+ const privateDownload=await app.inject({url:attachment.url,cookies:{pulse_visitor:visitorCookie!}});assert.equal(privateDownload.statusCode,200);assert.equal(privateDownload.headers['cache-control'],'private, no-store');
  response=await app.inject({method:'POST',url:clientPath+'/read',headers:auth,payload:{messageIds:[messageId]}});assert.equal(response.statusCode,200,response.body);assert.ok(response.json().journey.messages[0].readAt);
  const managerJourney=(await app.inject({url:'/api/v1/control/journeys',cookies})).json().items.find((x:any)=>x.leadId===lead.id).journey;assert.ok(managerJourney.messages[0].readAt);
  const acquisition=await app.inject({url:'/api/v1/control/acquisition',cookies});assert.equal(acquisition.statusCode,200,acquisition.body);const row=acquisition.json().items.find((r:any)=>r.source==='telegram');assert.equal(row.contacts,1);assert.equal(row.showings,1);
