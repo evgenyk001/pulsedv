@@ -70,6 +70,7 @@ test('Control preview: object editor and real state changes',async({page})=>{
 
 test('Privacy: policy and separate consent are public and linked from profile',async({page})=>{
  await page.setViewportSize({width:390,height:844});
+ await page.goto('/pulsedv/mini-app/');const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
  await page.goto('/pulsedv/mini-app/#/profile');
  await page.getByRole('link',{name:/Персональные данные/}).click();
  await expect(page.getByRole('heading',{name:'Политика обработки персональных данных'})).toBeVisible();
