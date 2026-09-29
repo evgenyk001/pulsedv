@@ -59,6 +59,14 @@ export function BottomNav(){
   React.useEffect(()=>()=>{if(morphTimer.current)window.clearTimeout(morphTimer.current)},[]);
 
   const haptic=()=>window.Telegram?.WebApp?.HapticFeedback?.impactOccurred?.("light");
+  const navigateSafely=(path:string)=>{
+    if(path===location.pathname)return;
+    const host=document.querySelector<HTMLElement>("[data-pulse-route-host]");
+    host?.setAttribute("inert","");
+    host?.setAttribute("aria-busy","true");
+    window.setTimeout(()=>{if(host?.isConnected){host.removeAttribute("inert");host.removeAttribute("aria-busy")}},800);
+    navigate(path,{flushSync:true});
+  };
   const triggerMorph=(direction:number)=>{
     setMorphing(false);
     setMorphDirection(direction);
@@ -135,7 +143,7 @@ export function BottomNav(){
     setVelocity(dragRef.current.velocity*.22);
     setPillX(index*segmentWidth);
     if(index!==dragRef.current.previewIndex)haptic();
-    if(items[index].path!==location.pathname)navigate(items[index].path,{flushSync:true});
+    navigateSafely(items[index].path);
     window.setTimeout(()=>setVelocity(0),240);
     window.setTimeout(()=>{dragRef.current.moved=false},90);
   };
@@ -149,7 +157,7 @@ export function BottomNav(){
     setVelocity(sign*.18);
     setPillX(index*segmentWidth);
     haptic();
-    if(items[index].path!==location.pathname)navigate(items[index].path,{flushSync:true});
+    navigateSafely(items[index].path);
     window.setTimeout(()=>setVelocity(0),260);
   };
 

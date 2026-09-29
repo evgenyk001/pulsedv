@@ -17,6 +17,13 @@ export function AppShell({children}:{children:React.ReactNode}){
   const [showOnboarding,setShowOnboarding]=React.useState(false);
   const chatRoute=location.pathname==="/journey"&&new URLSearchParams(location.search).has("lead");
   const hideNav=location.pathname.startsWith("/property/")||chatRoute;
+  const routeHost=React.useRef<HTMLElement>(null);
+
+  React.useLayoutEffect(()=>{
+    const host=routeHost.current;
+    host?.removeAttribute("inert");
+    host?.removeAttribute("aria-busy");
+  },[location.pathname]);
 
   React.useEffect(()=>{
     const version=control.content.onboardingVersion;
@@ -42,7 +49,7 @@ export function AppShell({children}:{children:React.ReactNode}){
 
   return <div className={styles.viewport}><NavigationMemory/><FavoriteSync/>
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
-    <main className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
+    <main ref={routeHost} data-pulse-route-host className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
       <div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:""}`}>{children}</div>
     </main>
     {!hideNav&&<BottomNav/>}
