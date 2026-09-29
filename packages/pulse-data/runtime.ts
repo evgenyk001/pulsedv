@@ -23,6 +23,7 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
 type Session={sessionId:string;accessToken:string;expiresAt:string};
 let sessionPromise:Promise<Session>|null=null;
 let telegramBound=false;
+let visitorCookieBound=false;
 const SESSION='pulse.dv.api.session.v1';
 async function session():Promise<Session>{
  if(sessionPromise)return sessionPromise;
@@ -37,13 +38,14 @@ async function session():Promise<Session>{
 export async function visitorApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
  const identity=await session();
  try{return await api<T>(path,{...options,headers:{...options.headers,Authorization:'Bearer '+identity.accessToken}});}catch(error){
-  if(error instanceof ApiError&&error.status===401){sessionPromise=null;telegramBound=false;try{localStorage.removeItem(SESSION);}catch{}}
+  if(error instanceof ApiError&&error.status===401){sessionPromise=null;telegramBound=false;visitorCookieBound=false;try{localStorage.removeItem(SESSION);}catch{}}
   throw error;
  }
 }
 export async function initializePublic(){
  const data=await api('/public/state');runtime.snapshot={...empty,state:data.state,version:data.version};runtime.consentVersion=data.consentVersion;runtime.ready=true;runtime.error=null;notify();
  await session();
+ if(!visitorCookieBound){await visitorApi('/auth/cookie',{method:'POST',body:'{}'});visitorCookieBound=true;}
  const initData=(window as any).Telegram?.WebApp?.initData;
  if(initData&&!telegramBound){await visitorApi('/auth/telegram',{method:'POST',body:JSON.stringify({initData})});telegramBound=true;}
 }
