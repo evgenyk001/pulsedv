@@ -28,6 +28,17 @@ test('SQL/API: заявки между устройствами, дедупли�
  const ownerCookie={pulse_control:await login('owner@example.test')};const managerCookie={pulse_control:await login('manager@example.test')};
  let identity:any;let other:any;let leadId='';let first:any;
  await t.test('сотрудник без cookie не получает CRM',async()=>{assert.equal((await app.inject('/api/v1/control/snapshot')).statusCode,401);});
+ await t.test('двухэтапный вход через Telegram выдаёт сессию только после одноразового кода',async()=>{
+  await db.query('update team_members set mfa_enabled=true where id=$1',[owner.id]);
+  const firstStep=await app.inject({method:'POST',url:'/api/v1/control/login',headers,payload:{email:'owner@example.test',password:'long-test-password'}});
+  assert.equal(firstStep.statusCode,200,firstStep.body);assert.equal(firstStep.json().mfaRequired,true);assert.ok(firstStep.json().challengeId);assert.equal(firstStep.cookies.find((x:any)=>x.name==='pulse_control'),undefined);
+  const challengeId=firstStep.json().challengeId;
+  const queued=(await db.query("select payload from outbox_events where topic='manager.security_code' and aggregate_id=$1 order by created_at desc limit 1",[owner.id])).rows[0];assert.match(String(queued?.payload?.code),/^\d{6}$/);
+  const wrong=await app.inject({method:'POST',url:'/api/v1/control/login/verify',headers,payload:{challengeId,code:'000000'}});if(queued.payload.code!=='000000')assert.equal(wrong.statusCode,401);
+  const verified=await app.inject({method:'POST',url:'/api/v1/control/login/verify',headers,payload:{challengeId,code:queued.payload.code}});assert.equal(verified.statusCode,200,verified.body);
+  const cookie=verified.cookies.find((x:any)=>x.name==='pulse_control')?.value;assert.ok(cookie);assert.equal(verified.json().member.mfaEnabled,true);
+  const disabled=await app.inject({method:'POST',url:'/api/v1/control/mfa',headers,cookies:{pulse_control:cookie},payload:{enabled:false,currentPassword:'long-test-password'}});assert.equal(disabled.statusCode,200,disabled.body);assert.equal(disabled.json().member.mfaEnabled,false);
+ });
  await t.test('старый PULSE Select config получает новые настройки без миграции документа',async()=>{
   await db.query("update app_config set document=document #- '{select,smartQueryEnabled}' #- '{select,whatIfEnabled}' #- '{select,maxPreferences}' #- '{select,preferenceEnabled}'");
   const snapshot=await app.inject({url:'/api/v1/control/snapshot',cookies:ownerCookie});assert.equal(snapshot.statusCode,200,snapshot.body);
