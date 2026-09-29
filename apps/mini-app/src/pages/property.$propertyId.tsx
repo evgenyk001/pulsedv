@@ -31,7 +31,9 @@ const priceLabel=(value:number)=>"от "+value.toFixed(1).replace(".",",")+" м�
 export default function PropertyPage(){
   const {propertyId=""}=useParams();
   const location=useLocation();
-  const returnTo=typeof location.state?.returnTo==="string"&&/^\/(catalog|favorites|selection|journey)?([?]|$)/.test(location.state.returnTo)?location.state.returnTo:propertyReturn();
+  const stateReturn=typeof location.state?.returnTo==="string"&&/^\/(catalog|favorites|selection|journey)?([?]|$)/.test(location.state.returnTo)?location.state.returnTo:null;
+  const rememberedReturn=propertyReturn();
+  const returnTo=rememberedReturn!=="/catalog"||!stateReturn?rememberedReturn:stateReturn;
   const {data:p,isLoading,error}=usePropertyDetail(propertyId);
   const {toggle,isFavorite}=useFavoriteIds();
   const [photoIndex,setPhotoIndex]=React.useState(0);
