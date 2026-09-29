@@ -132,7 +132,7 @@ export default function CatalogPage(){
   const isLoading=pulseMode?pulseQuery.isLoading:view==="map"?mapQuery.isLoading:listQuery.isLoading;
   const error=pulseMode?pulseQuery.error:view==="map"?mapQuery.error:listQuery.error;
 
-  const onQuery=(value:string)=>{setQuery(value);const next=new URLSearchParams(params);value?next.set("q",value):next.delete("q");setParams(next,{replace:true,flushSync:true});};
+  const onQuery=(value:string)=>{setQuery(value);try{sessionStorage.setItem("pulse.catalog.query",value)}catch{}const next=new URLSearchParams(params);value?next.set("q",value):next.delete("q");setParams(next,{replace:true,flushSync:true});};
   const catalogReturnTo=React.useMemo(()=>{const next=new URLSearchParams(params);query?next.set("q",query):next.delete("q");const search=next.toString();return "/catalog"+(search?"?"+search:"")},[params,query]);
 
   const setView=(nextView:"list"|"map")=>{
@@ -196,7 +196,7 @@ export default function CatalogPage(){
     setDelivery("Любой");
     setRooms("Все");
     setSea(false);
-    setQuery("");
+    setQuery("");try{sessionStorage.setItem("pulse.catalog.query","")}catch{}
     const next=new URLSearchParams(params);
     next.delete("city");next.delete("min");next.delete("max");next.delete("delivery");next.delete("rooms");next.delete("sea");next.delete("mortgage");next.delete("q");
     setParams(next,{replace:true});
