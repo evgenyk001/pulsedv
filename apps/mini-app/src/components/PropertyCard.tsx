@@ -12,7 +12,21 @@ export function PropertyCard({property,compact=false,returnTo}:PropertyCardProps
   const {toggle,isFavorite}=useFavoriteIds();
   const saved=isFavorite(property.id);
   const image=property.coverImageUrl||property.images[0]?.url;
-  const rememberReturn=()=>{try{const hash=window.location.hash.replace(/^#/,'');const value=returnTo??(/^\/(catalog|favorites|selection|journey)([?]|$)/.test(hash)?hash:location.pathname+location.search);sessionStorage.setItem('pulse.property.return',value)}catch{}};
+  const rememberReturn=()=>{try{
+    let value=returnTo??location.pathname+location.search;
+    if(location.pathname==="/catalog"){
+      const input=document.querySelector<HTMLInputElement>('input[aria-label="Поиск"]');
+      const params=new URLSearchParams(location.search);
+      const live=input?.value??"";
+      live?params.set("q",live):params.delete("q");
+      const search=params.toString();
+      value="/catalog"+(search?"?"+search:"");
+    }else{
+      const hash=window.location.hash.replace(/^#/,'');
+      if(!returnTo&&/^\/(catalog|favorites|selection|journey)([?]|$)/.test(hash))value=hash;
+    }
+    sessionStorage.setItem('pulse.property.return',value);
+  }catch{}};
   return <article className={`${styles.card} ${compact?styles.compact:""}`}>
     <Link to={`/property/${property.id}`} state={{returnTo:returnTo??location.pathname+location.search}} onClick={rememberReturn} className={styles.link} aria-label={`Открыть ${property.name}`}>
       <div className={styles.image}>
