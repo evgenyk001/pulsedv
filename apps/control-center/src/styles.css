@@ -1636,3 +1636,90 @@ main{
     overflow:hidden;
   }
 }
+
+
+/* ==========================================================================
+   Final Control audit — remove remaining legacy/light surfaces from interactive
+   states that only appear after opening drawers, journey tools and filters.
+   ========================================================================== */
+.control .leadEditorActions{
+  border-color:rgba(255,255,255,.11)!important;
+  background:rgba(35,39,45,.94)!important;
+  box-shadow:0 12px 34px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.035)!important;
+  backdrop-filter:blur(18px) saturate(1.05);
+  -webkit-backdrop-filter:blur(18px) saturate(1.05);
+}
+.control .leadEditorActions small{color:#9da3ab!important}
+.control .leadRequestContext>div b{
+  background:rgba(255,255,255,.07)!important;
+  border:1px solid rgba(255,255,255,.07)!important;
+  color:#dfe2e5!important;
+}
+.control .leadRequestContext>small{color:#858c95!important}
+.control .leadRequestContext>span{color:#9097a0!important}
+
+.control .journeyToolbar label>span{color:#9aa0a8!important}
+.control .journeyToolbar input{
+  border-color:rgba(255,255,255,.12)!important;
+  background:rgba(8,10,12,.24)!important;
+  color:#eef0f2!important;
+  color-scheme:dark;
+}
+.control .journeyToolbar input:focus{
+  border-color:rgba(255,86,99,.46)!important;
+  box-shadow:0 0 0 3px rgba(255,51,68,.07)!important;
+  outline:none;
+}
+.control .journeyEmpty{color:#868d96!important}
+.control .journeyEmpty.large b{color:#cfd3d7!important}
+.control .journeyEmpty.large span{color:#858c95!important}
+.control .journeyMetricIcon{
+  background:rgba(255,255,255,.065)!important;
+  border:1px solid rgba(255,255,255,.055)!important;
+  color:#949ba4!important;
+}
+.control .journeyMetricIcon.attention{
+  background:rgba(255,78,90,.10)!important;
+  border-color:rgba(255,78,90,.10)!important;
+  color:#ff6d79!important;
+}
+.control .journeyMetricIcon.verified{
+  background:rgba(79,190,148,.09)!important;
+  border-color:rgba(79,190,148,.09)!important;
+  color:#75d0ad!important;
+}
+.control .journeyVerificationBody{
+  background:rgba(0,0,0,.10)!important;
+  border-color:rgba(255,255,255,.055)!important;
+}
+.control .journeyShowingRow>.statusChip{background:rgba(255,255,255,.06)!important;color:#a3a9b0!important}
+
+/* Drawers should read as one continuous command-center surface. */
+.control .detailDrawer>h3{
+  color:#e7e9eb!important;
+  font-size:15px!important;
+  letter-spacing:-.015em;
+  margin:24px 0 11px!important;
+}
+.control .detailDrawer>p{color:#a0a6ad!important}
+.control .phoneLink{
+  color:#ff7883!important;
+  background:rgba(255,67,82,.055)!important;
+  border:1px solid rgba(255,67,82,.08)!important;
+  border-radius:12px!important;
+  padding:10px 12px!important;
+  width:max-content;
+  max-width:100%;
+}
+
+/* Keep select/date controls consistent in every workspace, including nested tools. */
+.control input[type="date"],
+.control input[type="datetime-local"]{color-scheme:dark}
+
+/* Compact mobile drawer rhythm after all embedded tools adopt the dark system. */
+@media(max-width:760px){
+  .control .leadEditorActions{border-radius:15px!important;padding:10px!important}
+  .control .leadEditorActions>div{gap:9px!important}
+  .control .detailDrawer>h3{margin-top:20px!important}
+  .control .phoneLink{width:100%;justify-content:flex-start}
+}
