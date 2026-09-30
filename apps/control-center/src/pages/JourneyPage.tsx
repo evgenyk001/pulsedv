@@ -36,7 +36,7 @@ export function JourneyPage(){
 
   {error&&<div className="errorNotice" role="alert">{error}</div>}
 
-  <section className="panel journeyWorkspace">
+  <section className="panel journeyWorkspace journeyCommandPanel">
    <div className="sectionHeading"><div><span className="kicker">РАБОЧАЯ ОЧЕРЕДЬ</span><h2>Следующие действия</h2></div><span className="countBadge">{active.length}</span></div>
    <div className="journeyQueueColumns">
     <div className="journeyQueueGroup">
