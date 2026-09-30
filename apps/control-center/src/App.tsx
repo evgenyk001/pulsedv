@@ -52,24 +52,26 @@ export function App(){
         <div><b>PULSE Control</b><small>Command Center</small></div>
       </div>
       <div className="sidebarNav">
-        {groups.map(group=>{
-          const items=visibleSections.filter(section=>section.group===group);
-          if(!items.length)return null;
-          return <section className="navGroup" key={group}>
-            <div className="navCaption">{group}</div>
-            <nav aria-label={group==="Работа"?"Разделы CRM":group}>
-              {items.map(({to,label,icon:Icon,end})=>
-                <NavLink key={to} to={to} end={end} className={({isActive})=>isActive?"active":undefined}>
-                  <span className="navIcon"><Icon size={17}/></span>
-                  <span>{label}</span>
-                  {to==="/tasks"&&overdue>0&&<em>{overdue}</em>}
-                  {to==="/leads"&&newLeads>0&&<em>{newLeads}</em>}
-                  <ChevronRight className="navChevron" size={14}/>
-                </NavLink>
-              )}
-            </nav>
-          </section>;
-        })}
+        <nav aria-label="Разделы CRM" className="groupedNav">
+          {groups.map(group=>{
+            const items=visibleSections.filter(section=>section.group===group);
+            if(!items.length)return null;
+            return <section className="navGroup" key={group}>
+              <div className="navCaption">{group}</div>
+              <div className="navGroupLinks">
+                {items.map(({to,label,icon:Icon,end})=>
+                  <NavLink key={to} to={to} end={end} className={({isActive})=>isActive?"active":undefined}>
+                    <span className="navIcon"><Icon size={17}/></span>
+                    <span>{label}</span>
+                    {to==="/tasks"&&overdue>0&&<em>{overdue}</em>}
+                    {to==="/leads"&&newLeads>0&&<em>{newLeads}</em>}
+                    <ChevronRight className="navChevron" size={14}/>
+                  </NavLink>
+                )}
+              </div>
+            </section>;
+          })}
+        </nav>
       </div>
       <div className="sidebarFoot">
         <span className="workspaceAvatar">P</span>
