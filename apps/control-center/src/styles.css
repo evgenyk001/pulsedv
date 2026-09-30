@@ -1331,3 +1331,14 @@ main{overflow:visible!important}
   .runtimeBar{z-index:50!important}
   .drawerBackdrop{z-index:1000!important}
 }
+
+
+/* Modal isolation: drawers fully own the viewport and background chrome cannot intercept taps. */
+body:has(.drawerBackdrop){overflow:hidden!important}
+body:has(.drawerBackdrop) .runtimeBar,
+body:has(.drawerBackdrop) .workspaceBar{pointer-events:none!important}
+.drawerBackdrop{position:fixed!important;inset:0!important;z-index:4000!important}
+.detailDrawer{
+  position:absolute!important;right:0!important;top:0!important;bottom:0!important;
+  height:100dvh!important;z-index:4001!important;
+}
