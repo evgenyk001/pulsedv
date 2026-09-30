@@ -144,7 +144,7 @@ for(const width of [390,1440])test(`Control workspace ${width}px: navigation, cl
  await page.setViewportSize({width,height:1000});
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/pulsedv/control-center/');
- await expect(page.getByRole('heading',{name:'Всё важное — в фокусе'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Командный центр'})).toBeVisible();
  await page.getByRole('link',{name:'Открыть клиентов'}).click();
  await page.getByRole('button',{name:'Доска',exact:true}).click();
  await expect(page.locator('.leadBoard')).toBeVisible();
