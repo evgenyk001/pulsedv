@@ -1318,3 +1318,16 @@ input[type=checkbox]{accent-color:var(--pc-red)!important}
 @media(prefers-reduced-motion:reduce){
   .sidebar nav a,.metrics article,.primaryAction,.secondaryAction,.catalogObjectCard{transition:none!important}
 }
+
+
+/* Control v2 interaction fixes found by Playwright */
+.groupedNav{display:flex!important;flex-direction:column!important;gap:13px!important}
+.navGroupLinks{display:flex;flex-direction:column;gap:3px}
+main{overflow:visible!important}
+.drawerBackdrop{z-index:1000!important}
+.detailDrawer{position:relative;z-index:1001!important}
+@media(max-width:760px){
+  .workspaceBar{z-index:40!important}
+  .runtimeBar{z-index:50!important}
+  .drawerBackdrop{z-index:1000!important}
+}
