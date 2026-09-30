@@ -1627,3 +1627,12 @@ main{
   .mortgageForm{grid-template-columns:1fr}
   .mortgageHintField{grid-column:auto}
 }
+
+
+/* Shell corner fix: sticky workspace chrome must follow the desktop frame radius. */
+@media(min-width:761px){
+  main>.workspaceBar{
+    border-radius:25px 25px 0 0!important;
+    overflow:hidden;
+  }
+}
