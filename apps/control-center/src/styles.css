@@ -1342,3 +1342,288 @@ body:has(.drawerBackdrop) .workspaceBar{pointer-events:none!important}
   position:absolute!important;right:0!important;top:0!important;bottom:0!important;
   height:100dvh!important;z-index:4001!important;
 }
+
+
+/* ==========================================================================
+   PULSE Control polish v3 — lighter graphite, clear actions, readable finance
+   ========================================================================== */
+:root{
+  --pc-bg:#14171b;
+  --pc-shell:#1b1f24;
+  --pc-shell-2:#20242a;
+  --pc-surface:rgba(255,255,255,.072);
+  --pc-surface-raised:rgba(255,255,255,.098);
+  --pc-surface-strong:rgba(255,255,255,.125);
+  --pc-line:rgba(255,255,255,.105);
+  --pc-line-strong:rgba(255,255,255,.16);
+  --pc-text:#f7f8f9;
+  --pc-muted:#b0b5bc;
+  --pc-dim:#858b94;
+}
+html,body,#root{background:#14171b!important}
+body{
+  background:
+    radial-gradient(circle at 15% 8%,rgba(151,109,82,.20),transparent 31%),
+    radial-gradient(circle at 88% 10%,rgba(125,74,68,.13),transparent 29%),
+    radial-gradient(circle at 72% 88%,rgba(73,86,105,.16),transparent 34%),
+    #14171b!important;
+}
+.runtimeBar{
+  background:rgba(19,22,26,.94)!important;
+  border-bottom-color:rgba(255,255,255,.075)!important;
+}
+.runtimeBar small{color:#8e949c!important}
+.sidebar{
+  background:
+    radial-gradient(circle at 24% 0%,rgba(255,255,255,.075),transparent 31%),
+    rgba(24,27,32,.88)!important;
+  border-color:rgba(255,255,255,.095)!important;
+}
+.sidebar nav a{color:#a0a5ad!important}
+.sidebar nav a:hover{background:rgba(255,255,255,.065)!important}
+.sidebar nav a.active{
+  background:linear-gradient(135deg,rgba(255,255,255,.13),rgba(255,255,255,.075))!important;
+  border-color:rgba(255,255,255,.105)!important;
+}
+.navIcon{background:rgba(255,255,255,.055)!important;color:#8e949c!important}
+.navCaption{color:#747a83!important}
+main{
+  background:
+    radial-gradient(circle at 80% 0%,rgba(255,255,255,.055),transparent 28%),
+    radial-gradient(circle at 90% 14%,rgba(255,51,68,.045),transparent 23%),
+    linear-gradient(145deg,rgba(38,42,48,.96),rgba(29,33,38,.97))!important;
+  border-color:rgba(255,255,255,.105)!important;
+}
+.workspaceBar{
+  background:rgba(31,35,40,.88)!important;
+  border-bottom-color:rgba(255,255,255,.09)!important;
+}
+.workspaceContext small{color:#858b94!important}
+.workspaceContext b{color:#f0f2f4!important}
+.workspaceSectionIcon{
+  background:rgba(255,255,255,.075)!important;
+  border-color:rgba(255,255,255,.11)!important;
+  color:#c9cdd2!important;
+}
+.control .workspaceActions .notificationsLink,
+.control .workspaceActions .miniAppLink{
+  min-height:36px!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  background:rgba(255,255,255,.09)!important;
+  color:#f0f2f4!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045)!important;
+  opacity:1!important;
+}
+.control .workspaceActions .notificationsLink svg,
+.control .workspaceActions .miniAppLink svg{color:#e9ebed!important;opacity:1!important}
+.control .workspaceActions .notificationsLink:hover,
+.control .workspaceActions .miniAppLink:hover{
+  background:rgba(255,255,255,.13)!important;
+  border-color:rgba(255,255,255,.17)!important;
+}
+.control .workspaceActions .miniAppLink{font-weight:680!important;letter-spacing:.005em}
+.workspaceDate{color:#9298a0!important}
+
+/* Make every working surface visibly separate without becoming white. */
+.control .panel,
+.control .tableCard,
+.control .metrics article,
+.control .kanbanCol,
+.control .journeySummaryGrid article,
+.control .dnaPanel,
+.control .catalogOverview article,
+.control .catalogImportHub,
+.control .catalogWorkspace,
+.control .catalogObjectCard,
+.control .catalogEditorSection,
+.control .bannerCampaignCard,
+.control .bannerActionBox,
+.control .bannerSchedule,
+.control .bannerMediaRow,
+.control .rulesTable,
+.control .profileSummary,
+.control .relatedLead,
+.control .switchControl,
+.control .editorRow,
+.control .signalList>div,
+.control .leadRequestContext,
+.control .objectCard,
+.control .leadBoardCard,
+.control .taskCard,
+.control .journeyQueueGroup,
+.control .journeyVerification{
+  background:rgba(255,255,255,.075)!important;
+  border-color:rgba(255,255,255,.105)!important;
+}
+.control .panel:hover{border-color:rgba(255,255,255,.14)!important}
+.control .pageHeader p,.control .panel p{color:#a6abb2!important}
+.control .sectionHeading>a,.control .panelFooterLink{color:#a4a9b0!important}
+.control .kicker,.control .pageHeader .pageHeading>span{color:#8e949c!important}
+.control .metrics article span{color:#a1a6ad!important}
+.control .metrics article small{color:#858b93!important}
+
+/* Inputs: editable content must never resemble a disabled skeleton. */
+.control .controlField>span{color:#aab0b7!important;font-size:9.5px!important}
+.control .controlField input,
+.control .controlField select,
+.control .controlField textarea,
+.control .inlineEditor input,
+.control .inlineEditor select,
+.control .cellInput,
+.control .cellSelect,
+.control .rulesRow input,
+.control .taskStage select{
+  background:rgba(8,10,12,.28)!important;
+  border-color:rgba(255,255,255,.13)!important;
+  color:#f2f4f5!important;
+}
+.control .controlField input:hover,
+.control .controlField select:hover,
+.control .controlField textarea:hover{
+  border-color:rgba(255,255,255,.19)!important;
+}
+.control .controlField input:focus,
+.control .controlField select:focus,
+.control .controlField textarea:focus,
+.control .inlineEditor input:focus,
+.control .cellInput:focus,
+.control .cellSelect:focus{
+  background:rgba(8,10,12,.40)!important;
+  border-color:rgba(255,86,99,.48)!important;
+  box-shadow:0 0 0 3px rgba(255,51,68,.075)!important;
+}
+.control .controlField input::placeholder,.control .controlField textarea::placeholder{color:#737a83!important}
+
+/* Dashboard chart: values are attached to points; bottom axis is day + date. */
+.control .pulseChartCard,.control .focusCard{
+  background:
+    radial-gradient(circle at 92% -8%,rgba(255,63,79,.095),transparent 33%),
+    linear-gradient(145deg,rgba(255,255,255,.09),rgba(255,255,255,.055))!important;
+  border-color:rgba(255,255,255,.12)!important;
+}
+.chartValue{
+  fill:#f1f3f4;
+  font-size:11px;
+  font-weight:760;
+  paint-order:stroke;
+  stroke:rgba(31,34,39,.95);
+  stroke-width:4px;
+  stroke-linejoin:round;
+}
+.pulseChartLabels span{gap:3px!important}
+.pulseChartLabels b{
+  color:#dfe2e5!important;
+  font-size:9.5px!important;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+.pulseChartLabels small{color:#7f858e!important;font-size:7.8px!important}
+.chartGridLine{stroke:rgba(255,255,255,.075)!important}
+.chartPointHalo{fill:rgba(255,69,83,.18)!important}
+.chartPoint{fill:#ff6572!important}
+.pulseChartSummary span{color:#b1b6bd!important}
+.pulseChartSummary small{color:#8c929a!important}
+
+/* Mortgage editor is a first-class operational screen, not a stack of grey panels. */
+.mortgageIntro{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:15px;align-items:center;
+  background:
+    radial-gradient(circle at 90% 10%,rgba(255,51,68,.08),transparent 32%),
+    rgba(255,255,255,.078)!important;
+}
+.mortgageIntroIcon{
+  width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+  background:rgba(255,51,68,.10);border:1px solid rgba(255,78,92,.14);color:#ff6975;
+}
+.mortgageIntro h2{margin:4px 0 4px!important;font-size:16px!important}
+.mortgageIntro p{max-width:760px}
+.mortgageSyncState{
+  min-height:34px;padding:0 11px;border-radius:11px;display:flex;align-items:center;gap:7px;
+  border:1px solid rgba(88,197,154,.15);background:rgba(88,197,154,.08);color:#a9d9c5;font-size:9px;font-weight:700;
+}
+.mortgageSyncState i{width:7px;height:7px;border-radius:50%;background:#66cda5;box-shadow:0 0 0 4px rgba(88,197,154,.08)}
+.mortgagePrograms{display:flex;flex-direction:column;gap:12px}
+.mortgageProgram{
+  padding:20px;border-radius:20px;
+  border:1px solid rgba(255,255,255,.11);
+  background:linear-gradient(145deg,rgba(255,255,255,.085),rgba(255,255,255,.055));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+.mortgageProgramHead{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:15px}
+.mortgageProgramTitle{display:flex;align-items:center;gap:11px}
+.mortgageProgramTitle>div{display:grid;gap:2px}
+.mortgageProgramTitle h2{margin:0!important;font-size:17px!important;color:#f5f6f7!important}
+.mortgageProgramIcon{
+  width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09);color:#d9dde1;
+}
+.mortgageRateBadge{
+  min-width:54px;height:34px;padding:0 11px;border-radius:10px;display:grid;place-items:center;
+  background:rgba(255,51,68,.10);border:1px solid rgba(255,75,89,.14);color:#ff7883;font-size:11px;font-weight:780;
+}
+.mortgageProgramPreview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
+.mortgageProgramPreview>div{
+  min-height:66px;padding:10px;border-radius:13px;
+  background:rgba(8,10,12,.18);border:1px solid rgba(255,255,255,.07);
+  display:grid;grid-template-columns:auto 1fr;column-gap:7px;align-content:center;
+}
+.mortgageProgramPreview svg{grid-row:1/3;color:#808791}
+.mortgageProgramPreview span{font-size:8px;color:#8d939b}
+.mortgageProgramPreview b{font-size:10px;color:#e8eaec;margin-top:2px;font-variant-numeric:tabular-nums}
+.mortgageForm{
+  padding-top:15px;border-top:1px solid rgba(255,255,255,.07);
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px 12px;
+}
+.mortgageForm .controlField input{height:43px!important}
+.mortgageHintField{grid-column:1/-1}
+.mortgageHintInput{position:relative}
+.mortgageHintInput svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#878e97;pointer-events:none}
+.mortgageHintInput input{padding-left:38px!important}
+
+/* Content, analytics and catalog inherit the brighter graphite system. */
+.control .catalogObjectCard:hover,
+.control .leadBoardCard:hover,
+.control .taskCard:hover,
+.control .journeyQueueRow:hover{
+  background:rgba(255,255,255,.105)!important;
+}
+.control .catalogImportActions button,
+.control .catalogImportActions label{
+  background:rgba(255,255,255,.065)!important;
+  border-color:rgba(255,255,255,.105)!important;
+}
+.control .catalogImportActions small,
+.control .catalogImportFoot,
+.control .catalogObjectTitle p,
+.control .catalogObjectFacts small{color:#8e949c!important}
+.control .journeyTable{background:rgba(6,8,10,.16)!important}
+.control .tableHead,.control .rulesHead{background:rgba(255,255,255,.04)!important}
+.control .tableRow:hover,.control .leadRowButton:hover{background:rgba(255,255,255,.055)!important}
+
+/* Drawers are lighter than the canvas so hierarchy stays obvious. */
+.detailDrawer{
+  background:
+    radial-gradient(circle at 100% 0%,rgba(255,51,68,.055),transparent 24%),
+    #20242a!important;
+}
+.control .profileSummary,.control .relatedLead,.control .dnaPanel{background:rgba(255,255,255,.07)!important}
+
+/* Stronger empty states without looking disabled. */
+.emptyState{color:#bdc1c6!important}
+.emptyState strong{color:#dfe2e5!important}
+.emptyState span{color:#858c95!important}
+.emptyState svg{color:#858c95!important}
+
+/* Mobile: retain the graphite language while increasing contrast. */
+@media(max-width:760px){
+  body{background:#171a1f!important}
+  main{background:linear-gradient(180deg,#23272d,#1d2126)!important}
+  .workspaceBar{background:rgba(30,34,39,.95)!important}
+  .pageHeader h1{font-size:28px!important}
+  .mortgageIntro{grid-template-columns:auto 1fr!important}
+  .mortgageSyncState{grid-column:1/-1;justify-self:start}
+  .mortgageProgram{padding:16px;border-radius:18px}
+  .mortgageProgramPreview{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mortgageForm{grid-template-columns:1fr}
+  .mortgageHintField{grid-column:auto}
+}
