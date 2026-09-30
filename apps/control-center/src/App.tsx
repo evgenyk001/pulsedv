@@ -1,6 +1,7 @@
 import { JourneyPage } from './pages/JourneyPage';
 import { runtime } from "../../../packages/pulse-data/runtime";
 import { useRuntime } from "./RuntimeShell";
+import { usePulseCounts } from "./data";
 import React from "react";
 import { NavLink, Route, Routes, useLocation, Link } from "react-router-dom";
 import {
@@ -38,8 +39,9 @@ export function App(){
   const [menu,setMenu]=React.useState(false);
   const location=useLocation();
   const current=useRuntime();
-  const overdue=current.counts.overdueTasks;
-  const newLeads=current.counts.newLeads;
+  const counts=usePulseCounts();
+  const overdue=counts.overdueTasks;
+  const newLeads=counts.newLeads;
   const activeSection=sections.find(s=>s.to===location.pathname)||sections[0];
   const visibleSections=sections.filter(section=>!runtime.enabled||runtime.member?.role!=="manager"||["/","/leads","/users","/tasks","/analytics","/journey"].includes(section.to));
   React.useEffect(()=>{setMenu(false);window.scrollTo({top:0,left:0,behavior:'auto'});},[location.pathname]);

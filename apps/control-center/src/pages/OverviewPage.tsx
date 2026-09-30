@@ -2,13 +2,12 @@ import { ArrowUpRight, ArrowRight, Clock3, Flame, UserRound, Activity, CheckChec
 import { Link } from 'react-router-dom';
 import { PageFrame } from '../components/PageFrame';
 import { ActivityFeed } from '../components/ActivityFeed';
-import { usePulseEvents, usePulseLeads, usePulseProfiles, usePulseState, usePulseTasks } from '../data';
-import { useRuntime } from '../RuntimeShell';
+import { usePulseCounts, usePulseEvents, usePulseLeads, usePulseProfiles, usePulseState, usePulseTasks } from '../data';
 
 export function OverviewPage(){
- const state=usePulseState(),leads=usePulseLeads(),events=usePulseEvents(),profiles=usePulseProfiles(),tasks=usePulseTasks();const current=useRuntime();
+ const state=usePulseState(),leads=usePulseLeads(),events=usePulseEvents(),profiles=usePulseProfiles(),tasks=usePulseTasks();
+ const counts=usePulseCounts();
  const open=tasks.filter(t=>t.status!=='done').sort((a,b)=>Date.parse(a.dueAt)-Date.parse(b.dueAt));
- const counts=current.counts;
  const stages=[['new','Новые'],['contacted','Связались'],['qualified','Подбор'],['showing','Показ'],['booking','Бронь'],['deal','Сделка']] as const;
 
  const dayMs=86400_000;
@@ -17,7 +16,7 @@ export function OverviewPage(){
    const date=new Date(today.getTime()-(6-index)*dayMs);
    const next=new Date(date.getTime()+dayMs);
    const value=leads.filter(lead=>{const created=Date.parse(lead.createdAt);return created>=date.getTime()&&created<next.getTime()}).length;
-   return {date,value,label:date.toLocaleDateString('ru-RU',{weekday:'short'}).replace('.','')};
+   return {date,value,day:date.toLocaleDateString('ru-RU',{weekday:'short'}).replace('.',''),dateLabel:date.toLocaleDateString('ru-RU',{day:'2-digit',month:'short'}).replace('.','')};
  });
  const maxDay=Math.max(1,...activityDays.map(day=>day.value));
  const chartPoints=activityDays.map((day,index)=>{
@@ -34,7 +33,7 @@ export function OverviewPage(){
   <section className="commandHero">
    <article className="pulseChartCard">
     <div className="pulseChartTop">
-     <div><span className="kicker">ПУЛЬС ПРОДАЖ</span><h2>Динамика новых обращений</h2><p>Последние семь дней по данным PULSE.DV</p></div>
+     <div><span className="kicker">ПУЛЬС ПРОДАЖ</span><h2>Динамика новых обращений</h2><p>Количество новых заявок по дням за последние семь дней.</p></div>
      <span className="periodBadge">7 дней</span>
     </div>
     <div className="pulseChartSummary"><strong>{weekLeads}</strong><span>новых обращений за период</span><small>{counts.activeLeads} клиентов сейчас в работе</small></div>
@@ -47,9 +46,9 @@ export function OverviewPage(){
       {[55,91,127,163].map(y=><line key={y} x1="28" x2="570" y1={y} y2={y} className="chartGridLine"/>)}
       <path d={chartArea} fill="url(#pulseArea)"/>
       <path d={chartLine} fill="none" stroke="url(#pulseLine)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-      {chartPoints.map(point=><g key={point.date.toISOString()}><circle cx={point.x} cy={point.y} r="6" className="chartPointHalo"/><circle cx={point.x} cy={point.y} r="3.3" className="chartPoint"/></g>)}
+      {chartPoints.map(point=><g key={point.date.toISOString()}><circle cx={point.x} cy={point.y} r="7" className="chartPointHalo"/><circle cx={point.x} cy={point.y} r="3.5" className="chartPoint"/><text x={point.x} y={Math.max(18,point.y-13)} textAnchor="middle" className="chartValue">{point.value}</text></g>)}
      </svg>
-     <div className="pulseChartLabels">{chartPoints.map(point=><span key={point.date.toISOString()}><b>{point.value}</b><small>{point.label}</small></span>)}</div>
+     <div className="pulseChartLabels">{chartPoints.map(point=><span key={point.date.toISOString()}><b>{point.day}</b><small>{point.dateLabel}</small></span>)}</div>
     </div>
    </article>
    <div className="focusStack">
