@@ -333,6 +333,114 @@ test('Клиент: конкретная планировка, переход п
  await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:/Уведомления, новых/}).click();await expect(page.getByRole('link',{name:/Сообщение от менеджера/})).toBeVisible();
 });
 
+
+
+test('Control nested journey: unified dark UI and all tabs work',async({page})=>{
+ await page.setViewportSize({width:390,height:900});
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/pulsedv/mini-app/');
+ const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
+ await page.goto('/pulsedv/mini-app/#/property/primorskiy');
+ await page.getByRole('button',{name:'Узнать наличие',exact:true}).click();
+ await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Аудит Control Journey');
+ await page.getByRole('textbox',{name:'Телефон',exact:true}).fill('+79990000471');
+ await page.getByRole('checkbox',{name:/Я даю согласие/}).check();
+ await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Обращение создано'})).toBeVisible();
+
+ await page.goto('/pulsedv/control-center/#/leads');
+ await page.locator('.leadRowButton').filter({hasText:'Аудит Control Journey'}).click();
+ const drawer=page.getByRole('dialog',{name:'Карточка клиента'});
+ await expect(drawer).toBeVisible();
+ await expect(drawer.locator('.controlJourney')).toBeVisible();
+ await expect(drawer.locator('.leadEditorActions')).toBeVisible();
+
+ const colors=await drawer.evaluate(node=>{
+  const pick=(selector:string)=>{
+   const el=node.querySelector(selector) as HTMLElement|null;
+   if(!el)return '';
+   return getComputedStyle(el).backgroundColor;
+  };
+  return {save:pick('.leadEditorActions'),tabs:pick('.controlJourneyTabs')};
+ });
+ expect(colors.save).not.toMatch(/rgb\(25[0-5], 25[0-5], 25[0-5]\)/);
+ expect(colors.tabs).not.toMatch(/rgb\(25[0-5], 25[0-5], 25[0-5]\)/);
+
+ await drawer.getByRole('tab',{name:/Подборки/}).click();
+ await expect(drawer.getByText('Подборок пока нет',{exact:true})).toBeVisible();
+ await drawer.getByText('Создать подборку',{exact:true}).click();
+ await expect(drawer.getByText('Название',{exact:true})).toBeVisible();
+
+ await drawer.getByRole('tab',{name:/Показы/}).click();
+ await expect(drawer.getByRole('heading',{name:'Показы',exact:true})).toBeVisible();
+ await drawer.getByText('Запросить время показа',{exact:true}).click();
+ await expect(drawer.getByLabel('ЖК',{exact:true})).toBeVisible();
+ await expect(drawer.getByLabel('Дата и время (Владивосток)',{exact:true})).toBeVisible();
+
+ await drawer.getByRole('tab',{name:'Переписка',exact:true}).click();
+ await expect(drawer.getByRole('log',{name:'Переписка по обращению'})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+ await page.screenshot({path:'test-results/control-lead-journey-390.png',fullPage:true,animations:'disabled'});
+ expect(errors).toEqual([]);
+});
+
+test('Control interaction audit: safe controls on every workspace page',async({page})=>{
+ await page.setViewportSize({width:390,height:900});
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ const noOverflow=async()=>expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+
+ await page.goto('/pulsedv/control-center/#/');
+ await page.getByRole('link',{name:/Открыть клиентов/}).click();
+ await expect(page.getByRole('heading',{name:'Лиды',level:1})).toBeVisible();await noOverflow();
+
+ await page.getByRole('button',{name:'Доска',exact:true}).click();await expect(page.locator('.leadBoard')).toBeVisible();
+ await page.getByRole('button',{name:'Таблица',exact:true}).click();
+ await page.getByRole('button',{name:'Все',exact:true}).click();
+ await page.getByLabel('Поиск клиента').fill('нет такого клиента');await expect(page.getByText('Заявок не найдено')).toBeVisible();await noOverflow();
+
+ await page.goto('/pulsedv/control-center/#/users');
+ await page.getByRole('button',{name:'Горячий интерес',exact:true}).click();
+ await page.getByRole('button',{name:'Все посетители',exact:true}).click();
+ await page.getByLabel('Поиск посетителя').fill('нет такого посетителя');await expect(page.getByText('Посетители не найдены')).toBeVisible();await noOverflow();
+
+ await page.goto('/pulsedv/control-center/#/journey');
+ await page.getByRole('button',{name:'Обновить',exact:true}).click();
+ await page.locator('.journeyToolbar input[type="date"]').fill('2026-10-01');
+ await expect(page.getByRole('button',{name:'Все даты',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Все даты',exact:true}).click();await noOverflow();
+
+ await page.goto('/pulsedv/control-center/#/tasks');
+ await page.getByRole('button',{name:/Просроченные/}).click();
+ await page.getByRole('button',{name:/Все задачи/}).click();
+ await page.getByLabel('Поиск задачи').fill('нет такой задачи');await noOverflow();
+
+ await page.goto('/pulsedv/control-center/#/objects');
+ await page.getByRole('button',{name:'Черновики',exact:true}).click();
+ await page.getByRole('button',{name:'Все',exact:true}).click();
+ const objectCard=page.locator('.catalogObjectCard').first();await expect(objectCard).toBeVisible();await objectCard.click();
+ await expect(page.getByRole('dialog',{name:'Редактор объекта'})).toBeVisible();
+ await page.getByRole('button',{name:'Закрыть редактор'}).click();await noOverflow();
+
+ await page.goto('/pulsedv/control-center/#/mortgage');
+ const mortgage=page.locator('.mortgageProgram').first();
+ const rate=mortgage.getByLabel(/ставка, %/i);const currentRate=await rate.inputValue();await rate.fill(currentRate);await rate.blur();await noOverflow();
+
+ await page.goto('/pulsedv/control-center/#/select');
+ const smart=page.getByRole('checkbox',{name:'Умная строка запроса'});const smartWas=await smart.isChecked();await smart.click();expect(await smart.isChecked()).toBe(!smartWas);await smart.click();expect(await smart.isChecked()).toBe(smartWas);await noOverflow();
+
+ await page.goto('/pulsedv/control-center/#/content');
+ const bannerToggle=page.getByRole('checkbox',{name:/Показывать /}).first();const bannerWas=await bannerToggle.isChecked();await bannerToggle.click();expect(await bannerToggle.isChecked()).toBe(!bannerWas);await bannerToggle.click();expect(await bannerToggle.isChecked()).toBe(bannerWas);await noOverflow();
+
+ await page.goto('/pulsedv/control-center/#/analytics');
+ await page.getByLabel('Поиск действий').fill('несуществующее действие');await expect(page.getByText('По этим условиям действий нет')).toBeVisible();
+ const category=page.locator('.filterChips button').first();await category.click();await noOverflow();
+
+ await page.goto('/pulsedv/control-center/#/settings');
+ const threshold=page.locator('.thresholdGrid input').first();const thresholdValue=await threshold.inputValue();await threshold.fill(thresholdValue);await threshold.blur();await noOverflow();
+
+ expect(errors).toEqual([]);
+});
+
 test('Клиент: понятные уведомления, пустые обращения и скрываемое продолжение',async({page})=>{
  await page.setViewportSize({width:390,height:844});
  await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:'Пропустить онбординг'}).click();

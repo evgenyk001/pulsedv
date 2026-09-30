@@ -1,3 +1,208 @@
-.controlJourney{margin:22px 0;border:1px solid #e4e8ef;border-radius:28px;background:linear-gradient(180deg,#fbfcfe 0%,#f5f7fa 100%);box-shadow:0 18px 50px rgba(31,43,62,.07);overflow:clip;color:#172131}.controlJourneyHeader{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 20px 16px}.controlJourneyHeader>div{min-width:0}.controlJourneyHeader span{font-size:10px;letter-spacing:.14em;font-weight:750;color:#7b8492}.controlJourneyHeader h2{margin:6px 0 4px;font-size:22px;line-height:1.15;letter-spacing:-.035em}.controlJourneyHeader small{font-size:11px;color:#7b8492}.controlJourneyIcon{display:grid;place-items:center;width:42px;height:42px;border:1px solid #e3e6ec;border-radius:50%;background:#fff;color:#202b3b;box-shadow:0 7px 20px rgba(31,43,62,.08);cursor:pointer}.controlJourneyTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:0 14px;padding:4px;border:1px solid #e4e7ed;border-radius:19px;background:#eceff3}.controlJourneyTabs button{min-width:0;min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid transparent;border-radius:15px;background:transparent;color:#7b8492;font:inherit;font-size:12px;font-weight:680;cursor:pointer}.controlJourneyTabs button[aria-selected=true]{background:#fff;color:#172131;border-color:#e5e8ee;box-shadow:0 5px 16px rgba(31,43,62,.08)}.controlJourneyTabs button>span{font-size:9px;color:#e5233f;background:#fff0f2;border-radius:20px;padding:2px 5px}.controlJourneyError{margin:12px 16px 0;padding:10px 12px;border-radius:14px;background:#fff0f2;color:#b62439;font-size:12px}.controlJourneyChat{padding:14px;display:grid;gap:10px}.controlChatCaption{font-size:10px;font-weight:750;letter-spacing:.08em;color:#89919e;padding:0 4px}.controlJourneyLog{height:min(430px,48dvh);min-height:260px;overflow:auto;display:flex;flex-direction:column;gap:8px;padding:12px 5px;scrollbar-width:thin}.controlMessage{max-width:80%;padding:11px 13px 7px;border-radius:19px;border:1px solid #e6e9ee;box-shadow:0 3px 10px rgba(31,43,62,.035)}.controlMessageIncoming{align-self:flex-start;background:#fff;border-bottom-left-radius:6px}.controlMessageOutgoing{align-self:flex-end;background:#fff0f2;border-color:#f4d8de;border-bottom-right-radius:6px}.controlMessage>strong{display:block;margin-bottom:5px;font-size:10px;color:#e5233f}.controlMessage p{margin:0;font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}.controlMessage footer{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:6px;color:#89919e;font-size:9px}.controlMessageOutgoing footer svg{color:#e5233f}.controlRead{filter:saturate(1.15)}.controlMessageImage{display:block;margin:-5px -7px 8px}.controlMessageImage img{display:block;max-width:260px;width:100%;max-height:280px;object-fit:cover;border-radius:14px}.controlFile{display:flex;align-items:center;gap:9px;padding:10px;margin:-3px -5px 7px;border-radius:13px;background:rgba(255,255,255,.75);border:1px solid #e5e8ed;color:#172131;text-decoration:none}.controlFile>svg{color:#e5233f}.controlFile span{min-width:0;display:grid;gap:2px}.controlFile b{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.controlFile small{font-size:9px;color:#89919e}.controlComposer{position:relative;display:flex;align-items:flex-end;flex-wrap:wrap;gap:7px;padding:7px;border:1px solid #e3e6ec;border-radius:25px;background:#fff;box-shadow:0 8px 24px rgba(31,43,62,.07)}.controlComposer textarea{flex:1;min-width:0;min-height:38px;max-height:110px;resize:none;border:0;outline:0;padding:8px 4px;background:transparent;color:#172131;font:inherit;font-size:14px}.controlAttachButton,.controlSendButton{width:39px;height:39px;display:grid;place-items:center;flex-shrink:0;border:0;border-radius:50%;cursor:pointer}.controlAttachButton{background:#eef1f5;color:#697384}.controlSendButton{background:#ef304a;color:#fff}.controlAttachMenu{position:absolute;left:6px;bottom:55px;z-index:5;min-width:160px;display:grid;gap:4px;padding:7px;border:1px solid #e3e6ec;border-radius:17px;background:#fff;box-shadow:0 16px 40px rgba(31,43,62,.15)}.controlAttachMenu button{display:flex;align-items:center;gap:9px;min-height:40px;padding:8px 10px;border:0;border-radius:12px;background:transparent;color:#172131;font:inherit;font-size:12px;cursor:pointer}.controlAttachMenu svg{color:#e5233f}.controlPending{order:-1;width:100%;display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:15px;background:#f1f3f6}.controlPending>img{width:42px;height:42px;object-fit:cover;border-radius:11px}.controlPending>svg{color:#e5233f}.controlPending span{flex:1;min-width:0;display:grid;gap:2px}.controlPending b{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.controlPending small{font-size:8px;color:#89919e}.controlPending>button{width:29px;height:29px;border:0;border-radius:50%;background:#fff;color:#747e8c;display:grid;place-items:center;cursor:pointer}.controlJourneyPane{padding:16px}.controlPaneTitle{display:flex;align-items:center;gap:9px;margin:2px 2px 13px}.controlPaneTitle>svg{color:#e5233f}.controlPaneTitle h3{margin:0;font-size:18px;letter-spacing:-.025em}.controlPaneTitle small{font-size:10px;color:#89919e}.controlCollection,.controlShowing,.controlCreate,.controlNext{margin:0 0 12px;padding:16px;border:1px solid #e4e7ed;border-radius:21px;background:#fff;box-shadow:0 7px 22px rgba(31,43,62,.045)}.controlCollection>header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}.controlCollection>header span{font-size:9px;letter-spacing:.1em;color:#e5233f;font-weight:750}.controlCollection h3,.controlShowing h3{margin:5px 0 0;font-size:16px;letter-spacing:-.02em}.controlCollection>header>small{font-size:9px;padding:5px 8px;border-radius:20px;background:#f1f3f6;color:#747e8c}.controlPropertyRow{padding:12px 0;border-top:1px solid #edf0f3}.controlPropertyRow>a{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#172131;text-decoration:none}.controlPropertyRow>a>span{min-width:0;display:grid;gap:4px}.controlPropertyRow>a b{font-size:13px}.controlPropertyRow>a small{font-size:9px;color:#89919e;font-weight:550;line-height:1.45}.controlPropertyRow p{margin:6px 0;font-size:12px;line-height:1.5;color:#6e7887}.controlPropertyRow small{font-size:10px;color:#89919e}.controlPrimary,.controlSecondary{min-height:42px;padding:10px 15px;border-radius:18px;font:inherit;font-size:12px;font-weight:700;cursor:pointer}.controlPrimary{border:0;background:#ef304a;color:#fff}.controlSecondary{border:1px solid #e1e5ea;background:#f7f8fa;color:#283343}.controlCollection>.controlSecondary{width:100%;margin-top:9px}.controlCreate summary{cursor:pointer;font-size:13px;font-weight:700;color:#172131}.controlForm{display:grid;gap:11px;margin-top:14px}.controlForm label,.controlShowing label{display:grid;gap:6px;color:#697384;font-size:11px}.controlForm input:not([type=checkbox]),.controlForm textarea,.controlForm select,.controlShowing textarea{box-sizing:border-box;width:100%;min-width:0;padding:11px 12px;border:1px solid #dfe3e9;border-radius:13px;background:#fafbfd;color:#172131;font:inherit;font-size:13px}.controlPicker{max-height:300px;overflow:auto;display:grid;gap:7px}.controlPicker>div{padding:9px;border-radius:13px;background:#f6f7f9}.controlPicker label{display:flex;align-items:center;gap:8px;margin:0;color:#273243}.controlPicker input[aria-label]{margin-top:8px}.controlShowing>.controlStatus,.controlStatus{display:inline-flex;padding:5px 8px;border-radius:20px;background:#f1f3f6;color:#687384;font-size:9px;font-weight:700}.controlShowing>b{display:block;margin:8px 0;font-size:12px}.controlShowing p{font-size:12px;line-height:1.55;color:#6e7887}.controlShowing .journeyActions{display:flex;gap:7px;flex-wrap:wrap}.controlShowing .journeyActions button{min-height:38px;border:1px solid #e1e4e9;border-radius:15px;background:#f7f8fa;color:#283343;font:inherit;font-size:11px;padding:8px 11px;cursor:pointer}.controlNext>p{display:grid;gap:9px;font-size:12px}.controlJourneyEmpty,.controlJourneyLoading{display:grid;place-items:center;gap:8px;padding:32px 18px;text-align:center;color:#89919e;font-size:12px}.controlJourneyEmpty svg{color:#e5233f}.controlJourneyEmpty b{color:#172131;font-size:14px}.controlSrOnly{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}.controlJourney button:disabled{opacity:.5;cursor:default}.controlJourney button:focus-visible,.controlJourney summary:focus-visible,.controlJourney input:focus-visible,.controlJourney textarea:focus-visible,.controlJourney select:focus-visible,.controlJourney a:focus-visible{outline:2px solid #ef304a;outline-offset:3px}@media(max-width:760px){.controlJourney{border-radius:22px}.controlJourneyHeader{padding:16px}.controlJourneyTabs{margin:0 10px}.controlJourneyTabs button{font-size:10px;gap:4px}.controlMessage{max-width:88%}.controlJourneyPane,.controlJourneyChat{padding:12px}.controlJourneyLog{height:360px}}.controlFieldError{color:#bd2438!important;font-size:10px!important;line-height:1.4}.controlFieldHint{display:block;margin-top:8px;color:#89919e;font-size:10px;line-height:1.45}
-.controlForm input[type="datetime-local"]{max-width:100%;min-width:0;box-sizing:border-box}
-.journeyFieldError{display:block;margin-top:6px;color:#bd2438;font-size:10px;line-height:1.4}
+.controlJourney{
+  --cj-surface:rgba(255,255,255,.065);
+  --cj-surface-raised:rgba(255,255,255,.095);
+  --cj-surface-soft:rgba(255,255,255,.045);
+  --cj-line:rgba(255,255,255,.105);
+  --cj-line-strong:rgba(255,255,255,.16);
+  --cj-text:#f4f5f6;
+  --cj-muted:#9aa0a8;
+  --cj-dim:#737a83;
+  --cj-red:#ff4352;
+  margin:22px 0;
+  border:1px solid var(--cj-line);
+  border-radius:22px;
+  background:
+    radial-gradient(circle at 92% -10%,rgba(255,67,82,.07),transparent 32%),
+    linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.04));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+  overflow:clip;
+  color:var(--cj-text);
+  min-width:0;
+}
+.controlJourneyHeader{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:18px 18px 14px;
+  border-bottom:1px solid rgba(255,255,255,.055);
+}
+.controlJourneyHeader>div{min-width:0}
+.controlJourneyHeader span{font-size:9px;letter-spacing:.14em;font-weight:780;color:#858b93}
+.controlJourneyHeader h2{margin:5px 0 4px;font-size:20px;line-height:1.15;letter-spacing:-.035em;color:#f7f8f9}
+.controlJourneyHeader small{font-size:10px;color:#858b93}
+.controlJourneyIcon{
+  display:grid;place-items:center;width:38px;height:38px;flex:none;
+  border:1px solid var(--cj-line);border-radius:12px;
+  background:rgba(255,255,255,.07);color:#d7dade;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);cursor:pointer;
+}
+.controlJourneyIcon:hover{background:rgba(255,255,255,.11);border-color:var(--cj-line-strong)}
+.controlJourneyTabs{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:4px;
+  margin:12px 14px 0;padding:4px;
+  border:1px solid rgba(255,255,255,.07);border-radius:14px;
+  background:rgba(0,0,0,.17);
+}
+.controlJourneyTabs button{
+  min-width:0;min-height:39px;display:flex;align-items:center;justify-content:center;gap:6px;
+  border:1px solid transparent;border-radius:10px;background:transparent;
+  color:#7f868f;font:inherit;font-size:10px;font-weight:690;cursor:pointer;
+}
+.controlJourneyTabs button:hover{color:#c9cdd2;background:rgba(255,255,255,.04)}
+.controlJourneyTabs button[aria-selected=true]{
+  background:rgba(255,255,255,.105);color:#f4f5f6;border-color:rgba(255,255,255,.075);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.035);
+}
+.controlJourneyTabs button[aria-selected=true] svg{color:var(--cj-red)}
+.controlJourneyTabs button>span{
+  font-size:8px;color:#ff727e;background:rgba(255,67,82,.11);
+  border:1px solid rgba(255,67,82,.11);border-radius:999px;padding:2px 5px;
+}
+.controlJourneyError{
+  margin:12px 14px 0;padding:10px 12px;border-radius:12px;
+  border:1px solid rgba(255,67,82,.16);background:rgba(255,67,82,.08);
+  color:#ff939c;font-size:11px;
+}
+.controlJourneyChat{padding:14px;display:grid;gap:10px}
+.controlChatCaption{font-size:9px;font-weight:760;letter-spacing:.1em;color:#787f88;padding:0 3px;text-transform:uppercase}
+.controlJourneyLog{
+  height:min(410px,46dvh);min-height:250px;overflow:auto;display:flex;flex-direction:column;gap:8px;
+  padding:12px;border:1px solid rgba(255,255,255,.06);border-radius:16px;
+  background:rgba(0,0,0,.13);scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent;
+}
+.controlMessage{
+  max-width:82%;padding:10px 12px 7px;border-radius:16px;
+  border:1px solid rgba(255,255,255,.075);box-shadow:none;color:#edf0f2;
+}
+.controlMessageIncoming{align-self:flex-start;background:rgba(255,255,255,.075);border-bottom-left-radius:5px}
+.controlMessageOutgoing{
+  align-self:flex-end;background:linear-gradient(145deg,rgba(255,67,82,.17),rgba(255,67,82,.095));
+  border-color:rgba(255,82,96,.16);border-bottom-right-radius:5px;
+}
+.controlMessage>strong{display:block;margin-bottom:5px;font-size:9px;color:#ff7b86}
+.controlMessage p{margin:0;font-size:12px;line-height:1.52;white-space:pre-wrap;overflow-wrap:anywhere;color:#eef0f2}
+.controlMessage footer{display:flex;align-items:center;justify-content:flex-end;gap:4px;margin-top:6px;color:#777e87;font-size:8.5px}
+.controlMessageOutgoing footer svg{color:#ff6975}.controlRead{filter:saturate(1.15)}
+.controlMessageImage{display:block;margin:-4px -6px 8px}
+.controlMessageImage img{display:block;max-width:260px;width:100%;max-height:280px;object-fit:cover;border-radius:12px}
+.controlFile{
+  display:flex;align-items:center;gap:9px;padding:9px;margin:-2px -4px 7px;border-radius:12px;
+  background:rgba(0,0,0,.16);border:1px solid rgba(255,255,255,.075);color:#e9ecef;text-decoration:none;
+}
+.controlFile>svg{color:var(--cj-red)}.controlFile span{min-width:0;display:grid;gap:2px}
+.controlFile b{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.controlFile small{font-size:8px;color:#7f868f}
+.controlComposer{
+  position:relative;display:flex;align-items:flex-end;flex-wrap:wrap;gap:7px;padding:7px;
+  border:1px solid var(--cj-line);border-radius:16px;background:rgba(0,0,0,.17);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.02);
+}
+.controlComposer textarea{
+  flex:1;min-width:0;min-height:38px;max-height:110px;resize:none;border:0;outline:0;
+  padding:8px 4px;background:transparent;color:#f2f4f5;font:inherit;font-size:12px;
+}
+.controlComposer textarea::placeholder{color:#686f78}
+.controlAttachButton,.controlSendButton{
+  width:38px;height:38px;display:grid;place-items:center;flex-shrink:0;border:1px solid transparent;border-radius:11px;cursor:pointer;
+}
+.controlAttachButton{background:rgba(255,255,255,.065);border-color:rgba(255,255,255,.07);color:#9aa1aa}
+.controlAttachButton:hover{background:rgba(255,255,255,.1);color:#d7dade}
+.controlSendButton{background:#ff3344;color:#fff;box-shadow:0 8px 20px rgba(255,51,68,.15)}
+.controlAttachMenu{
+  position:absolute;left:6px;bottom:53px;z-index:5;min-width:160px;display:grid;gap:4px;padding:7px;
+  border:1px solid var(--cj-line);border-radius:14px;background:#25292f;
+  box-shadow:0 18px 45px rgba(0,0,0,.34);
+}
+.controlAttachMenu button{
+  display:flex;align-items:center;gap:9px;min-height:38px;padding:8px 10px;border:0;border-radius:10px;
+  background:transparent;color:#dce0e4;font:inherit;font-size:11px;cursor:pointer;
+}
+.controlAttachMenu button:hover{background:rgba(255,255,255,.065)}
+.controlAttachMenu svg{color:var(--cj-red)}
+.controlPending{
+  order:-1;width:100%;display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:12px;
+  background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.06);
+}
+.controlPending>img{width:42px;height:42px;object-fit:cover;border-radius:9px}.controlPending>svg{color:var(--cj-red)}
+.controlPending span{flex:1;min-width:0;display:grid;gap:2px}.controlPending b{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.controlPending small{font-size:8px;color:#7f868f}
+.controlPending>button{width:29px;height:29px;border:1px solid rgba(255,255,255,.07);border-radius:9px;background:rgba(255,255,255,.05);color:#9ca3ab;display:grid;place-items:center;cursor:pointer}
+
+.controlJourneyPane{padding:14px}
+.controlPaneTitle{display:flex;align-items:center;gap:9px;margin:2px 2px 12px}
+.controlPaneTitle>svg{color:var(--cj-red)}.controlPaneTitle h3{margin:0;font-size:15px;letter-spacing:-.02em;color:#f0f2f4}
+.controlPaneTitle small{font-size:9px;color:#7f868f}
+.controlCollection,.controlShowing,.controlCreate,.controlNext{
+  margin:0 0 10px;padding:14px;border:1px solid var(--cj-line);border-radius:15px;
+  background:rgba(255,255,255,.055);box-shadow:inset 0 1px 0 rgba(255,255,255,.02);color:#e9ebed;
+}
+.controlCollection>header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px}
+.controlCollection>header span{font-size:8px;letter-spacing:.11em;color:#ff6875;font-weight:760}
+.controlCollection h3,.controlShowing h3{margin:5px 0 0;font-size:14px;letter-spacing:-.02em;color:#eef0f2}
+.controlCollection>header>small{
+  font-size:8px;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.06);color:#858c95;border:1px solid rgba(255,255,255,.06)
+}
+.controlPropertyRow{padding:11px 0;border-top:1px solid rgba(255,255,255,.065)}
+.controlPropertyRow>a{display:flex;align-items:center;justify-content:space-between;gap:8px;color:#eef0f2;text-decoration:none}
+.controlPropertyRow>a>span{min-width:0;display:grid;gap:4px}.controlPropertyRow>a b{font-size:11.5px}
+.controlPropertyRow>a small{font-size:8.5px;color:#858c95;font-weight:550;line-height:1.45}
+.controlPropertyRow p{margin:6px 0;font-size:10.5px;line-height:1.5;color:#a0a6ad}.controlPropertyRow small{font-size:9px;color:#858c95}
+.controlPrimary,.controlSecondary{
+  min-height:39px;padding:9px 13px;border-radius:11px;font:inherit;font-size:10.5px;font-weight:720;cursor:pointer
+}
+.controlPrimary{border:1px solid rgba(255,80,95,.18);background:#ff3344;color:#fff;box-shadow:0 8px 20px rgba(255,51,68,.12)}
+.controlSecondary{border:1px solid var(--cj-line);background:rgba(255,255,255,.055);color:#d7dade}
+.controlSecondary:hover{background:rgba(255,255,255,.09)}
+.controlCollection>.controlSecondary{width:100%;margin-top:9px}
+.controlCreate summary{cursor:pointer;font-size:11px;font-weight:720;color:#e3e6e9;list-style:none}
+.controlCreate summary::-webkit-details-marker{display:none}
+.controlCreate summary:after{content:"+";float:right;color:#7f868f;font-size:16px;line-height:.8}
+.controlCreate[open] summary:after{content:"−"}
+.controlForm{display:grid;gap:10px;margin-top:13px}
+.controlForm label,.controlShowing label{display:grid;gap:6px;color:#979da5;font-size:9.5px}
+.controlForm input:not([type=checkbox]),.controlForm textarea,.controlForm select,.controlShowing textarea{
+  box-sizing:border-box;width:100%;min-width:0;padding:10px 11px;
+  border:1px solid var(--cj-line);border-radius:10px;background:rgba(0,0,0,.18);color:#f0f2f4;font:inherit;font-size:11px;outline:none
+}
+.controlForm input:focus,.controlForm textarea:focus,.controlForm select:focus,.controlShowing textarea:focus{
+  border-color:rgba(255,88,102,.42);box-shadow:0 0 0 3px rgba(255,67,82,.07)
+}
+.controlPicker{max-height:300px;overflow:auto;display:grid;gap:7px}
+.controlPicker>div{padding:9px;border-radius:11px;background:rgba(0,0,0,.13);border:1px solid rgba(255,255,255,.05)}
+.controlPicker label{display:flex;align-items:center;gap:8px;margin:0;color:#cfd3d7}.controlPicker input[aria-label]{margin-top:8px}
+.controlShowing>.controlStatus,.controlStatus{
+  display:inline-flex;padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.06);color:#979ea6;font-size:8px;font-weight:720
+}
+.controlShowing>b{display:block;margin:8px 0;font-size:10.5px;color:#dfe2e5}
+.controlShowing p{font-size:10.5px;line-height:1.55;color:#9aa0a8}
+.controlJourney .journeyActions{display:flex;gap:7px;flex-wrap:wrap}
+.controlJourney .journeyActions button{
+  min-height:36px;border:1px solid var(--cj-line);border-radius:10px;background:rgba(255,255,255,.055);
+  color:#d7dade;font:inherit;font-size:10px;padding:8px 10px;cursor:pointer
+}
+.controlJourney .journeyActions button:hover{background:rgba(255,255,255,.09)}
+.controlNext>p{display:grid;gap:9px;font-size:10.5px;color:#b9bec4}
+
+.controlJourneyEmpty,.controlJourneyLoading{
+  display:grid;place-items:center;gap:8px;padding:30px 18px;text-align:center;color:#777f88;font-size:10.5px
+}
+.controlJourneyEmpty svg{color:#ff5260}.controlJourneyEmpty b{color:#dfe2e5;font-size:12px}.controlJourneyEmpty span{max-width:360px;line-height:1.5}
+.controlSrOnly{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.controlJourney button:disabled{opacity:.45;cursor:default}
+.controlJourney button:focus-visible,.controlJourney summary:focus-visible,.controlJourney input:focus-visible,.controlJourney textarea:focus-visible,.controlJourney select:focus-visible,.controlJourney a:focus-visible{
+  outline:2px solid rgba(255,67,82,.75);outline-offset:2px
+}
+.controlFieldError,.journeyFieldError{display:block;margin-top:6px;color:#ff8390!important;font-size:9px!important;line-height:1.4}
+.controlFieldHint{display:block;margin-top:8px;color:#808790;font-size:9px;line-height:1.45}
+.controlForm input[type="datetime-local"]{max-width:100%;min-width:0;box-sizing:border-box;color-scheme:dark}
+
+@media(max-width:760px){
+  .controlJourney{margin:16px 0;border-radius:17px}
+  .controlJourneyHeader{padding:14px}
+  .controlJourneyHeader h2{font-size:18px}
+  .controlJourneyTabs{margin:10px 10px 0;border-radius:12px}
+  .controlJourneyTabs button{font-size:9px;gap:4px;min-height:38px}
+  .controlJourneyTabs button svg{width:15px;height:15px}
+  .controlMessage{max-width:90%}
+  .controlJourneyPane,.controlJourneyChat{padding:10px}
+  .controlJourneyLog{height:340px;min-height:230px;padding:9px;border-radius:13px}
+  .controlCollection,.controlShowing,.controlCreate,.controlNext{padding:12px;border-radius:13px}
+}
