@@ -38,7 +38,7 @@ export function App(){
   const current=useRuntime();
   const overdue=current.counts.overdueTasks;
   const newLeads=current.counts.newLeads;
-  React.useEffect(()=>setMenu(false),[location.pathname]);
+  React.useEffect(()=>{setMenu(false);window.scrollTo({top:0,left:0,behavior:'auto'});},[location.pathname]);
   React.useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close)},[]);
   return <div className={"control"+(menu?" menuOpen":"")}>
     {menu&&<button className="menuScrim" aria-label="Закрыть меню" onClick={()=>setMenu(false)}/>}

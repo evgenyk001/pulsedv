@@ -348,3 +348,370 @@ main{padding:0 28px 36px}.workspaceBar{min-height:70px;display:flex;align-items:
 .journeyVerificationList{display:flex;flex-direction:column;gap:8px}.journeyVerification{margin:0!important;border:1px solid #e5eaf1;border-radius:12px;background:#fff;overflow:hidden}.journeyVerification summary{display:grid!important;grid-template-columns:auto 1fr auto;align-items:center;gap:11px;padding:12px 13px!important;border:0!important;border-radius:0!important;background:#fff!important;list-style:none}.journeyVerification summary::-webkit-details-marker{display:none}.journeyVerification summary>div{display:grid;gap:3px;min-width:0}.journeyVerification summary b{font-size:11px}.journeyVerification summary small{font-size:9px;color:#8996a9;line-height:1.45;overflow-wrap:anywhere}.journeyVerificationBody{display:flex;align-items:flex-end;gap:10px;padding:0 13px 13px;border-top:1px solid #edf0f5;background:#fbfcfe}.journeyVerificationBody .controlField{flex:1}.journeyVerificationBody .secondaryAction{flex:none}
 @media(max-width:980px){.journeySummaryGrid{grid-template-columns:1fr}.journeyQueueColumns{grid-template-columns:1fr}}
 @media(max-width:760px){.journeyWorkspace{padding:16px}.journeySummaryGrid article{min-height:auto;padding:15px}.journeyToolbar{align-items:stretch;flex-direction:column}.journeyToolbar label{min-width:0}.journeyToolbar .secondaryAction{width:100%}.journeyShowingRow{grid-template-columns:auto 1fr}.journeyShowingRow>.statusChip{grid-column:2}.journeyVerification summary{grid-template-columns:auto 1fr}.journeyVerification summary>.statusChip{grid-column:2;width:max-content}.journeyVerificationBody{align-items:stretch;flex-direction:column}.journeyVerificationBody .secondaryAction{width:100%}}
+
+
+/* Premium command center visual system — presentation only, business logic untouched. */
+:root{
+  --control-bg:#e9e7e3;
+  --control-ink:#17191d;
+  --control-muted:#777c84;
+  --control-glass:rgba(255,255,255,.64);
+  --control-glass-strong:rgba(255,255,255,.82);
+  --control-hairline:rgba(255,255,255,.72);
+  --control-shadow:0 18px 46px rgba(47,43,39,.09),0 2px 8px rgba(47,43,39,.035);
+  --control-radius:20px;
+  --card-radius:24px;
+}
+body{background:#e9e7e3;color:var(--control-ink)}
+.control{background:linear-gradient(135deg,#dfddd8 0%,#eeece8 45%,#e5e7e8 100%)}
+.sidebar{
+  margin:12px 0 12px 12px;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:26px;
+  background:linear-gradient(180deg,rgba(39,39,38,.95),rgba(26,27,28,.96));
+  box-shadow:0 24px 64px rgba(28,27,25,.18),inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter:blur(32px) saturate(1.15);
+  -webkit-backdrop-filter:blur(32px) saturate(1.15);
+  overflow:hidden;
+}
+.brand{padding:10px 12px 24px}.brand b{color:#fff;font-size:15px}.brand small{color:#9fa4ab}
+.mark{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.1);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.navCaption{color:#777d85!important;padding-left:13px}
+.sidebar nav{gap:5px}
+.sidebar nav a{height:46px;color:#aeb3ba;border:1px solid transparent;font-size:12px}
+.sidebar nav a:hover{color:#fff;background:rgba(255,255,255,.055)}
+.sidebar nav a.active{color:#fff;background:linear-gradient(135deg,rgba(255,255,255,.14),rgba(255,255,255,.075));border-color:rgba(255,255,255,.085);box-shadow:inset 0 1px 0 rgba(255,255,255,.09),0 12px 28px rgba(0,0,0,.12)}
+.sidebar nav a.active svg{color:#ff4050}.sidebarFoot{color:#8f949b}.sidebarFoot b{color:#e8eaed}.workspaceAvatar{background:rgba(255,255,255,.1)!important;color:#fff!important}
+main{
+  position:relative;
+  padding:24px 30px 40px;
+  background:
+   radial-gradient(circle at 74% 6%,rgba(255,255,255,.78),transparent 27%),
+   radial-gradient(circle at 26% 88%,rgba(194,188,178,.28),transparent 30%),
+   linear-gradient(145deg,#e7e4df,#edf0f1);
+}
+.workspaceBar{
+  min-height:58px;
+  margin:0 auto 24px;
+  padding:9px 12px 9px 18px;
+  max-width:1320px;
+  border:1px solid rgba(255,255,255,.72);
+  border-radius:20px;
+  background:rgba(255,255,255,.52);
+  box-shadow:0 10px 28px rgba(48,43,39,.055),inset 0 1px 0 rgba(255,255,255,.9);
+  backdrop-filter:blur(26px) saturate(1.2);
+  -webkit-backdrop-filter:blur(26px) saturate(1.2);
+}
+.breadcrumb{color:#8b8e93!important}.breadcrumb b{color:#282b30}.workspaceActions a,.notificationsLink{background:rgba(255,255,255,.72)!important;border-color:rgba(255,255,255,.9)!important;box-shadow:0 5px 16px rgba(36,34,32,.05)}
+.page{max-width:1320px;gap:22px}
+.pageHeader{padding:3px 3px 5px;align-items:flex-end}
+.pageHeader>div:first-child>span,.kicker{color:#898b8f;letter-spacing:.14em}
+.pageHeader h1{font-size:34px;line-height:1.02;letter-spacing:-.052em;margin:7px 0 8px;color:#17191d}
+.pageHeader p{font-size:13px;color:#777b82;max-width:690px}
+.primaryAction,.secondaryAction{transition:transform .16s ease,box-shadow .16s ease,background .16s ease}
+.primaryAction:hover,.secondaryAction:hover{transform:translateY(-1px)}
+.primaryAction{background:linear-gradient(135deg,#f20d1d,#e90e1e);box-shadow:0 11px 26px rgba(242,13,29,.2),inset 0 1px 0 rgba(255,255,255,.18)}
+.secondaryAction{background:rgba(255,255,255,.78)!important;border:1px solid rgba(255,255,255,.95)!important;box-shadow:0 8px 20px rgba(40,38,35,.06)}
+.panel,.tableCard,.kanbanCol,.metrics article,.journeySummaryGrid article,.dnaPanel{
+  border:1px solid var(--control-hairline);
+  background:var(--control-glass);
+  box-shadow:var(--control-shadow),inset 0 1px 0 rgba(255,255,255,.92);
+  backdrop-filter:blur(24px) saturate(1.12);
+  -webkit-backdrop-filter:blur(24px) saturate(1.12);
+}
+.panel{padding:24px 25px}.panel h2,.sectionHeading h2{letter-spacing:-.028em;color:#202329}
+.sectionHeading>a,.panelFooterLink{color:#6d7178!important;text-decoration:none;font-weight:650}
+.metrics{gap:12px}.metricLink{text-decoration:none;color:inherit}.metrics article{min-height:138px;padding:18px 19px}
+.metrics article:hover{background:rgba(255,255,255,.78);box-shadow:0 22px 48px rgba(47,43,39,.105),inset 0 1px 0 #fff}
+.metricHeading{display:flex;align-items:center;justify-content:space-between;gap:10px}.metricHeading svg{color:#9a9da2}
+.metrics article strong{display:flex;align-items:center;gap:8px;font-size:31px;letter-spacing:-.045em}.metrics article strong svg{color:#b1b4b8}
+.toolbar,.leadsViewBar{padding:8px;border:1px solid rgba(255,255,255,.72);border-radius:18px;background:rgba(255,255,255,.45);box-shadow:inset 0 1px 0 rgba(255,255,255,.82)}
+.segmented{background:rgba(45,45,45,.075);padding:4px}.segmented button{height:38px}.segmented button.active{background:rgba(255,255,255,.92);box-shadow:0 7px 18px rgba(45,42,39,.08),inset 0 1px 0 #fff}
+.controlSearch{min-height:44px;background:rgba(255,255,255,.72);border-color:rgba(255,255,255,.9);box-shadow:inset 0 1px 0 #fff}
+.tableCard{overflow:hidden}.tableHead{min-height:48px;background:rgba(255,255,255,.34);border-color:rgba(85,82,78,.08);letter-spacing:.035em}
+.tableRow{min-height:64px;background:rgba(255,255,255,.55);border-color:rgba(85,82,78,.075);transition:background .14s ease}.tableRow:hover,.leadRowButton:hover{background:rgba(255,255,255,.88)}
+.statusChip{background:rgba(67,69,73,.07);border:1px solid rgba(80,80,80,.06)}
+.controlField input,.controlField select,.controlField textarea,.inlineEditor input,.inlineEditor select,.cellInput,.cellSelect{
+  border-color:rgba(83,80,76,.1);
+  background:rgba(255,255,255,.64);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.84);
+}
+.controlField input:focus,.controlField select:focus,.controlField textarea:focus,.cellInput:focus,.cellSelect:focus{background:#fff}
+.switchControl,.editorRow,.signalList>div,.rulesTable,.leadRequestContext,.bannerMediaRow,.bannerActionBox,.bannerSchedule{
+  border-color:rgba(83,80,76,.09);
+  background:rgba(255,255,255,.48);
+}
+.objectCard,.leadBoardCard,.taskCard,.bannerCampaignCard,.journeyQueueGroup,.journeyVerification{
+  border-color:rgba(255,255,255,.72)!important;
+  background:rgba(255,255,255,.58)!important;
+  box-shadow:0 14px 34px rgba(47,43,39,.065),inset 0 1px 0 rgba(255,255,255,.9)!important;
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+}
+.objectCard:hover{transform:translateY(-3px);box-shadow:0 22px 44px rgba(47,43,39,.1)}
+.detailDrawer{background:rgba(245,244,242,.97);box-shadow:-22px 0 70px rgba(30,29,27,.2)}
+.drawerHeader button{background:rgba(255,255,255,.7);border-color:rgba(255,255,255,.9)}
+.runtimeBar{background:#1d1f22;border-bottom:1px solid rgba(255,255,255,.06);box-shadow:0 8px 28px rgba(0,0,0,.13)}
+.saveBar{background:rgba(252,247,239,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+
+/* Overview: reference-inspired hero */
+.commandHero{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(270px,.7fr);gap:14px}
+.pulseChartCard,.focusCard{
+  border:1px solid rgba(255,255,255,.11);
+  border-radius:25px;
+  background:linear-gradient(145deg,rgba(35,35,35,.97),rgba(54,51,48,.94));
+  color:#fff;
+  box-shadow:0 25px 58px rgba(38,34,31,.19),inset 0 1px 0 rgba(255,255,255,.08);
+  overflow:hidden;
+}
+.pulseChartCard{position:relative;padding:23px 25px 17px;min-height:375px}
+.pulseChartCard:before{content:"";position:absolute;inset:-80px -80px auto auto;width:260px;height:260px;border-radius:50%;background:radial-gradient(circle,rgba(242,13,29,.16),transparent 68%);pointer-events:none}
+.pulseChartTop,.focusCardHead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;position:relative;z-index:1}
+.pulseChartTop .kicker{color:#999da4}.pulseChartTop h2{font-size:20px;letter-spacing:-.035em;margin:5px 0 5px}.pulseChartTop p{font-size:11px;color:#9ca0a6;margin:0}
+.periodBadge{padding:7px 10px;border:1px solid rgba(255,255,255,.09);border-radius:999px;background:rgba(255,255,255,.07);font-size:9px;color:#d8d9dc}
+.pulseChartSummary{display:flex;align-items:baseline;gap:10px;margin-top:20px;position:relative;z-index:1}.pulseChartSummary strong{font-size:36px;letter-spacing:-.055em}.pulseChartSummary span{font-size:11px;color:#d2d4d7}.pulseChartSummary small{margin-left:auto;color:#8f949b;font-size:9px}
+.pulseChart{margin-top:4px}.pulseChart svg{display:block;width:100%;height:185px;overflow:visible}.chartGridLine{stroke:rgba(255,255,255,.07);stroke-width:1}.chartPointHalo{fill:rgba(242,13,29,.16)}.chartPoint{fill:#ff8a74;stroke:#fff;stroke-width:1.4}
+.pulseChartLabels{display:grid;grid-template-columns:repeat(7,1fr);padding:0 1.5% 0 2%;margin-top:-5px}.pulseChartLabels span{display:grid;justify-items:center;gap:2px}.pulseChartLabels b{font-size:10px;color:#e4e5e7}.pulseChartLabels small{font-size:8px;color:#777c83;text-transform:uppercase}
+.focusStack{display:grid;grid-template-rows:1fr 1fr;gap:14px}.focusCard{padding:19px 20px}.focusCardHead span{font-size:11px;font-weight:720;color:#d8d9dc}.focusCardHead svg{color:#8e9399}
+.conversionBody{display:grid;grid-template-columns:108px 1fr;gap:16px;align-items:center;margin-top:16px}.conversionRing{width:108px;height:108px;border-radius:50%;display:grid;place-items:center;padding:10px;box-shadow:inset 0 0 30px rgba(0,0,0,.15)}.conversionRing>div{width:78px;height:78px;border-radius:50%;background:#30302f;display:grid;place-items:center;align-content:center;box-shadow:0 0 0 1px rgba(255,255,255,.06)}.conversionRing strong{font-size:23px;letter-spacing:-.04em}.conversionRing small{font-size:8px;color:#858a90}.conversionBody>div:last-child{display:grid;gap:4px}.conversionBody>div:last-child b{font-size:24px}.conversionBody>div:last-child span{font-size:10px;color:#c1c4c8}.conversionBody>div:last-child small{font-size:9px;color:#7f848a}
+.focusQueue{display:grid;grid-template-rows:auto repeat(3,1fr)}.focusQueue>a{display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:8px;border-top:1px solid rgba(255,255,255,.07);text-decoration:none;color:#fff}.focusQueue>a:first-of-type{margin-top:10px}.focusQueue>a b{font-size:18px}.focusQueue>a span{font-size:10px;color:#aeb2b7}.focusQueue>a svg{color:#747a80}
+
+/* Across every Control page */
+.panelTitle h2,.bannerManagerHead h2,.journeyWorkspace h2{letter-spacing:-.03em}
+.countBadge,.campaignStatus,.campaignType,.scoreBadge{box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.leadBoard{gap:12px}.kanbanCol{border-radius:20px}.leadBoardCard{border-radius:17px!important}
+.rulesHead{background:rgba(255,255,255,.4)}.rulesRow{background:rgba(255,255,255,.56);border-color:rgba(80,76,72,.08)}
+.bannerCampaignCard{border-radius:20px!important}.bannerPreview{box-shadow:0 18px 42px rgba(31,29,27,.15)}
+.journeyWorkspace{border-radius:24px}.journeySummaryGrid article{border-radius:20px}.journeyQueueGroup{border-radius:17px}
+.dnaPanel{border-radius:22px}.dnaBrief{background:rgba(255,255,255,.45);border-color:rgba(255,255,255,.68)}
+.loginPage{background:radial-gradient(circle at 75% 18%,rgba(255,255,255,.95),transparent 28%),linear-gradient(145deg,#dfdcd7,#eef0f2)}.loginCard{background:rgba(255,255,255,.72);border-color:rgba(255,255,255,.85);backdrop-filter:blur(28px);box-shadow:0 28px 80px rgba(38,34,31,.14)}
+
+@media(max-width:1100px){
+  .commandHero{grid-template-columns:1fr}.focusStack{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none}
+}
+@media(max-width:760px){
+  main{padding:16px 12px 30px}.sidebar{margin:0;border-radius:0}.workspaceBar{margin-bottom:18px;border-radius:16px}.page{gap:16px}.pageHeader{align-items:flex-start}.pageHeader h1{font-size:29px}
+  .commandHero{gap:10px}.pulseChartCard{padding:18px 16px 14px;min-height:340px;border-radius:20px}.pulseChartSummary{flex-wrap:wrap}.pulseChartSummary small{width:100%;margin-left:0}.pulseChart svg{height:170px}.focusStack{grid-template-columns:1fr}.focusCard{border-radius:20px}.panel{padding:18px}
+  .toolbar,.leadsViewBar{padding:6px}.metrics article{min-height:118px}.conversionBody{grid-template-columns:96px 1fr}.conversionRing{width:96px;height:96px}.conversionRing>div{width:68px;height:68px}
+}
+
+
+/* Premium Control — second pass after screenshot review */
+.catalogOverview{gap:12px}
+.catalogOverview>article{
+  border:1px solid rgba(255,255,255,.82)!important;
+  background:rgba(255,255,255,.68)!important;
+  box-shadow:0 16px 34px rgba(47,43,39,.07),inset 0 1px 0 #fff!important;
+  border-radius:22px!important;
+}
+.catalogImportHub{
+  position:relative;overflow:hidden;
+  border:1px solid rgba(255,255,255,.1)!important;
+  background:linear-gradient(145deg,rgba(33,34,35,.98),rgba(59,54,51,.95))!important;
+  color:#fff;
+  box-shadow:0 24px 58px rgba(38,34,31,.18),inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+.catalogImportHub:after{content:"";position:absolute;width:340px;height:340px;right:-120px;top:-180px;border-radius:50%;background:radial-gradient(circle,rgba(242,13,29,.18),transparent 67%);pointer-events:none}
+.catalogImportHub .kicker{color:#9ea2a8}.catalogImportHub h2{color:#fff!important}.catalogImportHub p,.catalogImportHub small{color:#aeb2b7!important}
+.catalogImportActions{position:relative;z-index:1}
+.catalogImportActions>*{
+  border-color:rgba(255,255,255,.09)!important;
+  background:rgba(255,255,255,.07)!important;
+  color:#fff!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06)!important;
+}
+.catalogImportActions>*:hover{background:rgba(255,255,255,.11)!important}
+.catalogImportActions b{color:#fff!important}.catalogImportActions span,.catalogImportActions small{color:#aeb2b7!important}
+.catalogImportFoot{position:relative;z-index:1;color:#8f949a!important}
+.catalogWorkspace{border-radius:25px!important}
+.catalogWorkspaceTop{padding-bottom:17px;border-bottom:1px solid rgba(75,71,67,.08)}
+.catalogFilters{padding:5px;border-radius:15px;background:rgba(55,55,55,.065)}
+.catalogObjectGrid{gap:14px!important}
+.catalogObjectCard{
+  border-radius:21px!important;
+  transition:transform .18s ease,box-shadow .18s ease,background .18s ease!important;
+}
+.catalogObjectCard:hover{transform:translateY(-3px);background:rgba(255,255,255,.83)!important;box-shadow:0 22px 46px rgba(47,43,39,.11),inset 0 1px 0 #fff!important}
+.catalogObjectImage{overflow:hidden}.catalogObjectImage img{transition:transform .45s cubic-bezier(.2,.8,.2,1)}.catalogObjectCard:hover .catalogObjectImage img{transform:scale(1.025)}
+.catalogObjectTitle h3{letter-spacing:-.03em}
+.catalogEditorSection{border-color:rgba(83,80,76,.09)!important;background:rgba(255,255,255,.5)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.84)}
+.catalogEditorFooter{background:rgba(247,246,244,.88)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+
+.journeySummaryGrid article{background:rgba(255,255,255,.67)!important}
+.journeyWorkspace{background:rgba(255,255,255,.59)!important}
+.journeyQueueGroup{background:rgba(255,255,255,.44)!important}
+.journeyQueueTitle{background:rgba(255,255,255,.42)!important;border-bottom-color:rgba(80,76,72,.075)!important}
+.journeyQueueRow{background:rgba(255,255,255,.38)!important;border-color:rgba(80,76,72,.075)!important}.journeyQueueRow:hover{background:rgba(255,255,255,.74)!important}
+.journeyShowingRow{border-color:rgba(80,76,72,.075)!important}
+
+.kanban{gap:14px}.kanbanCol{padding:12px!important;background:rgba(255,255,255,.48)!important}
+.kanbanTitle{min-height:45px;padding:6px 8px 12px!important}.kanbanTitle b{font-size:11px;letter-spacing:.01em}.kanbanTitle span{min-width:25px;height:25px;display:grid;place-items:center;border-radius:999px;background:rgba(40,40,40,.065);font-weight:750}
+.taskStack{gap:10px}.taskCard{padding:14px!important;border-radius:17px!important;background:rgba(255,255,255,.65)!important}
+.taskCard:hover{background:rgba(255,255,255,.9)!important}
+.taskStage select{background:rgba(244,244,243,.9)!important}
+
+.profileSummary,.relatedLead{
+  border:1px solid rgba(255,255,255,.82)!important;
+  background:rgba(255,255,255,.64)!important;
+  box-shadow:0 12px 28px rgba(47,43,39,.05),inset 0 1px 0 #fff!important;
+}
+.profileSummary{border-radius:18px!important;padding:16px!important}
+.relatedLead{border-radius:17px!important}
+
+.bannerManager{background:rgba(255,255,255,.55)!important}
+.bannerCampaignCard{background:rgba(255,255,255,.47)!important}
+.bannerActionBox,.bannerSchedule,.bannerMediaRow{background:rgba(255,255,255,.6)!important}
+.bannerStats>div{background:rgba(255,255,255,.7)!important;border-color:rgba(255,255,255,.85)!important}
+
+.funnelRows{padding:17px;border-radius:18px;background:rgba(34,35,36,.965);box-shadow:0 18px 42px rgba(38,34,31,.14),inset 0 1px 0 rgba(255,255,255,.07)}
+.funnelRow>b,.funnelRow>strong{color:#f1f2f3}.funnelRow>span{background:rgba(255,255,255,.08);color:#c7cacf}.funnelRow>div{background:rgba(255,255,255,.08)}.funnelRow>small{color:#898e95}
+.signalList.compact>div{background:rgba(255,255,255,.52)!important;border-color:rgba(255,255,255,.75)!important}
+
+.editorList>.panel{background:rgba(255,255,255,.57)!important}
+.thresholdGrid .controlField,.weightGrid .controlField{padding:12px;border:1px solid rgba(255,255,255,.72);border-radius:16px;background:rgba(255,255,255,.42)}
+
+@media(max-width:760px){
+  .catalogImportHub{border-radius:20px!important}.catalogImportActions{grid-template-columns:1fr!important}
+  .funnelRows{padding:13px}
+}
+
+
+/* Premium Control — third pass: framed workspace, operational depth and page consistency */
+@media(min-width:761px){
+  .control{
+    min-height:calc(100dvh - 40px);
+    grid-template-columns:246px minmax(0,1fr);
+    gap:12px;
+    padding:12px;
+    background:
+      radial-gradient(circle at 78% 10%,rgba(255,255,255,.52),transparent 26%),
+      radial-gradient(circle at 18% 84%,rgba(179,166,151,.24),transparent 28%),
+      linear-gradient(145deg,#bbb8b2,#d7d3cc 35%,#c8cac9 100%);
+  }
+  .sidebar{
+    top:52px;
+    height:calc(100dvh - 64px);
+    margin:0;
+    border-radius:28px;
+  }
+  main{
+    min-height:calc(100dvh - 64px);
+    margin:0;
+    border:1px solid rgba(255,255,255,.34);
+    border-radius:28px;
+    box-shadow:0 28px 80px rgba(47,43,39,.15),inset 0 1px 0 rgba(255,255,255,.5);
+    overflow:clip;
+  }
+}
+.workspaceBar{position:relative;z-index:4}
+.workspaceBar:before{content:"";position:absolute;left:18px;right:18px;bottom:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(84,80,75,.09),transparent)}
+.pageHeader{min-height:86px}
+.pageHeader>div:first-child{min-width:0}
+.pageHeader h1{max-width:780px}
+.pageHeader .primaryAction{align-self:center}
+.panel,.tableCard,.metrics article,.journeySummaryGrid article{transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+.panel:hover{border-color:rgba(255,255,255,.88)}
+.panelTitle,.sectionHeading{min-height:38px}
+.panelTitle>div,.sectionHeading>div{min-width:0}
+.kicker{font-weight:780}
+.countBadge{min-width:28px;text-align:center}
+
+/* Analytical attribution block */
+.acquisitionPanel{
+  position:relative;
+  overflow:hidden;
+  padding:24px!important;
+  border-color:rgba(255,255,255,.1)!important;
+  background:
+    radial-gradient(circle at 88% -10%,rgba(242,13,29,.18),transparent 35%),
+    linear-gradient(145deg,rgba(31,32,33,.985),rgba(55,51,48,.96))!important;
+  color:#f5f5f5;
+  box-shadow:0 25px 60px rgba(38,34,31,.18),inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+.acquisitionHead{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.acquisitionHead>div{max-width:820px}.acquisitionHead .kicker{color:#979ba1}.acquisitionHead h2{color:#fff!important;font-size:21px!important;margin:5px 0 7px!important}.acquisitionHead p{color:#b1b4b8!important;max-width:780px}
+.acquisitionIcon{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);color:#ff6b78;flex:none}
+.acquisitionSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:20px 0 14px}
+.acquisitionSummary>div{min-height:94px;padding:14px 15px;border:1px solid rgba(255,255,255,.075);border-radius:16px;background:rgba(255,255,255,.055);box-shadow:inset 0 1px 0 rgba(255,255,255,.045)}
+.acquisitionSummary span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.09em;color:#8f949a;font-weight:750}.acquisitionSummary strong{display:block;font-size:27px;letter-spacing:-.04em;margin:7px 0 4px}.acquisitionSummary small{display:flex;align-items:center;gap:5px;font-size:9px;color:#aeb2b7}
+.acquisitionNote{display:block;color:#858a90!important;font-size:9px!important;line-height:1.5;margin-bottom:14px}
+.journeyTable{width:100%;overflow:auto;border:1px solid rgba(83,80,76,.08);border-radius:15px;background:rgba(255,255,255,.42)}
+.journeyTable table{width:100%;border-collapse:collapse;min-width:720px}.journeyTable th,.journeyTable td{text-align:left;padding:12px 13px;border-bottom:1px solid rgba(83,80,76,.07);font-size:10px}.journeyTable th{font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:#878b91;background:rgba(255,255,255,.36)}.journeyTable tbody tr:last-child td{border-bottom:0}
+.acquisitionPanel .journeyTable{border-color:rgba(255,255,255,.07);background:rgba(255,255,255,.035)}.acquisitionPanel .journeyTable th{background:rgba(255,255,255,.045);color:#8e9399;border-color:rgba(255,255,255,.06)}.acquisitionPanel .journeyTable td{color:#d9dbde;border-color:rgba(255,255,255,.055)}.acquisitionPanel .journeyTable tbody tr:hover{background:rgba(255,255,255,.035)}
+.acquisitionEmpty{padding:16px 4px 2px;color:#8f949a;font-size:10px}
+
+/* Tasks: one strong command surface before the kanban */
+.commitmentsPanel{
+  position:relative;overflow:hidden;
+  border-color:rgba(255,255,255,.1)!important;
+  background:
+    radial-gradient(circle at 88% 0%,rgba(242,13,29,.15),transparent 34%),
+    linear-gradient(145deg,rgba(33,34,35,.98),rgba(54,51,49,.96))!important;
+  color:#fff;
+  box-shadow:0 22px 52px rgba(38,34,31,.16),inset 0 1px 0 rgba(255,255,255,.07)!important;
+}
+.commitmentsHead{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}.commitmentsHead>div:first-child{max-width:700px}.commitmentsHead .kicker{color:#969ba1}.commitmentsHead h2{color:#fff!important;font-size:20px!important;margin:5px 0 5px!important}.commitmentsHead p{color:#aeb2b7!important}
+.commitmentsSummary{display:flex;gap:8px;flex:none}.commitmentsSummary>span{min-width:94px;padding:10px 12px;border:1px solid rgba(255,255,255,.075);border-radius:14px;background:rgba(255,255,255,.055);display:grid;grid-template-columns:auto 1fr;align-items:center;gap:3px 7px}.commitmentsSummary svg{grid-row:1/3;color:#7f858b}.commitmentsSummary b{font-size:18px}.commitmentsSummary small{font-size:8px;color:#8f949a}
+.commitmentsList{display:flex;flex-direction:column;margin-top:17px;border-top:1px solid rgba(255,255,255,.065)}.commitmentsList>a{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:12px;min-height:54px;border-bottom:1px solid rgba(255,255,255,.06);text-decoration:none;color:#fff}.commitmentsList>a:hover{background:rgba(255,255,255,.025)}.commitmentsList>a>div{display:grid;gap:3px}.commitmentsList b{font-size:11px}.commitmentsList small{font-size:9px;color:#979ca2}.commitmentsList time{font-size:9px;color:#8e9399}.commitmentsList>a>svg{color:#737980}
+.commitmentDot{width:8px;height:8px;border-radius:50%;background:#6a9dd8;box-shadow:0 0 0 5px rgba(106,157,216,.08)}.commitmentDot.late{background:#ff6b76;box-shadow:0 0 0 5px rgba(255,107,118,.08)}
+.commitmentsEmpty{min-height:76px;display:flex;align-items:center;justify-content:center;gap:8px;color:#8f949a;font-size:10px}.commitmentsEmpty svg{color:#70767c}
+.commitmentsFooter{display:flex;align-items:center;justify-content:flex-end;gap:6px;padding-top:13px;text-decoration:none;color:#b9bdc1;font-size:9px}
+
+/* Journey: operational queue gets the same dark command language */
+.journeyCommandPanel{
+  position:relative;overflow:hidden;
+  border-color:rgba(255,255,255,.1)!important;
+  background:
+    radial-gradient(circle at 90% -10%,rgba(242,13,29,.14),transparent 35%),
+    linear-gradient(145deg,rgba(33,34,35,.98),rgba(55,52,49,.96))!important;
+  color:#fff;
+  box-shadow:0 23px 56px rgba(38,34,31,.17),inset 0 1px 0 rgba(255,255,255,.07)!important;
+}
+.journeyCommandPanel .kicker{color:#969ba1}.journeyCommandPanel h2{color:#fff!important}.journeyCommandPanel .countBadge{background:rgba(255,255,255,.07);color:#d8dade}
+.journeyCommandPanel .journeyQueueGroup{border-color:rgba(255,255,255,.075)!important;background:rgba(255,255,255,.045)!important;box-shadow:none!important}
+.journeyCommandPanel .journeyQueueTitle{background:rgba(255,255,255,.035)!important;border-color:rgba(255,255,255,.055)!important}.journeyCommandPanel .journeyQueueTitle b{color:#f0f1f2}.journeyCommandPanel .journeyQueueTitle small{color:#858b91}
+.journeyCommandPanel .journeyQueueRow{background:transparent!important;border-color:rgba(255,255,255,.055)!important;color:#fff}.journeyCommandPanel .journeyQueueRow:hover{background:rgba(255,255,255,.035)!important}.journeyCommandPanel .journeyQueueRow small,.journeyCommandPanel .journeyQueueRow time{color:#8f949a}.journeyCommandPanel .journeyQueueRow>svg{color:#6f757b}.journeyCommandPanel .journeyEmpty{color:#858b91}
+.journeyCommandPanel .journeyMetricIcon{background:rgba(255,255,255,.07);color:#9eb3ce}.journeyCommandPanel .journeyMetricIcon.attention{background:rgba(242,13,29,.1);color:#ff7c86}
+
+/* Drawers and editors should feel like part of the same product */
+.drawerBackdrop{background:rgba(24,23,22,.5);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.detailDrawer{border-left:1px solid rgba(255,255,255,.7);background:linear-gradient(160deg,rgba(250,249,247,.985),rgba(239,240,240,.985));box-shadow:-28px 0 80px rgba(32,29,27,.24)}
+.drawerHeader{margin:-4px -4px 0;padding:4px 4px 18px;border-color:rgba(75,71,67,.09)}
+.drawerHeader h2{color:#17191d;font-size:26px}.drawerHeader button{box-shadow:0 7px 18px rgba(47,43,39,.06)}
+.leadEditorActions{background:rgba(250,249,247,.9)!important;border-color:rgba(255,255,255,.82)!important;box-shadow:0 12px 30px rgba(47,43,39,.08)!important}
+.dnaPanel{background:rgba(255,255,255,.62)!important;border-color:rgba(255,255,255,.82)!important}
+.dnaTabs{background:rgba(49,49,49,.07)!important}.dnaTabs button[aria-selected=true]{background:rgba(255,255,255,.92)!important;box-shadow:0 7px 18px rgba(47,43,39,.07)!important}
+.dnaNext{background:rgba(242,13,29,.045)!important;border-left-color:#f20d1d!important}
+
+/* Settings, content and editors: consistent density and surfaces */
+.teamRow{padding:14px!important;border:1px solid rgba(255,255,255,.75)!important;border-radius:16px!important;background:rgba(255,255,255,.48)!important}
+.timeline>div{border-color:rgba(78,74,70,.08)!important}
+.rulesTable{border-radius:17px!important;border-color:rgba(255,255,255,.76)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.7)}
+.rulesHead{min-height:42px}.rulesRow{min-height:51px}
+.editorList{gap:14px}.editorList>.panel{border-radius:22px!important}
+.bannerCampaignToolbar{padding-bottom:11px;border-bottom:1px solid rgba(76,72,68,.075)}
+.bannerCampaignActions button{box-shadow:0 6px 15px rgba(47,43,39,.045)}
+.bannerStats>div{min-height:62px}
+.switchControl{border-radius:16px!important;min-height:64px!important}
+
+/* Hover and focus language */
+.tableRow:focus-visible,.leadBoardCard:focus-visible,.catalogObjectCard:focus-visible,.journeyQueueRow:focus-visible{outline:2px solid rgba(242,13,29,.62);outline-offset:2px}
+.sidebar nav a,.tableRow,.journeyQueueRow,.catalogObjectCard,.leadBoardCard,.taskCard{will-change:transform}
+.sidebar nav a:active,.tableRow:active,.journeyQueueRow:active,.catalogObjectCard:active,.leadBoardCard:active,.taskCard:active{transform:scale(.992)}
+
+@media(max-width:980px){
+  .acquisitionSummary{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .commitmentsHead{flex-direction:column}.commitmentsSummary{width:100%}.commitmentsSummary>span{flex:1}
+}
+@media(max-width:760px){
+  .control{min-height:calc(100dvh - 40px);padding:0;background:linear-gradient(145deg,#ebe8e3,#f0f1f1)}
+  main{margin:0;border:0;border-radius:0;box-shadow:none;overflow:visible}
+  .pageHeader{min-height:0}.pageHeader h1{font-size:29px}
+  .acquisitionPanel,.commitmentsPanel,.journeyCommandPanel{border-radius:20px!important}
+  .acquisitionHead{gap:12px}.acquisitionIcon{width:38px;height:38px}.acquisitionSummary{grid-template-columns:1fr 1fr;gap:8px}.acquisitionSummary>div:last-child{grid-column:1/-1}.acquisitionSummary>div{min-height:80px}
+  .journeyTable{margin-left:0;margin-right:0}.journeyTable table{min-width:650px}
+  .commitmentsSummary{gap:7px}.commitmentsSummary>span{min-width:0}.commitmentsList>a{grid-template-columns:auto 1fr auto}.commitmentsList time{grid-column:2}.commitmentsList>a>svg{grid-row:1/3;grid-column:3}
+  .journeyCommandPanel .journeyQueueColumns{gap:9px}
+  .detailDrawer{border-left:0}
+  .drawerHeader h2{font-size:23px}
+}

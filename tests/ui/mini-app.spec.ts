@@ -144,7 +144,7 @@ for(const width of [390,1440])test(`Control workspace ${width}px: navigation, cl
  await page.setViewportSize({width,height:1000});
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/pulsedv/control-center/');
- await expect(page.getByRole('heading',{name:'Всё важное — в фокусе'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Командный центр'})).toBeVisible();
  await page.getByRole('link',{name:'Открыть клиентов'}).click();
  await page.getByRole('button',{name:'Доска',exact:true}).click();
  await expect(page.locator('.leadBoard')).toBeVisible();
@@ -369,4 +369,31 @@ for(const width of [320,390])test(`Переписка ${width}px: чернови
  await expect(page.getByRole('navigation',{name:'Основная навигация'})).toBeVisible();
  await page.setViewportSize({width,height:844});await page.screenshot({path:`test-results/chat-inbox-${width}.png`,animations:'disabled'});
  expect(errors).toEqual([]);await manager.close();
+});
+
+
+const controlAuditRoutes=[
+ ['overview','/','Командный центр'],
+ ['leads','/leads','Лиды'],
+ ['users','/users','Посетители и интерес'],
+ ['journey','/journey','Сопровождение клиентов'],
+ ['tasks','/tasks','Задачи под контролем'],
+ ['objects','/objects','Объекты'],
+ ['mortgage','/mortgage','Ипотека'],
+ ['select','/select','PULSE Select'],
+ ['content','/content','Контент'],
+ ['analytics','/analytics','Аналитика'],
+ ['settings','/settings','Настройки'],
+] as const;
+
+for(const width of [390,1440])test(`Control visual audit ${width}px: every workspace page`,async({page})=>{
+ await page.setViewportSize({width,height:1000});
+ const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
+ for(const [slug,route,title] of controlAuditRoutes){
+  await page.goto('/pulsedv/control-center/#'+route);
+  await expect(page.getByRole('heading',{name:title,level:1})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+  await page.screenshot({path:`test-results/control-audit-${slug}-${width}.png`,fullPage:true});
+ }
+ expect(errors).toEqual([]);
 });
