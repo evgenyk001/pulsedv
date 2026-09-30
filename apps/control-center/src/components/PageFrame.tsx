@@ -3,10 +3,14 @@ import type { ReactNode } from "react";
 export function PageFrame({eyebrow,title,description,action,children}:{eyebrow:string;title:string;description:string;action?:ReactNode;children:ReactNode}){
   return <div className="page">
     <header className="pageHeader">
-      <div><span>{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>
-      {action}
+      <div className="pageHeading">
+        <span>{eyebrow}</span>
+        <h1>{title}</h1>
+        <p>{description}</p>
+      </div>
+      {action&&<div className="pageAction">{action}</div>}
     </header>
-    {children}
+    <div className="pageFlow">{children}</div>
   </div>;
 }
 
