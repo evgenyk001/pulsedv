@@ -20,16 +20,16 @@ import { SettingsPage } from "./pages/SettingsPage";
 
 const sections=[
   {to:"/",label:"Обзор",group:"Работа",icon:LayoutDashboard,end:true},
-  {to:"/leads",label:"Лиды",group:"Работа",icon:Handshake},
-  {to:"/users",label:"Пользователи",group:"Работа",icon:UsersRound},
-  {to:"/journey",label:"Подборки и показы",group:"Работа",icon:Handshake},
-  {to:"/tasks",label:"Задачи",group:"Работа",icon:ListChecks},
-  {to:"/objects",label:"Объекты",group:"Продукт",icon:Building2},
-  {to:"/mortgage",label:"Ипотека",group:"Продукт",icon:BadgePercent},
-  {to:"/select",label:"PULSE Select",group:"Продукт",icon:Sparkles},
-  {to:"/content",label:"Контент",group:"Продукт",icon:Images},
-  {to:"/analytics",label:"Аналитика",group:"Контроль",icon:ChartNoAxesCombined},
-  {to:"/settings",label:"Настройки",group:"Контроль",icon:Settings2},
+  {to:"/leads",label:"Лиды",group:"Работа",icon:Handshake,end:false},
+  {to:"/users",label:"Пользователи",group:"Работа",icon:UsersRound,end:false},
+  {to:"/journey",label:"Подборки и показы",group:"Работа",icon:Handshake,end:false},
+  {to:"/tasks",label:"Задачи",group:"Работа",icon:ListChecks,end:false},
+  {to:"/objects",label:"Объекты",group:"Продукт",icon:Building2,end:false},
+  {to:"/mortgage",label:"Ипотека",group:"Продукт",icon:BadgePercent,end:false},
+  {to:"/select",label:"PULSE Select",group:"Продукт",icon:Sparkles,end:false},
+  {to:"/content",label:"Контент",group:"Продукт",icon:Images,end:false},
+  {to:"/analytics",label:"Аналитика",group:"Контроль",icon:ChartNoAxesCombined,end:false},
+  {to:"/settings",label:"Настройки",group:"Контроль",icon:Settings2,end:false},
 ] as const;
 
 const groups=["Работа","Продукт","Контроль"] as const;
