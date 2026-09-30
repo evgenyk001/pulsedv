@@ -210,6 +210,40 @@ test('CRM mobile: ипотечный контекст читаемый, заме
  await drawer.getByRole('button',{name:'Закрыть'}).click();await expect(drawer).not.toBeVisible();
 });
 
+
+
+test('Control mortgage settings are the same rules used by Mini App',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/pulsedv/control-center/#/mortgage');
+ const family=page.locator('.mortgageProgram').filter({hasText:'Семейная'}).first();
+ await expect(family).toBeVisible();
+ await family.getByLabel('Семейная — ставка, %').fill('6.7');
+ await family.getByLabel('Семейная — первоначальный взнос, %').fill('21');
+ await family.getByLabel('Семейная — подсказка клиенту').fill('Проверка синхронизации ипотечных правил');
+ await expect(family).toContainText('6.7%');
+ await expect(family).toContainText('21%');
+
+ await page.goto('/pulsedv/mini-app/');
+ const skip=page.getByRole('button',{name:'Пропустить онбординг'});
+ if(await skip.count())await skip.click();
+ await page.goto('/pulsedv/mini-app/#/mortgage');
+ const familyProgram=page.getByRole('button',{name:/Семейная/});
+ await expect(familyProgram).toContainText('от 6.7%');
+ await familyProgram.click();
+ await expect(page.getByText('21%',{exact:false}).first()).toBeVisible();
+ await expect(page.getByText('Проверка синхронизации ипотечных правил',{exact:true})).toBeVisible();
+});
+
+test('Control overview chart explains values and top actions stay visible',async({page})=>{
+ await page.setViewportSize({width:1440,height:1000});
+ await page.goto('/pulsedv/control-center/#/');
+ await expect(page.getByText('Количество новых заявок по дням за последние семь дней.')).toBeVisible();
+ await expect(page.locator('.chartValue')).toHaveCount(7);
+ await expect(page.locator('.pulseChartLabels>span')).toHaveCount(7);
+ await expect(page.getByRole('link',{name:/Мини-приложение/})).toBeVisible();
+ await expect(page.getByLabel(/Просроченные задачи:/)).toBeVisible();
+});
+
 for(const width of [390,1440])test(`Interest DNA ${width}px: facts, evidence, changed request and next step`,async({page})=>{
  await page.setViewportSize({width,height:1000});
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
