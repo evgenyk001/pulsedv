@@ -494,3 +494,83 @@ main{
   .commandHero{gap:10px}.pulseChartCard{padding:18px 16px 14px;min-height:340px;border-radius:20px}.pulseChartSummary{flex-wrap:wrap}.pulseChartSummary small{width:100%;margin-left:0}.pulseChart svg{height:170px}.focusStack{grid-template-columns:1fr}.focusCard{border-radius:20px}.panel{padding:18px}
   .toolbar,.leadsViewBar{padding:6px}.metrics article{min-height:118px}.conversionBody{grid-template-columns:96px 1fr}.conversionRing{width:96px;height:96px}.conversionRing>div{width:68px;height:68px}
 }
+
+
+/* Premium Control — second pass after screenshot review */
+.catalogOverview{gap:12px}
+.catalogOverview>article{
+  border:1px solid rgba(255,255,255,.82)!important;
+  background:rgba(255,255,255,.68)!important;
+  box-shadow:0 16px 34px rgba(47,43,39,.07),inset 0 1px 0 #fff!important;
+  border-radius:22px!important;
+}
+.catalogImportHub{
+  position:relative;overflow:hidden;
+  border:1px solid rgba(255,255,255,.1)!important;
+  background:linear-gradient(145deg,rgba(33,34,35,.98),rgba(59,54,51,.95))!important;
+  color:#fff;
+  box-shadow:0 24px 58px rgba(38,34,31,.18),inset 0 1px 0 rgba(255,255,255,.08)!important;
+}
+.catalogImportHub:after{content:"";position:absolute;width:340px;height:340px;right:-120px;top:-180px;border-radius:50%;background:radial-gradient(circle,rgba(242,13,29,.18),transparent 67%);pointer-events:none}
+.catalogImportHub .kicker{color:#9ea2a8}.catalogImportHub h2{color:#fff!important}.catalogImportHub p,.catalogImportHub small{color:#aeb2b7!important}
+.catalogImportActions{position:relative;z-index:1}
+.catalogImportActions>*{
+  border-color:rgba(255,255,255,.09)!important;
+  background:rgba(255,255,255,.07)!important;
+  color:#fff!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06)!important;
+}
+.catalogImportActions>*:hover{background:rgba(255,255,255,.11)!important}
+.catalogImportActions b{color:#fff!important}.catalogImportActions span,.catalogImportActions small{color:#aeb2b7!important}
+.catalogImportFoot{position:relative;z-index:1;color:#8f949a!important}
+.catalogWorkspace{border-radius:25px!important}
+.catalogWorkspaceTop{padding-bottom:17px;border-bottom:1px solid rgba(75,71,67,.08)}
+.catalogFilters{padding:5px;border-radius:15px;background:rgba(55,55,55,.065)}
+.catalogObjectGrid{gap:14px!important}
+.catalogObjectCard{
+  border-radius:21px!important;
+  transition:transform .18s ease,box-shadow .18s ease,background .18s ease!important;
+}
+.catalogObjectCard:hover{transform:translateY(-3px);background:rgba(255,255,255,.83)!important;box-shadow:0 22px 46px rgba(47,43,39,.11),inset 0 1px 0 #fff!important}
+.catalogObjectImage{overflow:hidden}.catalogObjectImage img{transition:transform .45s cubic-bezier(.2,.8,.2,1)}.catalogObjectCard:hover .catalogObjectImage img{transform:scale(1.025)}
+.catalogObjectTitle h3{letter-spacing:-.03em}
+.catalogEditorSection{border-color:rgba(83,80,76,.09)!important;background:rgba(255,255,255,.5)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.84)}
+.catalogEditorFooter{background:rgba(247,246,244,.88)!important;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+
+.journeySummaryGrid article{background:rgba(255,255,255,.67)!important}
+.journeyWorkspace{background:rgba(255,255,255,.59)!important}
+.journeyQueueGroup{background:rgba(255,255,255,.44)!important}
+.journeyQueueTitle{background:rgba(255,255,255,.42)!important;border-bottom-color:rgba(80,76,72,.075)!important}
+.journeyQueueRow{background:rgba(255,255,255,.38)!important;border-color:rgba(80,76,72,.075)!important}.journeyQueueRow:hover{background:rgba(255,255,255,.74)!important}
+.journeyShowingRow{border-color:rgba(80,76,72,.075)!important}
+
+.kanban{gap:14px}.kanbanCol{padding:12px!important;background:rgba(255,255,255,.48)!important}
+.kanbanTitle{min-height:45px;padding:6px 8px 12px!important}.kanbanTitle b{font-size:11px;letter-spacing:.01em}.kanbanTitle span{min-width:25px;height:25px;display:grid;place-items:center;border-radius:999px;background:rgba(40,40,40,.065);font-weight:750}
+.taskStack{gap:10px}.taskCard{padding:14px!important;border-radius:17px!important;background:rgba(255,255,255,.65)!important}
+.taskCard:hover{background:rgba(255,255,255,.9)!important}
+.taskStage select{background:rgba(244,244,243,.9)!important}
+
+.profileSummary,.relatedLead{
+  border:1px solid rgba(255,255,255,.82)!important;
+  background:rgba(255,255,255,.64)!important;
+  box-shadow:0 12px 28px rgba(47,43,39,.05),inset 0 1px 0 #fff!important;
+}
+.profileSummary{border-radius:18px!important;padding:16px!important}
+.relatedLead{border-radius:17px!important}
+
+.bannerManager{background:rgba(255,255,255,.55)!important}
+.bannerCampaignCard{background:rgba(255,255,255,.47)!important}
+.bannerActionBox,.bannerSchedule,.bannerMediaRow{background:rgba(255,255,255,.6)!important}
+.bannerStats>div{background:rgba(255,255,255,.7)!important;border-color:rgba(255,255,255,.85)!important}
+
+.funnelRows{padding:17px;border-radius:18px;background:rgba(34,35,36,.965);box-shadow:0 18px 42px rgba(38,34,31,.14),inset 0 1px 0 rgba(255,255,255,.07)}
+.funnelRow>b,.funnelRow>strong{color:#f1f2f3}.funnelRow>span{background:rgba(255,255,255,.08);color:#c7cacf}.funnelRow>div{background:rgba(255,255,255,.08)}.funnelRow>small{color:#898e95}
+.signalList.compact>div{background:rgba(255,255,255,.52)!important;border-color:rgba(255,255,255,.75)!important}
+
+.editorList>.panel{background:rgba(255,255,255,.57)!important}
+.thresholdGrid .controlField,.weightGrid .controlField{padding:12px;border:1px solid rgba(255,255,255,.72);border-radius:16px;background:rgba(255,255,255,.42)}
+
+@media(max-width:760px){
+  .catalogImportHub{border-radius:20px!important}.catalogImportActions{grid-template-columns:1fr!important}
+  .funnelRows{padding:13px}
+}
