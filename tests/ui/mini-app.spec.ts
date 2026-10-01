@@ -154,14 +154,37 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
   expect(geometry?.leftDelta??99).toBeLessThan(1.1);
   expect(geometry?.rightDelta??99).toBeLessThan(1.1);
 
-  const tabs=page.getByRole('tablist',{name:'Баннеры'});
+  let tabs=page.getByRole('tablist',{name:'Баннеры'});
   await expect(tabs).toBeVisible();
-  const dots=tabs.getByRole('tab');
+  let dots=tabs.getByRole('tab');
   await expect(dots).toHaveCount(3);
   const firstWidth=(await dots.nth(0).boundingBox())!.width;
   const secondWidth=(await dots.nth(1).boundingBox())!.width;
   expect(firstWidth).toBeGreaterThan(secondWidth*2);
+
+  const currentBanner=page.getByRole('heading',{name:'Квартира, которую хочется показывать друзьям'}).locator('xpath=ancestor::article');
+  const shadow=await currentBanner.evaluate(el=>getComputedStyle(el).boxShadow);
+  expect(shadow.split(/, (?=rgba|rgb)/).every(part=>part.includes('inset'))).toBe(true);
+
+  const bannerBefore=await currentBanner.boundingBox();
+  const tabsBefore=await tabs.boundingBox();
+  expect(bannerBefore).not.toBeNull();expect(tabsBefore).not.toBeNull();
+  await page.mouse.move(bannerBefore!.x+bannerBefore!.width*.72,bannerBefore!.y+bannerBefore!.height*.52);
+  await page.mouse.down();
+  await page.mouse.move(bannerBefore!.x+bannerBefore!.width*.48,bannerBefore!.y+bannerBefore!.height*.52,{steps:8});
+  const bannerDuring=await currentBanner.boundingBox();
+  const tabsDuring=await tabs.boundingBox();
+  expect(bannerDuring).not.toBeNull();expect(tabsDuring).not.toBeNull();
+  const bannerShift=bannerDuring!.x-bannerBefore!.x;
+  const tabsShift=tabsDuring!.x-tabsBefore!.x;
+  expect(Math.abs(bannerShift-tabsShift)).toBeLessThan(2);
+  await page.mouse.up();
+
+  tabs=page.getByRole('tablist',{name:'Баннеры'});
+  dots=tabs.getByRole('tab');
   await dots.nth(1).click();
+  tabs=page.getByRole('tablist',{name:'Баннеры'});
+  dots=tabs.getByRole('tab');
   await expect(dots.nth(1)).toHaveAttribute('aria-selected','true');
   await expect(dots.nth(0)).toHaveAttribute('aria-selected','false');
 
