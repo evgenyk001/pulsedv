@@ -166,18 +166,20 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
   const shadow=await currentBanner.evaluate(el=>getComputedStyle(el).boxShadow);
   expect(shadow.split(/, (?=rgba|rgb)/).every(part=>part.includes('inset'))).toBe(true);
 
+  const currentSlide=currentBanner.locator('xpath=ancestor::*[@role="group"][1]');
+  const attachedPagination=currentSlide.locator('[class*="pagination"]').first();
   const bannerBefore=await currentBanner.boundingBox();
-  const tabsBefore=await tabs.boundingBox();
-  expect(bannerBefore).not.toBeNull();expect(tabsBefore).not.toBeNull();
+  const paginationBefore=await attachedPagination.boundingBox();
+  expect(bannerBefore).not.toBeNull();expect(paginationBefore).not.toBeNull();
   await page.mouse.move(bannerBefore!.x+bannerBefore!.width*.72,bannerBefore!.y+bannerBefore!.height*.52);
   await page.mouse.down();
   await page.mouse.move(bannerBefore!.x+bannerBefore!.width*.48,bannerBefore!.y+bannerBefore!.height*.52,{steps:8});
   const bannerDuring=await currentBanner.boundingBox();
-  const tabsDuring=await tabs.boundingBox();
-  expect(bannerDuring).not.toBeNull();expect(tabsDuring).not.toBeNull();
+  const paginationDuring=await attachedPagination.boundingBox();
+  expect(bannerDuring).not.toBeNull();expect(paginationDuring).not.toBeNull();
   const bannerShift=bannerDuring!.x-bannerBefore!.x;
-  const tabsShift=tabsDuring!.x-tabsBefore!.x;
-  expect(Math.abs(bannerShift-tabsShift)).toBeLessThan(2);
+  const paginationShift=paginationDuring!.x-paginationBefore!.x;
+  expect(Math.abs(bannerShift-paginationShift)).toBeLessThan(2);
   await page.mouse.up();
 
   tabs=page.getByRole('tablist',{name:'Баннеры'});
