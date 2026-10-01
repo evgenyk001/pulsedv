@@ -43,7 +43,7 @@ export function LeadSheet({children,title="Получить консультац
     }else{if(sent){key.current=crypto.randomUUID();setName("");setPhone("");}setConsent(false);setSent(false);setError(null)}
   }}>
     <SheetTrigger asChild>{children}</SheetTrigger>
-    <SheetContent side="bottom" className={styles.sheet}>
+    <SheetContent side="bottom" closeLabel="Закрыть заявку" className={styles.sheet}>
       {sent?<div className={styles.success}><CheckCircle2 size={38}/><h2>{runtime.enabled?"Заявка принята":"Обращение создано"}</h2><p>{runtime.enabled?"Менеджер PULSE.DV свяжется с вами и уточнит детали"+(project?" по "+project:"")+".":"Это демонстрационный режим. Заявка не отправлена менеджеру."}</p><Link className={styles.submit} to={"/journey"+(leadId?"?lead="+leadId:"")}>Открыть моё обращение <ChevronRight size={17}/></Link></div>:<>
         <SheetHeader><SheetTitle>{title}</SheetTitle><SheetDescription>{project?(project+". "):""}Оставьте контакт — всё остальное обсудим без спешки.</SheetDescription></SheetHeader>
         <form className={styles.form} onSubmit={submit}>
