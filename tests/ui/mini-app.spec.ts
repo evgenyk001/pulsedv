@@ -283,8 +283,9 @@ test('Mini App UI system: shared gutters, icons and bottom sheets',async({page})
   expect(firstClose?.width??0).toBeCloseTo(36,0);
   expect(firstClose?.height??0).toBeCloseTo(36,0);
   await close.click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 
-  await nav.getByRole('button',{name:'Профиль',exact:true}).click();
+  await page.goto('/pulsedv/mini-app/#/profile');
   await page.getByRole('button',{name:/История подборов/}).click();
   dialog=page.getByRole('dialog');
   close=dialog.getByRole('button',{name:'Закрыть',exact:true});
