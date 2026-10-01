@@ -84,6 +84,37 @@ test('Mini App native viewport: no visible scrollbars and page zoom locked',asyn
 });
 
 
+
+
+test('Mini App home polish: property rail shadow fades before crop',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/pulsedv/mini-app/');
+ const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
+ await expect(page.getByRole('heading',{name:'Стоит посмотреть',exact:true})).toBeVisible();
+ const rail=page.locator('[class*="propertyRail"]').first();
+ const card=rail.locator('article').first();
+ await expect(card).toBeVisible();
+ const layout=await rail.evaluate(el=>{
+   const style=getComputedStyle(el);
+   const rect=el.getBoundingClientRect();
+   const first=(el.firstElementChild as HTMLElement|null)?.getBoundingClientRect();
+   return {
+     paddingBottom:parseFloat(style.paddingBottom),
+     marginBottom:parseFloat(style.marginBottom),
+     overflowX:style.overflowX,
+     overflowY:style.overflowY,
+     railBottom:rect.bottom,
+     cardBottom:first?.bottom??0,
+   };
+ });
+ expect(layout.paddingBottom).toBeGreaterThanOrEqual(18);
+ expect(layout.overflowX).toBe('auto');
+ expect(layout.overflowY).toBe('hidden');
+ expect(layout.railBottom-layout.cardBottom).toBeGreaterThanOrEqual(16);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+ await page.screenshot({path:'test-results/mini-app-home-motion-polish.png',fullPage:true,animations:'disabled'});
+});
+
 test('Control preview: object editor and real state changes',async({page})=>{
  await page.setViewportSize({width:1440,height:1000});await page.goto('/pulsedv/control-center/');
  await expect(page.getByText('Демонстрация · данные только в этом браузере')).toBeVisible();
