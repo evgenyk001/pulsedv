@@ -1,4 +1,4 @@
-.page{display:flex;flex-direction:column;gap:16px;padding-bottom:10px}
+.page{display:flex;flex-direction:column;gap:var(--app-page-gap);padding-bottom:10px}
 .hero{padding:4px 2px 2px}
 .heroTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .heroTop>span:last-child{font-size:10px;font-weight:760;color:var(--muted-foreground);font-variant-numeric:tabular-nums}
