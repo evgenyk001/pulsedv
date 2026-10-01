@@ -25,6 +25,7 @@ SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> {
   side?: "top" | "bottom" | "left" | "right";
+  closeLabel?: string;
 }
 
 const SheetContent = React.forwardRef<
@@ -32,6 +33,7 @@ const SheetContent = React.forwardRef<
   SheetContentProps
 >(({
   side = "right",
+  closeLabel = "Закрыть",
   className,
   children,
   style,
@@ -159,7 +161,7 @@ const SheetContent = React.forwardRef<
     >
       {side==="bottom"&&<div className={styles.grabZone} aria-hidden="true"><span className={styles.grabber}/></div>}
       {children}
-      <SheetPrimitive.Close ref={closeRef} aria-label="Закрыть" className={styles.close}>
+      <SheetPrimitive.Close ref={closeRef} aria-label={closeLabel} className={styles.close}>
         <X className={styles.closeIcon} />
       </SheetPrimitive.Close>
     </SheetPrimitive.Content>
