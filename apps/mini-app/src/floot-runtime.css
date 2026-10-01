@@ -7,3 +7,31 @@ body{min-height:100dvh;overflow-x:hidden;background:#F3F5F8}
 #root{min-height:100dvh;overflow-x:hidden}
 img,svg,video,canvas{display:block;max-width:100%}
 button,input,textarea,select{font:inherit}
+
+
+/* Native-like Telegram Mini App viewport: scroll normally, but never show browser scrollbars. */
+html,body,#root{
+  max-width:100%;
+  overflow-x:hidden;
+  overscroll-behavior-x:none;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+html{overscroll-behavior-y:none}
+body{
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+#root *::-webkit-scrollbar{
+  width:0!important;
+  height:0!important;
+  display:none!important;
+  background:transparent!important;
+}
+#root *{
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
