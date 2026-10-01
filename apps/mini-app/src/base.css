@@ -94,7 +94,9 @@
   --app-card-padding: 16px;
   --app-sheet-inline: 18px;
   --app-icon-button-size: 40px;
+  --app-icon-button-compact-size: 36px;
   --app-icon-tile-size: 44px;
+  --app-icon-hero-size: 64px;
   --app-icon-glyph-size: 18px;
   --app-chevron-size: 17px;
   --motion-spring: cubic-bezier(.18,.88,.22,1);
