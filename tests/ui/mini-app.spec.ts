@@ -128,6 +128,17 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
   await expect(page.getByText(/01\s*\/\s*03/)).toHaveCount(0);
   await expect(page.getByText('Приморье',{exact:true})).toBeVisible();
   await expect(page.getByText('Смотреть проекты',{exact:true})).toBeVisible();
+  const geometry=await page.locator('[class*="PromoCarousel_carousel"]').first().evaluate(carousel=>{
+    const viewport=carousel.querySelector('[class*="Carousel_viewport"]') as HTMLElement|null;
+    const slide=carousel.querySelector('[class*="PromoCarousel_slide"]') as HTMLElement|null;
+    if(!viewport||!slide)return null;
+    const v=viewport.getBoundingClientRect(),s=slide.getBoundingClientRect();
+    return {viewportWidth:v.width,slideWidth:s.width,paddingRight:getComputedStyle(slide).paddingRight,overflow:getComputedStyle(carousel).overflow};
+  });
+  expect(geometry).not.toBeNull();
+  expect(Math.abs((geometry?.viewportWidth??0)-(geometry?.slideWidth??0))).toBeLessThan(1.1);
+  expect(geometry?.paddingRight).toBe('0px');
+  expect(geometry?.overflow).toBe('hidden');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
   await page.screenshot({path:'test-results/mini-app-banner-premium-390.png',fullPage:true,animations:'disabled'});
 });
