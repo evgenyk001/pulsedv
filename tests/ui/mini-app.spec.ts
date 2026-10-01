@@ -200,6 +200,41 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
   await page.screenshot({path:'test-results/mini-app-banner-premium-390.png',fullPage:true,animations:'disabled'});
 });
 
+
+
+test('PULSE Select smart query: unified rounded search control',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/pulsedv/mini-app/');
+  const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
+  await page.getByRole('navigation',{name:'Основная навигация'}).getByRole('button',{name:'Подбор',exact:true}).click();
+  const input=page.getByRole('textbox',{name:'Опишите квартиру своими словами'});
+  await expect(input).toBeVisible();
+  const metrics=await input.evaluate(el=>{
+    const shell=el.parentElement as HTMLElement|null;
+    const button=shell?.querySelector('button') as HTMLElement|null;
+    if(!shell||!button)return null;
+    const shellStyle=getComputedStyle(shell);
+    const buttonStyle=getComputedStyle(button);
+    const shellRect=shell.getBoundingClientRect();
+    const buttonRect=button.getBoundingClientRect();
+    return {
+      shellHeight:shellRect.height,
+      shellRadius:parseFloat(shellStyle.borderRadius),
+      shellBackground:shellStyle.backgroundColor,
+      buttonWidth:buttonRect.width,
+      buttonHeight:buttonRect.height,
+      buttonRadius:parseFloat(buttonStyle.borderRadius),
+    };
+  });
+  expect(metrics).not.toBeNull();
+  expect(metrics?.shellHeight??0).toBeGreaterThanOrEqual(52);
+  expect(metrics?.shellRadius??0).toBeGreaterThan(20);
+  expect(Math.abs((metrics?.buttonWidth??0)-(metrics?.buttonHeight??0))).toBeLessThan(1);
+  expect(metrics?.buttonRadius??0).toBeGreaterThanOrEqual(19);
+  await input.focus();
+  await page.screenshot({path:'test-results/mini-app-select-smart-input.png',fullPage:true,animations:'disabled'});
+});
+
 test('Control preview: object editor and real state changes',async({page})=>{
  await page.setViewportSize({width:1440,height:1000});await page.goto('/pulsedv/control-center/');
  await expect(page.getByText('Демонстрация · данные только в этом браузере')).toBeVisible();
