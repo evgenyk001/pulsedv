@@ -92,7 +92,7 @@
 .developer span{font-size:8.5px;color:var(--muted-foreground)}
 .developer strong{font-size:11.5px;margin-top:2px}
 .developer small{margin-top:4px;font-size:8px;color:var(--success);display:flex;align-items:center;gap:3px}
-.developerSheet{border-radius:var(--app-radius-sheet)!important;background:rgba(248,250,252,.96)!important}
+.developerSheet{border-radius:var(--app-radius-sheet)!important}
 .developerInfo{margin-top:18px;padding:16px;border-radius:var(--app-radius-control);background:var(--app-card-strong);border:1px solid var(--app-card-border);display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
 .developerInfo>svg{color:var(--success)}
 .developerInfo span{display:flex;flex-direction:column}
