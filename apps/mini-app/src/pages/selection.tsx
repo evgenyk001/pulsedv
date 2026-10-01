@@ -778,7 +778,7 @@ export default function SelectionPage(){
           placeholder="Двушка во Владивостоке, до 70 тыс./мес, у моря"
           aria-label="Опишите квартиру своими словами"
         />
-        <button type="button" onClick={applySmartQuery} aria-label="Понять запрос"><ArrowRight size={16}/></button>
+        <button type="button" onClick={applySmartQuery} aria-label="Понять запрос"><ChevronRight size={18}/></button>
       </div>
       <button type="button" className={styles.exampleQuery} onClick={()=>{
         setSmartQuery("Двушка во Владивостоке, ипотека до 70 тыс. в месяц, первоначальный взнос 2 млн, желательно у моря");
@@ -920,11 +920,6 @@ export default function SelectionPage(){
         <div className={styles.selectionCount}>{preferences.length}/{control.select.maxPreferences} выбрано</div>
       </>}
     </section>
-
-    <div className={styles.liveMatch}>
-      <div><Sparkles size={17}/><span><strong>{liveCount} {plural(liveCount,["вариант","варианта","вариантов"])}</strong><small>{step===0?"после города и планировки":strongCount>0?strongCount+" с высоким совпадением":"PULSE продолжает искать лучший баланс"}</small></span></div>
-      <ChevronRight size={17}/>
-    </div>
 
     <div className={styles.actions}>
       {step>0&&<button type="button" className={styles.back} onClick={()=>{setStep(value=>Math.max(0,value-1));safeHaptic();}}><ChevronLeft size={17}/>Назад</button>}
