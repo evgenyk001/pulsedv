@@ -1,6 +1,6 @@
 import React from 'react';
 import {Link} from 'react-router-dom';
-import {ArrowRight, CalendarDays, Compass, Building2, MessageCircle, X} from 'lucide-react';
+import {ChevronRight, CalendarDays, Compass, Building2, MessageCircle, X} from 'lucide-react';
 import {useClientJourneys} from '../helpers/useClientJourneys';
 import {clientUpdates} from '../../../../packages/journey/updates';
 import './clientPolish.css';
@@ -18,5 +18,5 @@ export function ContinueChoice(){
  :last&&typeof last.id==='string'&&typeof last.name==='string'?{key:'property:'+last.id+last.at,to:'/property/'+encodeURIComponent(last.id),title:last.name,detail:'Вы недавно смотрели этот проект',action:'Вернуться к проекту',Icon:Building2}:null;
  if(!item||hidden===item.key)return null;
  const Icon=item.Icon;
- return <section className="pulseResume" aria-label="Продолжить выбор"><Link to={item.to}><span className="pulseResumeIcon"><Icon size={22}/></span><span className="pulseResumeCopy"><strong>{item.title}</strong><small>{item.detail}</small><span className="pulseResumeAction">{item.action}<ArrowRight size={14}/></span></span></Link><button aria-label="Скрыть продолжение выбора" onClick={()=>{setHidden(item.key);try{localStorage.setItem('pulse.continue-hidden',JSON.stringify(item.key))}catch{}}}><X size={16}/></button></section>;
+ return <section className="pulseResume" aria-label="Продолжить выбор"><Link to={item.to}><span className="pulseResumeIcon"><Icon size={22}/></span><span className="pulseResumeCopy"><strong>{item.title}</strong><small>{item.detail}</small><span className="pulseResumeAction">{item.action}<ChevronRight size={14}/></span></span></Link><button aria-label="Скрыть продолжение выбора" onClick={()=>{setHidden(item.key);try{localStorage.setItem('pulse.continue-hidden',JSON.stringify(item.key))}catch{}}}><X size={16}/></button></section>;
 }
