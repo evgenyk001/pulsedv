@@ -36,6 +36,22 @@ export function AppShell({children}:{children:React.ReactNode}){
   },[]);
 
   React.useEffect(()=>{
+    const preventPageGesture=(event:Event)=>{
+      const target=event.target instanceof Element?event.target:null;
+      if(target?.closest('[data-allow-pinch-zoom="true"]'))return;
+      event.preventDefault();
+    };
+    document.addEventListener("gesturestart",preventPageGesture,{passive:false});
+    document.addEventListener("gesturechange",preventPageGesture,{passive:false});
+    document.addEventListener("gestureend",preventPageGesture,{passive:false});
+    return()=>{
+      document.removeEventListener("gesturestart",preventPageGesture);
+      document.removeEventListener("gesturechange",preventPageGesture);
+      document.removeEventListener("gestureend",preventPageGesture);
+    };
+  },[]);
+
+  React.useEffect(()=>{
 
     recordPulseEvent({eventType:"page_view",entityType:"route",entityId:location.pathname,metadata:{search:location.search}});
   },[location.pathname,location.search]);
