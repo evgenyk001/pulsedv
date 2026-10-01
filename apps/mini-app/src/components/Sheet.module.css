@@ -18,7 +18,7 @@
     padding:30px var(--app-sheet-inline) var(--app-sheet-inline);
     border-radius:var(--app-radius-sheet)!important;
     overflow-y:auto;
-    background:rgba(248,250,252,.94);
+    background:rgba(248,250,252,.96);
     border:1px solid rgba(255,255,255,.88);
     box-shadow:0 4px 12px rgba(34,45,61,.075),0 26px 70px rgba(34,45,61,.16),inset 0 1px 0 rgba(255,255,255,.95);
     backdrop-filter:blur(32px) saturate(1.18);
