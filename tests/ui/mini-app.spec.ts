@@ -115,6 +115,23 @@ test('Mini App home polish: property rail shadow fades before crop',async({page}
  await page.screenshot({path:'test-results/mini-app-home-motion-polish.png',fullPage:true,animations:'disabled'});
 });
 
+
+
+test('Mini App banners: premium chrome without dismiss or counters',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/pulsedv/mini-app/');
+  const skip=page.getByRole('button',{name:'Пропустить онбординг'});
+  if(await skip.count())await skip.click();
+
+  await expect(page.getByRole('heading',{name:'Квартира, которую хочется показывать друзьям'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Скрыть баннеры на эту сессию'})).toHaveCount(0);
+  await expect(page.getByText(/01\s*\/\s*03/)).toHaveCount(0);
+  await expect(page.getByText('Приморье',{exact:true})).toBeVisible();
+  await expect(page.getByText('Смотреть проекты',{exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+  await page.screenshot({path:'test-results/mini-app-banner-premium-390.png',fullPage:true,animations:'disabled'});
+});
+
 test('Control preview: object editor and real state changes',async({page})=>{
  await page.setViewportSize({width:1440,height:1000});await page.goto('/pulsedv/control-center/');
  await expect(page.getByText('Демонстрация · данные только в этом браузере')).toBeVisible();
