@@ -26,6 +26,14 @@ const fallbackSlides:Slide[] = [
   { id:"select",image:asset("/_cdn/static/7493f319-d413-4d3d-90e4-66b4a2ee6ecd.png"),eyebrow:"PULSE Select",title:"Не листайте сотни квартир вручную",text:"Ответьте на несколько вопросов — покажем подходящие ЖК.",cta:"Начать подбор",to:"/selection",kind:"promo" }
 ];
 
+function visibleIndicatorIndexes(total:number,selected:number,maxVisible=5){
+  if(total<=maxVisible)return Array.from({length:total},(_,index)=>index);
+  const half=Math.floor(maxVisible/2);
+  let start=Math.max(0,selected-half);
+  start=Math.min(start,total-maxVisible);
+  return Array.from({length:maxVisible},(_,index)=>start+index);
+}
+
 function BannerLink({to,className,children,label,onActivate}:{to:string|null;className:string;children:React.ReactNode;label:string;onActivate:()=>void}){
   if(!to)return <div className={className} aria-label={label}>{children}</div>;
   if(/^https?:\/\//i.test(to))return <a href={to} target="_blank" rel="noreferrer" className={className} aria-label={label} onClick={onActivate}>{children}</a>;
@@ -97,6 +105,10 @@ export function PromoCarousel(){
 
   if(!slides.length)return null;
 
+  const indicatorIndexes=visibleIndicatorIndexes(slides.length,selected);
+  const hasBefore=indicatorIndexes.length>0&&indicatorIndexes[0]>0;
+  const hasAfter=indicatorIndexes.length>0&&indicatorIndexes[indicatorIndexes.length-1]<slides.length-1;
+
   return <div className={styles.wrap}>
     <Carousel opts={{loop:slides.length>1,align:"start",duration:26,slidesToScroll:1}} plugins={[autoplay.current]} setApi={setApi} className={styles.carousel}>
       <CarouselContent>
@@ -118,5 +130,24 @@ export function PromoCarousel(){
         </CarouselItem>)}
       </CarouselContent>
     </Carousel>
+    {slides.length>1&&<div className={styles.pagination} role="tablist" aria-label="Баннеры">
+      {indicatorIndexes.map((slideIndex,slotIndex)=>{
+        const active=slideIndex===selected;
+        const edgeBefore=hasBefore&&slotIndex===0;
+        const edgeAfter=hasAfter&&slotIndex===indicatorIndexes.length-1;
+        return <button
+          key={slideIndex}
+          type="button"
+          role="tab"
+          aria-selected={active}
+          aria-label={`Баннер ${slideIndex+1} из ${slides.length}`}
+          className={styles.dot+" "+(active?styles.dotActive:"")+" "+((edgeBefore||edgeAfter)&&!active?styles.dotEdge:"")}
+          onClick={()=>{
+            api?.scrollTo(slideIndex);
+            autoplay.current.reset();
+          }}
+        />;
+      })}
+    </div>}
   </div>;
 }
