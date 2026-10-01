@@ -1,6 +1,6 @@
 .wrap{position:relative}
-.carousel{height:244px;border-radius:var(--app-radius-card);overflow:visible}
-.slide{padding-right:10px}
+.carousel{height:244px;border-radius:var(--app-radius-card);overflow:hidden;contain:paint}
+.slide{padding-right:0;transform:translate3d(0,0,0);backface-visibility:hidden}
 .bannerLink{
   display:block;height:100%;color:inherit;text-decoration:none;
   -webkit-tap-highlight-color:transparent;
@@ -15,12 +15,11 @@
     0 11px 30px rgba(27,39,55,.085),
     0 28px 62px rgba(27,39,55,.075),
     inset 0 1px 0 rgba(255,255,255,.72);
-  transform:scale(.994) translateZ(0);
-  transition:transform .50s var(--motion-soft),box-shadow .50s ease;
+  transform:translateZ(0);
+  transition:box-shadow .42s ease,filter .42s ease;
   isolation:isolate;
 }
 .bannerActive{
-  transform:scale(1) translateZ(0);
   box-shadow:
     0 1px 2px rgba(22,31,43,.03),
     0 13px 34px rgba(27,39,55,.095),
@@ -29,13 +28,13 @@
 }
 .banner>img{
   position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-  transform:scale(1.018);
-  transition:transform 6.2s cubic-bezier(.22,.68,.18,1),filter .48s ease;
+  transform:scale(1.028) translate3d(0,0,0);
+  transition:transform 6s cubic-bezier(.22,.68,.18,1),filter .42s ease;
   filter:saturate(.93) contrast(1.04) brightness(.96);
   will-change:transform;
 }
 .bannerActive>img{
-  transform:scale(1.065);
+  transform:scale(1.052) translate3d(0,0,0);
   filter:saturate(1.01) contrast(1.055) brightness(.985);
 }
 .scrim{
@@ -107,7 +106,7 @@
   color:#fff;background:rgba(21,29,40,.94);
   transition:transform .20s var(--motion-spring);
 }
-.bannerLink:active .banner{transform:scale(.986)}
+.bannerLink:active .banner{filter:brightness(.985)}
 .bannerLink:active .cta{
   transform:scale(.97);
   background:#fff;
@@ -116,7 +115,7 @@
 .bannerLink:active .cta svg{transform:translate(1px,-1px)}
 @media(hover:hover) and (pointer:fine){
   .bannerLink:hover .banner{
-    transform:translateY(-2px) scale(1);
+    filter:brightness(1.015);
     box-shadow:
       0 2px 4px rgba(22,31,43,.03),
       0 16px 38px rgba(27,39,55,.10),
