@@ -126,9 +126,10 @@ export function PromoCarousel(){
     <Carousel opts={{loop:slides.length>1,align:"start",duration:42,slidesToScroll:1,skipSnaps:false}} plugins={[autoplay.current]} setApi={setApi} className={styles.carousel}>
       <CarouselContent>
         {slides.map(({id,image,eyebrow,title,text,cta,to,kind},index)=>{
-          const indicatorIndexes=visibleIndicatorIndexes(slides.length,index);
+          const indicatorIndexes=visibleIndicatorIndexes(slides.length,selected);
           const hasBefore=indicatorIndexes.length>0&&indicatorIndexes[0]>0;
           const hasAfter=indicatorIndexes.length>0&&indicatorIndexes[indicatorIndexes.length-1]<slides.length-1;
+          const activeSlot=Math.max(0,indicatorIndexes.indexOf(selected));
           const isCurrent=selected===index;
           return <CarouselItem key={id} className={styles.slide}>
             <BannerLink to={to} className={styles.bannerLink} label={title} onActivate={()=>recordPulseEvent({eventType:"banner_click",entityType:"banner",entityId:id,metadata:{kind,position:index+1,target:to}})}>
@@ -150,9 +151,11 @@ export function PromoCarousel(){
               role={isCurrent?"tablist":undefined}
               aria-label={isCurrent?"Баннеры":undefined}
               aria-hidden={!isCurrent}
+              style={{"--active-slot":activeSlot,"--slot-count":indicatorIndexes.length} as React.CSSProperties}
             >
+              <span className={styles.activePill} aria-hidden="true"/>
               {indicatorIndexes.map((slideIndex,slotIndex)=>{
-                const active=slideIndex===index;
+                const active=slideIndex===selected;
                 const edgeBefore=hasBefore&&slotIndex===0;
                 const edgeAfter=hasAfter&&slotIndex===indicatorIndexes.length-1;
                 return <button
@@ -162,7 +165,7 @@ export function PromoCarousel(){
                   aria-selected={isCurrent?active:undefined}
                   aria-label={isCurrent?`Баннер ${slideIndex+1} из ${slides.length}`:undefined}
                   tabIndex={isCurrent?0:-1}
-                  className={styles.dot+" "+(active?styles.dotActive:"")+" "+((edgeBefore||edgeAfter)&&!active?styles.dotEdge:"")}
+                  className={styles.dot+" "+(active?styles.dotCurrent:"")+" "+((edgeBefore||edgeAfter)&&!active?styles.dotEdge:"")}
                   onClick={()=>{
                     if(!isCurrent)return;
                     api?.scrollTo(slideIndex);
