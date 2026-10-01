@@ -1,4 +1,4 @@
-.page{display:grid;gap:20px;color:var(--foreground)}
+.page{display:grid;gap:var(--app-page-gap);color:var(--foreground)}
 .navigation{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 0}
 .navigation .iconButton{width:44px;height:44px}
 .pageHeader{padding:4px 3px}.pageHeader>span{font-size:9px;letter-spacing:.12em;font-weight:700;color:var(--muted-foreground)}
