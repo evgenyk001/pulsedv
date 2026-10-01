@@ -5,7 +5,7 @@ import {FloorplanViewer} from "../components/FloorplanViewer";
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
 import { Link, useParams, useLocation } from "react-router-dom";
 import {
-  ArrowLeft, Heart, Share2, MapPin, CalendarDays, Building2, Waves, Trees, CarFront,
+  ChevronLeft, Heart, Share2, MapPin, CalendarDays, Building2, Waves, Trees, CarFront,
   Baby, ShieldCheck, ChevronRight, Send, Sparkles, MapPinned, LayoutGrid, Ruler,
   WalletCards, Image as ImageIcon, FileText
 } from "lucide-react";
@@ -91,7 +91,7 @@ export default function PropertyPage(){
           :<div className={styles.heroSlide}><div className={styles.heroFallback}><ImageIcon size={34}/><span>Фото проекта готовится</span></div></div>}
       </div>
       <div className={styles.fade}/>
-      <Link to={returnTo} className={styles.back} aria-label="Назад"><ArrowLeft size={19}/></Link>
+      <Link to={returnTo} className={styles.back} aria-label="Назад"><ChevronLeft size={19}/></Link>
       <div className={styles.actions}>
         <button onClick={()=>toggle(p.id)} className={favorite?styles.favorited:""} aria-label={favorite?"Убрать из избранного":"В избранное"}><Heart size={18} fill={favorite?"currentColor":"none"}/></button>
         <button onClick={share} aria-label="Поделиться"><Share2 size={18}/></button>
