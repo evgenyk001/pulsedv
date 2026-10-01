@@ -55,7 +55,7 @@ export function PromoCarousel(){
 
   const [api,setApi]=React.useState<CarouselApi>();
   const [selected,setSelected]=React.useState(0);
-  const autoplay=React.useRef(Autoplay({delay:6000,stopOnInteraction:false,stopOnMouseEnter:true,playOnInit:false}));
+  const autoplay=React.useRef(Autoplay({delay:6200,stopOnInteraction:false,stopOnMouseEnter:true,playOnInit:false}));
   const [mediaReady,setMediaReady]=React.useState(false);
   const impressed=React.useRef(new Set<string>());
 
@@ -89,9 +89,26 @@ export function PromoCarousel(){
   React.useEffect(()=>{
     if(!api)return;
     const sync=()=>setSelected(api.selectedScrollSnap());
-    sync();api.on("select",sync);api.on("reInit",sync);
-    return ()=>{api.off("select",sync);api.off("reInit",sync)};
-  },[api]);
+    const onPointerDown=()=>autoplay.current.stop();
+    const onSettle=()=>{
+      const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      if(mediaReady&&slides.length>1&&!reduced){
+        autoplay.current.play();
+        autoplay.current.reset();
+      }
+    };
+    sync();
+    api.on("select",sync);
+    api.on("reInit",sync);
+    api.on("pointerDown",onPointerDown);
+    api.on("settle",onSettle);
+    return ()=>{
+      api.off("select",sync);
+      api.off("reInit",sync);
+      api.off("pointerDown",onPointerDown);
+      api.off("settle",onSettle);
+    };
+  },[api,mediaReady,slides.length]);
 
   React.useEffect(()=>{
     if(selected>=slides.length)setSelected(0);
@@ -105,49 +122,58 @@ export function PromoCarousel(){
 
   if(!slides.length)return null;
 
-  const indicatorIndexes=visibleIndicatorIndexes(slides.length,selected);
-  const hasBefore=indicatorIndexes.length>0&&indicatorIndexes[0]>0;
-  const hasAfter=indicatorIndexes.length>0&&indicatorIndexes[indicatorIndexes.length-1]<slides.length-1;
-
   return <div className={styles.wrap}>
-    <Carousel opts={{loop:slides.length>1,align:"start",duration:36,slidesToScroll:1,skipSnaps:false}} plugins={[autoplay.current]} setApi={setApi} className={styles.carousel}>
+    <Carousel opts={{loop:slides.length>1,align:"start",duration:42,slidesToScroll:1,skipSnaps:false}} plugins={[autoplay.current]} setApi={setApi} className={styles.carousel}>
       <CarouselContent>
-        {slides.map(({id,image,eyebrow,title,text,cta,to,kind},index)=><CarouselItem key={id} className={styles.slide}>
-          <BannerLink to={to} className={styles.bannerLink} label={title} onActivate={()=>recordPulseEvent({eventType:"banner_click",entityType:"banner",entityId:id,metadata:{kind,position:index+1,target:to}})}>
-            <article className={styles.banner+" "+styles[kind]+" "+(selected===index?styles.bannerActive:"")}>
-              <img src={image} alt="" loading="eager" decoding="async" fetchPriority={index===0?"high":"auto"}/>
-              <div className={styles.scrim}/>
-              <div className={styles.ambient}/>
-              <div className={styles.edge}/>
-              <div className={styles.content}>
-                <div className={styles.eyebrow}>{eyebrow}</div>
-                <h1>{title}</h1>
-                <p>{text}</p>
-                {to&&<div className={styles.cta}><span>{cta}</span><ArrowUpRight size={15}/></div>}
-              </div>
-            </article>
-          </BannerLink>
-        </CarouselItem>)}
+        {slides.map(({id,image,eyebrow,title,text,cta,to,kind},index)=>{
+          const indicatorIndexes=visibleIndicatorIndexes(slides.length,index);
+          const hasBefore=indicatorIndexes.length>0&&indicatorIndexes[0]>0;
+          const hasAfter=indicatorIndexes.length>0&&indicatorIndexes[indicatorIndexes.length-1]<slides.length-1;
+          const isCurrent=selected===index;
+          return <CarouselItem key={id} className={styles.slide}>
+            <BannerLink to={to} className={styles.bannerLink} label={title} onActivate={()=>recordPulseEvent({eventType:"banner_click",entityType:"banner",entityId:id,metadata:{kind,position:index+1,target:to}})}>
+              <article className={styles.banner+" "+styles[kind]+" "+(isCurrent?styles.bannerActive:"")}>
+                <img src={image} alt="" loading="eager" decoding="async" fetchPriority={index===0?"high":"auto"}/>
+                <div className={styles.scrim}/>
+                <div className={styles.ambient}/>
+                <div className={styles.edge}/>
+                <div className={styles.content}>
+                  <div className={styles.eyebrow}>{eyebrow}</div>
+                  <h1>{title}</h1>
+                  <p>{text}</p>
+                  {to&&<div className={styles.cta}><span>{cta}</span><ArrowUpRight size={15}/></div>}
+                </div>
+              </article>
+            </BannerLink>
+            {slides.length>1&&<div
+              className={styles.pagination+" "+(!isCurrent?styles.paginationInactive:"")}
+              role={isCurrent?"tablist":undefined}
+              aria-label={isCurrent?"Баннеры":undefined}
+              aria-hidden={!isCurrent}
+            >
+              {indicatorIndexes.map((slideIndex,slotIndex)=>{
+                const active=slideIndex===index;
+                const edgeBefore=hasBefore&&slotIndex===0;
+                const edgeAfter=hasAfter&&slotIndex===indicatorIndexes.length-1;
+                return <button
+                  key={slideIndex}
+                  type="button"
+                  role={isCurrent?"tab":undefined}
+                  aria-selected={isCurrent?active:undefined}
+                  aria-label={isCurrent?`Баннер ${slideIndex+1} из ${slides.length}`:undefined}
+                  tabIndex={isCurrent?0:-1}
+                  className={styles.dot+" "+(active?styles.dotActive:"")+" "+((edgeBefore||edgeAfter)&&!active?styles.dotEdge:"")}
+                  onClick={()=>{
+                    if(!isCurrent)return;
+                    api?.scrollTo(slideIndex);
+                    autoplay.current.reset();
+                  }}
+                />;
+              })}
+            </div>}
+          </CarouselItem>;
+        })}
       </CarouselContent>
     </Carousel>
-    {slides.length>1&&<div className={styles.pagination} role="tablist" aria-label="Баннеры">
-      {indicatorIndexes.map((slideIndex,slotIndex)=>{
-        const active=slideIndex===selected;
-        const edgeBefore=hasBefore&&slotIndex===0;
-        const edgeAfter=hasAfter&&slotIndex===indicatorIndexes.length-1;
-        return <button
-          key={slideIndex}
-          type="button"
-          role="tab"
-          aria-selected={active}
-          aria-label={`Баннер ${slideIndex+1} из ${slides.length}`}
-          className={styles.dot+" "+(active?styles.dotActive:"")+" "+((edgeBefore||edgeAfter)&&!active?styles.dotEdge:"")}
-          onClick={()=>{
-            api?.scrollTo(slideIndex);
-            autoplay.current.reset();
-          }}
-        />;
-      })}
-    </div>}
   </div>;
 }

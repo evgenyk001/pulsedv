@@ -154,14 +154,36 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
   expect(geometry?.leftDelta??99).toBeLessThan(1.1);
   expect(geometry?.rightDelta??99).toBeLessThan(1.1);
 
-  const tabs=page.getByRole('tablist',{name:'Баннеры'});
+  let tabs=page.getByRole('tablist',{name:'Баннеры'});
   await expect(tabs).toBeVisible();
-  const dots=tabs.getByRole('tab');
+  let dots=tabs.getByRole('tab');
   await expect(dots).toHaveCount(3);
   const firstWidth=(await dots.nth(0).boundingBox())!.width;
   const secondWidth=(await dots.nth(1).boundingBox())!.width;
   expect(firstWidth).toBeGreaterThan(secondWidth*2);
+
+  const currentBanner=page.getByRole('heading',{name:'Квартира, которую хочется показывать друзьям'}).locator('xpath=ancestor::article');
+  const shadow=await currentBanner.evaluate(el=>getComputedStyle(el).boxShadow);
+  expect(shadow.split(/, (?=rgba|rgb)/).every(part=>part.includes('inset'))).toBe(true);
+
+  const currentSlide=currentBanner.locator('xpath=ancestor::*[@role="group"][1]');
+  const attachedPagination=currentSlide.locator('[class*="pagination"]').first();
+  await expect(attachedPagination).toBeVisible();
+  const attachment=await currentSlide.evaluate(slide=>{
+    const pagination=slide.querySelector('[class*="pagination"]') as HTMLElement|null;
+    return {
+      directChild:pagination?.parentElement===slide,
+      position:pagination?getComputedStyle(pagination).position:'',
+    };
+  });
+  expect(attachment.directChild).toBe(true);
+  expect(attachment.position).toBe('absolute');
+
+  tabs=page.getByRole('tablist',{name:'Баннеры'});
+  dots=tabs.getByRole('tab');
   await dots.nth(1).click();
+  tabs=page.getByRole('tablist',{name:'Баннеры'});
+  dots=tabs.getByRole('tab');
   await expect(dots.nth(1)).toHaveAttribute('aria-selected','true');
   await expect(dots.nth(0)).toHaveAttribute('aria-selected','false');
 
