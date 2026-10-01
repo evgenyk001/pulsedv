@@ -139,8 +139,20 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
   });
   expect(geometry).not.toBeNull();
   expect(Math.abs((geometry?.viewportWidth??0)-(geometry?.slideWidth??0))).toBeLessThan(1.1);
-  expect(geometry?.paddingRight).toBe('0px');
+  expect(parseFloat(geometry?.paddingRight??'0')).toBeGreaterThanOrEqual(4);
   expect(geometry?.overflow).toBe('hidden');
+
+  const tabs=page.getByRole('tablist',{name:'Баннеры'});
+  await expect(tabs).toBeVisible();
+  const dots=tabs.getByRole('tab');
+  await expect(dots).toHaveCount(3);
+  const firstWidth=(await dots.nth(0).boundingBox())!.width;
+  const secondWidth=(await dots.nth(1).boundingBox())!.width;
+  expect(firstWidth).toBeGreaterThan(secondWidth*2);
+  await dots.nth(1).click();
+  await expect(dots.nth(1)).toHaveAttribute('aria-selected','true');
+  await expect(dots.nth(0)).toHaveAttribute('aria-selected','false');
+
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
   await page.screenshot({path:'test-results/mini-app-banner-premium-390.png',fullPage:true,animations:'disabled'});
 });

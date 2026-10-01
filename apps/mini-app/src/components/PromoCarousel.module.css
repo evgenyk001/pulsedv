@@ -1,6 +1,6 @@
 .wrap{position:relative}
-.carousel{height:244px;border-radius:var(--app-radius-card);overflow:hidden;contain:paint}
-.slide{padding-right:0;transform:translate3d(0,0,0);backface-visibility:hidden}
+.carousel{height:244px;width:calc(100% + 8px);margin-inline:-4px;border-radius:var(--app-radius-card);overflow:hidden;contain:paint}
+.slide{padding-inline:4px;transform:translate3d(0,0,0);backface-visibility:hidden}
 .bannerLink{
   display:block;height:100%;color:inherit;text-decoration:none;
   -webkit-tap-highlight-color:transparent;
@@ -134,4 +134,46 @@
   .content h1{font-size:23px;max-width:286px;margin-top:13px}
   .content p{max-width:268px;font-size:10.2px}
   .cta{min-height:37px}
+}
+
+.pagination{
+  position:absolute;z-index:8;right:22px;bottom:21px;
+  display:flex;align-items:center;gap:7px;
+  height:12px;
+  pointer-events:auto;
+}
+.dot{
+  appearance:none;-webkit-appearance:none;
+  width:6px;height:6px;padding:0;margin:0;
+  border:0!important;outline:0!important;border-radius:999px;
+  background:rgba(255,255,255,.46);
+  box-shadow:none!important;
+  opacity:.82;
+  cursor:pointer;
+  transition:
+    width .30s var(--motion-spring),
+    transform .30s var(--motion-spring),
+    opacity .24s ease,
+    background .24s ease;
+}
+.dotActive{
+  width:23px;
+  background:rgba(255,255,255,.96);
+  opacity:1;
+}
+.dotEdge{
+  width:4px;height:4px;
+  opacity:.48;
+  transform:scale(.9);
+}
+.dot:focus-visible{
+  outline:none!important;
+  box-shadow:0 0 0 4px rgba(255,255,255,.15)!important;
+}
+@media(max-width:360px){
+  .pagination{right:19px;bottom:19px;gap:6px}
+  .dotActive{width:20px}
+}
+@media(prefers-reduced-motion:reduce){
+  .dot{transition:none!important}
 }
