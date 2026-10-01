@@ -128,10 +128,12 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
   await expect(page.getByText(/01\s*\/\s*03/)).toHaveCount(0);
   await expect(page.getByText('Приморье',{exact:true})).toBeVisible();
   await expect(page.getByText('Смотреть проекты',{exact:true})).toBeVisible();
-  const geometry=await page.locator('[class*="PromoCarousel_carousel"]').first().evaluate(carousel=>{
-    const viewport=carousel.querySelector('[class*="Carousel_viewport"]') as HTMLElement|null;
-    const slide=carousel.querySelector('[class*="PromoCarousel_slide"]') as HTMLElement|null;
-    if(!viewport||!slide)return null;
+  const geometry=await page.getByRole('heading',{name:'Квартира, которую хочется показывать друзьям'}).evaluate(heading=>{
+    const banner=heading.closest('article') as HTMLElement|null;
+    const slide=banner?.closest('[role="group"]') as HTMLElement|null;
+    const viewport=slide?.parentElement?.parentElement as HTMLElement|null;
+    const carousel=viewport?.parentElement as HTMLElement|null;
+    if(!viewport||!slide||!carousel)return null;
     const v=viewport.getBoundingClientRect(),s=slide.getBoundingClientRect();
     return {viewportWidth:v.width,slideWidth:s.width,paddingRight:getComputedStyle(slide).paddingRight,overflow:getComputedStyle(carousel).overflow};
   });
