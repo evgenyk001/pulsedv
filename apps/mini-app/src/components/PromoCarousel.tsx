@@ -47,8 +47,36 @@ export function PromoCarousel(){
 
   const [api,setApi]=React.useState<CarouselApi>();
   const [selected,setSelected]=React.useState(0);
-  const autoplay=React.useRef(Autoplay({delay:5600,stopOnInteraction:false,stopOnMouseEnter:true}));
+  const autoplay=React.useRef(Autoplay({delay:6000,stopOnInteraction:false,stopOnMouseEnter:true,playOnInit:false}));
+  const [mediaReady,setMediaReady]=React.useState(false);
   const impressed=React.useRef(new Set<string>());
+
+  React.useEffect(()=>{
+    let active=true;
+    if(!slides.length){setMediaReady(false);return()=>{active=false};}
+    setMediaReady(false);
+    Promise.all(slides.map(slide=>new Promise<void>(resolve=>{
+      const image=new Image();
+      image.src=slide.image;
+      const done=()=>resolve();
+      if(image.complete){
+        if(typeof image.decode==="function")image.decode().catch(()=>{}).finally(done);
+        else done();
+      }else{
+        image.onload=()=>{if(typeof image.decode==="function")image.decode().catch(()=>{}).finally(done);else done();};
+        image.onerror=done;
+      }
+    }))).then(()=>{if(active)setMediaReady(true)});
+    return()=>{active=false};
+  },[slides]);
+
+  React.useEffect(()=>{
+    if(!api||!mediaReady||slides.length<2)return;
+    const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if(reduced)return;
+    autoplay.current.play();
+    return()=>autoplay.current.stop();
+  },[api,mediaReady,slides.length]);
 
   React.useEffect(()=>{
     if(!api)return;
@@ -70,12 +98,12 @@ export function PromoCarousel(){
   if(!slides.length)return null;
 
   return <div className={styles.wrap}>
-    <Carousel opts={{loop:slides.length>1,align:"start",duration:32}} plugins={[autoplay.current]} setApi={setApi} className={styles.carousel}>
+    <Carousel opts={{loop:slides.length>1,align:"start",duration:26,slidesToScroll:1}} plugins={[autoplay.current]} setApi={setApi} className={styles.carousel}>
       <CarouselContent>
         {slides.map(({id,image,eyebrow,title,text,cta,to,kind},index)=><CarouselItem key={id} className={styles.slide}>
           <BannerLink to={to} className={styles.bannerLink} label={title} onActivate={()=>recordPulseEvent({eventType:"banner_click",entityType:"banner",entityId:id,metadata:{kind,position:index+1,target:to}})}>
             <article className={styles.banner+" "+styles[kind]+" "+(selected===index?styles.bannerActive:"")}>
-              <img src={image} alt=""/>
+              <img src={image} alt="" loading="eager" decoding="async" fetchPriority={index===0?"high":"auto"}/>
               <div className={styles.scrim}/>
               <div className={styles.ambient}/>
               <div className={styles.edge}/>
