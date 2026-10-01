@@ -110,7 +110,7 @@ export function PromoCarousel(){
   const hasAfter=indicatorIndexes.length>0&&indicatorIndexes[indicatorIndexes.length-1]<slides.length-1;
 
   return <div className={styles.wrap}>
-    <Carousel opts={{loop:slides.length>1,align:"start",duration:26,slidesToScroll:1}} plugins={[autoplay.current]} setApi={setApi} className={styles.carousel}>
+    <Carousel opts={{loop:slides.length>1,align:"start",duration:36,slidesToScroll:1,skipSnaps:false}} plugins={[autoplay.current]} setApi={setApi} className={styles.carousel}>
       <CarouselContent>
         {slides.map(({id,image,eyebrow,title,text,cta,to,kind},index)=><CarouselItem key={id} className={styles.slide}>
           <BannerLink to={to} className={styles.bannerLink} label={title} onActivate={()=>recordPulseEvent({eventType:"banner_click",entityType:"banner",entityId:id,metadata:{kind,position:index+1,target:to}})}>

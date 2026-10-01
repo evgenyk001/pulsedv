@@ -133,14 +133,26 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
     const slide=banner?.closest('[role="group"]') as HTMLElement|null;
     const viewport=slide?.parentElement?.parentElement as HTMLElement|null;
     const carousel=viewport?.parentElement as HTMLElement|null;
-    if(!viewport||!slide||!carousel)return null;
-    const v=viewport.getBoundingClientRect(),s=slide.getBoundingClientRect();
-    return {viewportWidth:v.width,slideWidth:s.width,paddingRight:getComputedStyle(slide).paddingRight,overflow:getComputedStyle(carousel).overflow};
+    const wrap=carousel?.parentElement as HTMLElement|null;
+    if(!banner||!viewport||!slide||!carousel||!wrap)return null;
+    const v=viewport.getBoundingClientRect(),s=slide.getBoundingClientRect(),b=banner.getBoundingClientRect(),w=wrap.getBoundingClientRect();
+    return {
+      viewportWidth:v.width,
+      slideWidth:s.width,
+      paddingRight:getComputedStyle(slide).paddingRight,
+      overflow:getComputedStyle(carousel).overflow,
+      wrapOverflow:getComputedStyle(wrap).overflow,
+      leftDelta:Math.abs(b.left-w.left),
+      rightDelta:Math.abs(b.right-w.right),
+    };
   });
   expect(geometry).not.toBeNull();
   expect(Math.abs((geometry?.viewportWidth??0)-(geometry?.slideWidth??0))).toBeLessThan(1.1);
-  expect(parseFloat(geometry?.paddingRight??'0')).toBeGreaterThanOrEqual(4);
+  expect(parseFloat(geometry?.paddingRight??'0')).toBeGreaterThanOrEqual(8);
   expect(geometry?.overflow).toBe('hidden');
+  expect(geometry?.wrapOverflow).toBe('hidden');
+  expect(geometry?.leftDelta??99).toBeLessThan(1.1);
+  expect(geometry?.rightDelta??99).toBeLessThan(1.1);
 
   const tabs=page.getByRole('tablist',{name:'Баннеры'});
   await expect(tabs).toBeVisible();
