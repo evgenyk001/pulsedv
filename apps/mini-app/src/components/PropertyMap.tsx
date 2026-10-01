@@ -100,7 +100,7 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,immersive=fal
       const meta=document.createElement("small");meta.textContent=property.city+" · "+property.district;
       const name=document.createElement("strong");name.textContent=property.name;
       const detail=document.createElement("em");detail.textContent=(property.delivery||"Новостройка")+" · от "+property.priceFrom.toFixed(1).replace(".",",")+" млн ₽";
-      const open=document.createElement("b");open.textContent="Открыть ЖК →";
+      const open=document.createElement("b");open.textContent="Открыть ЖК";
       copy.append(meta,name,detail,open);card.append(image,copy);
       card.addEventListener("click",(event)=>{event.stopPropagation();(openRef.current??selectRef.current)(property.id)});
       root.addEventListener("mouseenter",()=>root.classList.add(styles.pinHover));
