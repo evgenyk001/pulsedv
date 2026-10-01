@@ -87,8 +87,19 @@
   --app-radius-sheet: 32px;
   --app-icon-radius: 16px;
   --app-control-height: 48px;
-  --app-section-gap: 26px;
-  --app-page-gap: 22px;
+  --app-page-inline: 18px;
+  --app-page-inline-compact: 14px;
+  --app-page-gap: 20px;
+  --app-page-gap-compact: 12px;
+  --app-section-gap: 24px;
+  --app-card-padding: 16px;
+  --app-sheet-inline: 18px;
+  --app-icon-button-size: 40px;
+  --app-icon-button-compact-size: 36px;
+  --app-icon-tile-size: 44px;
+  --app-icon-hero-size: 64px;
+  --app-icon-glyph-size: 18px;
+  --app-chevron-size: 17px;
   --motion-spring: cubic-bezier(.18,.88,.22,1);
   --motion-soft: cubic-bezier(.2,.8,.2,1);
   --motion-press: cubic-bezier(.3,.7,.4,1);
@@ -177,6 +188,7 @@ svg.lucide{
   stroke-width:1.8;
   stroke-linecap:round;
   stroke-linejoin:round;
+  shape-rendering:geometricPrecision;
 }
 button,a,input{
   -webkit-tap-highlight-color:transparent;

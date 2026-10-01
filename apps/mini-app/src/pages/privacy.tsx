@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ChevronLeft, ShieldCheck } from "lucide-react";
 import styles from "./legal.module.css";
 
 export default function PrivacyPage(){
   return <div className={styles.page}>
     <header className={styles.topbar}>
-      <Link to="/profile" aria-label="Назад в профиль"><ArrowLeft size={20}/></Link>
+      <Link to="/profile" aria-label="Назад в профиль"><ChevronLeft size={20}/></Link>
       <span>Персональные данные</span>
     </header>
 

@@ -249,6 +249,60 @@ test('PULSE Select removes dead live-count card and keeps a chevron action',asyn
   await page.screenshot({path:'test-results/mini-app-select-clean-step.png',fullPage:true,animations:'disabled'});
 });
 
+
+
+test('Mini App UI system: shared gutters, icons and bottom sheets',async({page})=>{
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/pulsedv/mini-app/');
+  const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
+
+  const homeBell=page.getByRole('button',{name:/Уведомления/}).first();
+  const iconMetrics=await homeBell.locator('svg').evaluate(svg=>({
+    strokeWidth:getComputedStyle(svg).strokeWidth,
+    linecap:getComputedStyle(svg).strokeLinecap,
+    linejoin:getComputedStyle(svg).strokeLinejoin,
+  }));
+  expect(parseFloat(iconMetrics.strokeWidth)).toBeCloseTo(1.8,1);
+  expect(iconMetrics.linecap).toBe('round');
+  expect(iconMetrics.linejoin).toBe('round');
+
+  const nav=page.getByRole('navigation',{name:'Основная навигация'});
+  await nav.getByRole('button',{name:'Каталог',exact:true}).click();
+  await page.getByRole('button',{name:'Фильтры',exact:true}).click();
+  let dialog=page.getByRole('dialog');
+  let close=dialog.getByRole('button',{name:'Закрыть',exact:true});
+  await expect(close).toBeVisible();
+  const firstSheet=await dialog.evaluate((el)=>{
+    const s=getComputedStyle(el);
+    return {paddingLeft:parseFloat(s.paddingLeft),paddingRight:parseFloat(s.paddingRight),radius:parseFloat(s.borderRadius)};
+  });
+  const firstClose=await close.boundingBox();
+  expect(firstSheet.paddingLeft).toBeCloseTo(18,0);
+  expect(firstSheet.paddingRight).toBeCloseTo(18,0);
+  expect(firstSheet.radius).toBeGreaterThanOrEqual(30);
+  expect(firstClose?.width??0).toBeCloseTo(36,0);
+  expect(firstClose?.height??0).toBeCloseTo(36,0);
+  await close.click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+
+  await page.goto('/pulsedv/mini-app/#/profile');
+  await page.getByRole('button',{name:/История подборов/}).click();
+  dialog=page.getByRole('dialog');
+  close=dialog.getByRole('button',{name:'Закрыть',exact:true});
+  await expect(close).toBeVisible();
+  const secondSheet=await dialog.evaluate((el)=>{
+    const s=getComputedStyle(el);
+    return {paddingLeft:parseFloat(s.paddingLeft),paddingRight:parseFloat(s.paddingRight),radius:parseFloat(s.borderRadius)};
+  });
+  const secondClose=await close.boundingBox();
+  expect(secondSheet.paddingLeft).toBeCloseTo(firstSheet.paddingLeft,0);
+  expect(secondSheet.paddingRight).toBeCloseTo(firstSheet.paddingRight,0);
+  expect(secondSheet.radius).toBeCloseTo(firstSheet.radius,0);
+  expect(secondClose?.width??0).toBeCloseTo(firstClose?.width??0,0);
+  expect(secondClose?.height??0).toBeCloseTo(firstClose?.height??0,0);
+  await page.screenshot({path:'test-results/mini-app-ui-system-pass.png',fullPage:true,animations:'disabled'});
+});
+
 test('Control preview: object editor and real state changes',async({page})=>{
  await page.setViewportSize({width:1440,height:1000});await page.goto('/pulsedv/control-center/');
  await expect(page.getByText('Демонстрация · данные только в этом браузере')).toBeVisible();
