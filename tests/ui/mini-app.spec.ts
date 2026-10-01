@@ -160,7 +160,11 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
   await expect(dots).toHaveCount(3);
   const firstWidth=(await dots.nth(0).boundingBox())!.width;
   const secondWidth=(await dots.nth(1).boundingBox())!.width;
-  expect(firstWidth).toBeGreaterThan(secondWidth*2);
+  expect(Math.abs(firstWidth-secondWidth)).toBeLessThan(1);
+  let activePill=tabs.locator('[class*="activePill"]').first();
+  await expect(activePill).toBeVisible();
+  const pillBefore=await activePill.boundingBox();
+  expect(pillBefore).not.toBeNull();
 
   const currentBanner=page.getByRole('heading',{name:'Квартира, которую хочется показывать друзьям'}).locator('xpath=ancestor::article');
   const shadow=await currentBanner.evaluate(el=>getComputedStyle(el).boxShadow);
@@ -186,6 +190,11 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
   dots=tabs.getByRole('tab');
   await expect(dots.nth(1)).toHaveAttribute('aria-selected','true');
   await expect(dots.nth(0)).toHaveAttribute('aria-selected','false');
+  activePill=tabs.locator('[class*="activePill"]').first();
+  await page.waitForTimeout(520);
+  const pillAfter=await activePill.boundingBox();
+  expect(pillAfter).not.toBeNull();
+  expect((pillAfter?.x??0)-(pillBefore?.x??0)).toBeGreaterThan(20);
 
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
   await page.screenshot({path:'test-results/mini-app-banner-premium-390.png',fullPage:true,animations:'disabled'});
