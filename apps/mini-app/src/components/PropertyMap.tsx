@@ -151,7 +151,7 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,immersive=fal
   },[selectedId,properties,status]);
 
   return <div className={styles.wrap}>
-    <div ref={nodeRef} className={styles.map} aria-label="Интерактивная карта 2ГИС с новостройками"/>
+    <div ref={nodeRef} className={styles.map} data-allow-pinch-zoom="true" aria-label="Интерактивная карта 2ГИС с новостройками"/>
     {status==="loading"&&<div className={styles.state}>Загружаем 2ГИС…</div>}
     {status==="error"&&<div className={styles.state}><strong>Карта 2ГИС пока не подключена</strong><span>{error}</span></div>}
     {status==="ready"&&<div className={styles.provider}>2ГИС</div>}
