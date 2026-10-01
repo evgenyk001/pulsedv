@@ -55,6 +55,35 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await page.screenshot({path:`test-results/mini-app-${width}.png`,fullPage:true});
 });
 
+
+
+test('Mini App native viewport: no visible scrollbars and page zoom locked',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/pulsedv/mini-app/');
+ const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
+ const viewport=await page.locator('meta[name="viewport"]').getAttribute('content');
+ expect(viewport).toContain('maximum-scale=1');
+ expect(viewport).toContain('user-scalable=no');
+ const css=await page.evaluate(()=>{
+   const body=getComputedStyle(document.body);
+   const root=getComputedStyle(document.getElementById('root')!);
+   return {
+     bodyOverflowX:body.overflowX,
+     rootOverflowX:root.overflowX,
+     bodyScrollbarWidth:body.getPropertyValue('scrollbar-width'),
+     rootScrollbarWidth:root.getPropertyValue('scrollbar-width'),
+     scrollWidth:document.documentElement.scrollWidth,
+     clientWidth:document.documentElement.clientWidth,
+   };
+ });
+ expect(css.bodyOverflowX).toBe('hidden');
+ expect(css.rootOverflowX).toBe('hidden');
+ expect(css.scrollWidth).toBeLessThanOrEqual(css.clientWidth+1);
+ await page.goto('/pulsedv/mini-app/#/catalog?view=map');
+ await expect(page.locator('[data-allow-pinch-zoom="true"]')).toBeVisible();
+});
+
+
 test('Control preview: object editor and real state changes',async({page})=>{
  await page.setViewportSize({width:1440,height:1000});await page.goto('/pulsedv/control-center/');
  await expect(page.getByText('Демонстрация · данные только в этом браузере')).toBeVisible();
