@@ -1,4 +1,3 @@
-import { representativePrice, selectionMatch, preferenceLabel, type PreferenceId, type PurchaseMode, type SelectionCriteria } from "../../../../packages/domain/propertyMatch";
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,8 +8,9 @@ import {
   CalendarDays,
   Car,
   Check,
-  ChevronLeft,
+  ChevronDown,
   ChevronRight,
+  CircleCheck,
   Home,
   Paintbrush,
   RotateCcw,
@@ -21,6 +21,19 @@ import {
   WalletCards,
   Waves,
 } from "lucide-react";
+import {
+  representativePrice,
+  selectionMatch,
+  preferenceLabel,
+  type PreferenceId,
+  type PurchaseMode,
+  type SelectionCriteria,
+} from "../../../../packages/domain/propertyMatch";
+import {
+  MORTGAGE_POLICY_VERSION,
+  readMortgageScenario,
+  type MortgageScenarioSettings,
+} from "../../../../packages/domain/mortgagePolicy";
 import { Slider } from "../components/Slider";
 import { Input } from "../components/Input";
 import { SegmentedControl } from "../components/SegmentedControl";
@@ -72,7 +85,6 @@ const preferenceIcon=(id:PreferenceId)=>{
 };
 
 type SavedSelection={
-  step?:number;showResult?:boolean;
   city?:string;
   rooms?:string;
   delivery?:string;
@@ -82,16 +94,12 @@ type SavedSelection={
   monthlyPayment?:number;
   mortgageProgram?:"standard"|"family"|"farEast"|"it";
   preferences?:PreferenceId[];
+  showResult?:boolean;
 };
 
+type PanelId="essentials"|"finance"|"delivery"|"preferences";
 type ScenarioId="more-payment"|"more-down"|"relax-preference"|"relax-delivery";
-type Scenario={
-  id:ScenarioId;
-  title:string;
-  detail:string;
-  value:string;
-  gain:number;
-};
+type Scenario={id:ScenarioId;title:string;detail:string;value:string;gain:number};
 
 function safeHaptic(kind:"light"|"medium"="light"){
   try{
@@ -106,53 +114,12 @@ function parseScaledMoney(value:string,unit:string){
   return /млн|мил/i.test(unit)?Math.round(amount*1_000_000):Math.round(amount*1_000);
 }
 
-function PulseRing({value,label,sublabel}:{value:number;label:string;sublabel:string}){
-  const gradientId=React.useId().replace(/:/g,"");
-  const radius=42;
-  const circumference=2*Math.PI*radius;
-  const percent=Math.max(0,Math.min(100,value));
-  const offset=circumference*(1-percent/100);
-
-  return <div className={styles.pulseRing}>
-    <svg className={styles.ringSvg} viewBox="0 0 100 100" aria-hidden="true">
-      <defs>
-        <linearGradient id={gradientId} x1="22" y1="8" x2="82" y2="88" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#ff4352"/>
-          <stop offset="48%" stopColor="#f20d1d"/>
-          <stop offset="100%" stopColor="#ff2639"/>
-        </linearGradient>
-      </defs>
-      <circle className={styles.ringTrackOuter} cx="50" cy="50" r={radius}/>
-      <circle className={styles.ringTrack} cx="50" cy="50" r={radius}/>
-      <circle
-        className={styles.ringProgressOutline}
-        cx="50" cy="50" r={radius}
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-      />
-      <circle
-        className={styles.ringProgress}
-        cx="50" cy="50" r={radius}
-        stroke={`url(#${gradientId})`}
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-      />
-      <circle
-        className={styles.ringProgressGlow}
-        cx="50" cy="50" r={radius}
-        strokeDasharray={circumference}
-        strokeDashoffset={offset}
-      />
-    </svg>
-    <div className={styles.ringCenter}><strong>{label}</strong><span>{sublabel}</span></div>
-  </div>;
-}
-
 export default function SelectionPage(){
   const navigate=useNavigate();
   const control=usePulseControlState();
   const {data:bounds}=usePriceBounds();
-  const {data:properties=[]}=useSelectionProperties();
+  const catalog=useSelectionProperties();
+  const properties=catalog.data??[];
   const minPrice=bounds?.minPriceRub??FALLBACK_MIN;
   const maxPrice=bounds?.maxPriceRub??FALLBACK_MAX;
   const priceStep=bounds?.stepRub??FALLBACK_STEP;
@@ -171,10 +138,9 @@ export default function SelectionPage(){
     ?saved.rooms!
     :control.select.roomOptions.includes("2")?"2":control.select.roomOptions[0]??"1";
 
-  const [step,setStep]=React.useState(Number.isInteger(saved.step)?Math.max(0,Math.min(3,saved.step!)):0);
   const [showResult,setShowResult]=React.useState(saved.showResult===true);
-  const [matching,setMatching]=React.useState(false);
   const [showAll,setShowAll]=React.useState(false);
+  const [openPanel,setOpenPanel]=React.useState<PanelId>("essentials");
   const [city,setCity]=React.useState(defaultCity);
   const [rooms,setRooms]=React.useState(defaultRooms);
   const [purchaseMode,setPurchaseMode]=React.useState<PurchaseMode>(control.select.mortgageEnabled&&saved.purchaseMode!=="cash"?"mortgage":"cash");
@@ -185,6 +151,7 @@ export default function SelectionPage(){
   ]);
   const budgetInitialized=React.useRef(false);
   const [mortgageProgram,setMortgageProgram]=React.useState<"standard"|"family"|"farEast"|"it">(saved.mortgageProgram??"standard");
+  const [mortgageScenario,setMortgageScenario]=React.useState<MortgageScenarioSettings|null>(()=>readMortgageScenario(typeof localStorage==="undefined"?null:localStorage));
   const [downPayment,setDownPayment]=React.useState(saved.downPayment??1_500_000);
   const [downDraft,setDownDraft]=React.useState(formatRub(saved.downPayment??1_500_000));
   const [monthlyPayment,setMonthlyPayment]=React.useState(saved.monthlyPayment??60_000);
@@ -193,8 +160,13 @@ export default function SelectionPage(){
   const [preferences,setPreferences]=React.useState<PreferenceId[]>(Array.isArray(saved.preferences)?saved.preferences.slice(0,control.select.maxPreferences):[]);
   const [smartQuery,setSmartQuery]=React.useState("");
   const [smartStatus,setSmartStatus]=React.useState("");
-  const [smartSignal,setSmartSignal]=React.useState(0);
-  const last=step===3;
+
+  React.useEffect(()=>{
+    const shared=readMortgageScenario(localStorage);
+    if(!shared)return;
+    setMortgageScenario(shared);
+    if(control.mortgagePrograms.some(item=>item.id===shared.programId))setMortgageProgram(shared.programId);
+  },[control.mortgagePrograms]);
 
   React.useEffect(()=>{
     if(!control.select.cities.includes(city))setCity(control.select.cities[0]??"Владивосток");
@@ -245,6 +217,13 @@ export default function SelectionPage(){
     if(!deliveryOptions.includes(delivery))setDelivery("Не важно");
   },[delivery,deliveryOptions]);
 
+  const appliedMortgageScenario=React.useMemo(()=>{
+    if(purchaseMode!=="mortgage"||!mortgageScenario)return null;
+    if(mortgageScenario.programId!==mortgageProgram)return null;
+    if(mortgageScenario.propertyKind!=="newbuild")return null;
+    return mortgageScenario;
+  },[purchaseMode,mortgageScenario,mortgageProgram]);
+
   const setBudgetFromSlider=(values:number[])=>{
     const next:[number,number]=[values[0]??minPrice,values[1]??maxPrice];
     setBudget(next);
@@ -286,12 +265,10 @@ export default function SelectionPage(){
     const value=Number.isFinite(raw)&&raw>0?raw:current;
     if(kind==="down"){
       const next=clamp(snap(value,100_000),0,Math.max(500_000,maxPrice));
-      setDownPayment(next);
-      setDownDraft(formatRub(next));
+      setDownPayment(next);setDownDraft(formatRub(next));
     }else{
       const next=clamp(snap(value,5_000),15_000,300_000);
-      setMonthlyPayment(next);
-      setPaymentDraft(formatRub(next));
+      setMonthlyPayment(next);setPaymentDraft(formatRub(next));
     }
   };
 
@@ -320,8 +297,9 @@ export default function SelectionPage(){
     downPayment,
     monthlyPayment,
     mortgageProgram,
+    mortgageScenario:appliedMortgageScenario,
     preferences,
-  }),[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences]);
+  }),[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,appliedMortgageScenario,preferences]);
 
   const rankFor=React.useCallback((next:SelectionCriteria)=>properties
     .map(property=>({property,match:selectionMatch(property,next,control.mortgagePrograms,control.select.weights)}))
@@ -332,77 +310,20 @@ export default function SelectionPage(){
   const eligible=ranked.filter(item=>item.match.eligible);
   const strongCount=eligible.filter(item=>item.match.score>=85).length;
   const topScore=eligible[0]?.match.score??0;
+  const financeLabel=purchaseMode==="mortgage"
+    ?("до "+Math.round(monthlyPayment/1000)+" тыс./мес")
+    :("до "+shortRub(budget[1]));
 
-  const firstStepCount=React.useMemo(()=>properties.filter(property=>{
-    const cityOk=city==="Все"||city==="Не важно"||property.city===city;
-    return cityOk&&representativePrice(property,rooms)!==null;
-  }).length,[properties,city,rooms]);
-  const liveCount=step===0?firstStepCount:eligible.length;
-
-  const pulseLevel=React.useMemo(()=>{
-    const catalogSize=Math.max(1,properties.length);
-    const narrowing=Math.max(0,Math.min(1,1-firstStepCount/catalogSize));
-    const smartBoost=Math.min(10,smartSignal*1.7);
-
-    if(step===0){
-      if(firstStepCount===0)return 0;
-      return Math.round(Math.max(3,Math.min(18,4+narrowing*6+smartBoost)));
-    }
-
-    // После финансового шага и дальше PULSE показывает только реальную уверенность:
-    // если нет ни одного допустимого варианта, кольцо не растёт.
-    if(eligible.length===0)return 0;
-
-    const matchSignal=Math.max(0,Math.min(1,topScore/100));
-    const strongRatio=Math.max(0,Math.min(1,strongCount/Math.max(1,eligible.length)));
-    const choiceSignal=Math.max(0,Math.min(1,eligible.length/Math.max(3,firstStepCount)));
-    const preferenceSignal=Math.min(1,preferences.length/3);
-
-    const stageBase=step===1?20:step===2?43:64;
-    const stageDetail=step===1
-      ?Math.min(6,smartBoost*.45)
-      :step===2
-        ?(delivery!=="Не важно"?6:1)
-        :preferenceSignal*8;
-
-    const value=
-      stageBase+
-      matchSignal*14+
-      strongRatio*7+
-      choiceSignal*5+
-      stageDetail;
-
-    return Math.round(Math.max(4,Math.min(97,value)));
-  },[step,properties.length,firstStepCount,topScore,eligible.length,strongCount,preferences.length,smartSignal,delivery]);
-  const [animatedPulseLevel,setAnimatedPulseLevel]=React.useState(0);
-  const [animatedResultScore,setAnimatedResultScore]=React.useState(0);
-  React.useEffect(()=>{
-    const frame=window.requestAnimationFrame(()=>setAnimatedPulseLevel(pulseLevel));
-    return()=>window.cancelAnimationFrame(frame);
-  },[pulseLevel]);
-  React.useEffect(()=>{
-    if(!showResult){
-      setAnimatedResultScore(0);
-      return;
-    }
-    const frame=window.requestAnimationFrame(()=>setAnimatedResultScore(topScore));
-    return()=>window.cancelAnimationFrame(frame);
-  },[showResult,topScore]);
-  const financeLabel=purchaseMode==="mortgage"?("до "+Math.round(monthlyPayment/1000)+" тыс./мес"):("до "+shortRub(budget[1]));
-
-  const persistSelection=()=>{
-    const value:SavedSelection={city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,step,showResult};
+  const persistSelection=React.useCallback(()=>{
+    const value:SavedSelection={city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult};
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(value));}catch{}
-  };
+  },[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult]);
 
-  React.useEffect(()=>{persistSelection()},[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,step,showResult]);
+  React.useEffect(()=>{persistSelection()},[persistSelection]);
 
   const applySmartQuery=()=>{
     const raw=smartQuery.trim();
-    if(!raw){
-      setSmartStatus("Напишите запрос одним предложением.");
-      return;
-    }
+    if(!raw){setSmartStatus("Напишите запрос одним предложением.");return;}
     const text=raw.toLowerCase().replace(/ё/g,"е");
     let found=0;
     let nextCity=city;
@@ -443,8 +364,8 @@ export default function SelectionPage(){
     if(budgetMatch&&!downMatch){
       const parsed=parseScaledMoney(budgetMatch[1],budgetMatch[2]);
       if(parsed){
-        const max=clamp(snap(parsed,priceStep),minPrice,maxPrice);
-        nextBudget=[minPrice,max];
+        const nextMax=clamp(snap(parsed,priceStep),minPrice,maxPrice);
+        nextBudget=[minPrice,nextMax];
         if(!mortgageIntent)nextMode="cash";
         found++;
       }
@@ -464,10 +385,7 @@ export default function SelectionPage(){
     ];
     for(const [id,pattern] of preferenceMap){
       const enabled=control.select.preferenceEnabled[id]&&(id!=="sea"||control.select.seaEnabled);
-      if(enabled&&pattern.test(text)&&!nextPreferences.includes(id)){
-        nextPreferences.push(id);
-        found++;
-      }
+      if(enabled&&pattern.test(text)&&!nextPreferences.includes(id)){nextPreferences.push(id);found++;}
     }
 
     if(nextCity!=="Владивосток"||!control.select.seaEnabled){
@@ -486,11 +404,11 @@ export default function SelectionPage(){
     setPaymentDraft(formatRub(nextPayment));
     setDelivery(nextDelivery);
     setPreferences(nextPreferences.filter(id=>control.select.preferenceEnabled[id]).slice(0,control.select.maxPreferences));
-    setSmartSignal(found);
     setSmartStatus(found
-      ?`PULSE понял ${found} ${plural(found,["параметр","параметра","параметров"])}. Проверьте — всё уже выставлено ниже.`
-      :"Не хочу додумывать за вас. Выберите параметры ниже — это займёт меньше минуты."
+      ?"PULSE понял "+found+" "+plural(found,["параметр","параметра","параметров"])+". Проверьте карточки ниже."
+      :"Не хочу додумывать за вас. Выберите параметры ниже."
     );
+    setShowResult(false);
     safeHaptic(found>2?"medium":"light");
   };
 
@@ -500,11 +418,12 @@ export default function SelectionPage(){
       const history=JSON.parse(localStorage.getItem("pulse_selection_history")||"[]");
       const nextHistory=[{
         city,rooms,min:budget[0],max:budget[1],delivery,
-        mortgage:purchaseMode==="mortgage",downPayment,monthlyPayment,
+        mortgage:purchaseMode==="mortgage",downPayment,monthlyPayment,mortgageProgram,
         preferences,score:topScore,strongCount,createdAt:Date.now(),
       },...(Array.isArray(history)?history:[])].slice(0,5);
       localStorage.setItem("pulse_selection_history",JSON.stringify(nextHistory));
     }catch{}
+
     recordPulseEvent({
       eventType:"select_submit",
       entityType:"selection",
@@ -518,40 +437,28 @@ export default function SelectionPage(){
         purchaseMode,
         program:purchaseMode==="mortgage"?mortgageProgram:null,
         topScore,strongCount,results:eligible.length,
-        source:"pulse-select-v3",
+        source:"pulse-select-v4",
+        policyVersion:MORTGAGE_POLICY_VERSION,
       }
     });
-    setMatching(true);
-    safeHaptic("medium");
-    window.setTimeout(()=>{
-      setMatching(false);
-      setShowResult(true);
-      setShowAll(false);
-      window.scrollTo({top:0,behavior:"smooth"});
-    },820);
-  };
 
-  const next=()=>{
-    if(last){finish();return;}
-    setStep(value=>Math.min(3,value+1));
-    safeHaptic();
-    window.scrollTo({top:0,behavior:"smooth"});
+    setShowResult(true);
+    setShowAll(false);
+    safeHaptic("medium");
+    window.setTimeout(()=>window.scrollTo({top:0,behavior:"smooth"}),20);
   };
 
   const reset=()=>{
     setShowResult(false);
     setShowAll(false);
-    setStep(0);
+    setOpenPanel("essentials");
     window.scrollTo({top:0,behavior:"smooth"});
   };
 
   const measure=React.useCallback((next:SelectionCriteria)=>{
     const list=rankFor(next);
     const exact=list.filter(item=>item.match.eligible);
-    return {
-      eligible:exact.length,
-      strong:exact.filter(item=>item.match.score>=85).length,
-    };
+    return {eligible:exact.length,strong:exact.filter(item=>item.match.score>=85).length};
   },[rankFor]);
 
   const scenarios=React.useMemo<Scenario[]>(()=>{
@@ -559,129 +466,86 @@ export default function SelectionPage(){
     const base={eligible:eligible.length,strong:strongCount};
     const gainFor=(next:SelectionCriteria)=>{
       const measured=measure(next);
-      return {
-        measured,
-        gain:Math.max(measured.eligible-base.eligible,measured.strong-base.strong),
-      };
+      return {measured,gain:Math.max(measured.eligible-base.eligible,measured.strong-base.strong)};
     };
 
     if(purchaseMode==="mortgage"){
-      const extraPayment=10_000;
-      const next={...criteria,monthlyPayment:monthlyPayment+extraPayment};
-      const {measured,gain}=gainFor(next);
-      items.push({
-        id:"more-payment",
-        title:"+10 тыс. ₽ к платежу",
-        detail:"Проверить, что откроется без изменения остальных пожеланий.",
-        value:`${measured.eligible} ${plural(measured.eligible,["вариант","варианта","вариантов"])}`,
-        gain,
-      });
-      const nextDown={...criteria,downPayment:downPayment+500_000};
-      const downResult=gainFor(nextDown);
-      items.push({
-        id:"more-down",
-        title:"+500 тыс. ₽ к взносу",
-        detail:"Посмотреть, даст ли больший первоначальный взнос заметный выбор.",
-        value:`${downResult.measured.eligible} ${plural(downResult.measured.eligible,["вариант","варианта","вариантов"])}`,
-        gain:downResult.gain,
-      });
+      const paymentResult=gainFor({...criteria,monthlyPayment:monthlyPayment+10_000});
+      items.push({id:"more-payment",title:"+10 тыс. ₽ к платежу",detail:"Остальные пожелания не меняются.",value:"+"+Math.max(0,paymentResult.measured.eligible-base.eligible)+" вариантов",gain:paymentResult.gain});
+
+      const downResult=gainFor({...criteria,downPayment:downPayment+500_000});
+      items.push({id:"more-down",title:"+500 тыс. ₽ к взносу",detail:"Проверим влияние большего первоначального взноса.",value:"+"+Math.max(0,downResult.measured.eligible-base.eligible)+" вариантов",gain:downResult.gain});
     }else{
       const extra=Math.max(500_000,Math.round(budget[1]*.08/100_000)*100_000);
-      const next={...criteria,max:Math.min(maxPrice,budget[1]+extra)};
-      const result=gainFor(next);
-      items.push({
-        id:"more-payment",
-        title:"Чуть расширить бюджет",
-        detail:`Добавить до ${shortRub(extra)} к верхней границе.`,
-        value:`${result.measured.eligible} ${plural(result.measured.eligible,["вариант","варианта","вариантов"])}`,
-        gain:result.gain,
-      });
+      const result=gainFor({...criteria,max:Math.min(maxPrice,budget[1]+extra)});
+      items.push({id:"more-payment",title:"Чуть расширить бюджет",detail:"Добавить до "+shortRub(extra)+" к верхней границе.",value:"+"+Math.max(0,result.measured.eligible-base.eligible)+" вариантов",gain:result.gain});
     }
 
     if(preferences.length){
-      const relaxed=preferences.slice(0,-1);
-      const result=gainFor({...criteria,preferences:relaxed});
-      items.push({
-        id:"relax-preference",
-        title:`Без «${preferenceLabel(preferences[preferences.length-1])}»`,
-        detail:"Остальные пожелания останутся — ослабим только один мягкий приоритет.",
-        value:`${result.measured.strong} сильных`,
-        gain:result.gain,
-      });
+      const result=gainFor({...criteria,preferences:preferences.slice(0,-1)});
+      items.push({id:"relax-preference",title:"Без «"+preferenceLabel(preferences[preferences.length-1])+"»",detail:"Ослабим только один мягкий приоритет.",value:"+"+Math.max(0,result.measured.strong-base.strong)+" сильных",gain:result.gain});
     }
 
     if(delivery!=="Не важно"){
       const result=gainFor({...criteria,delivery:"Не важно"});
-      items.push({
-        id:"relax-delivery",
-        title:"Гибче по сроку сдачи",
-        detail:"Не отбрасывать сильные проекты из-за выбранного года.",
-        value:`${result.measured.strong} сильных`,
-        gain:result.gain,
-      });
+      items.push({id:"relax-delivery",title:"Гибче по сроку сдачи",detail:"Не ограничивать выбор одним сроком.",value:"+"+Math.max(0,result.measured.strong-base.strong)+" сильных",gain:result.gain});
     }
 
     return items.sort((a,b)=>b.gain-a.gain).slice(0,3);
-  },[criteria,eligible.length,strongCount,purchaseMode,monthlyPayment,downPayment,budget,preferences,delivery,measure]);
+  },[criteria,eligible.length,strongCount,purchaseMode,monthlyPayment,downPayment,budget,preferences,delivery,measure,maxPrice]);
 
   const applyScenario=(id:ScenarioId)=>{
     if(id==="more-payment"){
       if(purchaseMode==="mortgage"){
-        const next=monthlyPayment+10_000;
-        setMonthlyPayment(next);setPaymentDraft(formatRub(next));
+        const next=monthlyPayment+10_000;setMonthlyPayment(next);setPaymentDraft(formatRub(next));
       }else{
         const extra=Math.max(500_000,Math.round(budget[1]*.08/100_000)*100_000);
         const next:[number,number]=[budget[0],Math.min(maxPrice,budget[1]+extra)];
         setBudget(next);setBudgetDraft([formatRub(next[0]),formatRub(next[1])]);
       }
     }
-    if(id==="more-down"){
-      const next=downPayment+500_000;
-      setDownPayment(next);setDownDraft(formatRub(next));
-    }
+    if(id==="more-down"){const next=downPayment+500_000;setDownPayment(next);setDownDraft(formatRub(next));}
     if(id==="relax-preference")setPreferences(current=>current.slice(0,-1));
     if(id==="relax-delivery")setDelivery("Не важно");
     setShowAll(false);
     safeHaptic("medium");
   };
 
-  const resultLabel=(index:number,payment:number|null,topPayment:number|null)=>{
-    if(index===0)return"Лучшее совпадение";
-    if(payment!==null&&topPayment!==null&&payment+5_000<topPayment)return"Выгоднее по платежу";
-    if(index===1)return"Сильная альтернатива";
-    return"Стоит посмотреть";
+  const panelSummary=(id:PanelId)=>{
+    if(id==="essentials")return city+" · "+(rooms==="Студия"?"Студия":rooms+" комн.");
+    if(id==="finance")return purchaseMode==="mortgage"
+      ?formatRub(downPayment)+" ₽ ПВ · "+Math.round(monthlyPayment/1000)+" тыс./мес"
+      :shortRub(budget[0])+" — "+shortRub(budget[1]);
+    if(id==="delivery")return delivery;
+    return preferences.length?preferences.map(preferenceLabel).slice(0,2).join(" · "):"Не выбрано";
   };
 
-  if(matching){
-    return <div className={styles.matchingScreen} aria-live="polite">
-      <div className={styles.matchingCore}>
-        <div className={styles.scanRing}/>
-        <div className={styles.scanRingTwo}/>
-        <Sparkles size={25}/>
-      </div>
-      <span className={styles.eyebrow}>PULSE SELECT</span>
-      <h1>Собираем ваш подбор</h1>
-      <p>Сопоставляем бюджет, планировки, срок и ваши приоритеты.</p>
-      <div className={styles.matchingSteps}><i/><i/><i/></div>
-    </div>;
-  }
+  const panelHeader=(id:PanelId,title:string,subtitle:string,icon:React.ReactNode)=><button
+    type="button"
+    className={styles.selectPanelHead}
+    onClick={()=>{setOpenPanel(current=>current===id?null:id);safeHaptic()}}
+    aria-expanded={openPanel===id}
+  >
+    <span className={styles.selectPanelIcon}>{icon}</span>
+    <span className={styles.selectPanelCopy}><strong>{title}</strong><small>{openPanel===id?subtitle:panelSummary(id)}</small></span>
+    <ChevronDown size={17}/>
+  </button>;
 
   if(showResult){
     const display=showAll?eligible:eligible.slice(0,3);
     const source=eligible.length?display:ranked.slice(0,3);
-    const topPayment=source[0]?.match.mortgagePayment??null;
     return <div className={styles.page}>
-      <section className={styles.resultHero} aria-label="Результат PULSE Select">
-        <PulseRing
-          value={animatedResultScore}
-          label={`${topScore}%`}
-          sublabel="PULSE MATCH"
-        />
-        <span className={styles.eyebrow}>PULSE SELECT</span>
-        <h1>{eligible.length?"Мы нашли ваш вектор":"Нужно немного расширить рамки"}</h1>
+      <section className={styles.selectResultSummary}>
+        <div className={styles.selectResultTop}>
+          <span className={styles.eyebrow}>PULSE SELECT</span>
+          <span className={styles.selectPolicy}><CircleCheck size={12}/>v4</span>
+        </div>
+        <h1>{eligible.length
+          ?eligible.length+" "+plural(eligible.length,["вариант подходит","варианта подходят","вариантов подходят"])
+          :"Точного совпадения пока нет"}</h1>
         <p>{eligible.length
-          ?<>PULSE сопоставил ваши ответы и выделил <strong>{eligible.length}</strong> {plural(eligible.length,["вариант","варианта","вариантов"])}. Ниже — не просто рейтинг, а причины каждого совпадения.</>
-          :<>Точных совпадений пока нет. Показываем ближайшие проекты и сразу подсказываем, какое небольшое изменение даст больше выбора.</>
+          ?<>Из них <strong>{strongCount}</strong> {plural(strongCount,["сильное совпадение","сильных совпадения","сильных совпадений"])}. PULSE объясняет, почему каждый проект попал сюда.</>
+          :<>Показываем ближайшие варианты и сразу считаем, какое небольшое изменение расширит выбор.</>
         }</p>
         <div className={styles.summaryChips}>
           <span><Home size={13}/>{city}</span>
@@ -692,8 +556,8 @@ export default function SelectionPage(){
       </section>
 
       <section className={styles.resultIntro}>
-        <div><span>ТОП PULSE</span><strong>{source.length?"Лучшие совпадения":"Ближайшие варианты"}</strong></div>
-        <small>Объясняем, почему каждый проект здесь.</small>
+        <div><span>РЕКОМЕНДАЦИИ</span><strong>{source.length?"Сначала самое подходящее":"Ближайшие варианты"}</strong></div>
+        <small>Match — вторичный сигнал. Главное — причины и компромиссы.</small>
       </section>
 
       <section className={styles.matchList}>
@@ -702,7 +566,7 @@ export default function SelectionPage(){
           return <article className={styles.matchCard} key={property.id}>
             <div className={styles.matchMedia}>
               {image?<img src={image} alt={property.name}/>:<div className={styles.matchFallback}><Building2 size={28}/></div>}
-              <span className={styles.matchRank}>{resultLabel(index,match.mortgagePayment,topPayment)}</span>
+              <span className={styles.matchRank}>{index===0?"Лучшее совпадение":index===1?"Сильная альтернатива":"Стоит посмотреть"}</span>
               <span className={styles.matchScore}>{match.score}%</span>
             </div>
             <div className={styles.matchBody}>
@@ -711,19 +575,18 @@ export default function SelectionPage(){
                 <b>{match.price?("от "+shortRub(match.price)):"По запросу"}</b>
               </div>
 
-              <div className={styles.whyTitle}><Sparkles size={13}/><span>Почему PULSE выбрал его</span></div>
+              <div className={styles.whyTitle}><Sparkles size={13}/><span>Почему подходит</span></div>
               <div className={styles.reasonList}>
                 {match.reasons.map(reason=><span key={reason}><Check size={12}/>{reason}</span>)}
               </div>
 
               {purchaseMode==="mortgage"&&match.mortgagePayment!==null&&<div className={styles.paymentHint}>
                 <WalletCards size={15}/>
-                <span><strong>≈ {formatPayment(match.mortgagePayment)}</strong><small>ориентир по программе «{match.mortgageProgram}», если она вам доступна</small></span>
+                <span><strong>≈ {formatPayment(match.mortgagePayment)}</strong><small>по сценарию «{match.mortgageProgram}» · право на льготу подтверждает банк</small></span>
               </div>}
 
               {match.tradeoffs.length>0&&<div className={styles.tradeoff}>
-                <span>КОМПРОМИСС</span>
-                <p>{match.tradeoffs.join(" · ")}</p>
+                <span>ЧТО НУЖНО ПРИНЯТЬ</span><p>{match.tradeoffs.join(" · ")}</p>
               </div>}
 
               <button type="button" className={styles.openProperty} onClick={()=>navigate("/property/"+property.id,{state:{returnTo:"/selection"}})}>
@@ -736,8 +599,8 @@ export default function SelectionPage(){
 
       {control.select.whatIfEnabled&&scenarios.length>0&&<section className={styles.whatIf}>
         <div className={styles.whatIfHead}>
-          <div><Sparkles size={16}/><span>А что если?</span></div>
-          <p>Одно изменение — и PULSE сразу пересчитает подбор.</p>
+          <div><Sparkles size={16}/><span>Хотите больше вариантов?</span></div>
+          <p>PULSE уже посчитал, что изменится от одного небольшого шага.</p>
         </div>
         <div className={styles.scenarioList}>
           {scenarios.map(item=><button type="button" key={item.id} onClick={()=>applyScenario(item.id)}>
@@ -756,19 +619,19 @@ export default function SelectionPage(){
         <button type="button" className={styles.catalogButton} onClick={()=>navigate("/catalog")}>Весь каталог<ChevronRight size={16}/></button>
       </div>
 
-      <div className={styles.disclaimer}><ShieldCheck size={14}/>Подбор и ипотечный платёж — ориентиры. Финальные условия подтверждаются по конкретной квартире и программе.</div>
+      <div className={styles.disclaimer}><ShieldCheck size={14}/>PULSE Select использует каталог, настройки PULSE Control и единый ипотечный движок. Финальные банковские условия подтверждаются отдельно.</div>
     </div>;
   }
 
   return <div className={styles.page}>
-    <header className={styles.hero}>
-      <div className={styles.heroTop}><span className={styles.eyebrow}>PULSE SELECT</span><span>{step+1}/4</span></div>
-      <h1>Не ищите квартиру.<br/><em>Опишите её.</em></h1>
-      <p>PULSE соберёт ваш запрос и покажет не сотню карточек, а несколько осмысленных вариантов.</p>
+    <header className={styles.selectHero}>
+      <div className={styles.selectHeroTop}><span className={styles.eyebrow}>PULSE SELECT</span><span className={styles.selectVersion}>4.0</span></div>
+      <h1>Опишите, что ищете.<br/><em>PULSE соберёт остальное.</em></h1>
+      <p>Не анкета и не сотня фильтров. Один живой запрос, который можно уточнять в любом порядке.</p>
     </header>
 
-    {step===0&&control.select.smartQueryEnabled&&<section className={styles.smartPrompt}>
-      <div className={styles.smartPromptHead}><Sparkles size={16}/><span>Можно своими словами</span><small>beta</small></div>
+    {control.select.smartQueryEnabled&&<section className={styles.smartPrompt}>
+      <div className={styles.smartPromptHead}><Sparkles size={16}/><span>Можно своими словами</span><small>AI PARSE</small></div>
       <div className={styles.smartInput}>
         <Search size={17}/>
         <Input
@@ -780,152 +643,140 @@ export default function SelectionPage(){
         />
         <button type="button" onClick={applySmartQuery} aria-label="Понять запрос"><ChevronRight size={18}/></button>
       </div>
-      <button type="button" className={styles.exampleQuery} onClick={()=>{
-        setSmartQuery("Двушка во Владивостоке, ипотека до 70 тыс. в месяц, первоначальный взнос 2 млн, желательно у моря");
-        setSmartStatus("");
-      }}>Попробовать пример</button>
       {smartStatus&&<div className={styles.smartStatus}><Check size={13}/>{smartStatus}</div>}
     </section>}
 
-    <section className={styles.pulseCore} aria-label="Живой профиль PULSE Select">
-      <PulseRing
-        value={animatedPulseLevel}
-        label={String(liveCount)}
-        sublabel={plural(liveCount,["вариант","варианта","вариантов"])}
-      />
-      <div className={styles.coreCopy}>
-        <span>PULSE CORE · LIVE</span>
-        <strong>{step===0?"Уже понимаем основу":step===1?"Проверяем покупательную способность":step===2?"Уточняем горизонт":"Расставляем личные приоритеты"}</strong>
-        <small>{step===0?"Выберите город и комнатность — остальные фильтры пока не мешают.":eligible.length?"Сильные варианты перестраиваются после каждого ответа.":"Если рамки слишком узкие, покажем ближайший разумный компромисс."}</small>
-        <div className={styles.coreChips}>
-          <i>{city}</i><i>{rooms==="Студия"?"Студия":rooms+" комн."}</i>
-          {step>0&&<i>{financeLabel}</i>}
-          {step>1&&delivery!=="Не важно"&&<i>{delivery}</i>}
-          {step>2&&preferences.slice(0,2).map(id=><i key={id}>{preferenceLabel(id)}</i>)}
-        </div>
+    <section className={styles.liveRequest} aria-live="polite">
+      <div className={styles.liveRequestTop}>
+        <div><span>ВАШ ЗАПРОС</span><strong>{catalog.isLoading?"Сверяем каталог…":eligible.length+" "+plural(eligible.length,["вариант","варианта","вариантов"])}</strong></div>
+        <div className={styles.liveBadge}>{strongCount?strongCount+" сильных":"LIVE"}</div>
       </div>
+      <div className={styles.liveRequestChips}>
+        <span>{city}</span>
+        <span>{rooms==="Студия"?"Студия":rooms+" комн."}</span>
+        <span>{financeLabel}</span>
+        {delivery!=="Не важно"&&<span>{delivery==="Сдан"?"Сдан":delivery}</span>}
+        {preferences.slice(0,2).map(id=><span key={id}>{preferenceLabel(id)}</span>)}
+      </div>
+      {catalog.isError&&<div className={styles.catalogIssue}>Не удалось обновить каталог. Проверьте соединение и повторите позже.</div>}
     </section>
 
-    <div className={styles.progress} aria-label={"Шаг "+(step+1)+" из 4"}>
-      {[0,1,2,3].map(i=><i key={i} className={i<=step?styles.progressActive:""}/>)}
-    </div>
-
-    <section className={styles.card}>
-      {step===0&&<>
-        <div className={styles.sectionHead}>
-          <div className={styles.cardIcon}><Building2 size={19}/></div>
-          <div><span className={styles.stepLabel}>ОСНОВА</span><h2>Где и что ищем?</h2><p>Это жёсткие условия: другой город или неподходящую планировку PULSE не будет выдавать как «почти совпадение».</p></div>
-        </div>
-
-        <div className={styles.fieldBlock}>
-          <label>Город</label>
-          <div className={styles.choiceGrid}>
-            {control.select.cities.map(value=><button type="button" key={value} aria-pressed={city===value} onClick={()=>{setCity(value);safeHaptic();}} className={city===value?styles.active:""}>{value}</button>)}
+    <section className={styles.selectPanels}>
+      <article className={openPanel==="essentials"?styles.selectPanelOpen:styles.selectPanel}>
+        {panelHeader("essentials","Где и что","Город и комнатность",<Building2 size={18}/>)}
+        {openPanel==="essentials"&&<div className={styles.selectPanelBody}>
+          <div className={styles.fieldBlock}>
+            <label>Город</label>
+            <div className={styles.choiceGrid}>
+              {control.select.cities.map(value=><button type="button" key={value} aria-pressed={city===value} onClick={()=>{setCity(value);safeHaptic();}} className={city===value?styles.active:""}>{value}</button>)}
+            </div>
           </div>
-        </div>
-
-        <div className={styles.fieldBlock}>
-          <label>Комнатность</label>
-          <div className={styles.roomGrid}>
-            {control.select.roomOptions.map(value=><button type="button" key={value} aria-pressed={rooms===value} onClick={()=>{setRooms(value);safeHaptic();}} className={rooms===value?styles.active:""}>{value}</button>)}
+          <div className={styles.fieldBlock}>
+            <label>Комнатность</label>
+            <div className={styles.roomGrid}>
+              {control.select.roomOptions.map(value=><button type="button" key={value} aria-pressed={rooms===value} onClick={()=>{setRooms(value);safeHaptic();}} className={rooms===value?styles.active:""}>{value}</button>)}
+            </div>
           </div>
-        </div>
-      </>}
-
-      {step===1&&<>
-        <div className={styles.sectionHead}>
-          <div className={styles.cardIcon}><WalletCards size={19}/></div>
-          <div><span className={styles.stepLabel}>ВОЗМОЖНОСТИ</span><h2>Как удобнее считать?</h2><p>Если берёте ипотеку, PULSE ориентируется на взнос и комфортный платёж, а не заставляет угадывать цену квартиры.</p></div>
-        </div>
-
-        {control.select.mortgageEnabled&&<SegmentedControl
-          className={styles.purchaseTabs}
-          value={purchaseMode}
-          onChange={value=>{setPurchaseMode(value as PurchaseMode);safeHaptic();}}
-          ariaLabel="Способ покупки"
-          options={[
-            {value:"mortgage",label:"Ипотека"},
-            {value:"cash",label:"По стоимости"},
-          ]}
-        />}
-
-        {purchaseMode==="mortgage"&&<div className={styles.fieldBlock}>
-          <label>Программа для расчёта</label>
-          <div className={styles.choiceGrid}>{control.mortgagePrograms.map(item=><button type="button" key={item.id} aria-pressed={mortgageProgram===item.id} className={mortgageProgram===item.id?styles.active:""} onClick={()=>setMortgageProgram(item.id)}>{item.label}</button>)}</div>
-          <p>Льготную программу выбирайте, если подходите под её условия. Доступность подтвердит банк; взнос и лимит учитываются в подборе.</p>
         </div>}
-        {purchaseMode==="cash"?<>
-          <div className={styles.moneyHero}><span>Ваш диапазон</span><strong>{shortRub(budget[0])} — {shortRub(budget[1])}</strong></div>
-          <div className={styles.moneyInputs}>
-            <label><span>От</span><div><Input inputMode="numeric" value={budgetDraft[0]} onChange={e=>editBudgetDraft(0,e.target.value)} onBlur={()=>commitBudgetDraft(0)} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div></label>
-            <label><span>До</span><div><Input inputMode="numeric" value={budgetDraft[1]} onChange={e=>editBudgetDraft(1,e.target.value)} onBlur={()=>commitBudgetDraft(1)} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div></label>
+      </article>
+
+      <article className={openPanel==="finance"?styles.selectPanelOpen:styles.selectPanel}>
+        {panelHeader("finance","Как покупаем","Бюджет или ипотечный сценарий",<WalletCards size={18}/>)}
+        {openPanel==="finance"&&<div className={styles.selectPanelBody}>
+          {control.select.mortgageEnabled&&<SegmentedControl
+            className={styles.purchaseTabs}
+            value={purchaseMode}
+            onChange={value=>{setPurchaseMode(value as PurchaseMode);safeHaptic();}}
+            ariaLabel="Способ покупки"
+            options={[{value:"mortgage",label:"Ипотека"},{value:"cash",label:"По стоимости"}]}
+          />}
+
+          {purchaseMode==="mortgage"?<>
+            <div className={styles.fieldBlock}>
+              <label>Сценарий для расчёта</label>
+              <div className={styles.choiceGrid}>{control.mortgagePrograms.map(item=><button
+                type="button"
+                key={item.id}
+                aria-pressed={mortgageProgram===item.id}
+                className={mortgageProgram===item.id?styles.active:""}
+                onClick={()=>{setMortgageProgram(item.id);safeHaptic();}}
+              >{item.label}</button>)}</div>
+            </div>
+
+            <div className={styles.financeGrid}>
+              <label className={styles.financeCard}>
+                <span><Banknote size={15}/>Первоначальный взнос</span>
+                <div><Input inputMode="numeric" value={downDraft} onChange={e=>editMoney("down",e.target.value)} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
+                <div className={styles.quickRow}>{[1_000_000,1_500_000,2_000_000,3_000_000].map(value=><button type="button" key={value} onClick={()=>{setDownPayment(value);setDownDraft(formatRub(value));safeHaptic();}}>{shortRub(value)}</button>)}</div>
+              </label>
+
+              <label className={styles.financeCard}>
+                <span><WalletCards size={15}/>Комфортный платёж</span>
+                <div><Input inputMode="numeric" value={paymentDraft} onChange={e=>editMoney("payment",e.target.value)} onBlur={()=>commitMoney("payment")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
+                <div className={styles.quickRow}>{[40_000,60_000,80_000,100_000].map(value=><button type="button" key={value} onClick={()=>{setMonthlyPayment(value);setPaymentDraft(formatRub(value));safeHaptic();}}>{Math.round(value/1_000)} тыс.</button>)}</div>
+              </label>
+            </div>
+
+            <div className={appliedMortgageScenario?styles.mortgageLinked:styles.mortgageLink}>
+              <div>
+                <span>{appliedMortgageScenario?<CircleCheck size={14}/>:<ShieldCheck size={14}/>}</span>
+                <div><strong>{appliedMortgageScenario?"Сценарий ипотеки подключён":"Нужна точная льготная логика?"}</strong><small>{appliedMortgageScenario
+                  ?"Используем настройки из калькулятора · "+MORTGAGE_POLICY_VERSION
+                  :"Откройте ипотеку, задайте детей и условия — Select подхватит тот же policy engine."
+                }</small></div>
+              </div>
+              <button type="button" onClick={()=>navigate("/mortgage?from=select&program="+encodeURIComponent(mortgageProgram))}>{appliedMortgageScenario?"Изменить":"Настроить"}</button>
+            </div>
+          </>:<>
+            <div className={styles.moneyHero}><span>Ваш диапазон</span><strong>{shortRub(budget[0])} — {shortRub(budget[1])}</strong></div>
+            <div className={styles.moneyInputs}>
+              <label><span>От</span><div><Input inputMode="numeric" value={budgetDraft[0]} onChange={e=>editBudgetDraft(0,e.target.value)} onBlur={()=>commitBudgetDraft(0)} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div></label>
+              <label><span>До</span><div><Input inputMode="numeric" value={budgetDraft[1]} onChange={e=>editBudgetDraft(1,e.target.value)} onBlur={()=>commitBudgetDraft(1)} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div></label>
+            </div>
+            <div className={styles.sliderWrap}>
+              <Slider min={minPrice} max={maxPrice} step={priceStep} value={budget} onValueChange={setBudgetFromSlider}/>
+              <div className={styles.sliderBounds}><span>{shortRub(minPrice)}</span><span>{shortRub(maxPrice)}</span></div>
+            </div>
+          </>}
+        </div>}
+      </article>
+
+      <article className={openPanel==="delivery"?styles.selectPanelOpen:styles.selectPanel}>
+        {panelHeader("delivery","Когда нужны ключи","Срок — мягкий приоритет",<CalendarDays size={18}/>)}
+        {openPanel==="delivery"&&<div className={styles.selectPanelBody}>
+          <div className={styles.deliveryGrid}>
+            {deliveryOptions.map(value=><button type="button" key={value} aria-pressed={delivery===value} onClick={()=>{setDelivery(value);safeHaptic();}} className={delivery===value?styles.active:""}>
+              {value==="Сдан"&&<Check size={14}/>}
+              {value}
+            </button>)}
           </div>
-          <div className={styles.sliderWrap}>
-            <Slider min={minPrice} max={maxPrice} step={priceStep} value={budget} onValueChange={setBudgetFromSlider}/>
-            <div className={styles.sliderBounds}><span>{shortRub(minPrice)}</span><span>{shortRub(maxPrice)}</span></div>
+          <div className={styles.timelineNote}><CalendarDays size={16}/><span>Срок не убивает сильный вариант: он влияет на порядок, а не превращает хороший ЖК в «неподходящий».</span></div>
+        </div>}
+      </article>
+
+      <article className={openPanel==="preferences"?styles.selectPanelOpen:styles.selectPanel}>
+        {panelHeader("preferences","Что для вас важно","До "+control.select.maxPreferences+" мягких приоритетов",<Sparkles size={18}/>)}
+        {openPanel==="preferences"&&<div className={styles.selectPanelBody}>
+          <div className={styles.preferenceGrid}>
+            {visiblePreferences.map(option=>{
+              const selected=preferences.includes(option.id);
+              const disabled=!selected&&preferences.length>=control.select.maxPreferences;
+              return <button type="button" key={option.id} aria-pressed={selected} disabled={disabled} onClick={()=>togglePreference(option.id)} className={selected?styles.preferenceActive:""}>
+                <span className={styles.preferenceIcon}>{selected?<Check size={16}/>:preferenceIcon(option.id)}</span>
+                <span><strong>{option.label}</strong><small>{option.hint}</small></span>
+              </button>
+            })}
           </div>
-        </>:<>
-          <div className={styles.financeGrid}>
-            <label className={styles.financeCard}>
-              <span><Banknote size={15}/>Первоначальный взнос</span>
-              <div><Input inputMode="numeric" value={downDraft} onChange={e=>editMoney("down",e.target.value)} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
-              <div className={styles.quickRow}>{[1_000_000,1_500_000,2_000_000,3_000_000].map(value=><button type="button" key={value} onClick={()=>{setDownPayment(value);setDownDraft(formatRub(value));safeHaptic();}}>{shortRub(value)}</button>)}</div>
-            </label>
-
-            <label className={styles.financeCard}>
-              <span><WalletCards size={15}/>Комфортный платёж</span>
-              <div><Input inputMode="numeric" value={paymentDraft} onChange={e=>editMoney("payment",e.target.value)} onBlur={()=>commitMoney("payment")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
-              <div className={styles.quickRow}>{[40_000,60_000,80_000,100_000].map(value=><button type="button" key={value} onClick={()=>{setMonthlyPayment(value);setPaymentDraft(formatRub(value));safeHaptic();}}>{Math.round(value/1_000)} тыс.</button>)}</div>
-            </label>
-          </div>
-          <div className={styles.infoBox}><ShieldCheck size={15}/><span>Это предварительная модель доступности. Она помогает ранжировать варианты, но не подменяет одобрение банка.</span></div>
-        </>}
-      </>}
-
-      {step===2&&<>
-        <div className={styles.sectionHead}>
-          <div className={styles.cardIcon}><CalendarDays size={19}/></div>
-          <div><span className={styles.stepLabel}>ГОРИЗОНТ</span><h2>Когда нужны ключи?</h2><p>Срок остаётся мягким приоритетом: сильный проект не пропадёт только потому, что сдаётся немного позже.</p></div>
-        </div>
-
-        <div className={styles.deliveryGrid}>
-          {deliveryOptions.map(value=><button type="button" key={value} aria-pressed={delivery===value} onClick={()=>{setDelivery(value);safeHaptic();}} className={delivery===value?styles.active:""}>
-            {value==="Сдан"&&<Check size={14}/>}
-            {value}
-          </button>)}
-        </div>
-
-        <div className={styles.timelineNote}>
-          <CalendarDays size={16}/>
-          <span>Годы формируются динамически. Когда в каталоге появятся проекты 2031+, PULSE добавит их автоматически.</span>
-        </div>
-      </>}
-
-      {step===3&&<>
-        <div className={styles.sectionHead}>
-          <div className={styles.cardIcon}><Sparkles size={19}/></div>
-          <div><span className={styles.stepLabel}>ХАРАКТЕР</span><h2>Что делает квартиру «вашей»?</h2><p>Выберите до {control.select.maxPreferences} приоритетов. Это не жёсткие фильтры — они учат PULSE правильно расставлять приоритеты.</p></div>
-        </div>
-
-        <div className={styles.preferenceGrid}>
-          {visiblePreferences.map(option=>{
-            const selected=preferences.includes(option.id);
-            const disabled=!selected&&preferences.length>=control.select.maxPreferences;
-            return <button type="button" key={option.id} aria-pressed={selected} disabled={disabled} onClick={()=>togglePreference(option.id)} className={selected?styles.preferenceActive:""}>
-              <span className={styles.preferenceIcon}>{selected?<Check size={16}/>:preferenceIcon(option.id)}</span>
-              <span><strong>{option.label}</strong><small>{option.hint}</small></span>
-            </button>
-          })}
-        </div>
-        <div className={styles.selectionCount}>{preferences.length}/{control.select.maxPreferences} выбрано</div>
-      </>}
+          <div className={styles.selectionCount}>{preferences.length}/{control.select.maxPreferences} выбрано</div>
+        </div>}
+      </article>
     </section>
 
-    <div className={styles.actions}>
-      {step>0&&<button type="button" className={styles.back} onClick={()=>{setStep(value=>Math.max(0,value-1));safeHaptic();}}><ChevronLeft size={17}/>Назад</button>}
-      <button type="button" className={styles.next} onClick={next}>{last?"Собрать мой подбор":"Продолжить"}<ChevronRight size={18}/></button>
-    </div>
+    <button type="button" className={styles.selectPrimary} disabled={catalog.isLoading||properties.length===0} onClick={finish}>
+      <span><strong>Показать подходящие</strong><small>{eligible.length?eligible.length+" "+plural(eligible.length,["вариант","варианта","вариантов"])+" сейчас":"Покажем ближайшие варианты"}</small></span>
+      <ArrowRight size={18}/>
+    </button>
 
-    <div className={styles.note}><ShieldCheck size={14}/>PULSE запомнит ответы — к подбору можно вернуться позже</div>
+    <div className={styles.note}><ShieldCheck size={14}/>Настройки Select приходят из PULSE Control, каталог — из API, ипотека — из общего policy engine.</div>
   </div>;
 }
