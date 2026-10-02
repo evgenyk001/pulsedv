@@ -11,14 +11,14 @@ type Tone="base"|"active";
 
 const source:Record<NavIconKind,LottieData>={
   home:homeAnimation as LottieData,
-  building:catalogAnimation as LottieData,
+  grid:catalogAnimation as LottieData,
   sparkles:selectionAnimation as LottieData,
   heart:heartAnimation as LottieData,
 };
 
 const speed:Record<NavIconKind,number>={
   home:1.25,
-  building:1.35,
+  grid:1.25,
   sparkles:1.35,
   heart:1.25,
 };
