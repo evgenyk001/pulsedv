@@ -108,11 +108,25 @@ export function buildInterestDNA(input:PulseEvent[],state:Pick<PulseState,'prope
  if(feedback&&reactionLabels[feedback.metadata.reaction as Reaction])briefParts.push('Последний ответ на подборку: '+reactionLabels[feedback.metadata.reaction as Reaction]+'. Уточните причину у клиента.');
  const nextAction=questions[0]?questions[0]+(topProperty?' Затем обсудить '+topProperty.label+'.':''):'Уточнить готовность к показу.';
  const recommendations:InterestDNA['recommendations']=[];
- if(latest){const m=latest.metadata;const min=num(m.min),max=num(m.max),down=num(m.down),payment=num(m.payment);const program=text(m.program);
+ if(latest){
+  const m=latest.metadata;const min=num(m.min),max=num(m.max),down=num(m.down),payment=num(m.payment);const program=text(m.program);
+  const submittedIds=Array.isArray(m.propertyIds)?m.propertyIds.filter((id):id is string=>typeof id==='string').slice(0,3):[];
   const financeKnown=mortgage?down!==null&&payment!==null&&!!programNames[program]:min!==null&&max!==null&&max>0;
-  if(financeKnown){const criteria:SelectionCriteria={city:specified(m.city)||'Все',rooms:room(m.rooms)||'Все',delivery:specified(m.delivery)||'Не важно',purchaseMode:mortgage?'mortgage':'cash',min:min??0,max:max??Number.MAX_SAFE_INTEGER,downPayment:down??0,monthlyPayment:payment??0,mortgageProgram:program as SelectionCriteria['mortgageProgram'],preferences:text(m.preferences).split(',').filter(x=>!!preferenceNames[x]) as PreferenceId[]};
+  if(mortgage&&financeKnown&&submittedIds.length){
+   // Mortgage recommendations must mirror the completed Select result. We intentionally
+   // do not persist family/disability eligibility inputs in analytics just to recompute it.
+   for(const id of submittedIds){
+    const p=properties.get(id);
+    if(p?.status==='published')recommendations.push({
+     id:p.id,name:p.name,
+     reasons:['Попал в последний PULSE Select'],
+     tradeoffs:['Доступность ипотечного сценария подтверждает банк'],
+    });
+   }
+  }else if(!mortgage&&financeKnown){
+   const criteria:SelectionCriteria={city:specified(m.city)||'Все',rooms:room(m.rooms)||'Все',delivery:specified(m.delivery)||'Не важно',purchaseMode:'cash',min:min??0,max:max??Number.MAX_SAFE_INTEGER,downPayment:0,monthlyPayment:0,preferences:text(m.preferences).split(',').filter(x=>!!preferenceNames[x]) as PreferenceId[]};
    const matches=state.properties.filter(p=>p.status==='published').map(p=>({p,match:selectionMatch(p,criteria,state.mortgagePrograms,state.select.weights)})).filter(x=>x.match.eligible).sort((a,b)=>b.match.score-a.match.score||a.p.id.localeCompare(b.p.id));
-   for(const {p,match} of matches.slice(0,3))recommendations.push({id:p.id,name:p.name,reasons:match.reasons,tradeoffs:[...match.tradeoffs,...(mortgage?['Доступность программы проверяет банк']:[])]});
+   for(const {p,match} of matches.slice(0,3))recommendations.push({id:p.id,name:p.name,reasons:match.reasons,tradeoffs:match.tradeoffs});
   }
  }
  return {version:1,generatedAt:now.toISOString(),windowDays:30,eventCount:events.length,sessionCount:new Set(events.map(e=>e.sessionId)).size,lastSeenAt:events.at(-1)?.createdAt??null,interests,facts,changes:changes.slice(0,6),questions,brief:briefParts.join(' '),nextAction,recommendations};
