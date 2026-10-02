@@ -43,3 +43,25 @@ test('DNA: объединение только по подтверждённом
  assert.deepEqual(selectIdentityEvents([a,b,c],'session-a','verified').map(e=>e.id),['a','b']);
  assert.deepEqual(selectIdentityEvents([a,b,c],'session-a',null).map(e=>e.id),['a']);
 });
+
+
+test('DNA: ипотечный Select сохраняет именно показанные клиенту ЖК без повторного пересчёта льготы',()=>{
+ const selection=event('select-v4','select_submit',{
+  city:'Владивосток',rooms:'2',purchaseMode:'mortgage',
+  down:2_000_000,payment:120_000,program:'family',
+  propertyIds:['solnechniy','primorskiy'],
+  policyVersion:'2026-10-01',
+ },'2026-09-27T05:30:00Z');
+ const dna=buildInterestDNA([selection],DEFAULT_STATE,now);
+ assert.deepEqual(dna.recommendations.map(item=>item.id),['solnechniy','primorskiy']);
+ assert.ok(dna.recommendations.every(item=>item.tradeoffs.some(value=>value.includes('подтверждает банк'))));
+});
+
+test('DNA: старый ипотечный Select без exact result IDs не выдумывает новый список ЖК',()=>{
+ const legacy=event('legacy-select','select_submit',{
+  city:'Владивосток',rooms:'2',purchaseMode:'mortgage',
+  down:2_000_000,payment:120_000,program:'family',
+ },'2026-09-27T05:30:00Z');
+ const dna=buildInterestDNA([legacy],DEFAULT_STATE,now);
+ assert.equal(dna.recommendations.length,0);
+});
