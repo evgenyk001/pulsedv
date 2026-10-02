@@ -1,14 +1,20 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { NavLordiconIcon } from "./NavLordiconIcon";
+import { NavPrimaryIcon } from "./NavPrimaryIcon";
 import styles from "./BottomNav.module.css";
 
 const items=[
   {path:"/",label:"Главная",icon:"home" as const},
-  {path:"/catalog",label:"Каталог",icon:"grid" as const},
+  {path:"/catalog",label:"Каталог",icon:"catalog" as const},
   {path:"/selection",label:"Подбор",icon:"sparkles" as const},
   {path:"/favorites",label:"Избранное",icon:"heart" as const},
 ];
+
+function NavIcon({icon,active,tone}:{icon:"home"|"catalog"|"sparkles"|"heart";active:boolean;tone:"base"|"active"}){
+  if(icon==="home"||icon==="catalog")return <NavPrimaryIcon kind={icon} active={active}/>;
+  return <NavLordiconIcon kind={icon} active={active} tone={tone}/>;
+}
 
 export function BottomNav(){
   const location=useLocation();
@@ -207,7 +213,7 @@ export function BottomNav(){
           aria-current={index===activeIndex?"page":undefined}
           onClick={()=>selectItem(index)}
         >
-          <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavLordiconIcon kind={icon} active={index===activeIndex} tone="base"/></span>
+          <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavIcon icon={icon} active={index===activeIndex} tone="base"/></span>
           <span className={styles.label} style={{opacity:v.labelOpacity,transform:`translateY(${v.labelLift}px)`}}>{label}</span>
         </button>
       })}
@@ -230,7 +236,7 @@ export function BottomNav(){
           {items.map(({path,label,icon},index)=>{
             const v=visual(index);
             return <span className={styles.activeItem} key={path}>
-              <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavLordiconIcon kind={icon} active={index===activeIndex} tone="active"/></span>
+              <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavIcon icon={icon} active={index===activeIndex} tone="active"/></span>
               <span className={styles.label} style={{opacity:v.labelOpacity,transform:`translateY(${v.labelLift}px)`}}>{label}</span>
             </span>
           })}
