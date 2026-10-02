@@ -2,7 +2,7 @@ import { matchScore } from "../../../../packages/domain/propertyMatch";
 import { usePulseControlState } from "../helpers/usePulseControlState";
 import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, SlidersHorizontal, List, MapPinned, ArrowUpDown, Check, ChevronRight, MapPin, X } from "lucide-react";
+import { Search, SlidersHorizontal, List, MapPinned, ArrowUpDown, Check, ChevronRight, MapPin, X, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "../components/Sheet";
 import { Slider } from "../components/Slider";
 import { PropertyCard } from "../components/PropertyCard";
