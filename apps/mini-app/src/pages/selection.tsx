@@ -393,7 +393,7 @@ export default function SelectionPage(){
     else if(/сдан|готовый дом|готовое/.test(text)){nextDelivery="Сдан";found++;}
 
     const preferenceMap:[PreferenceId,RegExp][]=[
-      ["sea",/море|морск|панорам.*вод/],
+      ["sea",/море|моря|морю|морем|морск|панорам.*вод/],
       ["family",/семь|семейн|дет|школ|садик/],
       ["parking",/парков|паркинг|машин/],
       ["center",/центр|центральн/],
