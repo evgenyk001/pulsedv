@@ -84,6 +84,7 @@ const preferenceIcon=(id:PreferenceId)=>{
 };
 
 type SavedSelection={
+  step?:number;
   city?:string;
   rooms?:string;
   delivery?:string;
@@ -141,7 +142,7 @@ export default function SelectionPage(){
 
   const [showResult,setShowResult]=React.useState(saved.showResult===true);
   const [showAll,setShowAll]=React.useState(false);
-  const [started,setStarted]=React.useState(saved.started===true||saved.showResult===true);
+  const [started,setStarted]=React.useState(saved.started===true||saved.showResult===true||(Number.isInteger(saved.step)&&Number(saved.step)>0));
   const [openPanel,setOpenPanel]=React.useState<PanelId|null>("essentials");
   const [city,setCity]=React.useState(defaultCity);
   const [rooms,setRooms]=React.useState(defaultRooms);
