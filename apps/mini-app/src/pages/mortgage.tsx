@@ -27,6 +27,7 @@ import {
   FAMILY_SUBSIDY_YEARS,
   MORTGAGE_POLICY_VERSION,
   MORTGAGE_SCENARIO_KEY,
+  readMortgageScenario,
   type FamilyChildren,
   type MortgagePropertyKind,
   type MortgageScenarioSettings,
@@ -61,18 +62,25 @@ export default function MortgagePage(){
   const initialPrice=Number.isFinite(requested)&&requested>0?clamp(requested,PRICE_MIN,PRICE_MAX):9_000_000;
   const control=usePulseControlState();
   const programs=control.mortgagePrograms;
+  const storedScenario=React.useMemo(()=>readMortgageScenario(typeof localStorage==="undefined"?null:localStorage),[]);
+  const requestedProgram=params.get("program");
+  const initialProgram:ProgramId=programs.some(item=>item.id===requestedProgram)
+    ?requestedProgram as ProgramId
+    :storedScenario?.programId??"family";
+  const initialKind=storedScenario?.propertyKind??"newbuild";
+  const initialMarketRate=storedScenario?.marketRate??DEFAULT_MARKET_RATES[initialKind];
 
-  const [program,setProgram]=React.useState<ProgramId>("family");
-  const [propertyKind,setPropertyKind]=React.useState<PropertyKind>("newbuild");
+  const [program,setProgram]=React.useState<ProgramId>(initialProgram);
+  const [propertyKind,setPropertyKind]=React.useState<PropertyKind>(initialKind);
   const [price,setPrice]=React.useState(initialPrice);
   const [down,setDown]=React.useState(2_000_000);
-  const [years,setYears]=React.useState(15);
-  const [marketRate,setMarketRate]=React.useState(DEFAULT_MARKET_RATES.newbuild);
-  const [marketRateDraft,setMarketRateDraft]=React.useState(String(DEFAULT_MARKET_RATES.newbuild).replace(".",","));
-  const [childrenCount,setChildrenCount]=React.useState<FamilyChildren>(1);
-  const [hasYoungChild,setHasYoungChild]=React.useState(true);
-  const [disabledChild,setDisabledChild]=React.useState(false);
-  const [largeArea,setLargeArea]=React.useState(false);
+  const [years,setYears]=React.useState(storedScenario?.years??15);
+  const [marketRate,setMarketRate]=React.useState(initialMarketRate);
+  const [marketRateDraft,setMarketRateDraft]=React.useState(String(initialMarketRate).replace(".",","));
+  const [childrenCount,setChildrenCount]=React.useState<FamilyChildren>(storedScenario?.childrenCount??1);
+  const [hasYoungChild,setHasYoungChild]=React.useState(storedScenario?.hasYoungChild??true);
+  const [disabledChild,setDisabledChild]=React.useState(storedScenario?.disabledChild??false);
+  const [largeArea,setLargeArea]=React.useState(storedScenario?.largeArea??false);
   const [priceDraft,setPriceDraft]=React.useState(formatRub(initialPrice));
   const [downDraft,setDownDraft]=React.useState(formatRub(2_000_000));
   const [interacted,setInteracted]=React.useState(false);
