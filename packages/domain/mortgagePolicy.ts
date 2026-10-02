@@ -82,7 +82,7 @@ export function annuityPayment(principal:number,annualRate:number,months:number)
 }
 
 export function mortgageProgram(programs:MortgageProgramRule[],id:MortgageProgramId){
-  return programs.find(item=>item.id===id)??programs[0]??null;
+  return programs.find(item=>item.id===id)??null;
 }
 
 export function calculateMortgageScenario(input:{
