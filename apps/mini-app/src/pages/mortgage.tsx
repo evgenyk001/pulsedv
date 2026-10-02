@@ -67,7 +67,9 @@ export default function MortgagePage(){
     ?requestedProgram as ProgramId
     :storedScenario?.programId??"family";
   const initialKind:PropertyKind=params.get("from")==="select"?"newbuild":storedScenario?.propertyKind??"newbuild";
-  const initialMarketRate=storedScenario?.marketRate??defaultMarketRate(programs,initialKind);
+  const initialMarketRate=storedScenario?.propertyKind===initialKind&&storedScenario.marketRate
+    ?storedScenario.marketRate
+    :defaultMarketRate(programs,initialKind);
 
   const [program,setProgram]=React.useState<ProgramId>(initialProgram);
   const [propertyKind,setPropertyKind]=React.useState<PropertyKind>(initialKind);
@@ -84,6 +86,7 @@ export default function MortgagePage(){
   const [downDraft,setDownDraft]=React.useState(formatRub(2_000_000));
   const [interacted,setInteracted]=React.useState(false);
   const lastCalculation=React.useRef("");
+  const propertyKindMounted=React.useRef(false);
 
   const rule=programs.find(item=>item.id===program)??programs[0];
   if(!rule)return null;
@@ -167,6 +170,10 @@ export default function MortgagePage(){
   },[minDown,down]);
 
   React.useEffect(()=>{
+    if(!propertyKindMounted.current){
+      propertyKindMounted.current=true;
+      return;
+    }
     const next=defaultMarketRate(programs,propertyKind);
     setMarketRate(next);
     setMarketRateDraft(String(next).replace(".",","));
