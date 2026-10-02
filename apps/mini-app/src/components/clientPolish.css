@@ -7,20 +7,19 @@
 .pulseClientAction{background:var(--primary);color:var(--primary-foreground,#fff)!important;border-radius:var(--app-radius-pill);box-shadow:0 9px 24px rgba(242,13,29,.16);font-size:12px;min-height:50px}.pulseResume{background:var(--app-card);border-color:var(--app-card-border);border-radius:var(--app-radius-card);box-shadow:var(--app-card-shadow)}.pulseResume>a{color:var(--foreground)}.pulseResumeIcon,.pulseEmptyIcon,.pulseUpdateIcon{background:var(--brand-soft);color:var(--primary);border-radius:var(--app-icon-radius)}.pulseResumeAction{color:var(--primary)}.pulseResumeCopy small,.pulseResume>button{color:var(--muted-foreground)}.pulseNotifications{background:var(--popup)!important;border-color:var(--app-card-border)!important}.pulseNotificationsHeader h2{color:var(--foreground)}.pulseNotificationsHeader p,.pulseNoticeEmpty p{color:var(--muted-foreground)}.pulseExplicitClose{background:var(--muted);color:var(--muted-foreground)}.pulseNoticeEmpty{padding:22px 8px 24px}.pulseNoticeEmpty h3{font-size:20px;color:var(--foreground)}.pulseNoticeEmpty p{font-size:12px;max-width:290px}.pulseUpdatesFooter{border-color:var(--border);gap:10px}.pulseUpdatesFooter .pulseClientAction,.pulseSecondaryAction{border-radius:var(--app-radius-pill);min-height:50px;font-size:12px}.pulseSecondaryAction{background:var(--app-card);border:1px solid var(--app-card-border);box-shadow:var(--shadow);color:var(--foreground)}.pulseUpdateRow{background:var(--app-card);color:var(--foreground);border-color:var(--app-card-border);border-radius:var(--app-radius-control)}.pulseUpdateRow.isUnread{background:var(--brand-soft);border-color:var(--app-card-border)}.pulseUpdatesToolbar button{color:var(--primary)}.pulseUpdateRow small,.pulseUpdatesToolbar{color:var(--muted-foreground)}
 
 
-/* ContinueChoice: living context card — visible, calm and premium. */
-.pulseResume{position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(135deg,rgba(255,255,255,.97) 0%,rgba(252,253,253,.95) 55%,rgba(248,251,250,.92) 100%);border-color:rgba(219,227,224,.82);box-shadow:0 9px 26px rgba(42,54,72,.052),0 2px 7px rgba(42,54,72,.025),inset 0 1px 0 rgba(255,255,255,.98)}
-.pulseResume:before{content:"";position:absolute;z-index:0;left:-24%;top:-58%;width:70%;height:215%;pointer-events:none;background:radial-gradient(ellipse at center,rgba(105,201,163,.095) 0%,rgba(105,201,163,.045) 38%,rgba(105,201,163,0) 74%);filter:blur(10px);transform:translate3d(0,0,0);animation:pulseResumeMintDrift 8.2s cubic-bezier(.45,0,.35,1) infinite alternate}
-.pulseResume:after{content:"";position:absolute;z-index:0;inset:0;pointer-events:none;background:linear-gradient(108deg,rgba(255,255,255,0) 24%,rgba(255,255,255,.24) 45%,rgba(220,244,234,.10) 54%,rgba(255,255,255,0) 74%);transform:translateX(-78%);animation:pulseResumeSheen 9.6s ease-in-out infinite}
+/* ContinueChoice: restrained premium card with subtle material motion. */
+.pulseResume{position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(135deg,rgba(255,255,255,.985) 0%,rgba(252,253,254,.97) 58%,rgba(248,250,252,.95) 100%);border-color:rgba(218,224,231,.84);box-shadow:0 10px 28px rgba(42,54,72,.052),0 2px 7px rgba(42,54,72,.025),inset 0 1px 0 rgba(255,255,255,.99)}
+.pulseResume:before{content:"";position:absolute;z-index:0;inset:-18% -38%;pointer-events:none;background:linear-gradient(112deg,rgba(255,255,255,0) 28%,rgba(255,255,255,.52) 44%,rgba(230,235,241,.16) 50%,rgba(255,255,255,.34) 56%,rgba(255,255,255,0) 72%);transform:translateX(-76%) rotate(.001deg);animation:pulseResumeSilverSheen 10.8s ease-in-out infinite}
+.pulseResume:after{content:"";position:absolute;z-index:0;left:12%;right:12%;bottom:-24px;height:34px;pointer-events:none;background:radial-gradient(ellipse at center,rgba(76,90,108,.055),rgba(76,90,108,0) 70%);filter:blur(10px)}
 .pulseResume>a{position:relative;z-index:1;gap:11px;padding:14px 46px 14px 14px}
-.pulseResumeIcon{position:relative;z-index:1;width:42px;height:42px;background:linear-gradient(145deg,rgba(242,245,246,.98),rgba(248,250,250,.94));color:#53635e;border:1px solid rgba(205,216,212,.72);border-radius:14px;box-shadow:0 4px 12px rgba(49,66,61,.045),inset 0 1px 0 rgba(255,255,255,.96)}
-.pulseResumeIcon:after{content:"";position:absolute;right:6px;bottom:6px;width:6px;height:6px;border-radius:50%;background:#73b89f;box-shadow:0 0 0 3px rgba(115,184,159,.08)}
+.pulseResumeIcon{position:relative;z-index:1;width:42px;height:42px;background:linear-gradient(145deg,rgba(245,247,249,.99),rgba(251,252,253,.97));color:#596572;border:1px solid rgba(214,220,227,.88);border-radius:14px;box-shadow:0 4px 12px rgba(47,59,78,.04),inset 0 1px 0 rgba(255,255,255,.98)}
 .pulseResumeCopy{position:relative;z-index:1;gap:3px}
-.pulseResumeCopy strong{font-size:12.8px;line-height:1.3;color:#20282a}
-.pulseResumeCopy small{font-size:9.9px;line-height:1.35;color:#778187}
-.pulseResumeAction{margin-top:3px;color:#283332;font-size:9.8px;font-weight:760;gap:3px}
-.pulseResumeAction svg{color:#5f746d;transition:transform .2s var(--motion-spring)}
-.pulseResume>a:active .pulseResumeAction svg{transform:translateX(2px)}
-.pulseResume>button{z-index:2;right:6px;top:6px;color:#858f92;opacity:.76}
-@keyframes pulseResumeMintDrift{0%{transform:translate3d(-4%,0,0) scale(.98);opacity:.78}100%{transform:translate3d(92%,3%,0) scale(1.08);opacity:1}}
-@keyframes pulseResumeSheen{0%,58%{transform:translateX(-82%);opacity:0}68%{opacity:.62}82%{transform:translateX(88%);opacity:.2}100%{transform:translateX(88%);opacity:0}}
-@media(prefers-reduced-motion:reduce){.pulseResume:before,.pulseResume:after{animation:none!important}.pulseResumeAction svg{transition:none!important}}
+.pulseResumeCopy strong{font-size:12.8px;line-height:1.3;color:#20262d}
+.pulseResumeCopy small{font-size:9.9px;line-height:1.35;color:#7a8490}
+.pulseResumeAction{margin-top:3px;color:#252d35;font-size:9.8px;font-weight:760;gap:3px}
+.pulseResumeAction svg{color:rgba(198,38,57,.78);animation:pulseResumeArrowHint 5.8s ease-in-out infinite}
+.pulseResume>a:active .pulseResumeAction svg{animation:none;transform:translateX(2px)}
+.pulseResume>button{z-index:2;right:6px;top:6px;color:#8b939d;opacity:.72}
+@keyframes pulseResumeSilverSheen{0%,64%{transform:translateX(-76%);opacity:0}72%{opacity:.66}86%{transform:translateX(78%);opacity:.22}100%{transform:translateX(78%);opacity:0}}
+@keyframes pulseResumeArrowHint{0%,72%,100%{transform:translateX(0)}78%{transform:translateX(2px)}84%{transform:translateX(0)}}
+@media(prefers-reduced-motion:reduce){.pulseResume:before,.pulseResumeAction svg{animation:none!important}.pulseResumeAction svg{transition:none!important}}
