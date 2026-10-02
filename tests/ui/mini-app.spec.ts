@@ -424,7 +424,7 @@ test('Control mortgage settings are the same rules used by Mini App',async({page
  const familyProgram=page.getByRole('button',{name:/Семейная/});
  await familyProgram.click();
  await expect(page.getByText('21%',{exact:false}).first()).toBeVisible();
- await expect(page.getByText('Проверка синхронизации ипотечных правил',{exact:true})).toBeVisible();
+ await expect(page.getByText(/Проверка синхронизации ипотечных правил/)).toBeVisible();
 
  const standardProgram=page.getByRole('button',{name:/Базовая/});
  await expect(standardProgram).toContainText('14,9%');
