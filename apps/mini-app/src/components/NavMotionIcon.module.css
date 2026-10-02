@@ -1,77 +1,79 @@
-.icon{width:30.5px!important;height:30.5px!important;display:block;overflow:visible;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
-.icon *{transform-box:fill-box;transform-origin:center;will-change:transform,opacity}
-.homeShell{transform-origin:12px 21px}
-.homeDoor{transform-origin:12px 21px}
-.layerTop,.layerBottom{transform-origin:center}
-.sliderTrack{opacity:.92}
-.sliderOne,.sliderTwo,.sliderThree{transform-origin:center}
-.heartPath{transform-origin:center 56%}
-
-.active .homeShell{animation:homeSettle .82s cubic-bezier(.2,.9,.22,1)}
-.active .homeDoor{animation:doorGlow .82s cubic-bezier(.2,.9,.22,1)}
-.active .layerTop{animation:layerTopMove .76s cubic-bezier(.18,.92,.22,1)}
-.active .layerBottom{animation:layerBottomMove .76s cubic-bezier(.18,.92,.22,1)}
-.active .sliderTrack{animation:trackBreathe .88s ease-in-out}
-.active .sliderOne{animation:sliderOneMove .88s cubic-bezier(.2,.9,.22,1)}
-.active .sliderTwo{animation:sliderTwoMove .88s cubic-bezier(.2,.9,.22,1)}
-.active .sliderThree{animation:sliderThreeMove .88s cubic-bezier(.2,.9,.22,1)}
-.active .heartPath{animation:heartBeatStrong .82s cubic-bezier(.2,.9,.22,1)}
-
-@keyframes homeSettle{
-  0%{transform:translateY(0) scale(1)}
-  28%{transform:translateY(-1.35px) scale(1.045)}
-  58%{transform:translateY(.55px) scale(.985)}
-  78%{transform:translateY(-.15px) scale(1.008)}
-  100%{transform:translateY(0) scale(1)}
+.icon{
+  width:30.5px!important;
+  height:30.5px!important;
+  display:block;
+  overflow:visible;
+  stroke:currentColor;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  vector-effect:non-scaling-stroke;
 }
-@keyframes doorGlow{
-  0%{transform:scaleY(1);opacity:1}
-  30%{transform:scaleY(.66);opacity:.42}
-  58%{transform:scaleY(1.12);opacity:1}
-  78%{transform:scaleY(.97)}
-  100%{transform:scaleY(1);opacity:1}
-}
-@keyframes layerTopMove{
-  0%{transform:translateY(0) scale(1)}
-  34%{transform:translateY(-2.15px) scale(1.035)}
-  66%{transform:translateY(.45px) scale(.992)}
-  100%{transform:translateY(0) scale(1)}
-}
-@keyframes layerBottomMove{
-  0%{transform:translateY(0) scale(1)}
-  34%{transform:translateY(1.45px) scale(.985)}
-  66%{transform:translateY(-.25px) scale(1.01)}
-  100%{transform:translateY(0) scale(1)}
-}
-@keyframes trackBreathe{
-  0%,100%{opacity:.92}
-  42%{opacity:.48}
-  72%{opacity:1}
-}
-@keyframes sliderOneMove{
-  0%{transform:translateX(0)}
-  34%{transform:translateX(-3.1px)}
-  66%{transform:translateX(.8px)}
-  100%{transform:translateX(0)}
-}
-@keyframes sliderTwoMove{
-  0%{transform:translateX(0)}
-  34%{transform:translateX(3.4px)}
-  66%{transform:translateX(-.9px)}
-  100%{transform:translateX(0)}
-}
-@keyframes sliderThreeMove{
-  0%{transform:translateX(0)}
-  34%{transform:translateX(-2.6px)}
-  66%{transform:translateX(.7px)}
-  100%{transform:translateX(0)}
-}
-@keyframes heartBeatStrong{
-  0%,100%{transform:scale(1)}
-  18%{transform:scale(1.145)}
-  34%{transform:scale(.985)}
-  52%{transform:scale(1.09)}
-  70%{transform:scale(1)}
+.icon *{
+  transform-box:view-box;
+  will-change:transform;
 }
 
-@media(prefers-reduced-motion:reduce){.icon *{animation:none!important}}
+.homePath{transform-origin:12px 21px}
+.dashboardTopLeft{transform-origin:6.75px 7.75px}
+.dashboardTopRight{transform-origin:17.25px 5.75px}
+.dashboardBottomRight{transform-origin:17.25px 16.25px}
+.dashboardBottomLeft{transform-origin:6.75px 18.25px}
+.searchLens{transform-origin:11px 11px}
+.heartPath{transform-origin:12px 12px}
+
+.active .homePath{
+  animation:homeHop .8s ease-in-out;
+}
+.active .dashboardTopLeft{
+  animation:dashboardTile .5s ease-in-out;
+}
+.active .dashboardTopRight{
+  animation:dashboardTile .5s ease-in-out .07s;
+}
+.active .dashboardBottomRight{
+  animation:dashboardTile .5s ease-in-out .14s;
+}
+.active .dashboardBottomLeft{
+  animation:dashboardTile .5s ease-in-out .21s;
+}
+.active .searchLens{
+  animation:searchScan .7s ease-in-out;
+}
+.active .heartPath{
+  animation:heartPulse .6s ease-in-out;
+}
+
+@keyframes homeHop{
+  0%{transform:translateY(0) scaleY(1)}
+  30%{transform:translateY(-2.5px) scaleY(1.06)}
+  55%{transform:translateY(0) scaleY(.94)}
+  75%{transform:translateY(-1px) scaleY(1.02)}
+  100%{transform:translateY(0) scaleY(1)}
+}
+
+@keyframes dashboardTile{
+  0%{transform:scale(1)}
+  35%{transform:scale(.82)}
+  70%{transform:scale(1.06)}
+  100%{transform:scale(1)}
+}
+
+@keyframes searchScan{
+  0%{transform:translate(0,0) rotate(0deg)}
+  25%{transform:translate(2px,-1px) rotate(6deg)}
+  50%{transform:translate(-2px,2px) rotate(-6deg)}
+  75%{transform:translate(1px,-1px) rotate(4deg)}
+  100%{transform:translate(0,0) rotate(0deg)}
+}
+
+@keyframes heartPulse{
+  0%{transform:scale(1)}
+  35%{transform:scale(1.1)}
+  70%{transform:scale(.96)}
+  100%{transform:scale(1)}
+}
+
+@media(prefers-reduced-motion:reduce){
+  .icon *{animation:none!important}
+}
