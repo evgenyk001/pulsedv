@@ -19,7 +19,6 @@ export default function HomePage(){
   return <div className={styles.page}>
     <header className={styles.header}>
       <div className={styles.brand}>
-        <div className={styles.mark}><span/><span/><span/></div>
         <div><div className={styles.brandName}>PULSE.DV</div><div className={styles.brandSub}>Новостройки Приморья</div></div>
       </div>
       <div className={styles.headerActions}>
