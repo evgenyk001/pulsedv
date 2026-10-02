@@ -67,7 +67,7 @@ export default function MortgagePage(){
   const initialProgram:ProgramId=programs.some(item=>item.id===requestedProgram)
     ?requestedProgram as ProgramId
     :storedScenario?.programId??"family";
-  const initialKind=storedScenario?.propertyKind??"newbuild";
+  const initialKind:PropertyKind=params.get("from")==="select"?"newbuild":storedScenario?.propertyKind??"newbuild";
   const initialMarketRate=storedScenario?.marketRate??DEFAULT_MARKET_RATES[initialKind];
 
   const [program,setProgram]=React.useState<ProgramId>(initialProgram);
