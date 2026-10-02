@@ -41,7 +41,7 @@ export function BottomNav(){
     const dock=dockRef.current;
     if(!dock)return;
     const measure=()=>{
-      const width=Math.max(0,dock.clientWidth-8);
+      const width=Math.max(0,dock.clientWidth-6);
       const segment=width/items.length;
       setSegmentWidth(segment);
       if(!dragging)setPillX(segment*activeIndex);
@@ -72,7 +72,7 @@ export function BottomNav(){
   const beginDrag=(event:React.PointerEvent<HTMLDivElement>)=>{
     if(event.button!==0||segmentWidth<=0)return;
     const rect=event.currentTarget.getBoundingClientRect();
-    const localX=event.clientX-rect.left-4;
+    const localX=event.clientX-rect.left-3;
     const pillLeft=pillX;
     const pillRight=pillX+segmentWidth;
     if(localX<pillLeft-5||localX>pillRight+5)return;
@@ -94,7 +94,7 @@ export function BottomNav(){
     event.preventDefault();
     const rect=event.currentTarget.getBoundingClientRect();
     const maxX=segmentWidth*(items.length-1);
-    const rawX=event.clientX-rect.left-4-dragRef.current.grabOffset;
+    const rawX=event.clientX-rect.left-3-dragRef.current.grabOffset;
     const edgeResistance=10;
     const nextX=rawX<0
       ? Math.max(-edgeResistance,rawX*.18)
