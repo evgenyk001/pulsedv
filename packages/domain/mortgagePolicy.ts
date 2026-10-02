@@ -62,6 +62,14 @@ export const DEFAULT_MARKET_RATES:Record<MortgagePropertyKind,number>={
   house:17.6,
 };
 
+export function defaultMarketRate(programs:MortgageProgramRule[],propertyKind:MortgagePropertyKind){
+  if(propertyKind==="newbuild"){
+    const configured=programs.find(item=>item.id==="standard")?.rate;
+    if(typeof configured==="number"&&Number.isFinite(configured)&&configured>0)return configured;
+  }
+  return DEFAULT_MARKET_RATES[propertyKind];
+}
+
 const MONEY_STEP=100_000;
 const ceilStep=(value:number,step=MONEY_STEP)=>Math.ceil(value/step)*step;
 
@@ -89,7 +97,7 @@ export function calculateMortgageScenario(input:{
 
   const propertyKind=input.settings.propertyKind;
   const years=Math.max(1,Math.min(input.years??input.settings.years??rule.maxYears,rule.maxYears));
-  const marketRate=input.settings.marketRate??DEFAULT_MARKET_RATES[propertyKind];
+  const marketRate=input.settings.marketRate??defaultMarketRate(input.programs,propertyKind);
   const downPercent=input.price>0?input.down/input.price*100:0;
   const familyChildren=input.settings.childrenCount??1;
   const family=FAMILY_SCALE[familyChildren];
