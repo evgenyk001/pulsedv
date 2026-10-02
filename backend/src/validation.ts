@@ -49,7 +49,17 @@ const eventTypes=['attribution','comparison_view','floorplan_view','page_view','
 export const eventsSchema=z.object({events:z.array(z.object({idempotencyKey:z.uuid(),eventType:z.enum(eventTypes),entityType:nullableText(80).optional(),entityId:nullableText(200).optional(),metadata:z.record(z.string(),z.unknown()).default({}),occurredAt:z.iso.datetime()})).min(1).max(100)});
 export function safeMetadata(input:Record<string,unknown>){
  const allowed=['medium','campaign','propertyIds','city','district','priceFrom','min','max','rooms','delivery','sea','mortgage','topScore','strongCount','program','price','down','years','rate','payment','results','source','policyVersion','purchaseMode','preferences','method','outcome','propertyName','floorplanId','areaFrom','areaTo','kind','position','target'];
- return Object.fromEntries(Object.entries(input).filter(([key,value])=>allowed.includes(key)&&(typeof value==='boolean'||typeof value==='number'&&Number.isFinite(value)||typeof value==='string'&&value.length<=150)));
+ const entries:[string,unknown][]=[];
+ for(const [key,value] of Object.entries(input)){
+  if(!allowed.includes(key))continue;
+  if(key==='propertyIds'&&Array.isArray(value)){
+   const ids=value.filter((item):item is string=>typeof item==='string'&&item.length>0&&item.length<=100).slice(0,25);
+   if(ids.length)entries.push([key,ids]);
+   continue;
+  }
+  if(typeof value==='boolean'||typeof value==='number'&&Number.isFinite(value)||typeof value==='string'&&value.length<=150)entries.push([key,value]);
+ }
+ return Object.fromEntries(entries);
 }
 
 
