@@ -103,10 +103,17 @@ test("PULSE Select uses the same mortgage calculation as the mortgage screen",()
 });
 
 
-test("analytics keeps policy version and still drops private metadata",()=>{
-  const clean=safeMetadata({source:"pulse-select-v4",policyVersion:MORTGAGE_POLICY_VERSION,phone:"+79990000000",childrenCount:3});
+test("analytics keeps policy version and exact result IDs while dropping private metadata",()=>{
+  const clean=safeMetadata({
+    source:"pulse-select-v4",
+    policyVersion:MORTGAGE_POLICY_VERSION,
+    propertyIds:["solnechniy","primorskiy",123,null],
+    phone:"+79990000000",
+    childrenCount:3,
+  });
   assert.equal(clean.source,"pulse-select-v4");
   assert.equal(clean.policyVersion,MORTGAGE_POLICY_VERSION);
+  assert.deepEqual(clean.propertyIds,["solnechniy","primorskiy"]);
   assert.equal("phone" in clean,false);
   assert.equal("childrenCount" in clean,false);
 });
