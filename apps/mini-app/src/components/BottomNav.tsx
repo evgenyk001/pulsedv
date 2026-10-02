@@ -1,9 +1,9 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { NavIconoirAnimated,type NavIconKind } from "./NavIconoirAnimated";
+import { NavMotionIcon,type NavMotionKind } from "./NavMotionIcon";
 import styles from "./BottomNav.module.css";
 
-const items:{path:string;label:string;icon:NavIconKind}[]=[
+const items:{path:string;label:string;icon:NavMotionKind}[]=[
   {path:"/",label:"Главная",icon:"home"},
   {path:"/catalog",label:"Каталог",icon:"catalog"},
   {path:"/selection",label:"Подбор",icon:"selection"},
@@ -207,7 +207,7 @@ export function BottomNav(){
           aria-current={index===activeIndex?"page":undefined}
           onClick={()=>selectItem(index)}
         >
-          <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavIconoirAnimated kind={icon} active={index===activeIndex}/></span>
+          <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavMotionIcon kind={icon} active={index===activeIndex}/></span>
           <span className={styles.label} style={{opacity:v.labelOpacity,transform:`translateY(${v.labelLift}px)`}}>{label}</span>
         </button>
       })}
@@ -230,7 +230,7 @@ export function BottomNav(){
           {items.map(({path,label,icon},index)=>{
             const v=visual(index);
             return <span className={styles.activeItem} key={path}>
-              <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavIconoirAnimated kind={icon} active={index===activeIndex}/></span>
+              <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavMotionIcon kind={icon} active={index===activeIndex}/></span>
               <span className={styles.label} style={{opacity:v.labelOpacity,transform:`translateY(${v.labelLift}px)`}}>{label}</span>
             </span>
           })}
