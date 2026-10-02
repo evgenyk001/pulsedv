@@ -227,12 +227,14 @@ export default function SelectionPage(){
   },[purchaseMode,mortgageScenario,mortgageProgram]);
 
   const setBudgetFromSlider=(values:number[])=>{
+    setStarted(true);
     const next:[number,number]=[values[0]??minPrice,values[1]??maxPrice];
     setBudget(next);
     setBudgetDraft([formatRub(next[0]),formatRub(next[1])]);
   };
 
   const editBudgetDraft=(index:0|1,value:string)=>{
+    setStarted(true);
     const clean=value.replace(/[^0-9]/g,"");
     setBudgetDraft(prev=>{
       const next:[string,string]=[...prev] as [string,string];
@@ -242,6 +244,7 @@ export default function SelectionPage(){
   };
 
   const commitBudgetDraft=(index:0|1)=>{
+    setStarted(true);
     const raw=Number(budgetDraft[index].replace(/[^0-9]/g,""));
     let value=Number.isFinite(raw)&&raw>0?raw:budget[index];
     value=clamp(snap(value,priceStep),minPrice,maxPrice);
@@ -254,6 +257,7 @@ export default function SelectionPage(){
   };
 
   const editMoney=(kind:"down"|"payment",value:string)=>{
+    setStarted(true);
     const clean=value.replace(/[^0-9]/g,"");
     const formatted=clean?formatRub(Number(clean)):"";
     if(kind==="down")setDownDraft(formatted);
@@ -261,6 +265,7 @@ export default function SelectionPage(){
   };
 
   const commitMoney=(kind:"down"|"payment")=>{
+    setStarted(true);
     const draft=kind==="down"?downDraft:paymentDraft;
     const current=kind==="down"?downPayment:monthlyPayment;
     const raw=Number(draft.replace(/[^0-9]/g,""));
@@ -281,6 +286,7 @@ export default function SelectionPage(){
   });
 
   const togglePreference=(id:PreferenceId)=>{
+    setStarted(true);
     setPreferences(current=>{
       if(current.includes(id))return current.filter(item=>item!==id);
       if(current.length>=control.select.maxPreferences)return current;
@@ -672,13 +678,13 @@ export default function SelectionPage(){
           <div className={styles.fieldBlock}>
             <label>Город</label>
             <div className={styles.choiceGrid}>
-              {control.select.cities.map(value=><button type="button" key={value} aria-pressed={city===value} onClick={()=>{setCity(value);safeHaptic();}} className={city===value?styles.active:""}>{value}</button>)}
+              {control.select.cities.map(value=><button type="button" key={value} aria-pressed={city===value} onClick={()=>{setStarted(true);setCity(value);safeHaptic();}} className={city===value?styles.active:""}>{value}</button>)}
             </div>
           </div>
           <div className={styles.fieldBlock}>
             <label>Комнатность</label>
             <div className={styles.roomGrid}>
-              {control.select.roomOptions.map(value=><button type="button" key={value} aria-pressed={rooms===value} onClick={()=>{setRooms(value);safeHaptic();}} className={rooms===value?styles.active:""}>{value}</button>)}
+              {control.select.roomOptions.map(value=><button type="button" key={value} aria-pressed={rooms===value} onClick={()=>{setStarted(true);setRooms(value);safeHaptic();}} className={rooms===value?styles.active:""}>{value}</button>)}
             </div>
           </div>
         </div>}
@@ -690,7 +696,7 @@ export default function SelectionPage(){
           {control.select.mortgageEnabled&&<SegmentedControl
             className={styles.purchaseTabs}
             value={purchaseMode}
-            onChange={value=>{setPurchaseMode(value as PurchaseMode);safeHaptic();}}
+            onChange={value=>{setStarted(true);setPurchaseMode(value as PurchaseMode);safeHaptic();}}
             ariaLabel="Способ покупки"
             options={[{value:"mortgage",label:"Ипотека"},{value:"cash",label:"По стоимости"}]}
           />}
@@ -703,7 +709,7 @@ export default function SelectionPage(){
                 key={item.id}
                 aria-pressed={mortgageProgram===item.id}
                 className={mortgageProgram===item.id?styles.active:""}
-                onClick={()=>{setMortgageProgram(item.id);safeHaptic();}}
+                onClick={()=>{setStarted(true);setMortgageProgram(item.id);safeHaptic();}}
               >{item.label}</button>)}</div>
             </div>
 
@@ -711,13 +717,13 @@ export default function SelectionPage(){
               <label className={styles.financeCard}>
                 <span><Banknote size={15}/>Первоначальный взнос</span>
                 <div><Input inputMode="numeric" value={downDraft} onChange={e=>editMoney("down",e.target.value)} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
-                <div className={styles.quickRow}>{[1_000_000,1_500_000,2_000_000,3_000_000].map(value=><button type="button" key={value} onClick={()=>{setDownPayment(value);setDownDraft(formatRub(value));safeHaptic();}}>{shortRub(value)}</button>)}</div>
+                <div className={styles.quickRow}>{[1_000_000,1_500_000,2_000_000,3_000_000].map(value=><button type="button" key={value} onClick={()=>{setStarted(true);setDownPayment(value);setDownDraft(formatRub(value));safeHaptic();}}>{shortRub(value)}</button>)}</div>
               </label>
 
               <label className={styles.financeCard}>
                 <span><WalletCards size={15}/>Комфортный платёж</span>
                 <div><Input inputMode="numeric" value={paymentDraft} onChange={e=>editMoney("payment",e.target.value)} onBlur={()=>commitMoney("payment")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
-                <div className={styles.quickRow}>{[40_000,60_000,80_000,100_000].map(value=><button type="button" key={value} onClick={()=>{setMonthlyPayment(value);setPaymentDraft(formatRub(value));safeHaptic();}}>{Math.round(value/1_000)} тыс.</button>)}</div>
+                <div className={styles.quickRow}>{[40_000,60_000,80_000,100_000].map(value=><button type="button" key={value} onClick={()=>{setStarted(true);setMonthlyPayment(value);setPaymentDraft(formatRub(value));safeHaptic();}}>{Math.round(value/1_000)} тыс.</button>)}</div>
               </label>
             </div>
 
@@ -749,7 +755,7 @@ export default function SelectionPage(){
         {panelHeader("delivery","Когда нужны ключи","Срок — мягкий приоритет",<CalendarDays size={18}/>)}
         {openPanel==="delivery"&&<div className={styles.selectPanelBody}>
           <div className={styles.deliveryGrid}>
-            {deliveryOptions.map(value=><button type="button" key={value} aria-pressed={delivery===value} onClick={()=>{setDelivery(value);safeHaptic();}} className={delivery===value?styles.active:""}>
+            {deliveryOptions.map(value=><button type="button" key={value} aria-pressed={delivery===value} onClick={()=>{setStarted(true);setDelivery(value);safeHaptic();}} className={delivery===value?styles.active:""}>
               {value==="Сдан"&&<Check size={14}/>}
               {value}
             </button>)}
