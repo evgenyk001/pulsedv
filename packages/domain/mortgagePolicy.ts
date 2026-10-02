@@ -63,9 +63,12 @@ export const DEFAULT_MARKET_RATES:Record<MortgagePropertyKind,number>={
 };
 
 export function defaultMarketRate(programs:MortgageProgramRule[],propertyKind:MortgagePropertyKind){
+  const standard=programs.find(item=>item.id==="standard");
+  const configuredByKind=standard?.marketRates?.[propertyKind];
+  if(typeof configuredByKind==="number"&&Number.isFinite(configuredByKind)&&configuredByKind>0)return configuredByKind;
   if(propertyKind==="newbuild"){
-    const configured=programs.find(item=>item.id==="standard")?.rate;
-    if(typeof configured==="number"&&Number.isFinite(configured)&&configured>0)return configured;
+    const legacy=standard?.rate;
+    if(typeof legacy==="number"&&Number.isFinite(legacy)&&legacy>0)return legacy;
   }
   return DEFAULT_MARKET_RATES[propertyKind];
 }
