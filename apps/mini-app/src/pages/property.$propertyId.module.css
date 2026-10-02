@@ -40,11 +40,9 @@
 .priceCard>a{height:46px;padding:0 13px;border-radius:999px;background:#fff;color:#172033;text-decoration:none;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;font-size:9.5px;font-weight:760;transition:transform .16s var(--motion-press)}
 .priceCard>a:active{transform:scale(.985)}
 
-.quickFacts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.quickFacts>div{min-height:92px;padding:13px;border-radius:20px;background:var(--app-card);border:1px solid var(--app-card-border);box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:flex-start}
-.quickFacts svg{color:var(--info)}
-.quickFacts span{margin-top:10px;font-size:7.8px;color:var(--muted-foreground)}
-.quickFacts strong{margin-top:3px;font-size:10.2px;line-height:1.2}
+.decisionCard{padding:17px 16px;border-radius:var(--app-radius-card);background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(243,247,250,.84));border:1px solid var(--app-card-border);box-shadow:var(--app-card-shadow)}
+.decisionHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:13px;border-bottom:1px solid var(--border)}.decisionHead>div{display:flex;flex-direction:column}.decisionHead>div>span{font-size:7.5px;letter-spacing:.12em;font-weight:800;color:var(--primary)}.decisionHead h2{margin:4px 0 0;font-size:17px;line-height:1.2;letter-spacing:-.03em}.decisionHead>small{display:flex;align-items:center;gap:4px;flex:none;padding:6px 8px;border-radius:var(--app-radius-pill);background:var(--brand-soft);color:var(--primary);font-size:7.5px;font-weight:760}
+.decisionRows{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.decisionRows>div{min-height:63px;display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:center;border-bottom:1px solid var(--border)}.decisionRows>div:nth-last-child(-n+2){border-bottom:0}.decisionRows>div>span{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:#fff;color:var(--info);border:1px solid var(--app-card-border)}.decisionRows>div>div{display:flex;min-width:0;flex-direction:column}.decisionRows small{font-size:7.5px;color:var(--muted-foreground)}.decisionRows strong{margin-top:3px;font-size:9.5px;line-height:1.25;overflow-wrap:anywhere}
 
 .section{padding:18px 16px;border-radius:26px;background:var(--app-card);border:1px solid var(--app-card-border);box-shadow:var(--app-card-shadow)}
 .sectionHead{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
