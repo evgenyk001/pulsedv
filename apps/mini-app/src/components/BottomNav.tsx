@@ -5,7 +5,7 @@ import styles from "./BottomNav.module.css";
 
 const items=[
   {path:"/",label:"Главная",icon:"home" as const},
-  {path:"/catalog",label:"Каталог",icon:"building" as const},
+  {path:"/catalog",label:"Каталог",icon:"grid" as const},
   {path:"/selection",label:"Подбор",icon:"sparkles" as const},
   {path:"/favorites",label:"Избранное",icon:"heart" as const},
 ];
