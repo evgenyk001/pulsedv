@@ -400,23 +400,34 @@ test('CRM mobile: ипотечный контекст читаемый, заме
 test('Control mortgage settings are the same rules used by Mini App',async({page})=>{
  await page.setViewportSize({width:390,height:844});
  await page.goto('/pulsedv/control-center/#/mortgage');
+
  const family=page.locator('.mortgageProgram').filter({hasText:'Семейная'}).first();
  await expect(family).toBeVisible();
- await family.getByLabel('Семейная — ставка, %').fill('6.7');
+ await expect(family.getByLabel('Семейная — ставка по policy')).toBeDisabled();
+ await expect(family.getByLabel('Семейная — лимит по policy')).toBeDisabled();
  await family.getByLabel('Семейная — первоначальный взнос, %').fill('21');
  await family.getByLabel('Семейная — подсказка клиенту').fill('Проверка синхронизации ипотечных правил');
- await expect(family).toContainText('6.7%');
+ await expect(family).toContainText('2–10%');
  await expect(family).toContainText('21%');
+
+ const standard=page.locator('.mortgageProgram').filter({hasText:'Базовая'}).first();
+ await expect(standard).toBeVisible();
+ await standard.getByLabel('Базовая — новостройка, %').fill('14.9');
+ await standard.getByLabel('Базовая — новостройка, %').blur();
+ await expect(standard).toContainText('14.9%');
 
  await page.goto('/pulsedv/mini-app/');
  const skip=page.getByRole('button',{name:'Пропустить онбординг'});
  if(await skip.count())await skip.click();
  await page.goto('/pulsedv/mini-app/#/mortgage');
+
  const familyProgram=page.getByRole('button',{name:/Семейная/});
- await expect(familyProgram).toContainText('от 6.7%');
  await familyProgram.click();
  await expect(page.getByText('21%',{exact:false}).first()).toBeVisible();
  await expect(page.getByText('Проверка синхронизации ипотечных правил',{exact:true})).toBeVisible();
+
+ const standardProgram=page.getByRole('button',{name:/Базовая/});
+ await expect(standardProgram).toContainText('14,9%');
 });
 
 test('Control overview chart explains values and top actions stay visible',async({page})=>{
@@ -605,8 +616,8 @@ test('Control interaction audit: safe controls on every workspace page',async({p
  await page.getByRole('button',{name:'Закрыть редактор'}).click();await noOverflow();
 
  await page.goto('/pulsedv/control-center/#/mortgage');
- const mortgage=page.locator('.mortgageProgram').first();
- const rate=mortgage.getByLabel(/ставка, %/i);const currentRate=await rate.inputValue();await rate.fill(currentRate);await rate.blur();await noOverflow();
+ const mortgage=page.locator('.mortgageProgram').filter({hasText:'Базовая'}).first();
+ const rate=mortgage.getByLabel('Базовая — новостройка, %');const currentRate=await rate.inputValue();await rate.fill(currentRate);await rate.blur();await noOverflow();
 
  await page.goto('/pulsedv/control-center/#/select');
  const smart=page.getByRole('checkbox',{name:'Умная строка запроса'});const smartWas=await smart.isChecked();await smart.click();expect(await smart.isChecked()).toBe(!smartWas);await smart.click();expect(await smart.isChecked()).toBe(smartWas);await noOverflow();
