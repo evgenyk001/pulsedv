@@ -1,4 +1,5 @@
 import type { MortgageProgramRule, PulseProperty, PulseSelectConfig } from '../pulse-data/model';
+import { calculateMortgageScenario, type MortgageScenarioSettings } from './mortgagePolicy';
 
 export type Criteria={city:string;rooms:string;min:number;max:number;delivery:string;sea:boolean};
 export type PurchaseMode='cash'|'mortgage';
@@ -15,6 +16,7 @@ export type SelectionCriteria={
   monthlyPayment:number;
   preferences:PreferenceId[];
   mortgageProgram?:MortgageProgramRule["id"];
+  mortgageScenario?:MortgageScenarioSettings|null;
 };
 
 export type SelectionMatch={
@@ -96,21 +98,41 @@ export function monthlyMortgagePayment(principal:number,annualRate:number,years:
   return principal*monthlyRate*factor/(factor-1);
 }
 
-export function bestMortgageFit(price:number,downPayment:number,target:number,programs:MortgageProgramRule[],selectedProgram:MortgageProgramRule["id"]="standard"){
+export function bestMortgageFit(
+  price:number,
+  downPayment:number,
+  target:number,
+  programs:MortgageProgramRule[],
+  selectedProgram:MortgageProgramRule["id"]="standard",
+  scenario?:MortgageScenarioSettings|null,
+){
   const principal=Math.max(0,price-Math.max(0,downPayment));
-  if(principal===0)return {payment:0,program:'Без кредита',fits:true};
-  const estimates=programs
-    .filter(program=>program.id===selectedProgram&&downPayment>=price*program.minDownPct/100&&principal<=Math.min(program.subsidizedLimit,program.totalLimit))
-    .map(program=>({
-      payment:monthlyMortgagePayment(principal,program.rate,program.maxYears),
-      program:program.label,
-    }))
-    .sort((a,b)=>a.payment-b.payment);
-  const best=estimates[0]||null;
+  if(principal===0)return {payment:0,program:'Без кредита',fits:true,status:'eligible' as const};
+  const rule=programs.find(program=>program.id===selectedProgram);
+  if(!rule)return {payment:null,program:null,fits:false,status:'blocked' as const};
+  const settings:MortgageScenarioSettings={
+    programId:selectedProgram,
+    propertyKind:'newbuild',
+    ...(scenario&&scenario.programId===selectedProgram?scenario:{}),
+  };
+  const calculation=calculateMortgageScenario({
+    programs,
+    settings,
+    price,
+    down:downPayment,
+    years:settings.years??rule.maxYears,
+  });
+  if(!calculation||calculation.invalid)return {
+    payment:null,
+    program:rule.label,
+    fits:false,
+    status:calculation?.status??'blocked' as const,
+  };
   return {
-    payment:best?.payment??null,
-    program:best?.program??null,
-    fits:!!best&&target>0&&best.payment<=target,
+    payment:calculation.payment,
+    program:rule.label,
+    fits:target>0&&calculation.payment<=target,
+    status:calculation.status,
   };
 }
 
@@ -137,7 +159,7 @@ export function selectionMatch(
   if(price!==null&&criteria.purchaseMode==='cash'){
     financeOk=price>=criteria.min&&price<=criteria.max;
   }else if(price!==null){
-    const fit=bestMortgageFit(price,criteria.downPayment,criteria.monthlyPayment,programs,criteria.mortgageProgram);
+    const fit=bestMortgageFit(price,criteria.downPayment,criteria.monthlyPayment,programs,criteria.mortgageProgram,criteria.mortgageScenario);
     financeOk=fit.fits;
     mortgagePayment=fit.payment;
     mortgageProgram=fit.program;
