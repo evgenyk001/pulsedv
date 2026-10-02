@@ -22,8 +22,7 @@ import { usePulseControlState } from "../helpers/usePulseControlState";
 import { recordPulseEvent, type MortgageProgramRule } from "../../../../packages/pulse-data";
 import {
   calculateMortgageScenario,
-  DEFAULT_MARKET_RATES,
-  FAMILY_SCALE,
+  defaultMarketRate,
   FAMILY_SUBSIDY_YEARS,
   MORTGAGE_POLICY_VERSION,
   MORTGAGE_SCENARIO_KEY,
@@ -68,7 +67,7 @@ export default function MortgagePage(){
     ?requestedProgram as ProgramId
     :storedScenario?.programId??"family";
   const initialKind:PropertyKind=params.get("from")==="select"?"newbuild":storedScenario?.propertyKind??"newbuild";
-  const initialMarketRate=storedScenario?.marketRate??DEFAULT_MARKET_RATES[initialKind];
+  const initialMarketRate=storedScenario?.marketRate??defaultMarketRate(programs,initialKind);
 
   const [program,setProgram]=React.useState<ProgramId>(initialProgram);
   const [propertyKind,setPropertyKind]=React.useState<PropertyKind>(initialKind);
@@ -131,7 +130,7 @@ export default function MortgagePage(){
   const cardRate=(id:ProgramId)=>{
     const item=programs.find(value=>value.id===id);
     if(id==="family")return program==="family"?formatRate(preferredRate):"2–10%";
-    if(id==="standard")return "от "+formatRate(DEFAULT_MARKET_RATES[propertyKind]);
+    if(id==="standard")return "от "+formatRate(defaultMarketRate(programs,propertyKind));
     return "от "+formatRate(item?.rate??0);
   };
 
@@ -168,11 +167,11 @@ export default function MortgagePage(){
   },[minDown,down]);
 
   React.useEffect(()=>{
-    const next=DEFAULT_MARKET_RATES[propertyKind];
+    const next=defaultMarketRate(programs,propertyKind);
     setMarketRate(next);
     setMarketRateDraft(String(next).replace(".",","));
     setLargeArea(false);
-  },[propertyKind]);
+  },[propertyKind,programs]);
 
   React.useEffect(()=>{
     const shared:MortgageScenarioSettings={
