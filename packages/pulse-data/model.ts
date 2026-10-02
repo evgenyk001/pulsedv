@@ -24,6 +24,7 @@ export type PulseBanner={
 export type MortgageProgramRule={
   id:"family"|"farEast"|"it"|"standard"; label:string; rate:number; maxYears:number;
   minDownPct:number; subsidizedLimit:number; totalLimit:number; blended:boolean; hint:string;
+  marketRates?:{newbuild:number;secondary:number;house:number};
 };
 
 export type PulseSelectConfig={
@@ -108,7 +109,7 @@ export const DEFAULT_MORTGAGE_PROGRAMS:MortgageProgramRule[]=[
   {id:"family",label:"Семейная",rate:10,maxYears:30,minDownPct:20.1,subsidizedLimit:6_000_000,totalLimit:15_000_000,blended:true,hint:"С 01.10.2026 в Приморье ставка и льготный лимит зависят от числа детей: от 10% / 6 млн ₽ при одном ребёнке до 2% / 10 млн ₽ при пяти и более. Mini App рассчитывает шкалу динамически."},
   {id:"farEast",label:"Дальневосточная",rate:2,maxYears:20,minDownPct:20.1,subsidizedLimit:6_000_000,totalLimit:9_000_000,blended:false,hint:"От 2%. До 6 млн ₽; до 9 млн ₽ для подходящего объекта увеличенной площади. Доступность зависит от категории заёмщика и объекта."},
   {id:"it",label:"IT",rate:6,maxYears:30,minDownPct:20.1,subsidizedLimit:9_000_000,totalLimit:18_000_000,blended:true,hint:"6% на льготную часть до 9 млн ₽. В Сбере общий кредит может быть до 18 млн ₽; превышение льготного лимита рассчитывается по рыночной ставке."},
-  {id:"standard",label:"Базовая",rate:15.7,maxYears:30,minDownPct:20.1,subsidizedLimit:100_000_000,totalLimit:100_000_000,blended:false,hint:"Рыночный ориентир Домклик для новостройки. В Mini App ставка меняется по типу объекта и остаётся редактируемой."}
+  {id:"standard",label:"Базовая",rate:15.7,maxYears:30,minDownPct:20.1,subsidizedLimit:100_000_000,totalLimit:100_000_000,blended:false,hint:"Рыночный сценарий. Ставки по типу объекта управляются из PULSE Control и остаются ориентировочными.",marketRates:{newbuild:15.7,secondary:15.5,house:17.6}}
 ];
 
 export const DEFAULT_STATE:PulseState={
