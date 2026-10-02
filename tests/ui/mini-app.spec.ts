@@ -29,20 +29,15 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await expect(page.getByRole('heading',{name:'Новостройки',exact:true})).toBeVisible();
 
  await nav.getByRole('button',{name:'Подбор',exact:true}).click();
- await expect(page.getByRole('heading',{name:'Где и что ищем?',exact:true})).toBeVisible();
- await expect(page.getByLabel('Живой профиль PULSE Select')).toBeVisible();
+ await expect(page.getByRole('heading',{name:/Опишите, что ищете/})).toBeVisible();
+ await expect(page.getByText('ВАШ ЗАПРОС',{exact:true})).toBeVisible();
  await page.getByRole('textbox',{name:'Опишите квартиру своими словами'}).fill('Двушка во Владивостоке, ипотека до 70 тыс. в месяц, первоначальный взнос 2 млн, у моря');
  await page.getByRole('button',{name:'Понять запрос',exact:true}).click();
  await expect(page.getByText(/PULSE понял/)).toBeVisible();
- await page.getByRole('button',{name:/Продолжить/}).click();
- await expect(page.getByRole('heading',{name:'Как удобнее считать?',exact:true})).toBeVisible();
- await page.getByRole('button',{name:/Продолжить/}).click();
- await expect(page.getByRole('heading',{name:'Когда нужны ключи?',exact:true})).toBeVisible();
- await page.getByRole('button',{name:/Продолжить/}).click();
- await expect(page.getByRole('heading',{name:'Что делает квартиру «вашей»?',exact:true})).toBeVisible();
- const sea=page.getByRole('button',{name:/Вид на море/});await sea.click();await expect(sea).toHaveAttribute('aria-pressed','true');
+ await page.getByRole('button',{name:/Что для вас важно/}).click();
+ const sea=page.getByRole('button',{name:/Вид на море/});await expect(sea).toHaveAttribute('aria-pressed','true');
  const parking=page.getByRole('button',{name:/Парковка/});await parking.click();await expect(parking).toHaveAttribute('aria-pressed','true');
- await page.getByRole('button',{name:'Собрать мой подбор',exact:true}).click();
+ await page.getByRole('button',{name:/Показать подходящие/}).click();
  await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
  await page.goto('/pulsedv/mini-app/#/mortgage');
  await page.getByRole('button',{name:/Дальневосточная/}).click();
@@ -316,17 +311,13 @@ test('Control preview: PULSE Select settings and activity stay connected',async(
  const nav=page.getByRole('navigation',{name:'Основная навигация'});
  await nav.getByRole('button',{name:'Подбор',exact:true}).click();
  await expect(page.getByRole('textbox',{name:'Опишите квартиру своими словами'})).toHaveCount(0);
-
- await page.getByRole('button',{name:/Продолжить/}).click();
- await page.getByRole('button',{name:/Продолжить/}).click();
- await page.getByRole('button',{name:/Продолжить/}).click();
- await expect(page.getByRole('heading',{name:'Что делает квартиру «вашей»?',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:/Что для вас важно/}).click();
  await expect(page.getByRole('button',{name:/Вид на море/})).toHaveCount(0);
  await expect(page.getByText(/0\/2 выбрано/)).toBeVisible();
  await page.getByRole('button',{name:/Для семьи/}).click();
  await page.getByRole('button',{name:/Парковка/}).click();
  await expect(page.getByText(/2\/2 выбрано/)).toBeVisible();
- await page.getByRole('button',{name:'Собрать мой подбор',exact:true}).click();
+ await page.getByRole('button',{name:/Показать подходящие/}).click();
  await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
 
  await page.goto('/pulsedv/control-center/#/select');
@@ -443,14 +434,12 @@ for(const width of [390,1440])test(`Interest DNA ${width}px: facts, evidence, ch
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:'Пропустить онбординг'}).click();
  await page.getByRole('navigation',{name:'Основная навигация'}).getByRole('button',{name:'Подбор',exact:true}).click();
- await page.getByRole('button',{name:/Продолжить/}).click();
+ await page.getByRole('button',{name:/Как покупаем/}).click();
  await page.getByRole('tab',{name:'По стоимости',exact:true}).click();
- await page.getByRole('button',{name:/Продолжить/}).click();await page.getByRole('button',{name:/Продолжить/}).click();
- await page.getByRole('button',{name:'Собрать мой подбор',exact:true}).click();await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
+ await page.getByRole('button',{name:/Показать подходящие/}).click();await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
  await page.getByRole('button',{name:'Изменить запрос',exact:true}).click();
  await page.getByRole('button',{name:'Артём',exact:true}).click();
- await page.getByRole('button',{name:/Продолжить/}).click();await page.getByRole('button',{name:/Продолжить/}).click();await page.getByRole('button',{name:/Продолжить/}).click();
- await page.getByRole('button',{name:'Собрать мой подбор',exact:true}).click();await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
+ await page.getByRole('button',{name:/Показать подходящие/}).click();await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
  await page.goto('/pulsedv/control-center/#/users');await page.locator('.leadRowButton').first().click();
  const dna=page.getByRole('region',{name:'Interest DNA'});
  await expect(dna.getByRole('heading',{name:'Interest DNA',exact:true})).toBeVisible();
