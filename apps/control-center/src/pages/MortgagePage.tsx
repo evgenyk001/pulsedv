@@ -2,7 +2,7 @@ import { BadgePercent, CalendarRange, CircleDollarSign, Info, Landmark, Percent,
 import { PageFrame } from "../components/PageFrame";
 import { usePulseState } from "../data";
 import { updatePulseState, type MortgageProgramRule } from "../../../../packages/pulse-data";
-import { MORTGAGE_POLICY_VERSION } from "../../../../packages/domain/mortgagePolicy";
+import { DEFAULT_MARKET_RATES, MORTGAGE_POLICY_VERSION, type MortgagePropertyKind } from "../../../../packages/domain/mortgagePolicy";
 
 const rub=(value:number)=>new Intl.NumberFormat("ru-RU").format(value);
 
@@ -11,6 +11,22 @@ export function MortgagePage(){
   const patch=(id:MortgageProgramRule["id"],patch:Partial<MortgageProgramRule>)=>updatePulseState(current=>({
     ...current,mortgagePrograms:current.mortgagePrograms.map(item=>item.id===id?{...item,...patch}:item)
   }));
+  const marketRate=(program:MortgageProgramRule,kind:MortgagePropertyKind)=>{
+    const configured=program.marketRates?.[kind];
+    if(typeof configured==="number"&&Number.isFinite(configured))return configured;
+    return kind==="newbuild"?program.rate:DEFAULT_MARKET_RATES[kind];
+  };
+  const patchMarketRate=(program:MortgageProgramRule,kind:MortgagePropertyKind,value:number)=>{
+    const marketRates:{
+      newbuild:number;secondary:number;house:number;
+    }={
+      newbuild:marketRate(program,"newbuild"),
+      secondary:marketRate(program,"secondary"),
+      house:marketRate(program,"house"),
+      [kind]:value,
+    };
+    patch(program.id,{marketRates,...(kind==="newbuild"?{rate:value}:{})});
+  };
   return <PageFrame eyebrow="FINANCE" title="Ипотека" description="Управляйте параметрами общего ипотечного движка. Mini App и PULSE Select используют одну и ту же конфигурацию.">
     <section className="mortgageIntro panel">
       <div className="mortgageIntroIcon"><Landmark size={20}/></div>
@@ -25,11 +41,11 @@ export function MortgagePage(){
             <span className="mortgageProgramIcon"><BadgePercent size={18}/></span>
             <div><span className="kicker">{program.id}</span><h2>{program.label}</h2></div>
           </div>
-          <span className="mortgageRateBadge">{program.id==="family"?"2–10%":program.rate+"%"}</span>
+          <span className="mortgageRateBadge">{program.id==="family"?"2–10%":program.id==="standard"?marketRate(program,"newbuild")+"%":program.rate+"%"}</span>
         </header>
 
         <div className="mortgageProgramPreview" aria-label={"Параметры программы "+program.label}>
-          <div><Percent size={15}/><span>Ставка</span><b>{program.id==="family"?"2–10%":program.rate+"%"}</b></div>
+          <div><Percent size={15}/><span>{program.id==="standard"?"Новостройка":"Ставка"}</span><b>{program.id==="family"?"2–10%":program.id==="standard"?marketRate(program,"newbuild")+"%":program.rate+"%"}</b></div>
           <div><WalletCards size={15}/><span>ПВ от</span><b>{program.minDownPct}%</b></div>
           <div><CalendarRange size={15}/><span>Срок</span><b>до {program.maxYears} лет</b></div>
           <div><CircleDollarSign size={15}/><span>Лимит</span><b>{program.id==="family"?"6–10 млн ₽":rub(program.subsidizedLimit)+" ₽"}</b></div>
@@ -38,7 +54,13 @@ export function MortgagePage(){
         <div className="mortgageForm">
           {program.id==="family"
             ?<label className="controlField"><span>Ставка</span><input aria-label="Семейная — ставка по policy" type="text" disabled value="2–10% · по детям"/></label>
-            :<label className="controlField"><span>Ставка, %</span><input aria-label={program.label+" — ставка, %"} type="number" step=".1" value={program.rate} onChange={e=>patch(program.id,{rate:Number(e.target.value)})}/></label>}
+            :program.id==="standard"
+              ?<>
+                <label className="controlField"><span>Новостройка, %</span><input aria-label="Базовая — новостройка, %" type="number" step=".1" value={marketRate(program,"newbuild")} onChange={e=>patchMarketRate(program,"newbuild",Number(e.target.value))}/></label>
+                <label className="controlField"><span>Вторичка, %</span><input aria-label="Базовая — вторичка, %" type="number" step=".1" value={marketRate(program,"secondary")} onChange={e=>patchMarketRate(program,"secondary",Number(e.target.value))}/></label>
+                <label className="controlField"><span>Дом / ИЖС, %</span><input aria-label="Базовая — дом, %" type="number" step=".1" value={marketRate(program,"house")} onChange={e=>patchMarketRate(program,"house",Number(e.target.value))}/></label>
+              </>
+              :<label className="controlField"><span>Ставка, %</span><input aria-label={program.label+" — ставка, %"} type="number" step=".1" value={program.rate} onChange={e=>patch(program.id,{rate:Number(e.target.value)})}/></label>}
           <label className="controlField"><span>Макс. срок, лет</span><input aria-label={program.label+" — максимальный срок, лет"} type="number" value={program.maxYears} onChange={e=>patch(program.id,{maxYears:Number(e.target.value)})}/></label>
           <label className="controlField"><span>Первоначальный взнос от, %</span><input aria-label={program.label+" — первоначальный взнос, %"} type="number" step=".1" value={program.minDownPct} onChange={e=>patch(program.id,{minDownPct:Number(e.target.value)})}/></label>
           {program.id==="family"
