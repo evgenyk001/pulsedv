@@ -54,3 +54,5 @@
   .childGrid{gap:4px}
   .chip,.chipActive{height:34px}
 }
+
+.returnSelect{width:100%;min-height:52px;border:1px solid var(--app-card-border);border-radius:var(--app-radius-pill);background:var(--app-card);color:var(--foreground);font:inherit;font-size:10.5px;font-weight:730;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:var(--shadow);transition:transform .16s ease}.returnSelect:active{transform:scale(.985)}
