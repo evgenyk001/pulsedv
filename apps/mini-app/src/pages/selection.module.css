@@ -244,3 +244,21 @@
 }
 
 @media(prefers-reduced-motion:reduce){.smartInput,.smartInput>button,.exampleQuery{transition:none!important}}
+
+/* Production polish: keep the intelligence visible, but get users to the first choice faster. */
+.hero{padding:2px 2px 0}
+.heroTop{margin-bottom:8px}
+.hero h1{font-size:31px;line-height:1}
+.hero p{margin-top:8px;line-height:1.46;max-width:345px}
+.smartPrompt{padding:12px}
+.smartPromptHead{margin-bottom:8px}
+.smartPromptHead svg{width:28px;height:28px;padding:6px}
+.smartInput{height:50px}
+.smartInput input{height:46px!important}
+.pulseCore{grid-template-columns:76px 1fr;min-height:104px;padding:11px 13px;gap:11px}
+.pulseCore .pulseRing{width:74px;height:74px}
+.coreCopy>strong{margin-top:4px;font-size:11.5px}
+.coreCopy>small{margin-top:4px;line-height:1.35}
+.coreChips{margin-top:7px}
+.coreChips i{min-height:21px;padding:0 7px}
+.progress{margin-top:-3px}
