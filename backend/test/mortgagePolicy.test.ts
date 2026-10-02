@@ -1,0 +1,102 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { DEFAULT_MORTGAGE_PROGRAMS } from "../../packages/pulse-data/model";
+import {
+  calculateMortgageScenario,
+  MORTGAGE_POLICY_VERSION,
+} from "../../packages/domain/mortgagePolicy";
+import { bestMortgageFit } from "../../packages/domain/propertyMatch";
+
+test("shared mortgage policy: family scale and 50% rule stay deterministic",()=>{
+  const familyTwo=calculateMortgageScenario({
+    programs:DEFAULT_MORTGAGE_PROGRAMS,
+    settings:{
+      programId:"family",
+      propertyKind:"newbuild",
+      childrenCount:2,
+      hasYoungChild:true,
+      disabledChild:false,
+      marketRate:15.7,
+      years:15,
+    },
+    price:9_000_000,
+    down:2_000_000,
+    years:15,
+  });
+  assert.ok(familyTwo);
+  assert.equal(familyTwo.policyVersion,MORTGAGE_POLICY_VERSION);
+  assert.equal(familyTwo.preferredRate,8);
+  assert.equal(familyTwo.subsidizedLimit,8_000_000);
+  assert.equal(familyTwo.status,"eligible");
+  assert.equal(familyTwo.invalid,false);
+
+  const familyHalfDown=calculateMortgageScenario({
+    programs:DEFAULT_MORTGAGE_PROGRAMS,
+    settings:{
+      programId:"family",
+      propertyKind:"newbuild",
+      childrenCount:1,
+      hasYoungChild:true,
+      disabledChild:false,
+      marketRate:15.7,
+      years:15,
+    },
+    price:8_000_000,
+    down:4_000_000,
+    years:15,
+  });
+  assert.ok(familyHalfDown);
+  assert.equal(familyHalfDown.preferredRate,6);
+});
+
+test("shared mortgage policy: object and limit rules are enforced",()=>{
+  const itSecondary=calculateMortgageScenario({
+    programs:DEFAULT_MORTGAGE_PROGRAMS,
+    settings:{programId:"it",propertyKind:"secondary",marketRate:15.5,years:20},
+    price:8_000_000,
+    down:2_000_000,
+  });
+  assert.ok(itSecondary);
+  assert.equal(itSecondary.status,"blocked");
+  assert.equal(itSecondary.invalid,true);
+
+  const farEastLarge=calculateMortgageScenario({
+    programs:DEFAULT_MORTGAGE_PROGRAMS,
+    settings:{programId:"farEast",propertyKind:"newbuild",largeArea:true,years:20},
+    price:10_000_000,
+    down:2_100_000,
+  });
+  assert.ok(farEastLarge);
+  assert.equal(farEastLarge.totalLimit,9_000_000);
+  assert.equal(farEastLarge.invalid,false);
+});
+
+test("PULSE Select uses the same mortgage calculation as the mortgage screen",()=>{
+  const scenario={
+    programId:"family" as const,
+    propertyKind:"newbuild" as const,
+    childrenCount:3 as const,
+    hasYoungChild:true,
+    disabledChild:false,
+    marketRate:15.7,
+    years:15,
+  };
+  const direct=calculateMortgageScenario({
+    programs:DEFAULT_MORTGAGE_PROGRAMS,
+    settings:scenario,
+    price:9_000_000,
+    down:2_000_000,
+  });
+  assert.ok(direct);
+
+  const fit=bestMortgageFit(
+    9_000_000,
+    2_000_000,
+    direct.payment+1,
+    DEFAULT_MORTGAGE_PROGRAMS,
+    "family",
+    scenario,
+  );
+  assert.equal(fit.payment,direct.payment);
+  assert.equal(fit.fits,true);
+});
