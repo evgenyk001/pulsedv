@@ -447,6 +447,7 @@ export default function SelectionPage(){
         purchaseMode,
         program:purchaseMode==="mortgage"?mortgageProgram:null,
         topScore,strongCount,results:eligible.length,
+        propertyIds:eligible.slice(0,3).map(item=>item.property.id),
         source:"pulse-select-v4",
         policyVersion:MORTGAGE_POLICY_VERSION,
       }
