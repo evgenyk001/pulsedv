@@ -6,6 +6,7 @@ import {
   MORTGAGE_POLICY_VERSION,
 } from "../../packages/domain/mortgagePolicy";
 import { bestMortgageFit } from "../../packages/domain/propertyMatch";
+import { safeMetadata } from "../src/validation";
 
 test("shared mortgage policy: family scale and 50% rule stay deterministic",()=>{
   const familyTwo=calculateMortgageScenario({
@@ -99,4 +100,13 @@ test("PULSE Select uses the same mortgage calculation as the mortgage screen",()
   );
   assert.equal(fit.payment,direct.payment);
   assert.equal(fit.fits,true);
+});
+
+
+test("analytics keeps policy version and still drops private metadata",()=>{
+  const clean=safeMetadata({source:"pulse-select-v4",policyVersion:MORTGAGE_POLICY_VERSION,phone:"+79990000000",childrenCount:3});
+  assert.equal(clean.source,"pulse-select-v4");
+  assert.equal(clean.policyVersion,MORTGAGE_POLICY_VERSION);
+  assert.equal("phone" in clean,false);
+  assert.equal("childrenCount" in clean,false);
 });
