@@ -26,7 +26,7 @@ const banner=z.object({
 export const stateSchema=z.object({
  properties:z.array(property).max(2000),
  banners:z.array(banner).max(100),
- mortgagePrograms:z.array(z.object({id:z.enum(['family','farEast','it','standard']),label:text(100),rate:z.number().min(0).max(60),maxYears:z.number().int().min(1).max(40),minDownPct:z.number().min(0).max(99),subsidizedLimit:z.number().positive(),totalLimit:z.number().positive(),blended:z.boolean(),hint:text(2000)})).min(1).max(4),
+ mortgagePrograms:z.array(z.object({id:z.enum(['family','farEast','it','standard']),label:text(100),rate:z.number().min(0).max(60),maxYears:z.number().int().min(1).max(40),minDownPct:z.number().min(0).max(99),subsidizedLimit:z.number().positive(),totalLimit:z.number().positive(),blended:z.boolean(),hint:text(2000),marketRates:z.object({newbuild:z.number().min(0).max(60),secondary:z.number().min(0).max(60),house:z.number().min(0).max(60)}).optional()})).min(1).max(4),
  select:z.object({
   cities:z.array(text(100).min(1)).min(1).max(30),
   roomOptions:z.array(text(30).min(1)).min(1).max(10),
