@@ -253,8 +253,8 @@
 .smartPrompt{padding:12px}
 .smartPromptHead{margin-bottom:8px}
 .smartPromptHead svg{width:28px;height:28px;padding:6px}
-.smartInput{height:52px}
-.smartInput input{height:48px!important}
+.smartInput{height:54px}
+.smartInput input{height:50px!important}
 .pulseCore{grid-template-columns:76px 1fr;min-height:104px;padding:11px 13px;gap:11px}
 .pulseCore .pulseRing{width:74px;height:74px}
 .coreCopy>strong{margin-top:4px;font-size:11.5px}
