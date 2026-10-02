@@ -799,3 +799,5 @@ export default function SelectionPage(){
     <div className={styles.note}><ShieldCheck size={14}/>Настройки Select приходят из PULSE Control, каталог — из API, ипотека — из общего policy engine.</div>
   </div>;
 }
+
+// CI probe: validate Select 4.0 across PR workflows.
