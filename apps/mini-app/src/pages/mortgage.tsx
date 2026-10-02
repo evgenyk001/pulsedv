@@ -1,9 +1,10 @@
 import React from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   BadgePercent,
   Calculator,
+  ChevronLeft,
   ChevronRight,
   CircleCheck,
   Info,
@@ -19,35 +20,26 @@ import { PageHeader } from "../components/PageHeader";
 import { Input } from "../components/Input";
 import { usePulseControlState } from "../helpers/usePulseControlState";
 import { recordPulseEvent, type MortgageProgramRule } from "../../../../packages/pulse-data";
+import {
+  calculateMortgageScenario,
+  DEFAULT_MARKET_RATES,
+  FAMILY_SCALE,
+  FAMILY_SUBSIDY_YEARS,
+  MORTGAGE_POLICY_VERSION,
+  MORTGAGE_SCENARIO_KEY,
+  type FamilyChildren,
+  type MortgagePropertyKind,
+  type MortgageScenarioSettings,
+} from "../../../../packages/domain/mortgagePolicy";
 import styles from "./mortgage.module.css";
 
 type ProgramId=MortgageProgramRule["id"];
-type PropertyKind="newbuild"|"secondary"|"house";
-type FamilyChildren=1|2|3|4|5;
+type PropertyKind=MortgagePropertyKind;
 
 const MONEY_STEP=100_000;
 const PRICE_MIN=3_000_000;
 const PRICE_MAX=45_000_000;
-const DOMCLICK_MIN_DOWN=20.1;
-const FAMILY_SUBSIDY_YEARS=15;
-const FAMILY_COMBINED_MAX=15_000_000;
-const IT_SUBSIDIZED_LIMIT=9_000_000;
-const IT_COMBINED_MAX=18_000_000;
 const RULES_UPDATED="02.10.2026";
-
-const FAMILY_SCALE:Record<FamilyChildren,{rate:number;limit:number;label:string}>={
-  1:{rate:10,limit:6_000_000,label:"1"},
-  2:{rate:8,limit:8_000_000,label:"2"},
-  3:{rate:6,limit:10_000_000,label:"3"},
-  4:{rate:4,limit:10_000_000,label:"4"},
-  5:{rate:2,limit:10_000_000,label:"5+"},
-};
-
-const MARKET_RATE:Record<PropertyKind,number>={
-  newbuild:15.7,
-  secondary:15.5,
-  house:17.6,
-};
 
 const formatRub=(value:number)=>new Intl.NumberFormat("ru-RU").format(Math.round(value));
 const formatRate=(value:number)=>String(Math.round(value*10)/10).replace(".",",")+"%";
@@ -55,13 +47,6 @@ const parseNumber=(value:string)=>Number(value.replace(/[^0-9.,]/g,"").replace("
 const clamp=(value:number,min:number,max:number)=>Math.min(max,Math.max(min,value));
 const snap=(value:number,step:number)=>Math.round(value/step)*step;
 const ceilStep=(value:number,step:number)=>Math.ceil(value/step)*step;
-const annuity=(principal:number,annualRate:number,months:number)=>{
-  if(principal<=0||months<=0)return 0;
-  const monthlyRate=annualRate/100/12;
-  if(monthlyRate===0)return principal/months;
-  const factor=Math.pow(1+monthlyRate,months);
-  return principal*(monthlyRate*factor)/(factor-1);
-};
 
 const propertyLabels:Record<PropertyKind,string>={
   newbuild:"Новостройка",
@@ -70,6 +55,7 @@ const propertyLabels:Record<PropertyKind,string>={
 };
 
 export default function MortgagePage(){
+  const navigate=useNavigate();
   const [params]=useSearchParams();
   const requested=Number(params.get("price"));
   const initialPrice=Number.isFinite(requested)&&requested>0?clamp(requested,PRICE_MIN,PRICE_MAX):9_000_000;
@@ -81,8 +67,8 @@ export default function MortgagePage(){
   const [price,setPrice]=React.useState(initialPrice);
   const [down,setDown]=React.useState(2_000_000);
   const [years,setYears]=React.useState(15);
-  const [marketRate,setMarketRate]=React.useState(MARKET_RATE.newbuild);
-  const [marketRateDraft,setMarketRateDraft]=React.useState(String(MARKET_RATE.newbuild).replace(".",","));
+  const [marketRate,setMarketRate]=React.useState(DEFAULT_MARKET_RATES.newbuild);
+  const [marketRateDraft,setMarketRateDraft]=React.useState(String(DEFAULT_MARKET_RATES.newbuild).replace(".",","));
   const [childrenCount,setChildrenCount]=React.useState<FamilyChildren>(1);
   const [hasYoungChild,setHasYoungChild]=React.useState(true);
   const [disabledChild,setDisabledChild]=React.useState(false);
@@ -95,97 +81,74 @@ export default function MortgagePage(){
   const rule=programs.find(item=>item.id===program)??programs[0];
   if(!rule)return null;
 
-  const familyBase=FAMILY_SCALE[childrenCount];
+  const settings:MortgageScenarioSettings={
+    programId:program,
+    propertyKind,
+    childrenCount:program==="family"?childrenCount:undefined,
+    hasYoungChild:program==="family"?hasYoungChild:undefined,
+    disabledChild:program==="family"?disabledChild:undefined,
+    largeArea:program==="farEast"?largeArea:undefined,
+    marketRate,
+    years,
+  };
+
+  const calculation=calculateMortgageScenario({programs,settings,price,down,years});
+  if(!calculation)return null;
+
   const downPercent=price?down/price*100:0;
-  const familyRate=propertyKind==="house"
-    ?6
-    :(disabledChild||downPercent>=50?Math.min(6,familyBase.rate):familyBase.rate);
-
-  const preferredRate=program==="family"
-    ?familyRate
-    :program==="farEast"
-      ?2
-      :program==="it"
-        ?6
-        :marketRate;
-
-  const farEastLimit=propertyKind==="newbuild"&&largeArea
-    ?9_000_000
-    :propertyKind==="secondary"&&largeArea
-      ?9_000_000
-      :6_000_000;
-
-  const subsidizedLimit=program==="family"
-    ?familyBase.limit
-    :program==="farEast"
-      ?farEastLimit
-      :program==="it"
-        ?IT_SUBSIDIZED_LIMIT
-        :100_000_000;
-
-  const totalLimit=program==="family"
-    ?FAMILY_COMBINED_MAX
-    :program==="farEast"
-      ?farEastLimit
-      :program==="it"
-        ?IT_COMBINED_MAX
-        :100_000_000;
-
-  const maxYears=program==="farEast"?20:30;
-  const minDown=ceilStep(price*DOMCLICK_MIN_DOWN/100,MONEY_STEP);
+  const familyBase=FAMILY_SCALE[childrenCount];
+  const preferredRate=calculation.preferredRate;
+  const subsidizedLimit=calculation.subsidizedLimit;
+  const totalLimit=calculation.totalLimit;
+  const maxYears=calculation.maxYears;
+  const minDown=calculation.minDown;
   const maxDown=Math.max(minDown,price-MONEY_STEP);
-  const loan=Math.max(price-down,0);
+  const loan=calculation.loan;
+  const subsidizedPrincipal=calculation.subsidizedPrincipal;
+  const marketPrincipal=calculation.marketPrincipal;
+  const preferredPayment=calculation.preferredPayment;
+  const marketPayment=calculation.marketPayment;
+  const payment=calculation.payment;
+  const totalKnown=calculation.totalKnown;
+  const overpayment=calculation.overpayment;
+  const mixed=calculation.mixed;
+  const requiredDown=calculation.requiredDown;
+  const invalid=calculation.invalid;
+  const income=payment/.45;
+
   const familyEligibilityBlocked=program==="family"&&!hasYoungChild&&!disabledChild;
   const objectBlocked=program==="it"&&propertyKind==="secondary";
-  const hardLimitExceeded=program==="farEast"&&loan>farEastLimit;
-  const totalLimitExceeded=program!=="standard"&&loan>totalLimit;
-  const invalid=familyEligibilityBlocked||objectBlocked||hardLimitExceeded||totalLimitExceeded||down<minDown;
-
-  const subsidizedPrincipal=program==="standard"?0:Math.min(loan,subsidizedLimit);
-  const marketPrincipal=program==="standard"
-    ?loan
-    :(program==="family"||program==="it"?Math.max(0,loan-subsidizedLimit):0);
-
-  const months=years*12;
-  const preferredPayment=program==="standard"?0:annuity(subsidizedPrincipal,preferredRate,months);
-  const marketPayment=annuity(marketPrincipal,marketRate,months);
-  const payment=invalid?0:(program==="standard"?marketPayment:preferredPayment+marketPayment);
-  const totalKnown=!(program==="family"&&years>FAMILY_SUBSIDY_YEARS);
-  const total=totalKnown?payment*months:0;
-  const overpayment=totalKnown?Math.max(total-loan,0):0;
-  const income=payment/.45;
-  const mixed=marketPrincipal>0&&program!=="standard";
-  const requiredDown=ceilStep(Math.max(minDown,price-totalLimit),MONEY_STEP);
+  const limitExceeded=calculation.blockReason==="Сумма кредита выше доступного лимита";
 
   const cardRate=(id:ProgramId)=>{
-    if(id==="family")return program==="family"?formatRate(familyRate):"2–10%";
-    if(id==="farEast")return "от 2%";
-    if(id==="it")return "от 6%";
-    return "от "+formatRate(MARKET_RATE[propertyKind]);
+    const item=programs.find(value=>value.id===id);
+    if(id==="family")return program==="family"?formatRate(preferredRate):"2–10%";
+    if(id==="standard")return "от "+formatRate(DEFAULT_MARKET_RATES[propertyKind]);
+    return "от "+formatRate(item?.rate??0);
   };
 
   const ruleCards=program==="family"
     ?[
-      {main:formatRate(familyRate),sub:"ставка сейчас"},
-      {main:formatRub(familyBase.limit)+" ₽",sub:"льготный лимит"},
-      {main:"15 лет",sub:"субсидирование"},
+      {main:formatRate(preferredRate),sub:"ставка сейчас"},
+      {main:formatRub(subsidizedLimit)+" ₽",sub:"льготный лимит"},
+      {main:FAMILY_SUBSIDY_YEARS+" лет",sub:"субсидирование"},
     ]
     :program==="farEast"
       ?[
-        {main:"2%",sub:"льготная ставка"},
-        {main:formatRub(farEastLimit)+" ₽",sub:"макс. кредит"},
-        {main:"20 лет",sub:"макс. срок"},
+        {main:formatRate(preferredRate),sub:"льготная ставка"},
+        {main:formatRub(subsidizedLimit)+" ₽",sub:"макс. кредит"},
+        {main:maxYears+" лет",sub:"макс. срок"},
       ]
       :program==="it"
         ?[
-          {main:"6%",sub:"льготная ставка"},
-          {main:"9 млн ₽",sub:"льготная часть"},
-          {main:"18 млн ₽",sub:"с увеличением"},
+          {main:formatRate(preferredRate),sub:"льготная ставка"},
+          {main:formatRub(subsidizedLimit)+" ₽",sub:"льготная часть"},
+          {main:formatRub(totalLimit)+" ₽",sub:"с увеличением"},
         ]
         :[
           {main:formatRate(marketRate),sub:"ориентир ставки"},
-          {main:"20,1%",sub:"взнос Домклик"},
-          {main:"30 лет",sub:"макс. срок"},
+          {main:String(rule.minDownPct).replace(".",",")+"%",sub:"взнос от"},
+          {main:maxYears+" лет",sub:"макс. срок"},
         ];
 
   React.useEffect(()=>{
@@ -197,27 +160,30 @@ export default function MortgagePage(){
   },[minDown,down]);
 
   React.useEffect(()=>{
-    const next=MARKET_RATE[propertyKind];
+    const next=DEFAULT_MARKET_RATES[propertyKind];
     setMarketRate(next);
     setMarketRateDraft(String(next).replace(".",","));
     setLargeArea(false);
   },[propertyKind]);
 
   React.useEffect(()=>{
+    const shared:MortgageScenarioSettings={
+      ...settings,
+      updatedAt:new Date().toISOString(),
+    };
+    try{localStorage.setItem(MORTGAGE_SCENARIO_KEY,JSON.stringify(shared));}catch{}
+  },[program,propertyKind,childrenCount,hasYoungChild,disabledChild,largeArea,marketRate,years]);
+
+  React.useEffect(()=>{
     if(!interacted||invalid)return;
     const metadata={
       program,
-      propertyKind,
       price,
       down,
       years,
-      preferredRate,
-      marketRate,
+      rate:preferredRate,
       payment:Math.round(payment),
-      childrenCount:program==="family"?childrenCount:undefined,
-      subsidizedLimit,
-      marketPrincipal,
-      rulesUpdated:RULES_UPDATED,
+      source:"mortgage-policy-"+MORTGAGE_POLICY_VERSION,
     };
     const key=JSON.stringify(metadata);
     if(lastCalculation.current===key)return;
@@ -226,15 +192,14 @@ export default function MortgagePage(){
       recordPulseEvent({eventType:"mortgage_calculated",entityType:"mortgage",entityId:program,metadata});
     },800);
     return()=>window.clearTimeout(timer);
-  },[
-    interacted,invalid,program,propertyKind,price,down,years,preferredRate,marketRate,
-    payment,childrenCount,subsidizedLimit,marketPrincipal,
-  ]);
+  },[interacted,invalid,program,price,down,years,preferredRate,payment]);
 
   const chooseProgram=(id:ProgramId)=>{
     setInteracted(true);
+    const next=programs.find(item=>item.id===id);
+    if(!next)return;
     setProgram(id);
-    setYears(current=>Math.min(current,id==="farEast"?20:30));
+    setYears(current=>Math.min(current,next.maxYears));
     if(id!=="farEast")setLargeArea(false);
     recordPulseEvent({eventType:"mortgage_program",entityType:"mortgage_program",entityId:id});
   };
@@ -242,7 +207,7 @@ export default function MortgagePage(){
   const updatePrice=(value:number)=>{
     setInteracted(true);
     const next=clamp(snap(value,MONEY_STEP),PRICE_MIN,PRICE_MAX);
-    const nextMin=ceilStep(next*DOMCLICK_MIN_DOWN/100,MONEY_STEP);
+    const nextMin=ceilStep(next*rule.minDownPct/100,MONEY_STEP);
     const nextDown=clamp(down,nextMin,next-MONEY_STEP);
     setDown(nextDown);
     setDownDraft(formatRub(nextDown));
@@ -284,9 +249,9 @@ export default function MortgagePage(){
         ?"С 1 октября 2026 ставка и льготный лимит в Приморье зависят от количества детей. Часть сверх льготного лимита показана как комбо-сценарий и требует подтверждения банка."
         :"С 1 октября 2026 ставка и лимит в Приморье зависят от количества детей.";
     }
-    if(program==="farEast")return "В Приморском крае — до 6 млн ₽; до 9 млн ₽ для подходящего объекта увеличенной площади. Нужна льготная категория заёмщика.";
-    if(program==="it")return "6% на льготную часть до 9 млн ₽. У Сбера увеличенный общий кредит — до 18 млн ₽; сверх 9 млн ₽ считается рыночная часть.";
-    return "Рыночная ставка — ориентир Домклик. Финальная ставка зависит от банка, взноса, страхования и профиля заёмщика.";
+    if(program==="farEast")return "В Приморском крае — базовый лимит и повышенный лимит для подходящего объекта берутся из PULSE Control. Нужна льготная категория заёмщика.";
+    if(program==="it")return "Льготная и максимальная части берутся из PULSE Control. Превышение льготного лимита считается по рыночной ставке.";
+    return "Рыночная ставка — ориентир. Финальная ставка зависит от банка, взноса, страхования и профиля заёмщика.";
   };
 
   return <div className={styles.page}>
@@ -297,7 +262,7 @@ export default function MortgagePage(){
       action={<div className={styles.headerIcon}><Calculator size={20}/></div>}
     />
 
-    <div className={styles.freshness}><CircleCheck size={14}/><span>Правила проверены {RULES_UPDATED} · новые договоры</span></div>
+    <div className={styles.freshness}><CircleCheck size={14}/><span>Правила проверены {RULES_UPDATED} · движок {MORTGAGE_POLICY_VERSION}</span></div>
 
     <section className={styles.programSection}>
       <div className={styles.sectionLabel}><span>Программа</span><small>Приморский край</small></div>
@@ -324,7 +289,7 @@ export default function MortgagePage(){
       {program==="family"&&<div className={styles.scenario}>
         <div className={styles.scenarioHead}>
           <div><strong>Сколько детей в семье?</strong><span>Для Приморья ставка зависит от их количества</span></div>
-          <span className={styles.liveRate}>{formatRate(familyRate)}</span>
+          <span className={styles.liveRate}>{formatRate(preferredRate)}</span>
         </div>
         <div className={styles.childGrid}>
           {([1,2,3,4,5] as FamilyChildren[]).map(count=><button
@@ -349,7 +314,7 @@ export default function MortgagePage(){
       {program==="farEast"&&propertyKind!=="house"&&<div className={styles.optionRow}>
         <div>
           <strong>{propertyKind==="newbuild"?"Площадь квартиры свыше 64 м²":"Площадь свыше 60 м² и подходящий моногород"}</strong>
-          <span>При выполнении условия лимит кредита повышается до 9 млн ₽</span>
+          <span>При выполнении условия используется повышенный лимит из PULSE Control</span>
         </div>
         <Switch checked={largeArea} onCheckedChange={value=>{setInteracted(true);setLargeArea(value)}}/>
       </div>}
@@ -360,9 +325,7 @@ export default function MortgagePage(){
       <div className={styles.ruleHint}><Info size={14}/><span>{programHint()}</span></div>
 
       {propertyKind==="secondary"&&(program==="family"||program==="farEast")&&<div className={styles.contextWarning}>
-        <Info size={15}/><span>
-          Вторичка по этой программе доступна не везде. Перед подачей нужно проверить населённый пункт и сам объект по действующему перечню ДОМ.РФ / условиям банка.
-        </span>
+        <Info size={15}/><span>Вторичка по этой программе доступна не везде. Перед подачей нужно проверить населённый пункт и сам объект по действующему перечню и условиям банка.</span>
       </div>}
     </section>
 
@@ -383,7 +346,7 @@ export default function MortgagePage(){
           <span>₽</span>
         </div>
         <Slider min={minDown} max={maxDown} step={MONEY_STEP} value={[clamp(down,minDown,maxDown)]} onValueChange={values=>updateDown(values[0]??down)}/>
-        <div className={styles.fieldMeta}>Минимум в калькуляторе Домклик / Сбер: 20,1% · {formatRub(minDown)} ₽</div>
+        <div className={styles.fieldMeta}>Минимум по настройкам программы: {String(rule.minDownPct).replace(".",",")}% · {formatRub(minDown)} ₽</div>
         {program==="family"&&downPercent>=50&&<div className={styles.inlineSuccess}><CircleCheck size={13}/>Взнос 50%+: для подходящей семьи ставка не выше 6%</div>}
       </div>
 
@@ -392,7 +355,6 @@ export default function MortgagePage(){
           <div className={styles.label}><span>Срок</span><b>{years} лет</b></div>
           <Slider min={5} max={maxYears} step={1} value={[years]} onValueChange={values=>{setInteracted(true);setYears(Math.min(values[0]??years,maxYears))}}/>
         </div>
-
         <div className={styles.rateField}>
           <label>{program==="standard"?"Рыночная ставка":"Рыночная часть"}</label>
           <div>
@@ -403,38 +365,25 @@ export default function MortgagePage(){
       </div>
 
       {mixed&&<div className={styles.mixedRate}>
-        <div>
-          <strong>Комбинированный расчёт</strong>
-          <span>{formatRub(subsidizedPrincipal)} ₽ под {formatRate(preferredRate)} + {formatRub(marketPrincipal)} ₽ под {formatRate(marketRate)}</span>
-        </div>
+        <div><strong>Комбинированный расчёт</strong><span>{formatRub(subsidizedPrincipal)} ₽ под {formatRate(preferredRate)} + {formatRub(marketPrincipal)} ₽ под {formatRate(marketRate)}</span></div>
         <BadgePercent size={19}/>
       </div>}
     </section>
 
     {familyEligibilityBlocked&&<section className={styles.warning+" "+styles.warningStrong}>
-      <AlertTriangle size={18}/>
-      <div><strong>Не подтверждено базовое право на Семейную ипотеку</strong><span>Для обычного сценария нужен ребёнок младше 7 лет. Отдельное основание — ребёнок с инвалидностью до 18 лет.</span></div>
+      <AlertTriangle size={18}/><div><strong>Не подтверждено базовое право на Семейную ипотеку</strong><span>Для обычного сценария нужен ребёнок младше 7 лет. Отдельное основание — ребёнок с инвалидностью до 18 лет.</span></div>
     </section>}
 
     {objectBlocked&&<section className={styles.warning+" "+styles.warningStrong}>
-      <AlertTriangle size={18}/>
-      <div><strong>Обычная вторичка не подходит под IT-ипотеку</strong><span>Программа рассчитана на первичное жильё от застройщика, дом от застройщика или строительство дома.</span></div>
+      <AlertTriangle size={18}/><div><strong>Обычная вторичка не подходит под IT-ипотеку</strong><span>Программа рассчитана на первичное жильё от застройщика, дом от застройщика или строительство дома.</span></div>
     </section>}
 
-    {(hardLimitExceeded||totalLimitExceeded)&&<section className={styles.warning+" "+styles.warningStrong}>
-      <AlertTriangle size={18}/>
-      <div>
-        <strong>Сумма кредита выше доступного лимита</strong>
-        <span>Увеличьте первоначальный взнос минимум до {formatRub(requiredDown)} ₽ или выберите другой сценарий.</span>
-      </div>
+    {limitExceeded&&<section className={styles.warning+" "+styles.warningStrong}>
+      <AlertTriangle size={18}/><div><strong>Сумма кредита выше доступного лимита</strong><span>Увеличьте первоначальный взнос минимум до {formatRub(requiredDown)} ₽ или выберите другой сценарий.</span></div>
     </section>}
 
     {program==="family"&&years>FAMILY_SUBSIDY_YEARS&&<section className={styles.warning}>
-      <Info size={18}/>
-      <div>
-        <strong>Льготная ставка действует первые 15 лет</strong>
-        <span>После этого ставка определяется правилами программы: минимум из «ставка по договору + 4 п.п.» и «ключевая ставка на момент окончания субсидии + 3 п.п.». Поэтому будущую переплату PULSE не выдумывает.</span>
-      </div>
+      <Info size={18}/><div><strong>Льготная ставка действует первые {FAMILY_SUBSIDY_YEARS} лет</strong><span>После этого ставка определяется правилами программы. Поэтому будущую переплату PULSE не выдумывает.</span></div>
     </section>}
 
     <section className={styles.result}>
@@ -443,12 +392,10 @@ export default function MortgagePage(){
         <div><span>Ориентировочный платёж</span><strong>{invalid?"—":formatRub(payment)+" ₽ / мес"}</strong></div>
         <BadgePercent size={20}/>
       </div>
-
       {mixed&&!invalid&&<div className={styles.splitResult}>
         <span>Льготная часть: {formatRub(preferredPayment)} ₽/мес</span>
         <span>Рыночная часть: {formatRub(marketPayment)} ₽/мес</span>
       </div>}
-
       <div className={styles.resultGrid}>
         <div><span>Сумма кредита</span><b>{formatRub(loan)} ₽</b></div>
         <div><span>Льготная часть</span><b>{program==="standard"?"—":formatRub(subsidizedPrincipal)+" ₽"}</b></div>
@@ -458,6 +405,10 @@ export default function MortgagePage(){
       <div className={styles.incomeNote}>Ориентир дохода рассчитан при условной долговой нагрузке 45%. Банк считает платёжеспособность индивидуально.</div>
     </section>
 
+    {params.get("from")==="select"&&<button type="button" className={styles.returnSelect} onClick={()=>navigate("/selection")}>
+      <ChevronLeft size={17}/> Использовать этот сценарий в PULSE Select
+    </button>}
+
     <details className={styles.details} open={program==="family"}>
       <summary><span>Условия выбранной программы</span><ChevronRight size={16}/></summary>
       <div className={styles.detailsBody}>
@@ -466,28 +417,19 @@ export default function MortgagePage(){
           <p>Хотя бы один ребёнок должен быть младше 7 лет. Для ребёнка с инвалидностью до 18 лет сохраняется ставка не выше 6%.</p>
           <p>При первоначальном взносе 50% и более ставка для подходящей семьи — не выше 6%. На строительство частного дома — 6% независимо от числа детей.</p>
           <p>Субсидирование — максимум 15 лет. Кредит может быть длиннее, но ставка после льготного периода меняется по правилам программы.</p>
-          <p>Если сумма кредита выше льготного лимита, PULSE показывает комбо-сценарий до 15 млн ₽ для региона: льготная часть + часть по введённой рыночной ставке. Доступность увеличенного лимита и его тариф обязательно подтверждает конкретный банк.</p>
-          <p>С 1 февраля 2026 действует принцип «одна семья — одна льготная ипотека». Повторный льготный кредит возможен после полного погашения прежнего и рождения нового ребёнка.</p>
+          <p>Если сумма кредита выше льготного лимита, PULSE показывает комбо-сценарий в пределах максимального лимита программы из PULSE Control. Доступность увеличенного лимита и его тариф подтверждает банк.</p>
           <p>Для вторичного жилья действует отдельный перечень населённых пунктов и требования к дому — поэтому объект нужно проверять отдельно.</p>
         </>}
-
         {program==="farEast"&&<>
-          <p><b>Дальневосточная ипотека — до 31.12.2030.</b> Ставка от 2%, взнос от 20,1%, срок до 20 лет.</p>
-          <p>Лимит — 6 млн ₽; до 9 млн ₽ для строящейся квартиры площадью свыше 64 м². Для вторички повышенный лимит связан с площадью свыше 60 м² и допустимой территорией.</p>
-          <p>Право имеют, в частности, молодые супруги до 36 лет, одинокий родитель до 36 лет, отдельные многодетные семьи, медики, педагоги, работники культуры и ОПК, участники СВО и отдельные члены их семей, участники «Дальневосточного гектара» и некоторые переехавшие по трудовым программам.</p>
-          <p>Если на момент сделки нет регистрации в ДФО, после оформления собственности необходимо зарегистрироваться в приобретённом жилье в установленный программой срок.</p>
+          <p><b>Дальневосточная ипотека.</b> Ставка и лимиты приходят из PULSE Control; в Mini App дополнительно учитывается повышенный лимит подходящего объекта.</p>
+          <p>Доступность зависит от категории заёмщика, территории и самого объекта. Банк подтверждает право на программу.</p>
         </>}
-
         {program==="it"&&<>
-          <p><b>IT-ипотека.</b> Ставка 6%, льготный лимит государства — 9 млн ₽; в Сбере общий кредит может достигать 18 млн ₽, при этом превышение считается по рыночной ставке.</p>
-          <p>Взнос от 20,1%, срок до 30 лет. По текущим условиям Домклик возраст заёмщика — 18–50 лет; работодатель должен быть аккредитованной IT-компанией, соответствующей условиям программы.</p>
-          <p>Требуемый доход зависит от места регистрации работодателя: для большинства городов — от 90 тыс. ₽, для крупных городов и отдельных регионов — от 150 тыс. ₽ до НДФЛ. Условия занятости в IT нужно сохранять в период кредита по правилам программы.</p>
+          <p><b>IT-ипотека.</b> Льготная ставка, льготный лимит и общий лимит приходят из PULSE Control. Часть сверх льготного лимита считается по рыночной ставке.</p>
           <p>Обычная вторичная квартира не является стандартным объектом IT-ипотеки.</p>
         </>}
-
         {program==="standard"&&<>
-          <p><b>Рыночный сценарий.</b> Для расчёта подставляется текущий ориентир Домклик по типу недвижимости. Ставку можно изменить вручную.</p>
-          <p>На момент проверки ориентир: новостройка — от 15,7%, вторичка — от 15,5%, строительство дома — от 17,6%. Реальная ставка определяется банком и может отличаться.</p>
+          <p><b>Рыночный сценарий.</b> Для расчёта подставляется текущий ориентир по типу недвижимости. Ставку можно изменить вручную.</p>
         </>}
       </div>
     </details>
@@ -495,21 +437,9 @@ export default function MortgagePage(){
     <details className={styles.details}>
       <summary><span>Другие ипотечные сценарии</span><ChevronRight size={16}/></summary>
       <div className={styles.otherPrograms}>
-        <div className={styles.otherProgram}>
-          <div><Landmark size={16}/><strong>Военная ипотека</strong></div>
-          <span className={styles.statusActive}>действует</span>
-          <p>Для участников НИС. В Домклик сейчас — от 18,6%, взнос от 20,1%, срок до 25 лет. Государство участвует во взносе и платежах на время службы.</p>
-        </div>
-        <div className={styles.otherProgram}>
-          <div><Landmark size={16}/><strong>Сельская ипотека</strong></div>
-          <span className={styles.statusPaused}>приём закрыт</span>
-          <p>Домклик сейчас указывает, что приём заявок завершён. Поэтому мы не показываем её как доступную программу в основном калькуляторе.</p>
-        </div>
-        <div className={styles.otherProgram}>
-          <div><Landmark size={16}/><strong>Материнский капитал</strong></div>
-          <span className={styles.statusInfo}>поддержка</span>
-          <p>Это не отдельная процентная программа: средства можно учитывать в первоначальном взносе, если конкретная сделка и банк это допускают.</p>
-        </div>
+        <div className={styles.otherProgram}><div><Landmark size={16}/><strong>Военная ипотека</strong></div><span className={styles.statusActive}>действует</span><p>Для участников НИС. Финальные условия зависят от банка и статуса участника.</p></div>
+        <div className={styles.otherProgram}><div><Landmark size={16}/><strong>Сельская ипотека</strong></div><span className={styles.statusPaused}>приём закрыт</span><p>Не показываем её как доступную программу в основном калькуляторе, пока приём заявок закрыт.</p></div>
+        <div className={styles.otherProgram}><div><Landmark size={16}/><strong>Материнский капитал</strong></div><span className={styles.statusInfo}>поддержка</span><p>Это не отдельная процентная программа: средства можно учитывать в первоначальном взносе, если сделка и банк это допускают.</p></div>
       </div>
     </details>
 
@@ -517,11 +447,7 @@ export default function MortgagePage(){
       title="Проверить ипотечные программы"
       source="mortgage"
       propertyId={params.get("property")||undefined}
-      context={{
-        program,propertyKind,price,down,years,preferredRate,marketRate,payment,
-        childrenCount:program==="family"?childrenCount:undefined,
-        subsidizedLimit,marketPrincipal,rulesUpdated:RULES_UPDATED,
-      }}
+      context={{program,propertyKind,price,down,years,preferredRate,marketRate,payment,subsidizedLimit,marketPrincipal,policyVersion:MORTGAGE_POLICY_VERSION}}
     >
       <button className={styles.cta}>Получить точный расчёт <ChevronRight size={18}/></button>
     </LeadSheet>
