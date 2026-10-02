@@ -7,12 +7,19 @@
 .pulseClientAction{background:var(--primary);color:var(--primary-foreground,#fff)!important;border-radius:var(--app-radius-pill);box-shadow:0 9px 24px rgba(242,13,29,.16);font-size:12px;min-height:50px}.pulseResume{background:var(--app-card);border-color:var(--app-card-border);border-radius:var(--app-radius-card);box-shadow:var(--app-card-shadow)}.pulseResume>a{color:var(--foreground)}.pulseResumeIcon,.pulseEmptyIcon,.pulseUpdateIcon{background:var(--brand-soft);color:var(--primary);border-radius:var(--app-icon-radius)}.pulseResumeAction{color:var(--primary)}.pulseResumeCopy small,.pulseResume>button{color:var(--muted-foreground)}.pulseNotifications{background:var(--popup)!important;border-color:var(--app-card-border)!important}.pulseNotificationsHeader h2{color:var(--foreground)}.pulseNotificationsHeader p,.pulseNoticeEmpty p{color:var(--muted-foreground)}.pulseExplicitClose{background:var(--muted);color:var(--muted-foreground)}.pulseNoticeEmpty{padding:22px 8px 24px}.pulseNoticeEmpty h3{font-size:20px;color:var(--foreground)}.pulseNoticeEmpty p{font-size:12px;max-width:290px}.pulseUpdatesFooter{border-color:var(--border);gap:10px}.pulseUpdatesFooter .pulseClientAction,.pulseSecondaryAction{border-radius:var(--app-radius-pill);min-height:50px;font-size:12px}.pulseSecondaryAction{background:var(--app-card);border:1px solid var(--app-card-border);box-shadow:var(--shadow);color:var(--foreground)}.pulseUpdateRow{background:var(--app-card);color:var(--foreground);border-color:var(--app-card-border);border-radius:var(--app-radius-control)}.pulseUpdateRow.isUnread{background:var(--brand-soft);border-color:var(--app-card-border)}.pulseUpdatesToolbar button{color:var(--primary)}.pulseUpdateRow small,.pulseUpdatesToolbar{color:var(--muted-foreground)}
 
 
-/* ContinueChoice: contextual memory, not an alert. */
-.pulseResume{background:linear-gradient(145deg,rgba(255,255,255,.80),rgba(247,249,252,.72));box-shadow:0 8px 22px rgba(42,54,72,.045),inset 0 1px 0 rgba(255,255,255,.88)}
-.pulseResume>a{gap:10px;padding:13px 46px 13px 13px}
-.pulseResumeIcon{width:40px;height:40px;background:rgba(234,238,243,.88);color:#556273;border-radius:14px}
-.pulseResumeCopy{gap:3px}
-.pulseResumeCopy strong{font-size:12.5px;line-height:1.3}
-.pulseResumeCopy small{font-size:9.8px;line-height:1.35}
-.pulseResumeAction{margin-top:2px;color:var(--foreground);font-size:9.6px;font-weight:720;gap:3px}
-.pulseResume>button{right:6px;top:6px;color:#8a94a2;opacity:.82}
+/* ContinueChoice: living context card — visible, calm and premium. */
+.pulseResume{position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(135deg,rgba(255,255,255,.94) 0%,rgba(248,252,250,.90) 48%,rgba(241,249,246,.86) 100%);border-color:rgba(190,216,205,.62);box-shadow:0 10px 28px rgba(45,72,62,.07),0 2px 8px rgba(42,54,72,.035),inset 0 1px 0 rgba(255,255,255,.96)}
+.pulseResume:before{content:"";position:absolute;z-index:0;left:-20%;top:-55%;width:72%;height:210%;pointer-events:none;background:radial-gradient(ellipse at center,rgba(105,201,163,.16) 0%,rgba(105,201,163,.08) 36%,rgba(105,201,163,0) 72%);filter:blur(8px);transform:translate3d(0,0,0);animation:pulseResumeMintDrift 7.2s cubic-bezier(.45,0,.35,1) infinite alternate}
+.pulseResume:after{content:"";position:absolute;z-index:0;inset:0;pointer-events:none;background:linear-gradient(108deg,rgba(255,255,255,0) 20%,rgba(255,255,255,.30) 44%,rgba(219,244,233,.20) 54%,rgba(255,255,255,0) 76%);transform:translateX(-76%);animation:pulseResumeSheen 8.5s ease-in-out infinite}
+.pulseResume>a{position:relative;z-index:1;gap:11px;padding:14px 46px 14px 14px}
+.pulseResumeIcon{position:relative;z-index:1;width:42px;height:42px;background:linear-gradient(145deg,rgba(231,247,240,.98),rgba(242,250,247,.88));color:#2f7560;border:1px solid rgba(117,190,161,.18);border-radius:14px;box-shadow:0 5px 14px rgba(60,125,100,.07),inset 0 1px 0 rgba(255,255,255,.94)}
+.pulseResumeCopy{position:relative;z-index:1;gap:3px}
+.pulseResumeCopy strong{font-size:12.8px;line-height:1.3;color:#1b2824}
+.pulseResumeCopy small{font-size:9.9px;line-height:1.35;color:#708078}
+.pulseResumeAction{margin-top:3px;color:#244f42;font-size:9.8px;font-weight:760;gap:3px}
+.pulseResumeAction svg{color:#3b7965;transition:transform .2s var(--motion-spring)}
+.pulseResume>a:active .pulseResumeAction svg{transform:translateX(2px)}
+.pulseResume>button{z-index:2;right:6px;top:6px;color:#7f8d87;opacity:.78}
+@keyframes pulseResumeMintDrift{0%{transform:translate3d(-4%,0,0) scale(.98);opacity:.78}100%{transform:translate3d(92%,3%,0) scale(1.08);opacity:1}}
+@keyframes pulseResumeSheen{0%,58%{transform:translateX(-82%);opacity:0}68%{opacity:.62}82%{transform:translateX(88%);opacity:.2}100%{transform:translateX(88%);opacity:0}}
+@media(prefers-reduced-motion:reduce){.pulseResume:before,.pulseResume:after{animation:none!important}.pulseResumeAction svg{transition:none!important}}
