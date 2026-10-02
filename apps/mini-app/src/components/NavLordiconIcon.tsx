@@ -1,24 +1,19 @@
 import React from "react";
 import Lottie,{type LottieRefCurrentProps} from "lottie-react";
-import {NavPhosphorIcon,type NavIconKind} from "./NavPhosphorIcon";
-import homeAnimation from "../assets/nav-lordicon/home.json";
-import catalogAnimation from "../assets/nav-lordicon/catalog.json";
+import {NavPhosphorIcon} from "./NavPhosphorIcon";
 import selectionAnimation from "../assets/nav-lordicon/selection.json";
 import heartAnimation from "../assets/nav-lordicon/heart.json";
 
 type LottieData=Record<string,any>;
 type Tone="base"|"active";
+type LordiconKind="sparkles"|"heart";
 
-const source:Record<NavIconKind,LottieData>={
-  home:homeAnimation as LottieData,
-  grid:catalogAnimation as LottieData,
+const source:Record<LordiconKind,LottieData>={
   sparkles:selectionAnimation as LottieData,
   heart:heartAnimation as LottieData,
 };
 
-const speed:Record<NavIconKind,number>={
-  home:1.25,
-  grid:1.25,
+const speed:Record<LordiconKind,number>={
   sparkles:1.35,
   heart:1.25,
 };
@@ -60,7 +55,7 @@ class IconBoundary extends React.Component<{children:React.ReactNode;fallback:Re
   render(){return this.state.failed?this.props.fallback:this.props.children;}
 }
 
-export function NavLordiconIcon({kind,active,tone}:{kind:NavIconKind;active:boolean;tone:Tone}){
+export function NavLordiconIcon({kind,active,tone}:{kind:LordiconKind;active:boolean;tone:Tone}){
   const ref=React.useRef<LottieRefCurrentProps|null>(null);
   const [reduce,setReduce]=React.useState(()=>window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const data=React.useMemo(()=>recolor(source[kind],toneColor[tone]),[kind,tone]);
