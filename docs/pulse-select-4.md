@@ -24,7 +24,8 @@ PULSE Control owns:
 - whether What-if scenarios are enabled;
 - enabled personal preferences and their maximum count;
 - ranking weights;
-- editable mortgage program terms such as minimum down payment, maximum term, total limit, and editable program rates.
+- editable mortgage program terms such as minimum down payment, maximum term, total limit, and editable program rates;
+- separate market-rate baselines for newbuilds, secondary homes, and house/IHС scenarios.
 
 The Family Mortgage child-count scale is versioned policy code (`MORTGAGE_POLICY_VERSION`) rather than a misleading single editable rate/limit. Control displays that scale as policy-managed.
 
