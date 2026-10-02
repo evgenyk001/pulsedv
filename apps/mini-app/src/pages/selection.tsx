@@ -554,7 +554,7 @@ export default function SelectionPage(){
     const display=showAll?eligible:eligible.slice(0,3);
     const source=eligible.length?display:ranked.slice(0,3);
     return <div className={styles.page}>
-      <section className={styles.selectResultSummary}>
+      <section className={styles.selectResultSummary} aria-label="Результат PULSE Select">
         <div className={styles.selectResultTop}>
           <span className={styles.eyebrow}>PULSE SELECT</span>
           <span className={styles.selectPolicy}><CircleCheck size={12}/>v4</span>
