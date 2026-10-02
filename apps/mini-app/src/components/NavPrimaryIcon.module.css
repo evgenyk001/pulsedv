@@ -1,81 +1,72 @@
-.icon{width:30.5px!important;height:30.5px!important;display:block;overflow:visible;stroke:currentColor;stroke-width:1.85;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.icon{width:30.5px!important;height:30.5px!important;display:block;overflow:visible;stroke:currentColor;stroke-width:1.62;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
 .icon *{transform-box:fill-box;transform-origin:center}
-.homeShell,.chimney,.door,.windows,.homeBase,.cardBack,.cardMiddle,.cardFront,.photoRoof,.photoHouse,.textLineA,.textLineB,.textLineC{will-change:transform,opacity}
-.windows rect{fill:transparent}
-.cardBack{opacity:.42}
-.cardMiddle{opacity:.68}
+.dashboardArc,.dashboardHub,.dashboardNeedle,.dashboardDots,.page,.pageFold,.pageLines,.searchGlass{will-change:transform,opacity}
+.dashboardDots path{stroke-width:2.15}
+.dashboardNeedle{transform-origin:12px 17px}
 
-.home.active .homeShell{animation:homeShell .62s cubic-bezier(.2,.9,.24,1)}
-.home.active .chimney{animation:chimney .62s cubic-bezier(.2,.9,.24,1)}
-.home.active .door{animation:door .62s cubic-bezier(.2,.9,.24,1)}
-.home.active .windows{animation:windows .62s cubic-bezier(.2,.9,.24,1)}
-.home.active .homeBase{animation:homeBase .62s cubic-bezier(.2,.9,.24,1)}
+.dashboard.active .dashboardArc{animation:dashboardArc .66s cubic-bezier(.2,.9,.24,1)}
+.dashboard.active .dashboardHub{animation:dashboardHub .66s cubic-bezier(.2,.9,.24,1)}
+.dashboard.active .dashboardNeedle{animation:dashboardNeedle .7s cubic-bezier(.18,.9,.22,1)}
+.dashboard.active .dashboardDots path:nth-child(1){animation:dashboardDot .5s ease 0ms}
+.dashboard.active .dashboardDots path:nth-child(2),.dashboard.active .dashboardDots path:nth-child(3){animation:dashboardDot .5s ease 45ms}
+.dashboard.active .dashboardDots path:nth-child(4),.dashboard.active .dashboardDots path:nth-child(5){animation:dashboardDot .5s ease 90ms}
+.dashboard.active .dashboardDots path:nth-child(6),.dashboard.active .dashboardDots path:nth-child(7){animation:dashboardDot .5s ease 135ms}
 
-.catalog.active .cardBack{animation:cardBack .72s cubic-bezier(.2,.88,.24,1)}
-.catalog.active .cardMiddle{animation:cardMiddle .72s cubic-bezier(.2,.88,.24,1)}
-.catalog.active .cardFront{animation:cardFront .72s cubic-bezier(.2,.88,.24,1)}
-.catalog.active .photoRoof,.catalog.active .photoHouse{animation:catalogPicture .72s cubic-bezier(.2,.88,.24,1)}
-.catalog.active .textLineA,.catalog.active .textLineB,.catalog.active .textLineC{animation:catalogLines .72s cubic-bezier(.2,.88,.24,1)}
+.catalog.active .page{animation:pageLift .68s cubic-bezier(.2,.9,.24,1)}
+.catalog.active .pageFold{animation:pageFold .68s cubic-bezier(.2,.9,.24,1)}
+.catalog.active .pageLines path:nth-child(1){animation:lineSlide .58s ease 20ms}
+.catalog.active .pageLines path:nth-child(2){animation:lineSlide .58s ease 70ms}
+.catalog.active .pageLines path:nth-child(3){animation:lineSlide .58s ease 120ms}
+.catalog.active .searchGlass{animation:searchPop .68s cubic-bezier(.2,.9,.24,1)}
 
-@keyframes homeShell{
-  0%{transform:translateY(0) scale(1)}
-  28%{transform:translateY(-1.2px) scale(1.035)}
-  58%{transform:translateY(.45px) scale(.985)}
-  100%{transform:translateY(0) scale(1)}
+@keyframes dashboardArc{
+  0%{transform:scale(1)}
+  34%{transform:scale(.96)}
+  64%{transform:scale(1.018)}
+  100%{transform:scale(1)}
 }
-@keyframes chimney{
-  0%{transform:translateY(0);opacity:1}
-  28%{transform:translateY(-2.2px);opacity:.68}
-  58%{transform:translateY(.5px);opacity:1}
-  100%{transform:translateY(0);opacity:1}
+@keyframes dashboardHub{
+  0%{transform:scale(1)}
+  35%{transform:scale(.78)}
+  62%{transform:scale(1.12)}
+  100%{transform:scale(1)}
 }
-@keyframes door{
-  0%{transform:scaleY(1)}
-  34%{transform:scaleY(.72)}
-  62%{transform:scaleY(1.08)}
-  100%{transform:scaleY(1)}
+@keyframes dashboardNeedle{
+  0%{transform:rotate(0)}
+  34%{transform:rotate(20deg)}
+  62%{transform:rotate(-7deg)}
+  82%{transform:rotate(2.5deg)}
+  100%{transform:rotate(0)}
 }
-@keyframes windows{
-  0%{transform:scale(1);opacity:1}
-  26%{transform:scale(.62);opacity:.35}
-  58%{transform:scale(1.1);opacity:1}
-  100%{transform:scale(1);opacity:1}
+@keyframes dashboardDot{
+  0%{opacity:1;transform:scale(1)}
+  42%{opacity:.28;transform:scale(.45)}
+  72%{opacity:1;transform:scale(1.22)}
+  100%{opacity:1;transform:scale(1)}
 }
-@keyframes homeBase{
-  0%{transform:scaleX(1)}
-  32%{transform:scaleX(.78)}
-  62%{transform:scaleX(1.05)}
-  100%{transform:scaleX(1)}
-}
-@keyframes cardBack{
-  0%{transform:translate(0,0) rotate(0);opacity:.42}
-  36%{transform:translate(2.2px,-2px) rotate(4deg);opacity:.72}
-  68%{transform:translate(.2px,.2px) rotate(-.6deg);opacity:.5}
-  100%{transform:translate(0,0) rotate(0);opacity:.42}
-}
-@keyframes cardMiddle{
-  0%{transform:translate(0,0) rotate(0);opacity:.68}
-  36%{transform:translate(-1.8px,-.9px) rotate(-3.4deg);opacity:.9}
-  68%{transform:translate(.25px,.2px) rotate(.45deg);opacity:.73}
-  100%{transform:translate(0,0) rotate(0);opacity:.68}
-}
-@keyframes cardFront{
-  0%{transform:translateY(0) scale(1)}
-  36%{transform:translateY(1px) scale(.97)}
-  68%{transform:translateY(-.3px) scale(1.015)}
-  100%{transform:translateY(0) scale(1)}
-}
-@keyframes catalogPicture{
+@keyframes pageLift{
   0%{transform:translateY(0)}
-  36%{transform:translateY(-1.2px)}
-  68%{transform:translateY(.25px)}
+  34%{transform:translateY(-.85px)}
+  66%{transform:translateY(.18px)}
   100%{transform:translateY(0)}
 }
-@keyframes catalogLines{
+@keyframes pageFold{
+  0%{transform:scale(1)}
+  38%{transform:scale(.78)}
+  68%{transform:scale(1.08)}
+  100%{transform:scale(1)}
+}
+@keyframes lineSlide{
   0%{transform:translateX(0);opacity:1}
-  30%{transform:translateX(2px);opacity:.58}
-  62%{transform:translateX(-.35px);opacity:1}
+  38%{transform:translateX(1.5px);opacity:.45}
+  72%{transform:translateX(-.25px);opacity:1}
   100%{transform:translateX(0);opacity:1}
+}
+@keyframes searchPop{
+  0%{transform:translate(0,0) scale(1)}
+  34%{transform:translate(.6px,-.5px) scale(1.12)}
+  66%{transform:translate(-.15px,.1px) scale(.98)}
+  100%{transform:translate(0,0) scale(1)}
 }
 @media(prefers-reduced-motion:reduce){
   .icon *{animation:none!important}
