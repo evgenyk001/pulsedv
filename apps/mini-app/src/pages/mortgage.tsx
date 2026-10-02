@@ -107,7 +107,6 @@ export default function MortgagePage(){
   if(!calculation)return null;
 
   const downPercent=price?down/price*100:0;
-  const familyBase=FAMILY_SCALE[childrenCount];
   const preferredRate=calculation.preferredRate;
   const subsidizedLimit=calculation.subsidizedLimit;
   const totalLimit=calculation.totalLimit;
