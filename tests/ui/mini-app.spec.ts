@@ -6,7 +6,7 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await page.getByRole('button',{name:'Пропустить онбординг'}).click();
  const nav=page.getByRole('navigation',{name:'Основная навигация'});
  await expect(nav.getByRole('button')).toHaveCount(4);
- await expect(nav.locator('svg')).toHaveCount(4);
+ await expect(nav.getByRole('button').locator('svg')).toHaveCount(4);
  await nav.getByRole('button',{name:'Каталог',exact:true}).click();
  const tabs=page.getByRole('tablist',{name:'Режим каталога'});await expect(tabs).toBeVisible();
  await expect(page.getByRole('heading',{name:'Новостройки',exact:true})).toBeVisible();
