@@ -262,3 +262,85 @@
 .coreChips{margin-top:7px}
 .coreChips i{min-height:21px;padding:0 7px}
 .progress{margin-top:-3px}
+
+
+/* PULSE Select 4.0 — live request composer */
+.selectHero{padding:4px 2px 2px}
+.selectHeroTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.selectHeroTop .eyebrow{margin:0}
+.selectVersion{min-height:23px;padding:0 8px;border-radius:999px;background:rgba(21,29,40,.055);border:1px solid rgba(21,29,40,.06);display:flex;align-items:center;color:var(--muted-foreground);font-size:7px;font-weight:780;letter-spacing:.08em}
+.selectHero h1{margin:0;max-width:390px;font-size:31px;line-height:1;letter-spacing:-.052em}
+.selectHero h1 em{font-style:normal;color:var(--primary)}
+.selectHero p{margin:9px 0 0;max-width:355px;color:var(--muted-foreground);font-size:9.7px;line-height:1.48}
+
+.liveRequest{position:relative;padding:15px 15px 14px;border-radius:var(--app-radius-card);background:linear-gradient(145deg,rgba(255,255,255,.94),rgba(246,249,252,.88));border:1px solid var(--app-card-border);box-shadow:var(--app-card-shadow);overflow:hidden}
+.liveRequest:before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.96)}
+.liveRequestTop{position:relative;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.liveRequestTop>div:first-child{display:flex;flex-direction:column}
+.liveRequestTop span{font-size:6.8px;letter-spacing:.11em;font-weight:800;color:var(--muted-foreground)}
+.liveRequestTop strong{margin-top:4px;font-size:17px;line-height:1.05;letter-spacing:-.035em}
+.liveBadge{flex:none;min-height:26px;padding:0 9px;border-radius:999px;background:rgba(50,156,104,.08);border:1px solid rgba(50,156,104,.11);color:#37775a!important;display:flex;align-items:center;font-size:7.3px!important;letter-spacing:.02em!important}
+.liveRequestChips{position:relative;display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.liveRequestChips span{min-height:28px;padding:0 9px;border-radius:999px;background:rgba(235,239,244,.72);border:1px solid rgba(218,225,233,.68);display:flex;align-items:center;color:#405267;font-size:8px;font-weight:650}
+.catalogIssue{position:relative;margin-top:10px;padding:9px 10px;border-radius:13px;background:rgba(200,69,75,.07);color:#93444a;font-size:8px;line-height:1.4}
+
+.selectPanels{display:flex;flex-direction:column;gap:8px}
+.selectPanel,.selectPanelOpen{border-radius:var(--app-radius-card);background:var(--app-card);border:1px solid var(--app-card-border);box-shadow:var(--shadow);overflow:hidden;transition:box-shadow .22s ease,border-color .22s ease,background .22s ease}
+.selectPanelOpen{background:rgba(255,255,255,.95);border-color:rgba(216,223,232,.92);box-shadow:0 13px 30px rgba(39,52,69,.075),inset 0 1px 0 rgba(255,255,255,.98)}
+.selectPanelHead{width:100%;min-height:66px;padding:11px 13px;border:0;background:transparent;color:var(--foreground);display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:11px;text-align:left;font:inherit;-webkit-tap-highlight-color:transparent}
+.selectPanelHead:active{background:rgba(238,242,246,.45)}
+.selectPanelIcon{width:38px;height:38px;border-radius:14px;background:rgba(237,241,245,.86);color:#4c6178;display:grid;place-items:center;border:1px solid rgba(223,228,235,.75)}
+.selectPanelOpen .selectPanelIcon{background:var(--brand-soft);color:var(--primary);border-color:rgba(242,13,29,.08)}
+.selectPanelCopy{display:flex;flex-direction:column;min-width:0}
+.selectPanelCopy strong{font-size:10.8px;line-height:1.2}
+.selectPanelCopy small{margin-top:4px;color:var(--muted-foreground);font-size:8.1px;line-height:1.28;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.selectPanelHead>svg{color:#8a96a5;transition:transform .2s ease}
+.selectPanelOpen .selectPanelHead>svg{transform:rotate(180deg)}
+.selectPanelBody{display:flex;flex-direction:column;gap:18px;padding:4px 14px 16px;border-top:1px solid rgba(223,228,235,.62);animation:selectPanelIn .22s var(--motion-soft) both}
+.selectPanelBody>.fieldBlock:first-child{padding-top:14px}
+
+.mortgageLink,.mortgageLinked{padding:12px;border-radius:17px;display:flex;align-items:center;justify-content:space-between;gap:11px}
+.mortgageLink{background:rgba(238,243,248,.78);border:1px solid rgba(218,226,234,.82)}
+.mortgageLinked{background:rgba(50,156,104,.07);border:1px solid rgba(50,156,104,.1)}
+.mortgageLink>div,.mortgageLinked>div{display:flex;align-items:center;gap:9px;min-width:0}
+.mortgageLink>div>span,.mortgageLinked>div>span{width:29px;height:29px;border-radius:10px;display:grid;place-items:center;flex:none}
+.mortgageLink>div>span{background:rgba(64,98,132,.08);color:#526e8a}
+.mortgageLinked>div>span{background:rgba(50,156,104,.1);color:#37775a}
+.mortgageLink>div>div,.mortgageLinked>div>div{display:flex;flex-direction:column;min-width:0}
+.mortgageLink strong,.mortgageLinked strong{font-size:9px;line-height:1.2}
+.mortgageLink small,.mortgageLinked small{margin-top:3px;color:var(--muted-foreground);font-size:7.4px;line-height:1.35}
+.mortgageLink>button,.mortgageLinked>button{flex:none;min-height:34px;padding:0 11px;border:0;border-radius:999px;background:var(--foreground);color:#fff;font:inherit;font-size:7.8px;font-weight:720;transition:transform .15s ease}
+.mortgageLink>button:active,.mortgageLinked>button:active{transform:scale(.96)}
+
+.selectPrimary{width:100%;min-height:60px;padding:8px 14px 8px 17px;border:0;border-radius:var(--app-radius-pill);background:var(--foreground);color:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;font:inherit;box-shadow:0 13px 28px rgba(21,29,40,.16);transition:transform .16s var(--motion-press),opacity .2s ease}
+.selectPrimary:active{transform:scale(.985)}
+.selectPrimary:disabled{opacity:.42}
+.selectPrimary>span{display:flex;flex-direction:column}
+.selectPrimary strong{font-size:11.3px;line-height:1.2}
+.selectPrimary small{margin-top:3px;color:rgba(255,255,255,.58);font-size:7.8px}
+.selectPrimary>svg{flex:none}
+
+.selectResultSummary{padding:18px;border-radius:var(--app-radius-card);background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(244,247,250,.91));border:1px solid var(--app-card-border);box-shadow:var(--app-card-shadow-strong)}
+.selectResultTop{display:flex;align-items:center;justify-content:space-between}
+.selectResultTop .eyebrow{margin:0}
+.selectPolicy{min-height:24px;padding:0 8px;border-radius:999px;background:rgba(50,156,104,.08);border:1px solid rgba(50,156,104,.11);color:#37775a;display:flex;align-items:center;gap:4px;font-size:7px;font-weight:780}
+.selectResultSummary h1{margin:11px 0 7px;font-size:28px;line-height:1;letter-spacing:-.05em}
+.selectResultSummary p{margin:0;max-width:350px;color:var(--muted-foreground);font-size:9px;line-height:1.48}
+.selectResultSummary p strong{color:var(--foreground)}
+.selectResultSummary .summaryChips{margin-top:13px}
+.selectResultSummary .summaryChips span{background:rgba(235,239,244,.78);border:1px solid rgba(219,225,232,.72);color:#405267}
+
+@keyframes selectPanelIn{from{opacity:.65;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+
+@media(prefers-reduced-motion:reduce){
+  .selectPanel,.selectPanelOpen,.selectPanelHead>svg,.selectPrimary,.mortgageLink>button,.mortgageLinked>button{transition:none!important}
+  .selectPanelBody{animation:none}
+}
+
+@media(max-width:360px){
+  .selectHero h1{font-size:28px}
+  .selectPanelHead{grid-template-columns:36px minmax(0,1fr) auto;padding-left:11px;padding-right:11px}
+  .selectPanelIcon{width:36px;height:36px}
+  .mortgageLink,.mortgageLinked{align-items:flex-start;flex-direction:column}
+  .mortgageLink>button,.mortgageLinked>button{align-self:stretch}
+}
