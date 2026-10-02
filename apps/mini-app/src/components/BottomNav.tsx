@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { NavPhosphorIcon } from "./NavPhosphorIcon";
+import { NavLordiconIcon } from "./NavLordiconIcon";
 import styles from "./BottomNav.module.css";
 
 const items=[
@@ -207,7 +207,7 @@ export function BottomNav(){
           aria-current={index===activeIndex?"page":undefined}
           onClick={()=>selectItem(index)}
         >
-          <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavPhosphorIcon kind={icon}/></span>
+          <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavLordiconIcon kind={icon} active={index===activeIndex} tone="base"/></span>
           <span className={styles.label} style={{opacity:v.labelOpacity,transform:`translateY(${v.labelLift}px)`}}>{label}</span>
         </button>
       })}
@@ -230,7 +230,7 @@ export function BottomNav(){
           {items.map(({path,label,icon},index)=>{
             const v=visual(index);
             return <span className={styles.activeItem} key={path}>
-              <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavPhosphorIcon kind={icon}/></span>
+              <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavLordiconIcon kind={icon} active={index===activeIndex} tone="active"/></span>
               <span className={styles.label} style={{opacity:v.labelOpacity,transform:`translateY(${v.labelLift}px)`}}>{label}</span>
             </span>
           })}
