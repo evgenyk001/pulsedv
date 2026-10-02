@@ -126,7 +126,7 @@ export function bestMortgageFit(
     payment:null,
     program:rule.label,
     fits:false,
-    status:calculation?.status??'blocked' as const,
+    status:(calculation?.status??'blocked'),
   };
   return {
     payment:calculation.payment,
