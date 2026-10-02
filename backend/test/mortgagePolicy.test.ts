@@ -110,3 +110,26 @@ test("analytics keeps policy version and still drops private metadata",()=>{
   assert.equal("phone" in clean,false);
   assert.equal("childrenCount" in clean,false);
 });
+
+
+test("PULSE Control standard rate feeds the shared newbuild market rate",()=>{
+  const programs=DEFAULT_MORTGAGE_PROGRAMS.map(item=>item.id==="standard"?{...item,rate:14.2}:item);
+  const standard=calculateMortgageScenario({
+    programs,
+    settings:{programId:"standard",propertyKind:"newbuild",years:20},
+    price:8_000_000,
+    down:2_000_000,
+  });
+  assert.ok(standard);
+  assert.equal(standard.marketRate,14.2);
+  assert.equal(standard.preferredRate,14.2);
+
+  const familyMixed=calculateMortgageScenario({
+    programs,
+    settings:{programId:"family",propertyKind:"newbuild",childrenCount:1,hasYoungChild:true,years:15},
+    price:12_000_000,
+    down:2_500_000,
+  });
+  assert.ok(familyMixed);
+  assert.equal(familyMixed.marketRate,14.2);
+});
