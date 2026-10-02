@@ -1,6 +1,6 @@
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { NavLottieIcon } from "./NavLottieIcon";
+import { NavPhosphorIcon } from "./NavPhosphorIcon";
 import styles from "./BottomNav.module.css";
 
 const items=[
@@ -155,6 +155,18 @@ export function BottomNav(){
 
   const stretch=Math.min(.095,Math.abs(velocity)*.065);
   const tilt=Math.max(-1.35,Math.min(1.35,velocity*.82));
+  const maskWidth=segmentWidth*(1+stretch);
+  const maskX=pillX-(maskWidth-segmentWidth)/2;
+  const visual=(index:number)=>{
+    const strength=Math.max(0,1-Math.abs(index-progress));
+    return {
+      strength,
+      iconScale:.97+strength*.07,
+      lift:-strength*.9,
+      labelOpacity:.78+strength*.22,
+      labelLift:-strength*.35,
+    };
+  };
 
   return <nav className={styles.wrap} aria-label="Основная навигация">
     <div
@@ -185,27 +197,45 @@ export function BottomNav(){
           <span className={styles.pillCaustic}/>
         </span>
       </span>
+
       {items.map(({path,label,icon},index)=>{
-        const strength=Math.max(0,1-Math.abs(index-progress));
-        const active=strength>.5;
-        const iconScale=.96+strength*.08;
-        const lift=-strength*.9;
-        const base=[122,135,150];
-        const accent=[242,13,29];
-        const mix=(a:number,b:number)=>Math.round(a+(b-a)*strength);
-        const color=`rgb(${mix(base[0],accent[0])} ${mix(base[1],accent[1])} ${mix(base[2],accent[2])})`;
+        const v=visual(index);
         return <button
           key={path}
           type="button"
-          className={`${styles.item} ${active?styles.active:""}`}
+          className={styles.item}
           aria-current={index===activeIndex?"page":undefined}
           onClick={()=>selectItem(index)}
-          style={{color}}
         >
-          <span className={styles.icon} style={{transform:`translateY(${lift}px) scale(${iconScale})`}}><NavLottieIcon kind={icon} active={index===activeIndex}/></span>
-          <span className={styles.label} style={{opacity:.66+strength*.34,transform:`translateY(${-strength*.35}px)`}}>{label}</span>
+          <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavPhosphorIcon kind={icon}/></span>
+          <span className={styles.label} style={{opacity:v.labelOpacity,transform:`translateY(${v.labelLift}px)`}}>{label}</span>
         </button>
       })}
+
+      {segmentWidth>0&&<span
+        className={styles.activeMask}
+        aria-hidden="true"
+        style={{
+          width:`${maskWidth}px`,
+          transform:`translate3d(${maskX}px,0,0)`,
+        }}
+      >
+        <span
+          className={styles.activeTrack}
+          style={{
+            width:`${segmentWidth*items.length}px`,
+            transform:`translate3d(${-maskX}px,0,0)`,
+          }}
+        >
+          {items.map(({path,label,icon},index)=>{
+            const v=visual(index);
+            return <span className={styles.activeItem} key={path}>
+              <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavPhosphorIcon kind={icon}/></span>
+              <span className={styles.label} style={{opacity:v.labelOpacity,transform:`translateY(${v.labelLift}px)`}}>{label}</span>
+            </span>
+          })}
+        </span>
+      </span>}
     </div>
   </nav>
 }
