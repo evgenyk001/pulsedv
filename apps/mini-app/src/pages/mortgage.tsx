@@ -63,9 +63,10 @@ export default function MortgagePage(){
   const programs=control.mortgagePrograms;
   const storedScenario=React.useMemo(()=>readMortgageScenario(typeof localStorage==="undefined"?null:localStorage),[]);
   const requestedProgram=params.get("program");
+  const storedProgram=storedScenario&&programs.some(item=>item.id===storedScenario.programId)?storedScenario.programId:null;
   const initialProgram:ProgramId=programs.some(item=>item.id===requestedProgram)
     ?requestedProgram as ProgramId
-    :storedScenario?.programId??"family";
+    :storedProgram??programs[0]?.id??"family";
   const initialKind:PropertyKind=params.get("from")==="select"?"newbuild":storedScenario?.propertyKind??"newbuild";
   const initialMarketRate=storedScenario?.propertyKind===initialKind&&storedScenario.marketRate
     ?storedScenario.marketRate
@@ -160,6 +161,10 @@ export default function MortgagePage(){
           {main:String(rule.minDownPct).replace(".",",")+"%",sub:"взнос от"},
           {main:maxYears+" лет",sub:"макс. срок"},
         ];
+
+  React.useEffect(()=>{
+    if(!programs.some(item=>item.id===program)&&programs[0])setProgram(programs[0].id);
+  },[programs,program]);
 
   React.useEffect(()=>{
     if(years>maxYears)setYears(maxYears);
