@@ -119,17 +119,21 @@ test("analytics keeps policy version and exact result IDs while dropping private
 });
 
 
-test("PULSE Control standard rate feeds the shared newbuild market rate",()=>{
-  const programs=DEFAULT_MORTGAGE_PROGRAMS.map(item=>item.id==="standard"?{...item,rate:14.2}:item);
+test("PULSE Control market rates feed every shared mortgage scenario",()=>{
+  const programs=DEFAULT_MORTGAGE_PROGRAMS.map(item=>item.id==="standard"?{
+    ...item,
+    rate:14.2,
+    marketRates:{newbuild:14.2,secondary:14.0,house:16.1},
+  }:item);
   const standard=calculateMortgageScenario({
     programs,
-    settings:{programId:"standard",propertyKind:"newbuild",years:20},
+    settings:{programId:"standard",propertyKind:"secondary",years:20},
     price:8_000_000,
     down:2_000_000,
   });
   assert.ok(standard);
-  assert.equal(standard.marketRate,14.2);
-  assert.equal(standard.preferredRate,14.2);
+  assert.equal(standard.marketRate,14.0);
+  assert.equal(standard.preferredRate,14.0);
 
   const familyMixed=calculateMortgageScenario({
     programs,
