@@ -181,6 +181,13 @@ export default function SelectionPage(){
   },[control.select.mortgageEnabled,purchaseMode]);
 
   React.useEffect(()=>{
+    if(!control.mortgagePrograms.some(item=>item.id===mortgageProgram)&&control.mortgagePrograms[0]){
+      setMortgageProgram(control.mortgagePrograms[0].id);
+      setMortgageScenario(null);
+    }
+  },[control.mortgagePrograms,mortgageProgram]);
+
+  React.useEffect(()=>{
     setPreferences(current=>{
       const next=current
         .filter(id=>control.select.preferenceEnabled[id])
