@@ -22,7 +22,6 @@ import {
   Waves,
 } from "lucide-react";
 import {
-  representativePrice,
   selectionMatch,
   preferenceLabel,
   type PreferenceId,
@@ -95,6 +94,8 @@ type SavedSelection={
   mortgageProgram?:"standard"|"family"|"farEast"|"it";
   preferences?:PreferenceId[];
   showResult?:boolean;
+  started?:boolean;
+  version?:number;
 };
 
 type PanelId="essentials"|"finance"|"delivery"|"preferences";
@@ -140,7 +141,8 @@ export default function SelectionPage(){
 
   const [showResult,setShowResult]=React.useState(saved.showResult===true);
   const [showAll,setShowAll]=React.useState(false);
-  const [openPanel,setOpenPanel]=React.useState<PanelId>("essentials");
+  const [started,setStarted]=React.useState(saved.started===true||saved.showResult===true);
+  const [openPanel,setOpenPanel]=React.useState<PanelId|null>("essentials");
   const [city,setCity]=React.useState(defaultCity);
   const [rooms,setRooms]=React.useState(defaultRooms);
   const [purchaseMode,setPurchaseMode]=React.useState<PurchaseMode>(control.select.mortgageEnabled&&saved.purchaseMode!=="cash"?"mortgage":"cash");
@@ -315,15 +317,16 @@ export default function SelectionPage(){
     :("до "+shortRub(budget[1]));
 
   const persistSelection=React.useCallback(()=>{
-    const value:SavedSelection={city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult};
+    const value:SavedSelection={city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started,version:4};
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(value));}catch{}
-  },[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult]);
+  },[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started]);
 
   React.useEffect(()=>{persistSelection()},[persistSelection]);
 
   const applySmartQuery=()=>{
     const raw=smartQuery.trim();
     if(!raw){setSmartStatus("Напишите запрос одним предложением.");return;}
+    setStarted(true);
     const text=raw.toLowerCase().replace(/ё/g,"е");
     let found=0;
     let nextCity=city;
@@ -413,6 +416,7 @@ export default function SelectionPage(){
   };
 
   const finish=()=>{
+    setStarted(true);
     persistSelection();
     try{
       const history=JSON.parse(localStorage.getItem("pulse_selection_history")||"[]");
@@ -523,7 +527,7 @@ export default function SelectionPage(){
   const panelHeader=(id:PanelId,title:string,subtitle:string,icon:React.ReactNode)=><button
     type="button"
     className={styles.selectPanelHead}
-    onClick={()=>{setOpenPanel(current=>current===id?null:id);safeHaptic()}}
+    onClick={()=>{setStarted(true);setOpenPanel(current=>current===id?null:id);safeHaptic()}}
     aria-expanded={openPanel===id}
   >
     <span className={styles.selectPanelIcon}>{icon}</span>
@@ -631,7 +635,7 @@ export default function SelectionPage(){
     </header>
 
     {control.select.smartQueryEnabled&&<section className={styles.smartPrompt}>
-      <div className={styles.smartPromptHead}><Sparkles size={16}/><span>Можно своими словами</span><small>AI PARSE</small></div>
+      <div className={styles.smartPromptHead}><Sparkles size={16}/><span>Можно своими словами</span><small>SMART INPUT</small></div>
       <div className={styles.smartInput}>
         <Search size={17}/>
         <Input
