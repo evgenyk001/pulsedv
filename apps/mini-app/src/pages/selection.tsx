@@ -575,7 +575,7 @@ export default function SelectionPage(){
       </section>
 
       <section className={styles.resultIntro}>
-        <div><span>РЕКОМЕНДАЦИИ</span><strong>{source.length?"Сначала самое подходящее":"Ближайшие варианты"}</strong></div>
+        <div><span>РЕКОМЕНДАЦИИ</span><strong>{eligible.length?"Сначала самое подходящее":"Ближайшие варианты"}</strong></div>
         <small>Match — вторичный сигнал. Главное — причины и компромиссы.</small>
       </section>
 
