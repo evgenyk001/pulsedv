@@ -25,3 +25,14 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+## Lordicon
+
+The Mini App bottom navigation includes four FREE Wired Outline Lottie animations by Lordicon:
+Home, Downtown, Sparkles/Glitter, and Heart.
+
+Free Lordicon use requires attribution. The in-app About section includes the required
+"Animated icons by Lordicon.com" credit and link.
+
+License and attribution terms: https://lordicon.com/docs/license/attribution
