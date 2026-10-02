@@ -2,7 +2,7 @@ import { matchScore } from "../../../../packages/domain/propertyMatch";
 import { usePulseControlState } from "../helpers/usePulseControlState";
 import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, SlidersHorizontal, List, MapPinned, ArrowUpDown, Check, ChevronRight, MapPin } from "lucide-react";
+import { Search, SlidersHorizontal, List, MapPinned, ArrowUpDown, Check, ChevronRight, MapPin, X, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "../components/Sheet";
 import { Slider } from "../components/Slider";
 import { PropertyCard } from "../components/PropertyCard";
@@ -33,6 +33,7 @@ const clamp=(value:number,min:number,max:number)=>Math.min(max,Math.max(min,valu
 const snap=(value:number,step:number)=>Math.round(value/step)*step;
 
 type SortMode="popular"|"priceAsc"|"priceDesc";
+type ActiveFilterKey="q"|"city"|"price"|"delivery"|"rooms"|"sea";
 const sortLabels:Record<SortMode,string>={
   popular:"По популярности",
   priceAsc:"Сначала дешевле",
@@ -202,6 +203,26 @@ export default function CatalogPage(){
     setParams(next,{replace:true});
   };
 
+  const clearAppliedFilter=(key:ActiveFilterKey)=>{
+    const next=new URLSearchParams(params);
+    if(key==="q"){next.delete("q");setQuery("");}
+    if(key==="city"){next.delete("city");setCity("Все");}
+    if(key==="price"){next.delete("min");next.delete("max");const range:[number,number]=[minBound,maxBound];setPriceRange(range);setPriceDraft([formatRub(range[0]),formatRub(range[1])]);}
+    if(key==="delivery"){next.delete("delivery");setDelivery("Любой");}
+    if(key==="rooms"){next.delete("rooms");setRooms("Все");}
+    if(key==="sea"){next.delete("sea");setSea(false);}
+    setParams(next,{replace:true});
+  };
+
+  const activeFilters:{key:ActiveFilterKey;label:string}[]=[];
+  const appliedQuery=params.get("q")?.trim();
+  if(appliedQuery)activeFilters.push({key:"q",label:"«"+appliedQuery+"»"});
+  if(appliedCity!=="Все")activeFilters.push({key:"city",label:appliedCity});
+  if(appliedRooms!=="Все")activeFilters.push({key:"rooms",label:appliedRooms==="Студия"?"Студия":appliedRooms+" комн."});
+  if(appliedDelivery!=="Любой")activeFilters.push({key:"delivery",label:appliedDelivery==="Сдан"?"Сдан":appliedDelivery});
+  if(appliedSea)activeFilters.push({key:"sea",label:"Вид на море"});
+  if(appliedMin>minBound||appliedMax<maxBound)activeFilters.push({key:"price",label:shortRub(appliedMin)+" — "+shortRub(appliedMax)});
+
   const pluralProject=(count:number)=>count===1?"проект":count>1&&count<5?"проекта":"проектов";
 
   return <div className={styles.page}>
@@ -240,8 +261,12 @@ export default function CatalogPage(){
       </Sheet>
     </div>
 
+    {activeFilters.length>0&&<div className={styles.activeFilters} aria-label="Активные фильтры">
+      {activeFilters.map(filter=><button type="button" key={filter.key} onClick={()=>clearAppliedFilter(filter.key)}>{filter.label}<X size={12}/></button>)}
+    </div>}
+
     {view==="list"&&<div className={styles.meta}>
-      <span className={styles.metaSummary}>{appliedCity!=="Все"&&<MapPin size={13}/>} {total} {pluralProject(total)}{appliedCity!=="Все"?" · "+appliedCity:""}</span>
+      <span className={styles.metaSummary}>{pulseMode?<Sparkles size={13}/>:appliedCity!=="Все"?<MapPin size={13}/>:null} {pulseMode?"Лучшие совпадения · ":""}{total} {pluralProject(total)}{!pulseMode&&appliedCity!=="Все"?" · "+appliedCity:""}</span>
       <Sheet>
         <SheetTrigger asChild><button><ArrowUpDown size={14}/>{sortLabels[sort]}</button></SheetTrigger>
         <SheetContent side="bottom" className={styles.sortSheet}>

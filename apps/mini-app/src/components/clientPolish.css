@@ -5,3 +5,14 @@
 
 /* Client surfaces share Mini App colors and geometry. */
 .pulseClientAction{background:var(--primary);color:var(--primary-foreground,#fff)!important;border-radius:var(--app-radius-pill);box-shadow:0 9px 24px rgba(242,13,29,.16);font-size:12px;min-height:50px}.pulseResume{background:var(--app-card);border-color:var(--app-card-border);border-radius:var(--app-radius-card);box-shadow:var(--app-card-shadow)}.pulseResume>a{color:var(--foreground)}.pulseResumeIcon,.pulseEmptyIcon,.pulseUpdateIcon{background:var(--brand-soft);color:var(--primary);border-radius:var(--app-icon-radius)}.pulseResumeAction{color:var(--primary)}.pulseResumeCopy small,.pulseResume>button{color:var(--muted-foreground)}.pulseNotifications{background:var(--popup)!important;border-color:var(--app-card-border)!important}.pulseNotificationsHeader h2{color:var(--foreground)}.pulseNotificationsHeader p,.pulseNoticeEmpty p{color:var(--muted-foreground)}.pulseExplicitClose{background:var(--muted);color:var(--muted-foreground)}.pulseNoticeEmpty{padding:22px 8px 24px}.pulseNoticeEmpty h3{font-size:20px;color:var(--foreground)}.pulseNoticeEmpty p{font-size:12px;max-width:290px}.pulseUpdatesFooter{border-color:var(--border);gap:10px}.pulseUpdatesFooter .pulseClientAction,.pulseSecondaryAction{border-radius:var(--app-radius-pill);min-height:50px;font-size:12px}.pulseSecondaryAction{background:var(--app-card);border:1px solid var(--app-card-border);box-shadow:var(--shadow);color:var(--foreground)}.pulseUpdateRow{background:var(--app-card);color:var(--foreground);border-color:var(--app-card-border);border-radius:var(--app-radius-control)}.pulseUpdateRow.isUnread{background:var(--brand-soft);border-color:var(--app-card-border)}.pulseUpdatesToolbar button{color:var(--primary)}.pulseUpdateRow small,.pulseUpdatesToolbar{color:var(--muted-foreground)}
+
+
+/* ContinueChoice: contextual memory, not an alert. */
+.pulseResume{background:linear-gradient(145deg,rgba(255,255,255,.80),rgba(247,249,252,.72));box-shadow:0 8px 22px rgba(42,54,72,.045),inset 0 1px 0 rgba(255,255,255,.88)}
+.pulseResume>a{gap:10px;padding:13px 46px 13px 13px}
+.pulseResumeIcon{width:40px;height:40px;background:rgba(234,238,243,.88);color:#556273;border-radius:14px}
+.pulseResumeCopy{gap:3px}
+.pulseResumeCopy strong{font-size:12.5px;line-height:1.3}
+.pulseResumeCopy small{font-size:9.8px;line-height:1.35}
+.pulseResumeAction{margin-top:2px;color:var(--foreground);font-size:9.6px;font-weight:720;gap:3px}
+.pulseResume>button{right:6px;top:6px;color:#8a94a2;opacity:.82}

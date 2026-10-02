@@ -62,6 +62,9 @@ export default function PropertyPage(){
   const visiblePlans=p.floorplans
     .filter(plan=>!activeRoom||plan.roomLabel===activeRoom)
     .sort((a,b)=>(a.priceFrom??Infinity)-(b.priceFrom??Infinity)||a.sortOrder-b.sortOrder);
+  const fromPulse=returnTo.startsWith("/selection");
+  const highlightFeature=[...p.features].sort((a,b)=>a.sortOrder-b.sortOrder)[0];
+  const HighlightIcon=highlightFeature?featureIcon(highlightFeature.icon):Sparkles;
 
   const share=async()=>{
     try{
@@ -126,11 +129,17 @@ export default function PropertyPage(){
         </Link>
       </section>
 
-      <section className={styles.quickFacts} aria-label="Ключевые характеристики">
-        <div><CalendarDays size={18}/><span>Срок сдачи</span><strong>{p.delivery||"Уточняется"}</strong></div>
-        <div><Building2 size={18}/><span>Класс</span><strong>{p.className||"Уточняется"}</strong></div>
-        <div><LayoutGrid size={18}/><span>Планировки</span><strong>{p.floorplans.length?p.floorplans.length+" вариантов":"Уточняются"}</strong></div>
-        <div><MapPin size={18}/><span>Район</span><strong>{p.district||"Уточняется"}</strong></div>
+      <section className={styles.decisionCard} aria-label="Ключевые характеристики">
+        <div className={styles.decisionHead}>
+          <div><span>{fromPulse?"PULSE SELECT":"КЛЮЧЕВОЕ"}</span><h2>{fromPulse?"Почему PULSE показывает этот ЖК":"Почему стоит рассмотреть"}</h2></div>
+          {fromPulse&&<small><Sparkles size={12}/>Из вашей подборки</small>}
+        </div>
+        <div className={styles.decisionRows}>
+          <div><span><CalendarDays size={17}/></span><div><small>Срок сдачи</small><strong>{p.delivery||"Уточняется"}</strong></div></div>
+          <div><span><MapPin size={17}/></span><div><small>Локация</small><strong>{p.district||"Уточняется"}</strong></div></div>
+          <div><span><HighlightIcon size={17}/></span><div><small>Сильная сторона</small><strong>{highlightFeature?.label||p.className||"Параметры проекта"}</strong></div></div>
+          <div><span><LayoutGrid size={17}/></span><div><small>Выбор квартир</small><strong>{p.floorplans.length?p.floorplans.length+" вариантов":"Уточняется"}</strong></div></div>
+        </div>
       </section>
 
       <section className={styles.section}>
