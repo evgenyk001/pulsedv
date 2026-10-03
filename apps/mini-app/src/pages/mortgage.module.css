@@ -56,3 +56,12 @@
 }
 
 .returnSelect{width:100%;min-height:52px;border:1px solid var(--app-card-border);border-radius:var(--app-radius-pill);background:var(--app-card);color:var(--foreground);font:inherit;font-size:10.5px;font-weight:730;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:var(--shadow);transition:transform .16s ease}.returnSelect:active{transform:scale(.985)}
+
+
+/* Mortgage intro replay trigger */
+button.headerIcon{
+  padding:0;cursor:pointer;font:inherit;
+  transition:transform .16s var(--motion-press),box-shadow .18s ease,background .18s ease;
+}
+button.headerIcon:active{transform:scale(.95)}
+button.headerIcon:focus-visible{outline:0;box-shadow:var(--app-card-shadow),var(--shadow-focus)}
