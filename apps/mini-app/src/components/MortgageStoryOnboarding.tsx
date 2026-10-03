@@ -2,39 +2,31 @@ import React from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
-import { mortgageStoryAsset1 } from "./mortgageStoryAsset1";
-import { mortgageStoryAsset2 } from "./mortgageStoryAsset2";
-import { mortgageStoryAsset3 } from "./mortgageStoryAsset3";
 import styles from "./MortgageStoryOnboarding.module.css";
 
-export const MORTGAGE_STORY_VERSION="mortgage_intro_v1";
+export const MORTGAGE_STORY_VERSION="mortgage_intro_v2";
 export const MORTGAGE_STORY_STORAGE="pulse_mortgage_intro_version";
 
+const BASE_URL=(import.meta.env.BASE_URL||"/").replace(/\/$/,"");
+const asset=(path:string)=>`${BASE_URL}${path}`;
+
 type Slide={
-  eyebrow:string;
-  title:string;
-  body:string;
   image:string;
+  alt:string;
 };
 
 const slides:Slide[]=[
   {
-    eyebrow:"PULSE · ИПОТЕКА",
-    title:"Ипотека без хаоса",
-    body:"Считайте платёж, сравнивайте программы и сразу понимайте, какой сценарий подходит клиенту.",
-    image:mortgageStoryAsset1,
+    image:asset("/_cdn/static/mortgage-onboarding-01.png"),
+    alt:"Ипотека без хаоса — расчёт и сравнение ипотечных сценариев в PULSE.DV",
   },
   {
-    eyebrow:"ВСЁ В ОДНОМ МЕСТЕ",
-    title:"Актуальные программы",
-    body:"Семейная, Дальневосточная, IT и базовый сценарий собраны в одном разделе — с понятными условиями и ограничениями.",
-    image:mortgageStoryAsset2,
+    image:asset("/_cdn/static/mortgage-onboarding-02.png"),
+    alt:"Актуальные ипотечные программы в одном разделе PULSE.DV",
   },
   {
-    eyebrow:"ЖИВОЙ РАСЧЁТ",
-    title:"Меняйте параметры — результат сразу",
-    body:"Стоимость, первоначальный взнос и срок влияют на платёж в реальном времени. PULSE показывает ставку, лимиты и ограничения программы.",
-    image:mortgageStoryAsset3,
+    image:asset("/_cdn/static/mortgage-onboarding-03.png"),
+    alt:"Живой ипотечный расчёт с изменением стоимости, взноса и срока",
   },
 ];
 
@@ -96,6 +88,14 @@ export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
 
   const story=<section className={styles.overlay} aria-label="Знакомство с ипотекой">
     <div className={styles.stage}>
+      <img
+        key={index}
+        className={styles.screen}
+        src={slide.image}
+        alt={slide.alt}
+        draggable={false}
+      />
+
       <div className={styles.progress} aria-label={"Экран "+(index+1)+" из "+slides.length}>
         {slides.map((_,i)=><span key={i} className={i<index?styles.progressDone:i===index?styles.progressCurrent:styles.progressFuture}>
           {i===index&&<i
@@ -111,7 +111,7 @@ export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
         type="button"
         aria-label="Закрыть знакомство с ипотекой"
         onClick={()=>finish("mortgage_intro_skip")}
-      ><X size={18}/></button>
+      ><X size={18} strokeWidth={1.9}/></button>
 
       <button
         type="button"
@@ -129,17 +129,6 @@ export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
         onPointerUp={pointerUp("right")}
         onPointerCancel={()=>{press.current=null;setPaused(false)}}
       />
-
-      <div key={index} className={styles.slide}>
-        <div className={styles.art}>
-          <img className={styles.artImage} src={slide.image} alt="" draggable={false}/>
-        </div>
-        <div className={styles.copy}>
-          <span className={styles.eyebrow}>{slide.eyebrow}</span>
-          <h2>{slide.title}</h2>
-          <p>{slide.body}</p>
-        </div>
-      </div>
     </div>
   </section>;
 
