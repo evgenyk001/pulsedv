@@ -146,7 +146,7 @@ export function OverviewPage(){
      </div>
     </div>
     {trendRange==='custom'&&<div className="pulseCustomRange">
-     <label><span>От</span><input type="date" value={customFrom} max={customTo} onChange={e=>setCustomFrom(e.target.value||customFrom)}/></label>
+     <label><span>От</span><input type="date" value={customFrom} min={addDays(customTo,-365)} max={customTo} onChange={e=>setCustomFrom(e.target.value||customFrom)}/></label>
      <span>—</span>
      <label><span>До</span><input type="date" value={customTo} min={customFrom} max={today} onChange={e=>setCustomTo(e.target.value||customTo)}/></label>
      <small>До 366 дней</small>
