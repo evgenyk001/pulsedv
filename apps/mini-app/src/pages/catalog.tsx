@@ -333,22 +333,22 @@ export default function CatalogPage(){
 
             <section className={styles.filterGroup}>
               <label className={styles.filterTitle}><span>Срок сдачи</span></label>
-              <div className={styles.sheetChips}>{deliveryOptions.map(v=><button type="button" onClick={()=>setDelivery(v)} key={v} className={delivery===v?styles.sheetActive:""}>{delivery===v&&<Check size={13}/>} {v}</button>)}</div>
+              <div className={styles.sheetChips} role="group" aria-label="Срок сдачи">{deliveryOptions.map(v=><button type="button" aria-pressed={delivery===v} onClick={()=>setDelivery(v)} key={v} className={delivery===v?styles.sheetActive:""}>{delivery===v&&<Check size={13}/>} {v}</button>)}</div>
             </section>
 
             <section className={styles.filterGroup}>
               <label className={styles.filterTitle}><span>Город</span></label>
-              <div className={styles.sheetChips}>{cityOptions.map(v=><button type="button" onClick={()=>selectCity(v)} key={v} className={city===v?styles.sheetActive:""}>{city===v&&<Check size={13}/>} {v}</button>)}</div>
+              <div className={styles.sheetChips} role="group" aria-label="Город">{cityOptions.map(v=><button type="button" aria-pressed={city===v} onClick={()=>selectCity(v)} key={v} className={city===v?styles.sheetActive:""}>{city===v&&<Check size={13}/>} {v}</button>)}</div>
             </section>
 
             <section className={styles.filterGroup}>
               <label className={styles.filterTitle}><span>Комнатность</span></label>
-              <div className={styles.sheetChips}>{roomOptions.map(v=><button type="button" onClick={()=>setRooms(v)} key={v} className={rooms===v?styles.sheetActive:""}>{rooms===v&&<Check size={13}/>} {v}</button>)}</div>
+              <div className={styles.sheetChips} role="group" aria-label="Комнатность">{roomOptions.map(v=><button type="button" aria-pressed={rooms===v} onClick={()=>setRooms(v)} key={v} className={rooms===v?styles.sheetActive:""}>{rooms===v&&<Check size={13}/>} {v}</button>)}</div>
             </section>
 
             {control.select.seaEnabled&&(city==="Все"||city==="Владивосток")&&<section className={styles.filterGroup}>
               <label className={styles.filterTitle}><span>Особенности</span></label>
-              <div className={styles.sheetChips}><button type="button" onClick={()=>setSea(value=>!value)} className={sea?styles.sheetActive:""}>{sea&&<Check size={13}/>} Вид на море</button></div>
+              <div className={styles.sheetChips} role="group" aria-label="Особенности"><button type="button" aria-pressed={sea} onClick={()=>setSea(value=>!value)} className={sea?styles.sheetActive:""}>{sea&&<Check size={13}/>} Вид на море</button></div>
             </section>}
           </div>
 
