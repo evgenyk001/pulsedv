@@ -140,6 +140,15 @@ test('SQL/API: заявки между устройствами, дедупли�
   const pagedEvents=await app.inject({url:'/api/v1/control/events?page=1&limit=1',cookies:ownerCookie});assert.equal(pagedEvents.statusCode,200,pagedEvents.body);assert.equal(pagedEvents.json().items.length,1);assert.ok(pagedEvents.json().total>=1);
   const pagedProfiles=await app.inject({url:'/api/v1/control/profiles?page=1&limit=1',cookies:ownerCookie});assert.equal(pagedProfiles.statusCode,200,pagedProfiles.body);assert.equal(pagedProfiles.json().items.length,1);
   const analytics=await app.inject({url:'/api/v1/control/analytics-summary',cookies:ownerCookie});assert.equal(analytics.statusCode,200,analytics.body);assert.equal(analytics.json().leadsTotal,1);assert.ok(Number.isInteger(analytics.json().sessions));
+  const from=new Date(Date.now()-2*86400_000).toISOString().slice(0,10),to=new Date(Date.now()+86400_000).toISOString().slice(0,10);
+  const series=await app.inject({url:'/api/v1/control/analytics-series?from='+from+'&to='+to,cookies:ownerCookie});
+  assert.equal(series.statusCode,200,series.body);
+  assert.equal(series.json().days.length,4);
+  assert.ok(series.json().totals.leads>=1);
+  assert.ok(series.json().totals.events>=1);
+  assert.ok(Number.isInteger(series.json().totals.visitors));
+  assert.equal(series.json().timezone,'Asia/Vladivostok');
+  assert.equal((await app.inject({url:'/api/v1/control/analytics-series?from=2025-01-01&to=2026-12-31',cookies:ownerCookie})).statusCode,400);
  });
  await t.test('права менеджера ограничены назначением, изменение отражается в задачах',async()=>{
   await db.query('update leads set manager_id=$2 where id=$1',[leadId,owner.id]);await db.query('update crm_tasks set assigned_to=$2 where lead_id=$1',[leadId,owner.id]);
