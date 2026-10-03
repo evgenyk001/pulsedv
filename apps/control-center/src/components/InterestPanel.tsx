@@ -47,3 +47,5 @@ export function InterestPanel({sessionId,userId,events,state,onUseNextAction}:{s
   <h3>История действий</h3><ActivityFeed events={result.events} state={state}/>
  </>;
 }
+
+// CI probe: validate dark intelligence surfaces.
