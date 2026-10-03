@@ -279,7 +279,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const previousLeadValues=scoped?[m.id,iso(previousFrom),iso(previousTo)]:[iso(previousFrom),iso(previousTo)];
   const previousEventValues=scoped?[m.id,iso(previousFrom),iso(previousTo)]:[iso(previousFrom),iso(previousTo)];
 
-  const [leadRows,eventRows,previousLead,previousEvent]=await Promise.all([
+  const [leadRows,eventRows,currentEvent,previousLead,previousEvent]=await Promise.all([
    db.query(`select (created_at at time zone 'Asia/Vladivostok')::date::text as day,count(*)::int as value
     from leads where ${leadWhere}(created_at at time zone 'Asia/Vladivostok')::date between ${fromIndex}::date and ${toIndex}::date
     group by day order by day`,leadValues),
@@ -296,9 +296,10 @@ export async function createApp(db:Database,config:RuntimeConfig){
   eventRows.rows.forEach(row=>{const item=days.get(String(row.day));if(item){item.events=Number(row.events||0);item.visitors=Number(row.visitors||0)}});
 
   const series=[...days.values()];
-  const totals=series.reduce((sum,item)=>({leads:sum.leads+item.leads,events:sum.events+item.events,visitors:sum.visitors+item.visitors}),{leads:0,events:0,visitors:0});
+  const leadTotal=series.reduce((sum,item)=>sum+item.leads,0);
   return {
-   from:q.from,to:q.to,timezone:'Asia/Vladivostok',days:series,totals,
+   from:q.from,to:q.to,timezone:'Asia/Vladivostok',days:series,
+   totals:{leads:leadTotal,events:Number(currentEvent.rows[0]?.events||0),visitors:Number(currentEvent.rows[0]?.visitors||0)},
    previous:{leads:Number(previousLead.rows[0]?.value||0),events:Number(previousEvent.rows[0]?.events||0),visitors:Number(previousEvent.rows[0]?.visitors||0)},
   };
  });
