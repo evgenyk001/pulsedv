@@ -40,6 +40,7 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await page.getByRole('button',{name:/Показать подходящие/}).click();
  await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
  await page.goto('/pulsedv/mini-app/#/mortgage');
+ const mortgageIntroSmoke=page.getByLabel('Знакомство с ипотекой');if(await mortgageIntroSmoke.count())await mortgageIntroSmoke.getByRole('button',{name:/Пропустить/}).click();
  await page.getByRole('button',{name:/Дальневосточная/}).click();
  const switches=page.getByRole('switch');await expect(switches.first()).toBeVisible();
  for(const item of await switches.all()){
@@ -383,10 +384,41 @@ test('CRM: real preview lead, editable stage, readable history and keyboard draw
  await expect(page.getByRole('link',{name:/ЗАЯВКА КЛИЕНТА/})).toBeVisible();
 });
 
+test('Mortgage story onboarding: first open, story navigation, persistence and replay',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/pulsedv/mini-app/');
+ const globalIntro=page.getByRole('button',{name:'Пропустить онбординг'});if(await globalIntro.count())await globalIntro.click();
+
+ await page.goto('/pulsedv/mini-app/#/mortgage');
+ const story=page.getByLabel('Знакомство с ипотекой');
+ await expect(story).toBeVisible();
+ await expect(story.getByRole('heading',{name:'Ипотека без хаоса'})).toBeVisible();
+ await expect(story.getByText('52 840 ₽',{exact:true})).toBeVisible();
+
+ await story.getByRole('button',{name:'Следующая история'}).click();
+ await expect(story.getByRole('heading',{name:'Актуальные программы'})).toBeVisible();
+ await expect(story.getByText('Дальневосточная',{exact:true})).toBeVisible();
+
+ await story.getByRole('button',{name:'Следующая история'}).click();
+ await expect(story.getByRole('heading',{name:'Меняйте параметры — результат обновится сразу'})).toBeVisible();
+ await expect(story.getByText('59 072 ₽',{exact:true})).toBeVisible();
+ await story.getByRole('button',{name:'Открыть калькулятор',exact:true}).click();
+ await expect(story).toBeHidden();
+ await expect(page.getByRole('heading',{name:'Ипотека',exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>localStorage.getItem('pulse_mortgage_intro_version'))).toBe('mortgage_intro_v1');
+
+ await page.reload();
+ await expect(page.getByLabel('Знакомство с ипотекой')).toHaveCount(0);
+ await page.getByRole('button',{name:'Как работает ипотека'}).click();
+ await expect(page.getByLabel('Знакомство с ипотекой')).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Ипотека без хаоса'})).toBeVisible();
+ await page.getByLabel('Знакомство с ипотекой').getByRole('button',{name:/Пропустить/}).click();
+});
+
 test('CRM mobile: ипотечный контекст читаемый, заметка менеджера остаётся ручной',async({page})=>{
  await page.setViewportSize({width:390,height:844});
  await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:'Пропустить онбординг'}).click();
- await page.goto('/pulsedv/mini-app/#/mortgage');await page.getByRole('button',{name:'Получить точный расчёт',exact:true}).click();
+ await page.goto('/pulsedv/mini-app/#/mortgage');const mortgageIntroCrm=page.getByLabel('Знакомство с ипотекой');if(await mortgageIntroCrm.count())await mortgageIntroCrm.getByRole('button',{name:/Пропустить/}).click();await page.getByRole('button',{name:'Получить точный расчёт',exact:true}).click();
  await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Ипотечный тест');await page.getByRole('textbox',{name:'Телефон',exact:true}).fill('+79990000077');await page.getByRole('checkbox',{name:/Я даю согласие/}).check();await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();
  await page.goto('/pulsedv/control-center/#/leads');await page.locator('.leadRowButton').filter({hasText:'Ипотечный тест'}).click();
  const drawer=page.getByRole('dialog',{name:'Карточка клиента'});const context=drawer.getByRole('region',{name:'Контекст обращения'});
@@ -420,6 +452,7 @@ test('Control mortgage settings are the same rules used by Mini App',async({page
  const skip=page.getByRole('button',{name:'Пропустить онбординг'});
  if(await skip.count())await skip.click();
  await page.goto('/pulsedv/mini-app/#/mortgage');
+ const mortgageIntroSync=page.getByLabel('Знакомство с ипотекой');if(await mortgageIntroSync.count())await mortgageIntroSync.getByRole('button',{name:/Пропустить/}).click();
 
  const familyProgram=page.getByRole('button',{name:/Семейная/});
  await familyProgram.click();
