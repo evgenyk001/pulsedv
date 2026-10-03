@@ -15,6 +15,7 @@ export function AppShell({children}:{children:React.ReactNode}){
   const location=useLocation();
   const control=usePulseControlState();
   const [showOnboarding,setShowOnboarding]=React.useState(false);
+  const [storyOverlayOpen,setStoryOverlayOpen]=React.useState(false);
   const chatRoute=location.pathname==="/journey"&&new URLSearchParams(location.search).has("lead");
   const hideNav=location.pathname.startsWith("/property/")||chatRoute;
 
@@ -28,6 +29,15 @@ export function AppShell({children}:{children:React.ReactNode}){
     window.addEventListener("pulse:show-onboarding",replay);
     return()=>window.removeEventListener("pulse:show-onboarding",replay);
   },[control.content.onboardingEnabled]);
+
+  React.useEffect(()=>{
+    const handleStoryOverlay=(event:Event)=>{
+      const detail=(event as CustomEvent<{open?:boolean}>).detail;
+      setStoryOverlayOpen(Boolean(detail?.open));
+    };
+    window.addEventListener("pulse:story-overlay",handleStoryOverlay);
+    return()=>window.removeEventListener("pulse:story-overlay",handleStoryOverlay);
+  },[]);
 
   React.useEffect(()=>{
     if(!sessionStorage.getItem("pulse.attribution.v1")){recordPulseEvent({eventType:"attribution",metadata:attribution(window.location.search||window.location.hash.split("?")[1]||"")});sessionStorage.setItem("pulse.attribution.v1","1");}
@@ -61,7 +71,7 @@ export function AppShell({children}:{children:React.ReactNode}){
     <main className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
       <div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:""}`}>{children}</div>
     </main>
-    {!hideNav&&<BottomNav/>}
+    {!hideNav&&!storyOverlayOpen&&<BottomNav/>}
     {showOnboarding&&!hideNav&&control.content.onboardingEnabled&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}
   </div>
 }
