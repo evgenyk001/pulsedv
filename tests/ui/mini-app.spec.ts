@@ -807,8 +807,11 @@ for(const width of [1024,1366])test(`Control client details ${width}px: drawers 
  await expect(leadDrawer).toBeVisible();
  const leadBox=await leadDrawer.boundingBox();
  const leadBackdrop=await page.locator('.drawerBackdrop').boundingBox();
+ const leadWorkspaceBar=await page.locator('.workspaceBar').boundingBox();
  expect(leadBox).not.toBeNull();
  expect(leadBackdrop).not.toBeNull();
+ expect(leadWorkspaceBar).not.toBeNull();
+ expect(leadBox!.y).toBeGreaterThanOrEqual(leadWorkspaceBar!.y+leadWorkspaceBar!.height-1);
  expect(Math.abs(leadBox!.x-leadBackdrop!.x)).toBeLessThanOrEqual(1);
  expect(Math.abs(leadBox!.width-leadBackdrop!.width)).toBeLessThanOrEqual(1);
  expect(leadBox!.x+leadBox!.width).toBeLessThanOrEqual(width+1);
@@ -826,8 +829,11 @@ for(const width of [1024,1366])test(`Control client details ${width}px: drawers 
  await expect(userDrawer).toBeVisible();
  const userBox=await userDrawer.boundingBox();
  const userBackdrop=await page.locator('.drawerBackdrop').boundingBox();
+ const userWorkspaceBar=await page.locator('.workspaceBar').boundingBox();
  expect(userBox).not.toBeNull();
  expect(userBackdrop).not.toBeNull();
+ expect(userWorkspaceBar).not.toBeNull();
+ expect(userBox!.y).toBeGreaterThanOrEqual(userWorkspaceBar!.y+userWorkspaceBar!.height-1);
  expect(Math.abs(userBox!.x-userBackdrop!.x)).toBeLessThanOrEqual(1);
  expect(Math.abs(userBox!.width-userBackdrop!.width)).toBeLessThanOrEqual(1);
  expect(userBox!.x+userBox!.width).toBeLessThanOrEqual(width+1);
