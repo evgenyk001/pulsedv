@@ -858,3 +858,41 @@ for(const width of [1024,1366])test(`Control client details ${width}px: drawers 
  expect(legacyWhiteSurfaces).toEqual([]);
  expect(errors).toEqual([]);
 });
+
+
+test('Control overview analytics: periods, metrics and custom range stay interactive',async({page})=>{
+ await page.setViewportSize({width:1366,height:900});
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('/pulsedv/control-center/#/');
+ await expect(page.getByRole('heading',{name:'Командный центр',level:1})).toBeVisible();
+
+ const chart=page.locator('.pulseChartCard');
+ await expect(chart).toBeVisible();
+ await expect(chart.getByRole('tab',{name:'Обращения'})).toHaveAttribute('aria-selected','true');
+
+ await chart.getByRole('button',{name:'30д',exact:true}).click();
+ await expect(chart.getByRole('button',{name:'30д',exact:true})).toHaveAttribute('aria-pressed','true');
+
+ await chart.getByRole('tab',{name:'Активность'}).click();
+ await expect(chart.getByRole('tab',{name:'Активность'})).toHaveAttribute('aria-selected','true');
+ await expect(chart.getByRole('heading',{name:'Активность клиентов'})).toBeVisible();
+
+ await chart.getByRole('button',{name:'90д',exact:true}).click();
+ await expect(chart.getByRole('button',{name:'90д',exact:true})).toHaveAttribute('aria-pressed','true');
+
+ await chart.getByRole('tab',{name:'Посетители'}).click();
+ await expect(chart.getByRole('heading',{name:'Уникальные посетители'})).toBeVisible();
+
+ await chart.getByRole('button',{name:'Свой',exact:true}).click();
+ await expect(chart.getByLabel('От')).toBeVisible();
+ await expect(chart.getByLabel('До')).toBeVisible();
+ const to=await chart.getByLabel('До').inputValue();
+ const customFrom=new Date(new Date(to+'T00:00:00Z').getTime()-14*86400_000).toISOString().slice(0,10);
+ await chart.getByLabel('От').fill(customFrom);
+ await expect(chart.getByRole('button',{name:'Свой',exact:true})).toHaveAttribute('aria-pressed','true');
+
+ await expect(chart.locator('.pulseChartInsights')).toBeVisible();
+ await expect(chart.locator('.pulseChartTooltip')).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+ expect(errors).toEqual([]);
+});
