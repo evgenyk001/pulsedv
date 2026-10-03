@@ -1,4 +1,4 @@
-import { matchScore } from "../../../../packages/domain/propertyMatch";
+import { hasSea, matchScore, matchesBudgetAndRooms } from "../../../../packages/domain/propertyMatch";
 import { usePulseControlState } from "../helpers/usePulseControlState";
 import React, { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -63,6 +63,7 @@ export default function CatalogPage(){
   const [sort,setSort]=useState<SortMode>(initialSort&&sortLabels[initialSort]?initialSort:"popular");
   const view=params.get("view")==="map"?"map":"list";
   const [selectedId,setSelectedId]=useState<string|undefined>();
+  const [filterOpen,setFilterOpen]=useState(false);
   const navigate=useNavigate();
   const pulseMode=params.get("pulse")==="1";
 
@@ -72,6 +73,10 @@ export default function CatalogPage(){
   const appliedSea=params.get("sea")==="1";
   const appliedMin=parsePriceParam(params.get("min"))??minBound;
   const appliedMax=parsePriceParam(params.get("max"))??maxBound;
+
+  const cityOptions=React.useMemo(()=>["Все",...new Set(control.select.cities.filter(Boolean))],[control.select.cities]);
+  const roomOptions=React.useMemo(()=>["Все",...new Set(control.select.roomOptions.filter(value=>value&&value!=="Все"&&value!=="Не важно"))],[control.select.roomOptions]);
+  const deliveryOptions=React.useMemo(()=>["Любой",...new Set(control.select.deliveryOptions.filter(value=>value&&value!=="Любой"&&value!=="Не важно"))],[control.select.deliveryOptions]);
 
   React.useEffect(()=>{
     if(initialSort&&sortLabels[initialSort])return;
@@ -108,30 +113,59 @@ export default function CatalogPage(){
   const serverItems=React.useMemo(()=>listQuery.data?.pages.flatMap(page=>page.items)??[],[listQuery.data]);
   const serverTotal=listQuery.data?.pages[0]?.total??0;
 
+  const pulseMatches=React.useCallback((item:(NonNullable<typeof pulseQuery.data>)[number],filter:{
+    city:string;delivery:string;rooms:string;min:number;max:number;sea:boolean;
+  })=>{
+    const matchesQuery=(item.name+" "+item.city+" "+item.district+" "+item.developerName).toLowerCase().includes((params.get("q")||"").trim().toLowerCase());
+    const matchesCity=filter.city==="Все"||item.city===filter.city;
+    const matchesDelivery=filter.delivery==="Любой"||filter.delivery==="Не важно"||(
+      filter.delivery==="Сдан"
+        ?/сдан|готов|введ[её]н/i.test(item.delivery)
+        :item.delivery.includes(filter.delivery)
+    );
+    const matchesPriceAndRooms=matchesBudgetAndRooms(item,{rooms:filter.rooms,min:filter.min,max:filter.max});
+    const matchesSea=!filter.sea||hasSea(item);
+    return matchesQuery&&matchesCity&&matchesDelivery&&matchesPriceAndRooms&&matchesSea;
+  },[params]);
+
   const pulseItems=useMemo(()=>{
     if(!pulseMode)return [];
     const properties=pulseQuery.data??[];
-    const filtered=properties.filter(item=>{
-      const matchesQuery=(item.name+" "+item.city+" "+item.district+" "+item.developerName).toLowerCase().includes((params.get("q")||"").toLowerCase());
-      const matchesCity=appliedCity==="Все"||item.city===appliedCity;
-      const matchesDelivery=appliedDelivery==="Любой"||item.delivery.includes(appliedDelivery);
-      const prices=(appliedRooms==="Все"?item.floorplans:item.floorplans.filter(plan=>plan.roomLabel===appliedRooms))
-        .map(plan=>plan.priceFrom).filter((value):value is number=>value!==null).map(value=>value*1_000_000);
-      const representative=prices.length?Math.min(...prices):item.priceFrom*1_000_000;
-      const matchesPrice=representative>=appliedMin&&representative<=appliedMax;
-      const matchesSea=!appliedSea||item.tags.some(tag=>tag.toLowerCase().includes("море"))||item.features.some(feature=>feature.label.toLowerCase().includes("море"));
-      return matchesQuery&&matchesCity&&matchesDelivery&&matchesPrice&&matchesSea;
-    });
+    const filter={city:appliedCity,delivery:appliedDelivery,rooms:appliedRooms,min:appliedMin,max:appliedMax,sea:appliedSea};
+    const filtered=properties.filter(item=>pulseMatches(item,filter));
     if(sort==="priceAsc")return [...filtered].sort((a,b)=>a.priceFrom-b.priceFrom);
     if(sort==="priceDesc")return [...filtered].sort((a,b)=>b.priceFrom-a.priceFrom);
     return [...filtered].sort((a,b)=>matchScore(b,{city:appliedCity,rooms:appliedRooms,min:appliedMin,max:appliedMax,delivery:appliedDelivery,sea:appliedSea},control.select.weights)-matchScore(a,{city:appliedCity,rooms:appliedRooms,min:appliedMin,max:appliedMax,delivery:appliedDelivery,sea:appliedSea},control.select.weights)||a.sortOrder-b.sortOrder);
-  },[pulseMode,pulseQuery.data,params,appliedCity,appliedDelivery,appliedRooms,appliedMin,appliedMax,appliedSea,sort,control.select.weights]);
+  },[pulseMode,pulseQuery.data,pulseMatches,appliedCity,appliedDelivery,appliedRooms,appliedMin,appliedMax,appliedSea,sort,control.select.weights]);
+
+  const previewFilters=React.useMemo(()=>({
+    limit:1,
+    q:params.get("q")||undefined,
+    city,
+    min:priceRange[0],
+    max:priceRange[1],
+    delivery,
+    rooms,
+    sea,
+    sort,
+    view:"card" as const,
+  }),[params,city,priceRange,delivery,rooms,sea,sort]);
+  const previewQuery=useCatalogInfinite(previewFilters,filterOpen&&!pulseMode);
+  const pulsePreviewTotal=React.useMemo(()=>{
+    if(!pulseMode||!filterOpen)return 0;
+    const filter={city,delivery,rooms,min:priceRange[0],max:priceRange[1],sea};
+    return (pulseQuery.data??[]).filter(item=>pulseMatches(item,filter)).length;
+  },[pulseMode,filterOpen,pulseQuery.data,pulseMatches,city,delivery,rooms,priceRange,sea]);
 
   const visible=pulseMode?pulseItems:serverItems;
   const total=pulseMode?pulseItems.length:serverTotal;
   const mapProperties=pulseMode?pulseItems:(mapQuery.data??[]);
   const isLoading=pulseMode?pulseQuery.isLoading:view==="map"?mapQuery.isLoading:listQuery.isLoading;
   const error=pulseMode?pulseQuery.error:view==="map"?mapQuery.error:listQuery.error;
+  const previewTotal=pulseMode
+    ?pulsePreviewTotal
+    :(previewQuery.data?.pages[0]?.total??total);
+  const previewLoading=filterOpen&&!pulseMode&&previewQuery.isLoading;
 
   const onQuery=(value:string)=>{setQuery(value);const next=new URLSearchParams(params);value?next.set("q",value):next.delete("q");setParams(next,{replace:true,flushSync:true});};
   const catalogReturnTo=React.useMemo(()=>{const next=new URLSearchParams(params);query?next.set("q",query):next.delete("q");const search=next.toString();return "/catalog"+(search?"?"+search:"")},[params,query]);
@@ -177,16 +211,36 @@ export default function CatalogPage(){
     setPriceDraft([formatRub(next[0]),formatRub(next[1])]);
   };
 
+  const syncFilterDraft=()=>{
+    setCity(appliedCity);
+    const nextRange:[number,number]=[appliedMin,appliedMax];
+    setPriceRange(nextRange);
+    setPriceDraft([formatRub(nextRange[0]),formatRub(nextRange[1])]);
+    setDelivery(appliedDelivery);
+    setRooms(appliedRooms);
+    setSea(appliedSea);
+  };
+
   const applyFilters=()=>{
     const next=new URLSearchParams(params);
     city==="Все"?next.delete("city"):next.set("city",city);
-    next.set("min",(priceRange[0]/1_000_000).toFixed(1));
-    next.set("max",(priceRange[1]/1_000_000).toFixed(1));
+    priceRange[0]<=minBound?next.delete("min"):next.set("min",(priceRange[0]/1_000_000).toFixed(1));
+    priceRange[1]>=maxBound?next.delete("max"):next.set("max",(priceRange[1]/1_000_000).toFixed(1));
     delivery==="Любой"?next.delete("delivery"):next.set("delivery",delivery);
     rooms==="Все"?next.delete("rooms"):next.set("rooms",rooms);
     sea?next.set("sea","1"):next.delete("sea");
     setParams(next,{replace:true});
-    recordPulseEvent({eventType:"catalog_filter",entityType:"catalog",entityId:"filters",metadata:{city,min:priceRange[0],max:priceRange[1],delivery,rooms,sea,results:total}});
+    recordPulseEvent({eventType:"catalog_filter",entityType:"catalog",entityId:"filters",metadata:{city,min:priceRange[0],max:priceRange[1],delivery,rooms,sea,results:previewTotal}});
+  };
+
+  const resetFilterDraft=()=>{
+    setCity("Все");
+    const nextRange:[number,number]=[minBound,maxBound];
+    setPriceRange(nextRange);
+    setPriceDraft([formatRub(nextRange[0]),formatRub(nextRange[1])]);
+    setDelivery("Любой");
+    setRooms("Все");
+    setSea(false);
   };
 
   const resetFilters=()=>{
@@ -223,7 +277,20 @@ export default function CatalogPage(){
   if(appliedSea)activeFilters.push({key:"sea",label:"Вид на море"});
   if(appliedMin>minBound||appliedMax<maxBound)activeFilters.push({key:"price",label:shortRub(appliedMin)+" — "+shortRub(appliedMax)});
 
-  const pluralProject=(count:number)=>count===1?"проект":count>1&&count<5?"проекта":"проектов";
+  const pluralProject=(count:number)=>{
+    const n=Math.abs(count)%100;
+    const n1=n%10;
+    if(n>10&&n<20)return "проектов";
+    if(n1===1)return "проект";
+    if(n1>=2&&n1<=4)return "проекта";
+    return "проектов";
+  };
+  const draftFilterCount=
+    Number(city!=="Все")+
+    Number(delivery!=="Любой")+
+    Number(rooms!=="Все")+
+    Number(sea)+
+    Number(priceRange[0]>minBound||priceRange[1]<maxBound);
 
   return <div className={styles.page}>
     <PageHeader eyebrow="Каталог PULSE.DV" title="Новостройки" subtitle="Подбирайте спокойно — по району, бюджету и сроку сдачи."/>
@@ -236,26 +303,57 @@ export default function CatalogPage(){
     <div className={styles.search}>
       <Search size={18}/>
       <Input value={query} onChange={(e)=>onQuery(e.target.value)} placeholder="ЖК, район, застройщик" aria-label="Поиск"/>
-      <Sheet>
-        <SheetTrigger asChild><button aria-label="Фильтры"><SlidersHorizontal size={18}/></button></SheetTrigger>
+      <Sheet open={filterOpen} onOpenChange={open=>{setFilterOpen(open);if(open)syncFilterDraft();}}>
+        <SheetTrigger asChild>
+          <button className={styles.filterTrigger} aria-label={activeFilters.length?"Фильтры, выбрано "+activeFilters.length:"Фильтры"}>
+            <SlidersHorizontal size={18}/>
+            {activeFilters.length>0&&<span>{activeFilters.length}</span>}
+          </button>
+        </SheetTrigger>
         <SheetContent side="bottom" className={styles.filterSheet}>
-          <SheetHeader><SheetTitle>Фильтры</SheetTitle><SheetDescription>Оставьте только подходящие проекты.</SheetDescription></SheetHeader>
+          <SheetHeader className={styles.filterHeader}>
+            <SheetTitle className={styles.filterSheetTitle}>Фильтры</SheetTitle>
+            <SheetDescription className={styles.filterSheetDescription}>Оставьте только подходящие проекты.</SheetDescription>
+          </SheetHeader>
+
           <div className={styles.filterBody}>
-            <label className={styles.filterTitle}><span>Бюджет</span><b>{shortRub(priceRange[0])} — {shortRub(priceRange[1])}</b></label>
-            <div className={styles.priceInputs}>
-              <label><span>От</span><div><Input inputMode="numeric" value={priceDraft[0]} onChange={e=>editPriceDraft(0,e.target.value)} onBlur={()=>commitPriceDraft(0)} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div></label>
-              <label><span>До</span><div><Input inputMode="numeric" value={priceDraft[1]} onChange={e=>editPriceDraft(1,e.target.value)} onBlur={()=>commitPriceDraft(1)} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div></label>
-            </div>
-            <div className={styles.filterSlider}><Slider min={minBound} max={maxBound} step={priceStep} value={priceRange} onValueChange={setPriceFromSlider}/><div><span>{shortRub(minBound)}</span><span>{shortRub(maxBound)}</span></div></div>
-            <label className={styles.filterTitle}><span>Срок сдачи</span></label>
-            <div className={styles.sheetChips}>{["Любой","2026","2027"].map(v=><button onClick={()=>setDelivery(v)} key={v} className={delivery===v?styles.sheetActive:""}>{delivery===v&&<Check size={14}/>} {v}</button>)}</div>
-            <label className={styles.filterTitle}><span>Город</span></label>
-            <div className={styles.sheetChips}>{["Все","Владивосток","Уссурийск","Артём"].map(v=><button onClick={()=>setCity(v)} key={v} className={city===v?styles.sheetActive:""}>{city===v&&<Check size={14}/>} {v}</button>)}</div>
-            <label className={styles.filterTitle}><span>Комнатность</span></label>
-            <div className={styles.sheetChips}>{["Все","Студия","1","2","3+"].map(v=><button onClick={()=>setRooms(v)} key={v} className={rooms===v?styles.sheetActive:""}>{rooms===v&&<Check size={14}/>} {v}</button>)}</div>
-            <label className={styles.filterTitle}><span>Особенности</span></label>
-            <div className={styles.sheetChips}><button onClick={()=>setSea(value=>!value)} className={sea?styles.sheetActive:""}>{sea&&<Check size={14}/>} Вид на море</button></div>
-            <SheetClose asChild><button className={styles.apply} onClick={applyFilters}>Применить фильтры</button></SheetClose>
+            <section className={styles.filterGroup}>
+              <label className={styles.filterTitle}><span>Бюджет</span><b>{shortRub(priceRange[0])} — {shortRub(priceRange[1])}</b></label>
+              <div className={styles.priceInputs}>
+                <label><span>От</span><div><Input inputMode="numeric" value={priceDraft[0]} onChange={e=>editPriceDraft(0,e.target.value)} onBlur={()=>commitPriceDraft(0)} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div></label>
+                <label><span>До</span><div><Input inputMode="numeric" value={priceDraft[1]} onChange={e=>editPriceDraft(1,e.target.value)} onBlur={()=>commitPriceDraft(1)} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div></label>
+              </div>
+              <div className={styles.filterSlider}><Slider min={minBound} max={maxBound} step={priceStep} value={priceRange} onValueChange={setPriceFromSlider}/><div><span>{shortRub(minBound)}</span><span>{shortRub(maxBound)}</span></div></div>
+            </section>
+
+            <section className={styles.filterGroup}>
+              <label className={styles.filterTitle}><span>Срок сдачи</span></label>
+              <div className={styles.sheetChips}>{deliveryOptions.map(v=><button type="button" onClick={()=>setDelivery(v)} key={v} className={delivery===v?styles.sheetActive:""}>{delivery===v&&<Check size={13}/>} {v}</button>)}</div>
+            </section>
+
+            <section className={styles.filterGroup}>
+              <label className={styles.filterTitle}><span>Город</span></label>
+              <div className={styles.sheetChips}>{cityOptions.map(v=><button type="button" onClick={()=>setCity(v)} key={v} className={city===v?styles.sheetActive:""}>{city===v&&<Check size={13}/>} {v}</button>)}</div>
+            </section>
+
+            <section className={styles.filterGroup}>
+              <label className={styles.filterTitle}><span>Комнатность</span></label>
+              <div className={styles.sheetChips}>{roomOptions.map(v=><button type="button" onClick={()=>setRooms(v)} key={v} className={rooms===v?styles.sheetActive:""}>{rooms===v&&<Check size={13}/>} {v}</button>)}</div>
+            </section>
+
+            {control.select.seaEnabled&&<section className={styles.filterGroup}>
+              <label className={styles.filterTitle}><span>Особенности</span></label>
+              <div className={styles.sheetChips}><button type="button" onClick={()=>setSea(value=>!value)} className={sea?styles.sheetActive:""}>{sea&&<Check size={13}/>} Вид на море</button></div>
+            </section>}
+          </div>
+
+          <div className={styles.filterActions} data-sheet-no-drag>
+            <button type="button" className={styles.resetFilter} onClick={resetFilterDraft} disabled={draftFilterCount===0}>Сбросить</button>
+            <SheetClose asChild>
+              <button className={styles.apply} onClick={applyFilters} disabled={previewLoading}>
+                {previewLoading?"Считаем…":"Показать "+previewTotal+" "+pluralProject(previewTotal)}
+              </button>
+            </SheetClose>
           </div>
         </SheetContent>
       </Sheet>
