@@ -18,6 +18,7 @@ import { Switch } from "../components/Switch";
 import { LeadSheet } from "../components/LeadSheet";
 import { PageHeader } from "../components/PageHeader";
 import { Input } from "../components/Input";
+import { MortgageStoryOnboarding, MORTGAGE_STORY_STORAGE, MORTGAGE_STORY_VERSION } from "../components/MortgageStoryOnboarding";
 import { usePulseControlState } from "../helpers/usePulseControlState";
 import { recordPulseEvent, type MortgageProgramRule } from "../../../../packages/pulse-data";
 import {
@@ -86,6 +87,9 @@ export default function MortgagePage(){
   const [priceDraft,setPriceDraft]=React.useState(formatRub(initialPrice));
   const [downDraft,setDownDraft]=React.useState(formatRub(2_000_000));
   const [interacted,setInteracted]=React.useState(false);
+  const [showMortgageStory,setShowMortgageStory]=React.useState(()=>{
+    try{return localStorage.getItem(MORTGAGE_STORY_STORAGE)!==MORTGAGE_STORY_VERSION}catch{return true}
+  });
   const lastCalculation=React.useRef("");
   const propertyKindMounted=React.useRef(false);
 
@@ -274,7 +278,16 @@ export default function MortgagePage(){
       eyebrow="Финансовый сценарий"
       title="Ипотека"
       subtitle="Расчёт по действующим правилам для Приморского края."
-      action={<div className={styles.headerIcon}><Calculator size={20}/></div>}
+      action={<button
+        type="button"
+        className={styles.headerIcon}
+        aria-label="Как работает ипотека"
+        title="Как работает ипотека"
+        onClick={()=>{
+          recordPulseEvent({eventType:"mortgage_intro_replay",entityType:"onboarding",entityId:MORTGAGE_STORY_VERSION});
+          setShowMortgageStory(true);
+        }}
+      ><Calculator size={20}/></button>}
     />
 
     <div className={styles.freshness}><CircleCheck size={14}/><span>Правила проверены {RULES_UPDATED} · движок {MORTGAGE_POLICY_VERSION}</span></div>
@@ -468,5 +481,7 @@ export default function MortgagePage(){
     </LeadSheet>
 
     <div className={styles.note}><ShieldCheck size={15}/>Расчёт предварительный. Финальные условия, право на льготу и объект подтверждает банк.</div>
+
+    {showMortgageStory&&<MortgageStoryOnboarding onDone={()=>setShowMortgageStory(false)}/>}
   </div>;
 }
