@@ -782,3 +782,45 @@ test('Catalog filters: live count, draft reset and applied URL stay in one flow'
  expect(page.url()).not.toContain('city=');
  await expect(page.getByLabel('Активные фильтры')).toHaveCount(0);
 });
+
+
+for(const width of [1024,1366])test(`Control client details ${width}px: drawers stay inside framed workspace`,async({page})=>{
+ await page.setViewportSize({width,height:820});
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+
+ await page.goto('/pulsedv/control-center/#/leads');
+ const leadRow=page.locator('.leadRowButton').first();
+ await expect(leadRow).toBeVisible();
+ await leadRow.click();
+
+ const leadDrawer=page.getByRole('dialog',{name:'Карточка клиента'});
+ await expect(leadDrawer).toBeVisible();
+ const leadBox=await leadDrawer.boundingBox();
+ const leadBackdrop=await page.locator('.drawerBackdrop').boundingBox();
+ expect(leadBox).not.toBeNull();
+ expect(leadBackdrop).not.toBeNull();
+ expect(leadBox!.x).toBeGreaterThanOrEqual(leadBackdrop!.x-1);
+ expect(leadBox!.x+leadBox!.width).toBeLessThanOrEqual(width+1);
+ expect(leadBackdrop!.x).toBeGreaterThan(240);
+ expect(await leadDrawer.evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+ await leadDrawer.getByRole('button',{name:'Закрыть'}).click();
+
+ await page.goto('/pulsedv/control-center/#/users');
+ const userRow=page.locator('.leadRowButton').first();
+ await expect(userRow).toBeVisible();
+ await userRow.click();
+
+ const userDrawer=page.getByRole('dialog',{name:'Профиль посетителя'});
+ await expect(userDrawer).toBeVisible();
+ const userBox=await userDrawer.boundingBox();
+ const userBackdrop=await page.locator('.drawerBackdrop').boundingBox();
+ expect(userBox).not.toBeNull();
+ expect(userBackdrop).not.toBeNull();
+ expect(userBox!.x).toBeGreaterThanOrEqual(userBackdrop!.x-1);
+ expect(userBox!.x+userBox!.width).toBeLessThanOrEqual(width+1);
+ expect(userBackdrop!.x).toBeGreaterThan(240);
+ expect(await userDrawer.evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+ expect(errors).toEqual([]);
+});
