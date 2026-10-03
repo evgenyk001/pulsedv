@@ -733,3 +733,52 @@ for(const width of [390,1440])test(`Control visual audit ${width}px: every works
  }
  expect(errors).toEqual([]);
 });
+
+
+test('Catalog filters: live count, draft reset and applied URL stay in one flow',async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto('/pulsedv/mini-app/');
+ const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
+ await page.goto('/pulsedv/mini-app/#/catalog');
+
+ const trigger=page.getByRole('button',{name:'Фильтры',exact:true});
+ await expect(trigger).toBeVisible();
+ await trigger.click();
+
+ const dialog=page.getByRole('dialog');
+ await expect(dialog.getByRole('heading',{name:'Фильтры',exact:true})).toBeVisible();
+ const cityGroup=dialog.getByRole('group',{name:'Город'});
+ const cityButtons=cityGroup.getByRole('button');
+ expect(await cityButtons.count()).toBeGreaterThan(1);
+
+ const cityButton=cityButtons.nth(1);
+ const cityName=(await cityButton.innerText()).trim();
+ await cityButton.click();
+ await expect(cityButton).toHaveAttribute('aria-pressed','true');
+
+ const apply=dialog.getByRole('button',{name:/Показать \d+ проект/});
+ await expect(apply).toBeVisible();
+ const applyText=await apply.innerText();
+ const previewCount=Number(applyText.match(/\d+/)?.[0]??-1);
+ expect(previewCount).toBeGreaterThanOrEqual(0);
+ await apply.click();
+
+ await expect(dialog).toBeHidden();
+ await expect(page.getByLabel('Активные фильтры').getByRole('button',{name:new RegExp(cityName)})).toBeVisible();
+ await expect(page.getByRole('button',{name:/Фильтры, выбрано 1/})).toBeVisible();
+ expect(page.url()).toContain('city=');
+
+ await page.getByRole('button',{name:/Фильтры, выбрано 1/}).click();
+ const reopened=page.getByRole('dialog');
+ const reset=reopened.getByRole('button',{name:'Сбросить',exact:true});
+ await expect(reset).toBeEnabled();
+ await reset.click();
+ await expect(reopened).toBeVisible();
+ expect(page.url()).toContain('city=');
+ await expect(reopened.getByRole('group',{name:'Город'}).getByRole('button',{name:'Все',exact:true})).toHaveAttribute('aria-pressed','true');
+
+ await reopened.getByRole('button',{name:/Показать \d+ проект/}).click();
+ await expect(reopened).toBeHidden();
+ expect(page.url()).not.toContain('city=');
+ await expect(page.getByLabel('Активные фильтры')).toHaveCount(0);
+});
