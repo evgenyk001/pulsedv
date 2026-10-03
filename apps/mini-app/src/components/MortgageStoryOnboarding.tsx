@@ -145,3 +145,5 @@ export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
 
   return createPortal(story,document.body);
 }
+
+// CI probe: validate mortgage story onboarding v2.
