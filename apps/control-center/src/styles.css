@@ -1908,3 +1908,35 @@ main{
     -webkit-backdrop-filter:none!important;
   }
 }
+
+
+/* Client detail workspace v3 — reserve the real sticky workspace header */
+@media(min-width:761px){
+  .control .drawerBackdrop{
+    top:116px!important; /* 52px shell top + 64px workspaceBar */
+    left:260px!important; /* 12px shell pad + 236px sidebar + 12px gap */
+    right:12px!important;
+    bottom:12px!important;
+    border-radius:0 0 26px 26px!important;
+  }
+  .control .detailDrawer{
+    inset:0!important;
+    border-radius:0 0 26px 26px!important;
+    padding-top:24px!important;
+  }
+  .control .leadDetailDrawer .leadEditorActions{
+    top:-24px!important;
+  }
+}
+
+@media(max-width:760px){
+  .control .drawerBackdrop{
+    top:98px!important; /* 40px runtime bar + 58px mobile workspaceBar */
+    left:0!important;
+    right:0!important;
+    bottom:0!important;
+  }
+  .control .detailDrawer{
+    padding-top:18px!important;
+  }
+}
