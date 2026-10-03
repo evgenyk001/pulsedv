@@ -1848,3 +1848,63 @@ main{
   .control .userDetailDrawer .profileSummary>b{grid-column:auto}
   .control .userDetailDrawer .dnaTabs button{font-size:9px!important;padding-left:4px!important;padding-right:4px!important}
 }
+
+
+/* Client detail workspace v2 — detail replaces the whole right workspace, not a nested side panel */
+@media(min-width:761px){
+  .control .drawerBackdrop{
+    top:52px!important;
+    right:12px!important;
+    bottom:12px!important;
+    left:270px!important;
+    border-radius:28px!important;
+    background:transparent!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+    overflow:hidden!important;
+  }
+  .control .detailDrawer{
+    position:absolute!important;
+    inset:0!important;
+    width:100%!important;
+    max-width:none!important;
+    height:100%!important;
+    padding:24px 28px 30px!important;
+    border:0!important;
+    border-radius:28px!important;
+    background:
+      radial-gradient(circle at 92% 0%,rgba(255,51,68,.05),transparent 23%),
+      radial-gradient(circle at 12% 85%,rgba(78,92,112,.08),transparent 31%),
+      linear-gradient(145deg,#252a31,#20242a)!important;
+    box-shadow:none!important;
+    gap:18px!important;
+  }
+  .control .detailDrawer .drawerHeader{
+    margin:0!important;
+    padding:0 0 16px!important;
+    border-bottom:1px solid rgba(255,255,255,.075)!important;
+  }
+  .control .leadDetailDrawer .leadEditorActions{
+    top:-24px!important;
+    margin-left:0!important;
+    margin-right:0!important;
+  }
+}
+
+@media(min-width:761px) and (max-width:1100px){
+  .control .drawerBackdrop{left:270px!important}
+  .control .detailDrawer{
+    width:100%!important;
+    max-width:none!important;
+    padding:20px 22px 26px!important;
+    border-radius:28px!important;
+  }
+}
+
+@media(max-width:760px){
+  .control .drawerBackdrop{
+    background:transparent!important;
+    backdrop-filter:none!important;
+    -webkit-backdrop-filter:none!important;
+  }
+}
