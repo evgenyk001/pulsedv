@@ -1940,3 +1940,269 @@ main{
     padding-top:18px!important;
   }
 }
+
+
+/* ==========================================================================
+   Client intelligence dark-surface audit — remove legacy white islands
+   ========================================================================== */
+.control .detailDrawer{
+  color-scheme:dark;
+  --detail-surface:rgba(255,255,255,.055);
+  --detail-surface-raised:rgba(255,255,255,.078);
+  --detail-surface-strong:rgba(255,255,255,.105);
+  --detail-line:rgba(255,255,255,.085);
+  --detail-line-strong:rgba(255,255,255,.125);
+  --detail-text:#eef0f2;
+  --detail-muted:#9aa0a8;
+  --detail-dim:#767d86;
+}
+
+/* Header + generic nested actions */
+.control .detailDrawer .drawerHeader button,
+.control .detailDrawer .dnaRefresh,
+.control .detailDrawer .secondaryAction{
+  background:var(--detail-surface)!important;
+  border-color:var(--detail-line)!important;
+  color:#cfd3d7!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+.control .detailDrawer .drawerHeader button:hover,
+.control .detailDrawer .dnaRefresh:hover,
+.control .detailDrawer .secondaryAction:hover{
+  background:var(--detail-surface-raised)!important;
+  border-color:var(--detail-line-strong)!important;
+}
+
+/* Interest DNA shell */
+.control .userDetailDrawer .dnaPanel{
+  background:
+    radial-gradient(circle at 100% 0%,rgba(255,67,82,.055),transparent 24%),
+    rgba(255,255,255,.045)!important;
+  border-color:var(--detail-line)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+.control .userDetailDrawer .dnaMark{
+  background:rgba(255,67,82,.10)!important;
+  border-color:rgba(255,82,96,.14)!important;
+  color:#ff7883!important;
+}
+.control .userDetailDrawer .dnaHeading h3,
+.control .userDetailDrawer .dnaSignal summary b,
+.control .userDetailDrawer .dnaFacts b,
+.control .userDetailDrawer .dnaChanges b,
+.control .userDetailDrawer .dnaRecommendations b{
+  color:var(--detail-text)!important;
+}
+.control .userDetailDrawer .dnaMeta,
+.control .userDetailDrawer .dnaScope,
+.control .userDetailDrawer .dnaExplanation,
+.control .userDetailDrawer .dnaTimestamp,
+.control .userDetailDrawer .dnaSignal summary small,
+.control .userDetailDrawer .dnaEvidence small,
+.control .userDetailDrawer .dnaFacts span,
+.control .userDetailDrawer .dnaFacts small,
+.control .userDetailDrawer .dnaChanges p,
+.control .userDetailDrawer .dnaChanges small,
+.control .userDetailDrawer .dnaRecommendations p,
+.control .userDetailDrawer .dnaRecommendations small{
+  color:var(--detail-muted)!important;
+}
+
+/* Conversation brief */
+.control .userDetailDrawer .dnaBrief{
+  background:var(--detail-surface-raised)!important;
+  border-color:var(--detail-line)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025)!important;
+}
+.control .userDetailDrawer .dnaBrief>div{color:#d9dde1!important}
+.control .userDetailDrawer .dnaBrief p{color:#d5d8dc!important}
+.control .userDetailDrawer .dnaBrief small{color:var(--detail-dim)!important}
+.control .userDetailDrawer .dnaBrief button{
+  background:rgba(0,0,0,.18)!important;
+  border-color:var(--detail-line)!important;
+  color:#b9bec4!important;
+}
+
+/* Tabs */
+.control .userDetailDrawer .dnaTabs{
+  background:rgba(0,0,0,.16)!important;
+  border:1px solid rgba(255,255,255,.055)!important;
+}
+.control .userDetailDrawer .dnaTabs button{
+  background:transparent!important;
+  color:#858c95!important;
+  box-shadow:none!important;
+}
+.control .userDetailDrawer .dnaTabs button:hover{
+  background:rgba(255,255,255,.04)!important;
+  color:#c8ccd1!important;
+}
+.control .userDetailDrawer .dnaTabs button[aria-selected=true]{
+  background:var(--detail-surface-strong)!important;
+  border:1px solid rgba(255,255,255,.07)!important;
+  color:#f0f2f4!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03)!important;
+}
+.control .userDetailDrawer .dnaTabs em{
+  background:rgba(255,67,82,.11)!important;
+  color:#ff7d88!important;
+}
+
+/* Interest signals and evidence */
+.control .userDetailDrawer .dnaSignal{
+  border-bottom-color:rgba(255,255,255,.07)!important;
+}
+.control .userDetailDrawer .dnaSignal summary span{color:#9ba2ab!important}
+.control .userDetailDrawer .dnaMeter{background:rgba(255,255,255,.075)!important}
+.control .userDetailDrawer .dnaMeter i{
+  background:linear-gradient(90deg,#ff4050,#ff7b87)!important;
+}
+.control .userDetailDrawer .dnaEvidence{
+  background:rgba(0,0,0,.13)!important;
+  border:1px solid rgba(255,255,255,.055)!important;
+}
+.control .userDetailDrawer .dnaEvidence>b{color:#adb4bd!important}
+.control .userDetailDrawer .dnaEvidence>div{
+  color:#d1d5da!important;
+  border-bottom-color:rgba(255,255,255,.06)!important;
+}
+
+/* Next step, questions, declared facts and changes */
+.control .userDetailDrawer .dnaNext{
+  background:linear-gradient(90deg,rgba(255,67,82,.105),rgba(255,67,82,.04))!important;
+  border-left-color:#ff5664!important;
+}
+.control .userDetailDrawer .dnaNext p{color:#d8dadd!important}
+.control .userDetailDrawer .dnaQuestions{
+  background:rgba(255,255,255,.035)!important;
+  border-color:var(--detail-line)!important;
+}
+.control .userDetailDrawer .dnaQuestions summary,
+.control .userDetailDrawer .dnaQuestions li{color:#aeb4bc!important}
+.control .userDetailDrawer .dnaFacts>div,
+.control .userDetailDrawer .dnaChanges article{
+  border-bottom-color:rgba(255,255,255,.065)!important;
+}
+.control .userDetailDrawer .dnaChanges article>span{
+  background:var(--detail-surface)!important;
+  color:#aab1b9!important;
+}
+
+/* Recommendation cards — main source of visible white islands */
+.control .userDetailDrawer .dnaRecommendations h4{color:#9ba2ab!important}
+.control .userDetailDrawer .dnaRecommendations a{
+  background:var(--detail-surface)!important;
+  border-color:var(--detail-line)!important;
+  color:var(--detail-text)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.02)!important;
+  transition:background .16s ease,border-color .16s ease,transform .16s ease;
+}
+.control .userDetailDrawer .dnaRecommendations a:hover{
+  background:var(--detail-surface-raised)!important;
+  border-color:var(--detail-line-strong)!important;
+  transform:translateY(-1px);
+}
+.control .userDetailDrawer .dnaRecommendations svg{color:#9fa6af!important}
+
+/* Notices must be dark-tinted, never cream/white */
+.control .userDetailDrawer .dnaNotice{
+  background:rgba(203,153,52,.09)!important;
+  border:1px solid rgba(203,153,52,.12)!important;
+  color:#c9b176!important;
+}
+
+/* Activity history */
+.control .userDetailDrawer .activityFeed,
+.control .userDetailDrawer .activityRows,
+.control .userDetailDrawer .activityRows>li{
+  background:transparent!important;
+}
+.control .userDetailDrawer .activityFilters{
+  padding:12px!important;
+  border:1px solid var(--detail-line)!important;
+  border-radius:15px!important;
+  background:rgba(0,0,0,.10)!important;
+}
+.control .userDetailDrawer .activityFilters .controlSearch{
+  background:rgba(0,0,0,.16)!important;
+  border-color:var(--detail-line)!important;
+  color:#959ca5!important;
+  box-shadow:none!important;
+}
+.control .userDetailDrawer .activityFilters .controlSearch input{
+  color:#e8eaec!important;
+}
+.control .userDetailDrawer .activityFilters .controlSearch input::placeholder{
+  color:#6f767f!important;
+}
+.control .userDetailDrawer .filterChips button{
+  background:var(--detail-surface)!important;
+  border-color:var(--detail-line)!important;
+  color:#969da6!important;
+  box-shadow:none!important;
+}
+.control .userDetailDrawer .filterChips button:hover{
+  background:var(--detail-surface-raised)!important;
+  color:#d8dce0!important;
+}
+.control .userDetailDrawer .filterChips button[aria-pressed=true]{
+  background:var(--detail-surface-strong)!important;
+  border-color:rgba(255,255,255,.11)!important;
+  color:#f1f3f4!important;
+}
+.control .userDetailDrawer .activityDay{color:#747b84!important}
+.control .userDetailDrawer .activityItem{
+  margin:7px 0!important;
+  padding:12px!important;
+  border:1px solid rgba(255,255,255,.06)!important;
+  border-radius:13px!important;
+  background:rgba(255,255,255,.035)!important;
+}
+.control .userDetailDrawer .activityRows li:last-child .activityItem{
+  border:1px solid rgba(255,255,255,.06)!important;
+}
+.control .userDetailDrawer .activityItem b{color:#e7e9eb!important}
+.control .userDetailDrawer .activityItem p{color:#9ca3ac!important}
+.control .userDetailDrawer .activityItem a{color:#7f98bd!important}
+.control .userDetailDrawer .activityItem time{color:#727983!important}
+.control .userDetailDrawer .activityIcon{
+  background:var(--detail-surface)!important;
+  color:#9da4ac!important;
+  border:1px solid rgba(255,255,255,.05)!important;
+}
+.control .userDetailDrawer .activityIcon.interest{
+  background:rgba(255,67,82,.09)!important;
+  color:#ff7883!important;
+}
+.control .userDetailDrawer .activityIcon.finance{
+  background:rgba(104,137,212,.10)!important;
+  color:#91a9df!important;
+}
+.control .userDetailDrawer .activityIcon.contact{
+  background:rgba(73,154,126,.10)!important;
+  color:#7bc6a8!important;
+}
+
+/* Profile + linked lead remain dark and intentional */
+.control .userDetailDrawer .profileSummary,
+.control .userDetailDrawer .relatedLead{
+  background:var(--detail-surface)!important;
+  border-color:var(--detail-line)!important;
+  color:var(--detail-text)!important;
+}
+.control .userDetailDrawer .profileSummary p,
+.control .userDetailDrawer .relatedLead small{color:var(--detail-muted)!important}
+.control .userDetailDrawer .relatedLead:hover{
+  background:var(--detail-surface-raised)!important;
+  border-color:var(--detail-line-strong)!important;
+}
+
+/* Safety net: legacy white form/search surfaces inside any client detail screen */
+.control .detailDrawer .controlSearch,
+.control .detailDrawer .inlineEditor,
+.control .detailDrawer .timeline>div{
+  background:transparent!important;
+}
+.control .detailDrawer .timeline>div{
+  border-bottom-color:rgba(255,255,255,.065)!important;
+}
