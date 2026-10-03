@@ -50,3 +50,5 @@ export function LeadsPage(){
   </section></div>}
  </PageFrame>;
 }
+
+// CI probe: validate full-workspace client details.
