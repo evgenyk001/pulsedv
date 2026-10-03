@@ -1,8 +1,85 @@
-import { ArrowUpRight, ArrowRight, Clock3, Flame, UserRound, Activity, CheckCheck } from 'lucide-react';
+import React from 'react';
+import { ArrowUpRight, ArrowRight, Clock3, Flame, UserRound, Activity, CheckCheck, CalendarRange, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageFrame } from '../components/PageFrame';
 import { ActivityFeed } from '../components/ActivityFeed';
-import { usePulseCounts, usePulseEvents, usePulseLeads, usePulseProfiles, usePulseState, usePulseTasks } from '../data';
+import { useControlTrend, usePulseCounts, usePulseEvents, usePulseLeads, usePulseProfiles, usePulseState, usePulseTasks, type ControlTrendDay } from '../data';
+
+type TrendMetric='leads'|'events'|'visitors';
+type TrendRange='7d'|'30d'|'90d'|'6m'|'12m'|'custom';
+type TrendBucket={key:string;axis:string;label:string;start:string;end:string;leads:number;events:number;visitors:number};
+
+const DAY_MS=86400_000;
+const VLADIVOSTOK='Asia/Vladivostok';
+const BUSINESS_DATE=new Intl.DateTimeFormat('en-CA',{timeZone:VLADIVOSTOK,year:'numeric',month:'2-digit',day:'2-digit'});
+const RANGE_DAYS:Record<Exclude<TrendRange,'custom'>,number>={ '7d':7,'30d':30,'90d':90,'6m':180,'12m':365 };
+const RANGE_OPTIONS:{id:TrendRange;label:string}[]=[
+ {id:'7d',label:'7д'},{id:'30d',label:'30д'},{id:'90d',label:'90д'},{id:'6m',label:'6м'},{id:'12m',label:'12м'},{id:'custom',label:'Свой'}
+];
+const METRIC_META:Record<TrendMetric,{label:string;title:string;description:string;summary:string}>={
+ leads:{label:'Обращения',title:'Динамика новых обращений',description:'Новые заявки клиентов за выбранный период.',summary:'новых обращений'},
+ events:{label:'Активность',title:'Активность клиентов',description:'Все зафиксированные действия клиентов в Mini App.',summary:'действий клиентов'},
+ visitors:{label:'Посетители',title:'Уникальные посетители',description:'Уникальные сессии с активностью за выбранный период.',summary:'уникальных посетителей'},
+};
+const isoDate=(date:Date)=>date.toISOString().slice(0,10);
+const parseIso=(value:string)=>new Date(value+'T00:00:00Z');
+const addDays=(value:string,days:number)=>isoDate(new Date(parseIso(value).getTime()+days*DAY_MS));
+const businessDate=(value:string|Date)=>BUSINESS_DATE.format(value instanceof Date?value:new Date(value));
+const formatShort=(value:string)=>parseIso(value).toLocaleDateString('ru-RU',{day:'numeric',month:'short',timeZone:'UTC'}).replace('.','');
+const formatMonth=(value:string)=>parseIso(value+'-01').toLocaleDateString('ru-RU',{month:'short',year:'2-digit',timeZone:'UTC'}).replace('.','');
+const formatFull=(value:string)=>parseIso(value).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'});
+const daysInclusive=(from:string,to:string)=>Math.floor((parseIso(to).getTime()-parseIso(from).getTime())/DAY_MS)+1;
+
+function localTrend(from:string,to:string,leads:{createdAt:string}[],events:{createdAt:string;sessionId:string}[]){
+ const length=Math.max(1,daysInclusive(from,to));
+ const previousTo=addDays(from,-1),previousFrom=addDays(previousTo,-(length-1));
+ const dayMap=new Map<string,{date:string;leads:number;events:number;visitors:number;visitorIds:Set<string>}>();
+ for(let index=0;index<length;index++){const date=addDays(from,index);dayMap.set(date,{date,leads:0,events:0,visitors:0,visitorIds:new Set()});}
+ leads.forEach(lead=>{const date=businessDate(lead.createdAt);const day=dayMap.get(date);if(day)day.leads++});
+ events.forEach(event=>{const date=businessDate(event.createdAt);const day=dayMap.get(date);if(day){day.events++;day.visitorIds.add(event.sessionId)}});
+ const days:ControlTrendDay[]=[...dayMap.values()].map(day=>({date:day.date,leads:day.leads,events:day.events,visitors:day.visitorIds.size}));
+ const inRange=(value:string,start:string,end:string)=>{const date=businessDate(value);return date>=start&&date<=end};
+ const currentVisitors=new Set(events.filter(event=>inRange(event.createdAt,from,to)).map(event=>event.sessionId)).size;
+ const previousVisitors=new Set(events.filter(event=>inRange(event.createdAt,previousFrom,previousTo)).map(event=>event.sessionId)).size;
+ return {
+  from,to,timezone:VLADIVOSTOK,days,
+  totals:{
+   leads:leads.filter(lead=>inRange(lead.createdAt,from,to)).length,
+   events:events.filter(event=>inRange(event.createdAt,from,to)).length,
+   visitors:currentVisitors,
+  },
+  previous:{
+   leads:leads.filter(lead=>inRange(lead.createdAt,previousFrom,previousTo)).length,
+   events:events.filter(event=>inRange(event.createdAt,previousFrom,previousTo)).length,
+   visitors:previousVisitors,
+  },
+ };
+}
+
+function aggregateTrend(days:ControlTrendDay[]):TrendBucket[]{
+ if(days.length<=31)return days.map(day=>({key:day.date,axis:formatShort(day.date),label:formatFull(day.date),start:day.date,end:day.date,leads:day.leads,events:day.events,visitors:day.visitors}));
+ if(days.length<=120){
+  const result:TrendBucket[]=[];
+  for(let index=0;index<days.length;index+=7){
+   const chunk=days.slice(index,index+7),start=chunk[0].date,end=chunk[chunk.length-1].date;
+   result.push({
+    key:start,axis:formatShort(start),label:start===end?formatFull(start):formatShort(start)+' — '+formatShort(end),start,end,
+    leads:chunk.reduce((sum,item)=>sum+item.leads,0),
+    events:chunk.reduce((sum,item)=>sum+item.events,0),
+    visitors:chunk.reduce((sum,item)=>sum+item.visitors,0),
+   });
+  }
+  return result;
+ }
+ const months=new Map<string,TrendBucket>();
+ days.forEach(day=>{
+  const key=day.date.slice(0,7);
+  const existing=months.get(key);
+  if(existing){existing.end=day.date;existing.leads+=day.leads;existing.events+=day.events;existing.visitors+=day.visitors;}
+  else months.set(key,{key,axis:formatMonth(key),label:parseIso(day.date).toLocaleDateString('ru-RU',{month:'long',year:'numeric',timeZone:'UTC'}),start:day.date,end:day.date,leads:day.leads,events:day.events,visitors:day.visitors});
+ });
+ return [...months.values()];
+}
 
 export function OverviewPage(){
  const state=usePulseState(),leads=usePulseLeads(),events=usePulseEvents(),profiles=usePulseProfiles(),tasks=usePulseTasks();
@@ -10,45 +87,105 @@ export function OverviewPage(){
  const open=tasks.filter(t=>t.status!=='done').sort((a,b)=>Date.parse(a.dueAt)-Date.parse(b.dueAt));
  const stages=[['new','Новые'],['contacted','Связались'],['qualified','Подбор'],['showing','Показ'],['booking','Бронь'],['deal','Сделка']] as const;
 
- const dayMs=86400_000;
- const today=new Date();today.setHours(0,0,0,0);
- const activityDays=Array.from({length:7},(_,index)=>{
-   const date=new Date(today.getTime()-(6-index)*dayMs);
-   const next=new Date(date.getTime()+dayMs);
-   const value=leads.filter(lead=>{const created=Date.parse(lead.createdAt);return created>=date.getTime()&&created<next.getTime()}).length;
-   return {date,value,day:date.toLocaleDateString('ru-RU',{weekday:'short'}).replace('.',''),dateLabel:date.toLocaleDateString('ru-RU',{day:'2-digit',month:'short'}).replace('.','')};
+ const [trendRange,setTrendRange]=React.useState<TrendRange>('7d');
+ const [trendMetric,setTrendMetric]=React.useState<TrendMetric>('leads');
+ const today=businessDate(new Date());
+ const [customFrom,setCustomFrom]=React.useState(()=>addDays(today,-29));
+ const [customTo,setCustomTo]=React.useState(today);
+ const presetDays=trendRange==='custom'?null:RANGE_DAYS[trendRange];
+ const rangeFrom=trendRange==='custom'?customFrom:addDays(today,-((presetDays??7)-1));
+ const rangeTo=trendRange==='custom'?customTo:today;
+ const safeFrom=rangeFrom<=rangeTo?rangeFrom:rangeTo;
+ const safeTo=rangeTo>=rangeFrom?rangeTo:rangeFrom;
+ const trendQuery=useControlTrend(safeFrom,safeTo);
+ const fallbackTrend=React.useMemo(()=>localTrend(safeFrom,safeTo,leads,events),[safeFrom,safeTo,leads,events]);
+ const trend=trendQuery.data??fallbackTrend;
+ const buckets=React.useMemo(()=>aggregateTrend(trend.days),[trend.days]);
+ const metric=METRIC_META[trendMetric];
+ const values=buckets.map(bucket=>bucket[trendMetric]);
+ const maxValue=Math.max(1,...values);
+ const chartMax=maxValue<=4?4:Math.ceil(maxValue/4)*4;
+ const chartLeft=44,chartRight=566,chartTop=30,chartBottom=154;
+ const chartPoints=buckets.map((bucket,index)=>{
+  const x=buckets.length===1?305:chartLeft+index*((chartRight-chartLeft)/(buckets.length-1));
+  const value=bucket[trendMetric];
+  const y=chartBottom-(value/chartMax)*(chartBottom-chartTop);
+  return {...bucket,value,x,y};
  });
- const maxDay=Math.max(1,...activityDays.map(day=>day.value));
- const chartPoints=activityDays.map((day,index)=>{
-   const x=38+index*87;
-   const y=158-(day.value/maxDay)*104;
-   return {x,y,...day};
- });
- const chartLine=chartPoints.map((point,index)=>`${index?'L':'M'} ${point.x} ${point.y}`).join(' ');
- const chartArea=`M ${chartPoints[0].x} 164 L ${chartPoints.map(point=>`${point.x} ${point.y}`).join(' L ')} L ${chartPoints[chartPoints.length-1].x} 164 Z`;
- const weekLeads=activityDays.reduce((sum,day)=>sum+day.value,0);
+ const chartLine=chartPoints.length?chartPoints.map((point,index)=>`${index?'L':'M'} ${point.x} ${point.y}`).join(' '):'';
+ const chartArea=chartPoints.length?`M ${chartPoints[0].x} ${chartBottom+5} L ${chartPoints.map(point=>`${point.x} ${point.y}`).join(' L ')} L ${chartPoints[chartPoints.length-1].x} ${chartBottom+5} Z`:'';
+ const labelStep=Math.max(1,Math.ceil(chartPoints.length/7));
+ const axisPoints=chartPoints.filter((_,index)=>index%labelStep===0||index===chartPoints.length-1);
+ const [hoveredPoint,setHoveredPoint]=React.useState<number|null>(null);
+ React.useEffect(()=>setHoveredPoint(null),[trendMetric,trendRange,safeFrom,safeTo]);
+ const activeIndex=hoveredPoint??Math.max(0,chartPoints.length-1);
+ const activePoint=chartPoints[activeIndex];
+ const currentTotal=trend.totals[trendMetric],previousTotal=trend.previous[trendMetric];
+ const changePct=previousTotal>0?Math.round(((currentTotal-previousTotal)/previousTotal)*100):null;
+ const bucketTotal=values.reduce((sum,value)=>sum+value,0);
+ const average=buckets.length?Math.round((bucketTotal/buckets.length)*10)/10:0;
+ const peak=chartPoints.reduce<(typeof chartPoints)[number]|null>((best,point)=>!best||point.value>best.value?point:best,null);
+ const granularity=trend.days.length<=31?'день':trend.days.length<=120?'неделю':'месяц';
+ const periodText=safeFrom===safeTo?formatFull(safeFrom):formatShort(safeFrom)+' — '+formatShort(safeTo);
  const dealRate=counts.leadsTotal?Math.round((counts.leadStages.deal/counts.leadsTotal)*100):0;
 
  return <PageFrame eyebrow="PULSE CONTROL" title="Командный центр" description="Продажи, клиенты и работа команды — единая картина в реальном времени." action={<Link className="primaryAction" to="/leads">Открыть клиентов <ArrowUpRight size={16}/></Link>}>
   <section className="commandHero">
    <article className="pulseChartCard">
     <div className="pulseChartTop">
-     <div><span className="kicker">ПУЛЬС ПРОДАЖ</span><h2>Динамика новых обращений</h2><p>Количество новых заявок по дням за последние семь дней.</p></div>
-     <span className="periodBadge">7 дней</span>
+     <div><span className="kicker">ПУЛЬС ПРОДАЖ</span><h2>{metric.title}</h2><p>{metric.description}</p></div>
+     <span className="pulsePeriodCaption"><CalendarRange size={14}/>{periodText}</span>
     </div>
-    <div className="pulseChartSummary"><strong>{weekLeads}</strong><span>новых обращений за период</span><small>{counts.activeLeads} клиентов сейчас в работе</small></div>
-    <div className="pulseChart">
-     <svg viewBox="0 0 600 185" role="img" aria-label="График новых обращений за семь дней">
+
+    <div className="pulseChartControls">
+     <div className="pulseMetricTabs" role="tablist" aria-label="Показатель графика">
+      {(Object.keys(METRIC_META) as TrendMetric[]).map(key=><button key={key} role="tab" aria-selected={trendMetric===key} onClick={()=>setTrendMetric(key)}>{METRIC_META[key].label}</button>)}
+     </div>
+     <div className="pulseRangeTabs" aria-label="Период графика">
+      {RANGE_OPTIONS.map(option=><button key={option.id} aria-pressed={trendRange===option.id} onClick={()=>setTrendRange(option.id)}>{option.label}</button>)}
+     </div>
+    </div>
+    {trendRange==='custom'&&<div className="pulseCustomRange">
+     <label><span>От</span><input type="date" value={customFrom} max={customTo} onChange={e=>setCustomFrom(e.target.value||customFrom)}/></label>
+     <span>—</span>
+     <label><span>До</span><input type="date" value={customTo} min={customFrom} max={today} onChange={e=>setCustomTo(e.target.value||customTo)}/></label>
+     <small>До 366 дней</small>
+    </div>}
+
+    <div className="pulseChartSummary">
+     <strong>{currentTotal}</strong><span>{metric.summary} за период</span>
+     <small className={changePct===null?'':changePct>0?'trendUp':changePct<0?'trendDown':'trendFlat'}><TrendingUp size={13}/>{changePct===null?(currentTotal>0?'Новый период':'Нет данных для сравнения'):`${changePct>0?'+':''}${changePct}% к прошлому периоду`}</small>
+    </div>
+
+    <div className="pulseChartInsights">
+     <span><small>Среднее / {granularity}</small><b>{average.toLocaleString('ru-RU')}</b></span>
+     <span><small>Пиковый интервал</small><b>{peak?peak.value:0}<em>{peak?' · '+peak.axis:''}</em></b></span>
+     <span><small>Сейчас в работе</small><b>{counts.activeLeads}</b></span>
+    </div>
+
+    <div className="pulseChart" aria-busy={trendQuery.loading}>
+     {trendQuery.loading&&<span className="pulseChartStatus">Обновляем данные…</span>}
+     {trendQuery.error&&<span className="pulseChartStatus error">Сервер недоступен — показаны уже загруженные данные</span>}
+     {activePoint&&<div className="pulseChartTooltip" style={{left:(activePoint.x/600*100)+'%',top:Math.max(3,(activePoint.y/185*100)-4)+'%'}}><b>{activePoint.value}</b><span>{activePoint.label}</span></div>}
+     <svg viewBox="0 0 600 185" role="img" aria-label={metric.title+' · '+periodText}>
       <defs>
        <linearGradient id="pulseLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#ff5260"/><stop offset="55%" stopColor="#f20d1d"/><stop offset="100%" stopColor="#ff9c72"/></linearGradient>
        <linearGradient id="pulseArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f20d1d" stopOpacity=".28"/><stop offset="100%" stopColor="#f20d1d" stopOpacity="0"/></linearGradient>
       </defs>
-      {[55,91,127,163].map(y=><line key={y} x1="28" x2="570" y1={y} y2={y} className="chartGridLine"/>)}
-      <path d={chartArea} fill="url(#pulseArea)"/>
-      <path d={chartLine} fill="none" stroke="url(#pulseLine)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>
-      {chartPoints.map(point=><g key={point.date.toISOString()}><circle cx={point.x} cy={point.y} r="7" className="chartPointHalo"/><circle cx={point.x} cy={point.y} r="3.5" className="chartPoint"/><text x={point.x} y={Math.max(18,point.y-13)} textAnchor="middle" className="chartValue">{point.value}</text></g>)}
+      {[0,1,2,3,4].map(step=>{const value=Math.round(chartMax*(4-step)/4);const y=chartTop+step*((chartBottom-chartTop)/4);return <g key={step}><line x1={chartLeft} x2={chartRight} y1={y} y2={y} className="chartGridLine"/><text x="8" y={y+3} className="chartAxisValue">{value}</text></g>})}
+      {chartArea&&<path d={chartArea} fill="url(#pulseArea)"/>}
+      {chartLine&&<path d={chartLine} fill="none" stroke="url(#pulseLine)" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"/>}
+      {chartPoints.map((point,index)=>{
+       const hitWidth=Math.max(18,(chartRight-chartLeft)/Math.max(1,chartPoints.length));
+       return <g key={point.key} onMouseEnter={()=>setHoveredPoint(index)} onMouseLeave={()=>setHoveredPoint(null)} onClick={()=>setHoveredPoint(index)} tabIndex={0} role="button" aria-label={point.label+': '+point.value} onFocus={()=>setHoveredPoint(index)} onBlur={()=>setHoveredPoint(null)}>
+        <rect x={point.x-hitWidth/2} y="18" width={hitWidth} height="146" fill="transparent"/>
+        <circle cx={point.x} cy={point.y} r={activeIndex===index?8:6} className="chartPointHalo"/>
+        <circle cx={point.x} cy={point.y} r={activeIndex===index?4.2:3.2} className="chartPoint"/>
+        {chartPoints.length<=8&&<text x={point.x} y={Math.max(18,point.y-13)} textAnchor="middle" className="chartValue">{point.value}</text>}
+       </g>;
+      })}
      </svg>
-     <div className="pulseChartLabels">{chartPoints.map(point=><span key={point.date.toISOString()}><b>{point.day}</b><small>{point.dateLabel}</small></span>)}</div>
+     <div className="pulseChartLabels">{axisPoints.map(point=><span key={point.key} style={{left:(point.x/600*100)+'%'}}><b>{point.axis}</b></span>)}</div>
     </div>
    </article>
    <div className="focusStack">
