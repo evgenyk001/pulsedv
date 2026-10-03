@@ -433,9 +433,14 @@ test('Control mortgage settings are the same rules used by Mini App',async({page
 test('Control overview chart explains values and top actions stay visible',async({page})=>{
  await page.setViewportSize({width:1440,height:1000});
  await page.goto('/pulsedv/control-center/#/');
- await expect(page.getByText('Количество новых заявок по дням за последние семь дней.')).toBeVisible();
- await expect(page.locator('.chartValue')).toHaveCount(7);
- await expect(page.locator('.pulseChartLabels>span')).toHaveCount(7);
+ const chart=page.locator('.pulseChartCard');
+ await expect(chart.getByRole('heading',{name:'Динамика новых обращений'})).toBeVisible();
+ await expect(chart.getByText('Новые заявки клиентов за выбранный период.')).toBeVisible();
+ await expect(chart.getByRole('tab',{name:'Обращения'})).toHaveAttribute('aria-selected','true');
+ await expect(chart.getByRole('button',{name:'7д',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect(chart.locator('.chartValue')).toHaveCount(7);
+ await expect(chart.locator('.pulseChartLabels>span')).toHaveCount(7);
+ await expect(chart.locator('.pulseChartInsights')).toBeVisible();
  await expect(page.getByRole('link',{name:/Мини-приложение/})).toBeVisible();
  await expect(page.getByLabel(/Просроченные задачи:/)).toBeVisible();
 });
