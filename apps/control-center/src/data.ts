@@ -4,7 +4,7 @@ import {
   subscribePulseEvents, subscribePulseLeads, subscribePulseProfiles, subscribePulseState, subscribePulseTasks,
   type PulseEvent, type PulseLead, type PulseState, type PulseTask, type PulseVisitorProfile
 } from "../../../packages/pulse-data";
-import { loadMoreControlResource, refreshControlResource, runtime, subscribeRuntime, type ControlCounts, type ControlResource } from "../../../packages/pulse-data/runtime";
+import { api, loadMoreControlResource, refreshControlResource, runtime, subscribeRuntime, type ControlCounts, type ControlResource } from "../../../packages/pulse-data/runtime";
 
 const refs:Record<ControlResource,number>={leads:0,tasks:0,events:0,profiles:0};
 const timers:Partial<Record<ControlResource,number>>={};
@@ -28,6 +28,34 @@ export function useControlPaging(kind:ControlResource){
  React.useEffect(()=>subscribeRuntime(render),[]);
  const meta=runtime.pages[kind];
  return {...meta,loadMore:()=>loadMoreControlResource(kind)};
+}
+
+
+export type ControlTrendDay={date:string;leads:number;events:number;visitors:number};
+export type ControlTrend={
+  from:string;
+  to:string;
+  timezone:string;
+  days:ControlTrendDay[];
+  totals:{leads:number;events:number;visitors:number};
+  previous:{leads:number;events:number;visitors:number};
+};
+
+export function useControlTrend(from:string,to:string){
+  const [data,setData]=React.useState<ControlTrend|null>(null);
+  const [loading,setLoading]=React.useState(false);
+  const [error,setError]=React.useState<string|null>(null);
+  React.useEffect(()=>{
+    if(!runtime.enabled){setData(null);setLoading(false);setError(null);return;}
+    const controller=new AbortController();
+    setLoading(true);setError(null);
+    void api<ControlTrend>('/control/analytics-series?from='+encodeURIComponent(from)+'&to='+encodeURIComponent(to),{signal:controller.signal})
+      .then(value=>{if(!controller.signal.aborted)setData(value)})
+      .catch(reason=>{if(!controller.signal.aborted)setError(reason instanceof Error?reason.message:'Не удалось загрузить динамику')})
+      .finally(()=>{if(!controller.signal.aborted)setLoading(false)});
+    return()=>controller.abort();
+  },[from,to]);
+  return {data,loading,error};
 }
 
 export function usePulseState(){
