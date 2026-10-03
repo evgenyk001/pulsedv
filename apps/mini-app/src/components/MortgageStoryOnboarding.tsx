@@ -196,3 +196,5 @@ export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
     </div>
   </section>;
 }
+
+// CI probe: validate mortgage story onboarding.
