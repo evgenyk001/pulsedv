@@ -256,6 +256,53 @@ export async function createApp(db:Database,config:RuntimeConfig){
   return {items,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
  });
 
+ app.get('/api/v1/control/analytics-series',{preHandler:control},async request=>{
+  const q=z.object({
+   from:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+   to:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  }).strict().parse(request.query);
+  const fromDate=new Date(q.from+'T00:00:00Z'),toDate=new Date(q.to+'T00:00:00Z');
+  if(!Number.isFinite(fromDate.getTime())||!Number.isFinite(toDate.getTime())||fromDate>toDate)throw new HttpError(400,'Некорректный период');
+  const dayCount=Math.floor((toDate.getTime()-fromDate.getTime())/86400_000)+1;
+  if(dayCount>366)throw new HttpError(400,'Период не должен превышать 366 дней');
+
+  const previousTo=new Date(fromDate.getTime()-86400_000);
+  const previousFrom=new Date(previousTo.getTime()-(dayCount-1)*86400_000);
+  const iso=(value:Date)=>value.toISOString().slice(0,10);
+  const m=request.member!,scoped=m.role==='manager';
+  const leadValues=scoped?[m.id,q.from,q.to]:[q.from,q.to];
+  const eventValues=scoped?[m.id,q.from,q.to]:[q.from,q.to];
+  const leadWhere=scoped?'manager_id=$1 and ':'';
+  const eventScope=scoped?'session_id in(select session_id from leads where manager_id=$1) and ':'';
+  const fromIndex=scoped?2:1,toIndex=scoped?3:2;
+
+  const previousLeadValues=scoped?[m.id,iso(previousFrom),iso(previousTo)]:[iso(previousFrom),iso(previousTo)];
+  const previousEventValues=scoped?[m.id,iso(previousFrom),iso(previousTo)]:[iso(previousFrom),iso(previousTo)];
+
+  const [leadRows,eventRows,previousLead,previousEvent]=await Promise.all([
+   db.query(`select (created_at at time zone 'Asia/Vladivostok')::date::text as day,count(*)::int as value
+    from leads where ${leadWhere}(created_at at time zone 'Asia/Vladivostok')::date between ${fromIndex}::date and ${toIndex}::date
+    group by day order by day`,leadValues),
+   db.query(`select (occurred_at at time zone 'Asia/Vladivostok')::date::text as day,count(*)::int as events,count(distinct session_id)::int as visitors
+    from user_events where ${eventScope}(occurred_at at time zone 'Asia/Vladivostok')::date between ${fromIndex}::date and ${toIndex}::date
+    group by day order by day`,eventValues),
+   db.query(`select count(*)::int as value from leads where ${leadWhere}(created_at at time zone 'Asia/Vladivostok')::date between ${fromIndex}::date and ${toIndex}::date`,previousLeadValues),
+   db.query(`select count(*)::int as events,count(distinct session_id)::int as visitors from user_events where ${eventScope}(occurred_at at time zone 'Asia/Vladivostok')::date between ${fromIndex}::date and ${toIndex}::date`,previousEventValues),
+  ]);
+
+  const days=new Map<string,{date:string;leads:number;events:number;visitors:number}>();
+  for(let i=0;i<dayCount;i++){const date=new Date(fromDate.getTime()+i*86400_000).toISOString().slice(0,10);days.set(date,{date,leads:0,events:0,visitors:0});}
+  leadRows.rows.forEach(row=>{const item=days.get(String(row.day));if(item)item.leads=Number(row.value||0)});
+  eventRows.rows.forEach(row=>{const item=days.get(String(row.day));if(item){item.events=Number(row.events||0);item.visitors=Number(row.visitors||0)}});
+
+  const series=[...days.values()];
+  const totals=series.reduce((sum,item)=>({leads:sum.leads+item.leads,events:sum.events+item.events,visitors:sum.visitors+item.visitors}),{leads:0,events:0,visitors:0});
+  return {
+   from:q.from,to:q.to,timezone:'Asia/Vladivostok',days:series,totals,
+   previous:{leads:Number(previousLead.rows[0]?.value||0),events:Number(previousEvent.rows[0]?.events||0),visitors:Number(previousEvent.rows[0]?.visitors||0)},
+  };
+ });
+
  app.get('/api/v1/control/analytics-summary',{preHandler:control},async request=>{
   const m=request.member!,scoped=m.role==='manager',values=scoped?[m.id]:[];
   const eventWhere=scoped?'where session_id in(select session_id from leads where manager_id=$1)':'';
