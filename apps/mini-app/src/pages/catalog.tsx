@@ -184,6 +184,11 @@ export default function CatalogPage(){
     setParams(next,{replace:true});
   };
 
+  const selectCity=(value:string)=>{
+    setCity(value);
+    if(value!=="Все"&&value!=="Владивосток")setSea(false);
+  };
+
   const setPriceFromSlider=(values:number[])=>{
     const next:[number,number]=[values[0]??minBound,values[1]??maxBound];
     setPriceRange(next);
@@ -333,7 +338,7 @@ export default function CatalogPage(){
 
             <section className={styles.filterGroup}>
               <label className={styles.filterTitle}><span>Город</span></label>
-              <div className={styles.sheetChips}>{cityOptions.map(v=><button type="button" onClick={()=>setCity(v)} key={v} className={city===v?styles.sheetActive:""}>{city===v&&<Check size={13}/>} {v}</button>)}</div>
+              <div className={styles.sheetChips}>{cityOptions.map(v=><button type="button" onClick={()=>selectCity(v)} key={v} className={city===v?styles.sheetActive:""}>{city===v&&<Check size={13}/>} {v}</button>)}</div>
             </section>
 
             <section className={styles.filterGroup}>
@@ -341,7 +346,7 @@ export default function CatalogPage(){
               <div className={styles.sheetChips}>{roomOptions.map(v=><button type="button" onClick={()=>setRooms(v)} key={v} className={rooms===v?styles.sheetActive:""}>{rooms===v&&<Check size={13}/>} {v}</button>)}</div>
             </section>
 
-            {control.select.seaEnabled&&<section className={styles.filterGroup}>
+            {control.select.seaEnabled&&(city==="Все"||city==="Владивосток")&&<section className={styles.filterGroup}>
               <label className={styles.filterTitle}><span>Особенности</span></label>
               <div className={styles.sheetChips}><button type="button" onClick={()=>setSea(value=>!value)} className={sea?styles.sheetActive:""}>{sea&&<Check size={13}/>} Вид на море</button></div>
             </section>}
