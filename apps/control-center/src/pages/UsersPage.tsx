@@ -28,3 +28,5 @@ export function UsersPage(){
   </section></div>}
  </PageFrame>;
 }
+
+// CI probe: validate detail header offset.
