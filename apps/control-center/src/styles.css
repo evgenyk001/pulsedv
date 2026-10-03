@@ -1723,3 +1723,128 @@ main{
   .control .detailDrawer>h3{margin-top:20px!important}
   .control .phoneLink{width:100%;justify-content:flex-start}
 }
+
+
+/* Client detail drawers — aligned with the framed PULSE Control workspace */
+.control .drawerBackdrop{
+  overflow:hidden!important;
+}
+.control .detailDrawer{
+  min-width:0!important;
+  max-width:100%!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(255,255,255,.14) transparent;
+}
+.control .detailDrawer>*{min-width:0}
+.control .detailDrawer img,.control .detailDrawer video,.control .detailDrawer iframe{max-width:100%}
+.control .detailDrawer p,.control .detailDrawer b,.control .detailDrawer small,.control .detailDrawer span,.control .detailDrawer a{overflow-wrap:anywhere}
+.control .detailDrawer .formGrid,
+.control .detailDrawer .editorFieldset{min-width:0}
+.control .detailDrawer .controlField,
+.control .detailDrawer .controlField input,
+.control .detailDrawer .controlField select,
+.control .detailDrawer .controlField textarea{min-width:0;max-width:100%}
+.control .leadDetailDrawer .controlJourney,
+.control .userDetailDrawer .dnaPanel{width:100%;max-width:100%;min-width:0}
+.control .userDetailDrawer .dnaTabs{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));}
+.control .userDetailDrawer .dnaTabs button{min-width:0;white-space:normal;line-height:1.2}
+.control .userDetailDrawer .dnaBrief,
+.control .userDetailDrawer .dnaEvidence,
+.control .userDetailDrawer .dnaRecommendations,
+.control .userDetailDrawer .dnaFacts,
+.control .userDetailDrawer .dnaChanges{max-width:100%;min-width:0}
+.control .userDetailDrawer .relatedLead{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0}
+.control .userDetailDrawer .relatedLead>div{min-width:0}
+.control .userDetailDrawer .profileSummary{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px 12px;align-items:center}
+.control .userDetailDrawer .profileSummary>p{margin:0;min-width:0}
+.control .userDetailDrawer .profileSummary>b{grid-column:1/-1;line-height:1.45}
+.control .leadDetailDrawer .leadRequestContext,
+.control .leadDetailDrawer .leadEditorActions,
+.control .leadDetailDrawer .signalList{width:100%;max-width:100%;min-width:0}
+.control .leadDetailDrawer .signalList>div{min-width:0}
+.control .leadDetailDrawer .signalList>div>b{min-width:0}
+.control .leadDetailDrawer .leadEditorActions{top:0}
+.control .leadDetailDrawer .editorFieldset{border:0;padding:0;margin:0}
+
+@media(min-width:761px){
+  .control .drawerBackdrop{
+    top:52px!important;
+    right:12px!important;
+    bottom:12px!important;
+    left:270px!important;
+    border-radius:28px!important;
+    background:rgba(5,6,8,.58)!important;
+    backdrop-filter:blur(10px)!important;
+    -webkit-backdrop-filter:blur(10px)!important;
+  }
+  .control .detailDrawer{
+    position:absolute!important;
+    top:0!important;
+    right:0!important;
+    bottom:0!important;
+    width:clamp(580px,64%,780px)!important;
+    height:100%!important;
+    padding:24px!important;
+    border-radius:24px 0 0 24px!important;
+    border:1px solid rgba(255,255,255,.105)!important;
+    border-right:0!important;
+    gap:18px!important;
+    box-shadow:-24px 0 60px rgba(0,0,0,.28)!important;
+  }
+  .control .detailDrawer .drawerHeader{
+    padding-bottom:14px!important;
+    border-bottom:1px solid rgba(255,255,255,.07)!important;
+  }
+}
+
+@media(min-width:761px) and (max-width:1100px){
+  .control .drawerBackdrop{left:270px!important}
+  .control .detailDrawer{
+    width:min(100%,720px)!important;
+    border-radius:20px 0 0 20px!important;
+    padding:20px!important;
+  }
+}
+
+@media(min-width:761px) and (max-width:900px){
+  .control .leadDetailDrawer .formGrid,
+  .control .leadDetailDrawer .editorFieldset{grid-template-columns:1fr!important}
+  .control .leadDetailDrawer .controlField.wide{grid-column:auto!important}
+}
+
+@media(max-width:760px){
+  .control .drawerBackdrop{
+    top:40px!important;
+    right:0!important;
+    bottom:0!important;
+    left:0!important;
+    border-radius:0!important;
+    align-items:flex-end!important;
+    background:rgba(4,5,6,.72)!important;
+  }
+  .control .detailDrawer{
+    top:0!important;
+    right:0!important;
+    bottom:0!important;
+    left:0!important;
+    width:100%!important;
+    height:100%!important;
+    max-width:none!important;
+    padding:18px 14px 24px!important;
+    border:0!important;
+    border-radius:0!important;
+    gap:16px!important;
+  }
+  .control .detailDrawer .drawerHeader{
+    padding:2px 0 13px!important;
+    border-bottom:1px solid rgba(255,255,255,.07)!important;
+  }
+  .control .leadDetailDrawer .formGrid,
+  .control .leadDetailDrawer .editorFieldset{grid-template-columns:1fr!important}
+  .control .leadDetailDrawer .controlField.wide{grid-column:auto!important}
+  .control .userDetailDrawer .profileSummary{grid-template-columns:1fr}
+  .control .userDetailDrawer .profileSummary>b{grid-column:auto}
+  .control .userDetailDrawer .dnaTabs button{font-size:9px!important;padding-left:4px!important;padding-right:4px!important}
+}
