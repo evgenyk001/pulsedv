@@ -840,5 +840,21 @@ for(const width of [1024,1366])test(`Control client details ${width}px: drawers 
  expect(userBackdrop!.x).toBeGreaterThan(240);
  expect(await userDrawer.evaluate(node=>node.scrollWidth<=node.clientWidth+1)).toBe(true);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+1)).toBe(true);
+
+ const legacyWhiteSurfaces=await userDrawer.evaluate(root=>{
+  const selectors=['.dnaPanel','.dnaBrief','.dnaTabs','.dnaEvidence','.dnaNext','.dnaRecommendations a','.activityItem','.activityFilters'];
+  const results:{selector:string;background:string}[]=[];
+  for(const selector of selectors){
+   const nodes=[...root.querySelectorAll<HTMLElement>(selector)];
+   for(const node of nodes){
+    const background=getComputedStyle(node).backgroundColor;
+    const parts=background.match(/[\d.]+/g)?.map(Number)??[];
+    const [r=0,g=0,b=0,a=1]=parts;
+    if(a>.5&&r>220&&g>220&&b>220)results.push({selector,background});
+   }
+  }
+  return results;
+ });
+ expect(legacyWhiteSurfaces).toEqual([]);
  expect(errors).toEqual([]);
 });
