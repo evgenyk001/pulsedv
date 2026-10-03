@@ -2206,3 +2206,146 @@ main{
 .control .detailDrawer .timeline>div{
   border-bottom-color:rgba(255,255,255,.065)!important;
 }
+
+
+/* ==========================================================================
+   Overview trend lab — interactive periods, metrics and comparison
+   ========================================================================== */
+.control .pulseChartCard{
+  min-height:470px;
+  padding:23px 25px 18px;
+}
+.control .pulseChartTop{align-items:flex-start}
+.control .pulseChartTop>div{min-width:0}
+.control .pulseChartTop h2{font-size:21px!important}
+.control .pulseChartTop p{max-width:520px}
+.pulsePeriodCaption{
+  min-height:32px;padding:0 10px;border:1px solid rgba(255,255,255,.085);border-radius:10px;
+  background:rgba(255,255,255,.055);color:#9ea4ab;font-size:8.5px;font-weight:660;
+  display:flex;align-items:center;gap:6px;white-space:nowrap;flex:none;
+}
+.pulsePeriodCaption svg{color:#7f868f}
+
+.pulseChartControls{
+  position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:17px;
+}
+.pulseMetricTabs,.pulseRangeTabs{
+  display:flex;align-items:center;gap:3px;padding:3px;border-radius:11px;
+  border:1px solid rgba(255,255,255,.055);background:rgba(0,0,0,.15);
+}
+.pulseMetricTabs button,.pulseRangeTabs button{
+  min-height:31px;padding:0 10px;border:1px solid transparent;border-radius:8px;background:transparent;
+  color:#7f858d;font:inherit;font-size:9px;font-weight:680;white-space:nowrap;
+  transition:background .15s ease,color .15s ease,border-color .15s ease,transform .15s ease;
+}
+.pulseMetricTabs button:hover,.pulseRangeTabs button:hover{background:rgba(255,255,255,.045);color:#c7cbd0}
+.pulseMetricTabs button:active,.pulseRangeTabs button:active{transform:scale(.97)}
+.pulseMetricTabs button[aria-selected=true]{
+  background:rgba(255,255,255,.10);border-color:rgba(255,255,255,.07);color:#f3f4f5;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.03);
+}
+.pulseRangeTabs button[aria-pressed=true]{
+  background:rgba(255,67,82,.11);border-color:rgba(255,75,90,.12);color:#ff7b86;
+}
+
+.pulseCustomRange{
+  position:relative;z-index:2;display:flex;align-items:flex-end;gap:8px;margin-top:9px;padding:9px 10px;
+  border:1px solid rgba(255,255,255,.06);border-radius:12px;background:rgba(0,0,0,.10);
+}
+.pulseCustomRange label{display:grid;gap:4px}
+.pulseCustomRange label>span,.pulseCustomRange>small{font-size:7.5px;color:#747b84}
+.pulseCustomRange input{
+  height:32px;padding:0 8px;border-radius:8px;border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.18);color:#d9dde1;font:inherit;font-size:9px;color-scheme:dark;outline:none;
+}
+.pulseCustomRange input:focus{border-color:rgba(255,86,99,.42);box-shadow:0 0 0 3px rgba(255,67,82,.06)}
+.pulseCustomRange>span{color:#626971;padding-bottom:8px}
+.pulseCustomRange>small{margin-left:auto;padding-bottom:8px}
+
+.control .pulseChartSummary{margin-top:16px!important}
+.control .pulseChartSummary strong{font-size:39px!important}
+.control .pulseChartSummary>small{
+  display:flex;align-items:center;gap:5px;min-height:27px;padding:0 8px;border-radius:8px;
+  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.055);
+  color:#9299a1!important;white-space:nowrap;
+}
+.control .pulseChartSummary>small svg{color:#858c95}
+.control .pulseChartSummary>small.trendUp{color:#85c8aa!important;background:rgba(83,174,135,.075);border-color:rgba(83,174,135,.10)}
+.control .pulseChartSummary>small.trendUp svg{color:#6fc19c}
+.control .pulseChartSummary>small.trendDown{color:#df8b92!important;background:rgba(220,76,88,.07);border-color:rgba(220,76,88,.10)}
+.control .pulseChartSummary>small.trendDown svg{color:#df6c77;transform:rotate(90deg)}
+.control .pulseChartSummary>small.trendFlat svg{color:#9399a1}
+
+.pulseChartInsights{
+  position:relative;z-index:2;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px;
+}
+.pulseChartInsights>span{
+  min-width:0;min-height:47px;padding:8px 10px;border:1px solid rgba(255,255,255,.055);border-radius:11px;
+  background:rgba(255,255,255,.032);display:grid;align-content:center;gap:3px;
+}
+.pulseChartInsights small{font-size:7.5px;color:#747b84}
+.pulseChartInsights b{font-size:11px;color:#dfe2e5;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pulseChartInsights em{font-style:normal;font-size:8px;color:#747b84;font-weight:560}
+
+.control .pulseChart{position:relative;margin-top:3px!important;padding-top:2px}
+.control .pulseChart svg{height:185px!important;overflow:visible}
+.chartAxisValue{fill:#666d76;font-size:7px;font-weight:650;font-variant-numeric:tabular-nums}
+.control .chartGridLine{stroke:rgba(255,255,255,.065)!important}
+.control .chartPoint{transition:r .13s ease}
+.control .chartPointHalo{transition:r .13s ease}
+.control .pulseChart svg g[role=button]{cursor:crosshair;outline:none}
+.control .pulseChart svg g[role=button]:focus .chartPoint{stroke:#fff;stroke-width:2}
+.pulseChartTooltip{
+  position:absolute;z-index:5;pointer-events:none;transform:translate(-50%,-110%);
+  min-width:88px;max-width:150px;padding:7px 9px;border:1px solid rgba(255,255,255,.11);border-radius:10px;
+  background:rgba(22,24,28,.94);box-shadow:0 10px 30px rgba(0,0,0,.23),inset 0 1px 0 rgba(255,255,255,.035);
+  backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  display:grid;gap:2px;text-align:center;
+}
+.pulseChartTooltip b{font-size:13px;color:#fff;font-variant-numeric:tabular-nums}
+.pulseChartTooltip span{font-size:7.5px;color:#9198a0;line-height:1.3}
+.pulseChartStatus{
+  position:absolute;z-index:4;right:0;top:4px;padding:5px 7px;border-radius:7px;
+  background:rgba(255,255,255,.055);color:#818890;font-size:7.5px;
+}
+.pulseChartStatus.error{color:#d59aa0;background:rgba(214,78,90,.07)}
+.control .pulseChartLabels{
+  position:relative!important;display:block!important;height:18px!important;padding:0!important;margin-top:-5px!important;
+}
+.control .pulseChartLabels span{
+  position:absolute;top:0;transform:translateX(-50%);display:block!important;white-space:nowrap;
+}
+.control .pulseChartLabels b{
+  display:block;font-size:7.8px!important;font-weight:650!important;color:#767d85!important;text-transform:uppercase;
+}
+
+@media(max-width:1100px){
+  .control .pulseChartCard{min-height:455px}
+  .pulseChartControls{align-items:stretch;flex-direction:column}
+  .pulseMetricTabs,.pulseRangeTabs{width:max-content;max-width:100%;overflow-x:auto;scrollbar-width:none}
+  .pulseMetricTabs::-webkit-scrollbar,.pulseRangeTabs::-webkit-scrollbar{display:none}
+}
+@media(max-width:760px){
+  .control .pulseChartCard{min-height:485px!important;padding:17px 15px 14px!important}
+  .pulseChartTop{gap:10px!important}
+  .pulsePeriodCaption{font-size:0;width:32px;padding:0;justify-content:center}
+  .pulsePeriodCaption svg{width:15px;height:15px}
+  .pulseChartControls{margin-top:13px;gap:7px}
+  .pulseMetricTabs,.pulseRangeTabs{width:100%}
+  .pulseMetricTabs button{flex:1;padding:0 7px;font-size:8.5px}
+  .pulseRangeTabs button{flex:1;padding:0 6px;font-size:8px}
+  .pulseCustomRange{flex-wrap:wrap}
+  .pulseCustomRange label{flex:1;min-width:118px}
+  .pulseCustomRange input{width:100%}
+  .pulseCustomRange>small{width:100%;margin-left:0;padding:0}
+  .control .pulseChartSummary{align-items:center!important;gap:7px!important}
+  .control .pulseChartSummary strong{font-size:34px!important}
+  .control .pulseChartSummary>span{font-size:9px!important}
+  .control .pulseChartSummary>small{width:auto!important;margin-left:0!important;font-size:7.5px!important}
+  .pulseChartInsights{gap:5px}
+  .pulseChartInsights>span{padding:7px;min-height:44px}
+  .pulseChartInsights small{font-size:7px}.pulseChartInsights b{font-size:10px}
+  .control .pulseChart svg{height:175px!important}
+  .pulseChartTooltip{min-width:74px;padding:6px 7px}
+}
