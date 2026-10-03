@@ -788,8 +788,18 @@ for(const width of [1024,1366])test(`Control client details ${width}px: drawers 
  await page.setViewportSize({width,height:820});
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
 
+ await page.goto('/pulsedv/mini-app/');
+ const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
+ await page.goto('/pulsedv/mini-app/#/property/solnechniy');
+ await page.getByRole('button',{name:'Узнать наличие',exact:true}).click();
+ await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Проверка responsive '+width);
+ await page.getByRole('textbox',{name:'Телефон',exact:true}).fill(width===1024?'+79990001024':'+79990001366');
+ await page.getByRole('checkbox',{name:/Я даю согласие/}).check();
+ await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Обращение создано'})).toBeVisible();
+
  await page.goto('/pulsedv/control-center/#/leads');
- const leadRow=page.locator('.leadRowButton').first();
+ const leadRow=page.locator('.leadRowButton').filter({hasText:'Проверка responsive '+width});
  await expect(leadRow).toBeVisible();
  await leadRow.click();
 
