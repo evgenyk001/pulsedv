@@ -213,3 +213,5 @@ export function OverviewPage(){
   <section className="panel"><div className="sectionHeading"><div><span className="kicker">ЖИВАЯ ИСТОРИЯ</span><h2>Последние действия клиентов</h2></div><Link to="/analytics">Весь журнал <Activity size={15}/></Link></div><ActivityFeed events={events} state={state} compact/></section>
  </PageFrame>;
 }
+
+// CI probe: validate advanced overview analytics.
