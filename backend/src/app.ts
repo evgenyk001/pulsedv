@@ -281,13 +281,15 @@ export async function createApp(db:Database,config:RuntimeConfig){
 
   const [leadRows,eventRows,currentEvent,previousLead,previousEvent]=await Promise.all([
    db.query(`select (created_at at time zone 'Asia/Vladivostok')::date::text as day,count(*)::int as value
-    from leads where ${leadWhere}(created_at at time zone 'Asia/Vladivostok')::date between ${fromIndex}::date and ${toIndex}::date
+    from leads where ${leadWhere}(created_at at time zone 'Asia/Vladivostok')::date between $${fromIndex}::date and $${toIndex}::date
     group by day order by day`,leadValues),
    db.query(`select (occurred_at at time zone 'Asia/Vladivostok')::date::text as day,count(*)::int as events,count(distinct session_id)::int as visitors
-    from user_events where ${eventScope}(occurred_at at time zone 'Asia/Vladivostok')::date between ${fromIndex}::date and ${toIndex}::date
+    from user_events where ${eventScope}(occurred_at at time zone 'Asia/Vladivostok')::date between $${fromIndex}::date and $${toIndex}::date
     group by day order by day`,eventValues),
-   db.query(`select count(*)::int as value from leads where ${leadWhere}(created_at at time zone 'Asia/Vladivostok')::date between ${fromIndex}::date and ${toIndex}::date`,previousLeadValues),
-   db.query(`select count(*)::int as events,count(distinct session_id)::int as visitors from user_events where ${eventScope}(occurred_at at time zone 'Asia/Vladivostok')::date between ${fromIndex}::date and ${toIndex}::date`,previousEventValues),
+   db.query(`select count(*)::int as events,count(distinct session_id)::int as visitors
+    from user_events where ${eventScope}(occurred_at at time zone 'Asia/Vladivostok')::date between $${fromIndex}::date and $${toIndex}::date`,eventValues),
+   db.query(`select count(*)::int as value from leads where ${leadWhere}(created_at at time zone 'Asia/Vladivostok')::date between $${fromIndex}::date and $${toIndex}::date`,previousLeadValues),
+   db.query(`select count(*)::int as events,count(distinct session_id)::int as visitors from user_events where ${eventScope}(occurred_at at time zone 'Asia/Vladivostok')::date between $${fromIndex}::date and $${toIndex}::date`,previousEventValues),
   ]);
 
   const days=new Map<string,{date:string;leads:number;events:number;visitors:number}>();
