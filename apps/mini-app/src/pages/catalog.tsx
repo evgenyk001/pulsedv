@@ -398,3 +398,5 @@ export default function CatalogPage(){
     </div>}
   </div>;
 }
+
+// CI probe: validate connected catalog filter sheet.
