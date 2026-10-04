@@ -77,7 +77,7 @@ export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
       const preload=new Image();
       preload.decoding="async";
       preload.src=nextSlide.image;
-    },220);
+    },850);
     return()=>window.clearTimeout(timer);
   },[index]);
 
