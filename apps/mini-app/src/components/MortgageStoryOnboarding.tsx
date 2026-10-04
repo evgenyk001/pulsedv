@@ -4,29 +4,41 @@ import { X } from "lucide-react";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./MortgageStoryOnboarding.module.css";
 
-export const MORTGAGE_STORY_VERSION="mortgage_intro_v3";
+export const MORTGAGE_STORY_VERSION="mortgage_intro_v4";
 export const MORTGAGE_STORY_STORAGE="pulse_mortgage_intro_version";
 
 const BASE_URL=(import.meta.env.BASE_URL||"/").replace(/\/$/,"");
 const asset=(path:string)=>`${BASE_URL}${path}`;
 
 type Slide={
+  eyebrow:string;
+  title:string;
+  body:string;
   image:string;
   alt:string;
 };
 
 const slides:Slide[]=[
   {
+    eyebrow:"PULSE · ИПОТЕКА",
+    title:"Ипотека без хаоса",
+    body:"Считайте платёж, сравнивайте программы и сразу понимайте, какой сценарий подходит именно вам.",
     image:asset("/_cdn/static/mortgage-onboarding-01.png"),
-    alt:"Ипотека без хаоса — расчёт и сравнение ипотечных сценариев в PULSE.DV",
+    alt:"Дом, ипотечный расчёт и ключи",
   },
   {
+    eyebrow:"ВСЁ В ОДНОМ МЕСТЕ",
+    title:"Актуальные программы",
+    body:"Семейная, Дальневосточная и базовая — рядом, с понятными условиями и быстрым сравнением.",
     image:asset("/_cdn/static/mortgage-onboarding-02.png"),
-    alt:"Актуальные ипотечные программы в одном разделе PULSE.DV",
+    alt:"Карточки ипотечных программ",
   },
   {
+    eyebrow:"ЖИВОЙ РАСЧЁТ",
+    title:"Меняйте параметры — результат сразу",
+    body:"Стоимость, первоначальный взнос и срок меняются — платёж пересчитывается в тот же момент.",
     image:asset("/_cdn/static/mortgage-onboarding-03.png"),
-    alt:"Живой ипотечный расчёт с изменением стоимости, взноса и срока",
+    alt:"Интерактивный расчёт ипотеки",
   },
 ];
 
@@ -59,11 +71,15 @@ export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
   const previous=React.useCallback(()=>{if(index>0)goTo(index-1)},[goTo,index]);
 
   React.useEffect(()=>{
-    slides.forEach(({image})=>{
+    const nextSlide=slides[index+1];
+    if(!nextSlide)return;
+    const timer=window.setTimeout(()=>{
       const preload=new Image();
-      preload.src=image;
-    });
-  },[]);
+      preload.decoding="async";
+      preload.src=nextSlide.image;
+    },220);
+    return()=>window.clearTimeout(timer);
+  },[index]);
 
   React.useEffect(()=>{
     recordPulseEvent({eventType:"mortgage_intro_open",entityType:"onboarding",entityId:MORTGAGE_STORY_VERSION});
@@ -95,15 +111,6 @@ export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
 
   const story=<section className={styles.overlay} aria-label="Знакомство с ипотекой">
     <div className={styles.stage}>
-      <img
-        key={index}
-        className={styles.screen}
-        src={slide.image}
-        alt={slide.alt}
-        draggable={false}
-        fetchPriority="high"
-      />
-
       <div className={styles.progress} aria-label={"Экран "+(index+1)+" из "+slides.length}>
         {slides.map((_,i)=><span key={i} className={i<index?styles.progressDone:i===index?styles.progressCurrent:styles.progressFuture}>
           {i===index&&<i
@@ -119,7 +126,30 @@ export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
         type="button"
         aria-label="Закрыть знакомство с ипотекой"
         onClick={()=>finish("mortgage_intro_skip")}
-      ><X size={18} strokeWidth={1.9}/></button>
+      ><X size={18} strokeWidth={1.8}/></button>
+
+      <div key={index} className={styles.slide}>
+        <div className={styles.art}>
+          <img
+            className={styles.artImage}
+            src={slide.image}
+            alt={slide.alt}
+            draggable={false}
+            decoding="async"
+            loading="eager"
+            fetchPriority={index===0?"high":"auto"}
+          />
+        </div>
+
+        <div className={styles.copy}>
+          <div className={styles.meta}>
+            <span className={styles.eyebrow}><i/>{slide.eyebrow}</span>
+            <span className={styles.counter}>0{index+1}/0{slides.length}</span>
+          </div>
+          <h2>{slide.title}</h2>
+          <p>{slide.body}</p>
+        </div>
+      </div>
 
       <button
         type="button"
