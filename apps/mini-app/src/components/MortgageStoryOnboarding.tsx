@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./MortgageStoryOnboarding.module.css";
 
-export const MORTGAGE_STORY_VERSION="mortgage_intro_v2";
+export const MORTGAGE_STORY_VERSION="mortgage_intro_v3";
 export const MORTGAGE_STORY_STORAGE="pulse_mortgage_intro_version";
 
 const BASE_URL=(import.meta.env.BASE_URL||"/").replace(/\/$/,"");
@@ -59,6 +59,13 @@ export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
   const previous=React.useCallback(()=>{if(index>0)goTo(index-1)},[goTo,index]);
 
   React.useEffect(()=>{
+    slides.forEach(({image})=>{
+      const preload=new Image();
+      preload.src=image;
+    });
+  },[]);
+
+  React.useEffect(()=>{
     recordPulseEvent({eventType:"mortgage_intro_open",entityType:"onboarding",entityId:MORTGAGE_STORY_VERSION});
     const previousOverflow=document.body.style.overflow;
     document.body.style.overflow="hidden";
@@ -94,6 +101,7 @@ export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
         src={slide.image}
         alt={slide.alt}
         draggable={false}
+        fetchPriority="high"
       />
 
       <div className={styles.progress} aria-label={"Экран "+(index+1)+" из "+slides.length}>
