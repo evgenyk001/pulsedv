@@ -4,171 +4,167 @@ import { X } from "lucide-react";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./MortgageStoryOnboarding.module.css";
 
-export const MORTGAGE_STORY_VERSION="mortgage_intro_v4";
-export const MORTGAGE_STORY_STORAGE="pulse_mortgage_intro_version";
-
-const BASE_URL=(import.meta.env.BASE_URL||"/").replace(/\/$/,"");
-const asset=(path:string)=>`${BASE_URL}${path}`;
-
-type Slide={
-  eyebrow:string;
-  title:string;
-  body:string;
-  image:string;
-  alt:string;
-};
-
-const slides:Slide[]=[
+export const MORTGAGE_STORY_VERSION = "mortgage_intro_v5";
+export const MORTGAGE_STORY_STORAGE = "pulse_mortgage_intro_version";
+const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+const slides = [
   {
-    eyebrow:"PULSE · ИПОТЕКА",
-    title:"Ипотека без хаоса",
-    body:"Считайте платёж, сравнивайте программы и сразу понимайте, какой сценарий подходит именно вам.",
-    image:asset("/_cdn/static/mortgage-onboarding-01.png"),
-    alt:"Дом, ипотечный расчёт и ключи",
+    eyebrow: "ПРОГРАММА ПОД ВАШУ ЗАДАЧУ",
+    title: "Начните с выбора",
+    body: "Выберите ипотечную программу и тип недвижимости. Условия расчёта изменятся под ваш сценарий.",
+    image: `${base}/_cdn/static/mortgage-v5-programs.png`,
+    alt: "Современный дом и карточки ипотечных программ",
   },
   {
-    eyebrow:"ВСЁ В ОДНОМ МЕСТЕ",
-    title:"Актуальные программы",
-    body:"Семейная, Дальневосточная и базовая — рядом, с понятными условиями и быстрым сравнением.",
-    image:asset("/_cdn/static/mortgage-onboarding-02.png"),
-    alt:"Карточки ипотечных программ",
+    eyebrow: "ВАШ КОМФОРТНЫЙ ПЛАТЁЖ",
+    title: "Настройте под себя",
+    body: "Меняйте стоимость, первый взнос и срок. Сразу увидите, как меняется ежемесячный платёж.",
+    image: `${base}/_cdn/static/mortgage-v5-payment.png`,
+    alt: "Калькулятор и три регулятора параметров ипотеки",
   },
   {
-    eyebrow:"ЖИВОЙ РАСЧЁТ",
-    title:"Меняйте параметры — результат сразу",
-    body:"Стоимость, первоначальный взнос и срок меняются — платёж пересчитывается в тот же момент.",
-    image:asset("/_cdn/static/mortgage-onboarding-03.png"),
-    alt:"Интерактивный расчёт ипотеки",
+    eyebrow: "СЛЕДУЮЩИЙ ШАГ — ВМЕСТЕ",
+    title: "От расчёта к решению",
+    body: "Расчёт здесь предварительный. Нажмите «Получить точный расчёт» в разделе ипотеки — обсудим условия с вами.",
+    image: `${base}/_cdn/static/mortgage-v5-adviser.png`,
+    alt: "Результат расчёта, сообщения и ключ от квартиры",
   },
 ];
 
-export function MortgageStoryOnboarding({onDone}:{onDone:()=>void}){
-  const [index,setIndex]=React.useState(0);
-  const [paused,setPaused]=React.useState(false);
-  const [cycle,setCycle]=React.useState(0);
-  const press=React.useRef<{x:number;at:number}|null>(null);
-  const slide=slides[index];
+export function MortgageStoryOnboarding({ onDone }: { onDone: () => void }) {
+  const [index, setIndex] = React.useState(0);
+  const [cycle, setCycle] = React.useState(0);
+  const [paused, setPaused] = React.useState(false);
+  const [hidden, setHidden] = React.useState(document.hidden);
+  const [ready, setReady] = React.useState<string | null>(null);
+  const [failed, setFailed] = React.useState<string | null>(null);
+  const [retry, setRetry] = React.useState(0);
+  const [reducedMotion, setReducedMotion] = React.useState(false);
+  const dialog = React.useRef<HTMLDialogElement>(null);
+  const press = React.useRef<{ x: number; at: number } | null>(null);
+  const finished = React.useRef(false);
+  const slide = slides[index];
 
-  const finish=React.useCallback((eventType:"mortgage_intro_complete"|"mortgage_intro_skip")=>{
-    try{localStorage.setItem(MORTGAGE_STORY_STORAGE,MORTGAGE_STORY_VERSION)}catch{}
-    recordPulseEvent({eventType,entityType:"onboarding",entityId:MORTGAGE_STORY_VERSION});
+  const finish = React.useCallback((eventType: "mortgage_intro_complete" | "mortgage_intro_skip") => {
+    if (finished.current) return;
+    finished.current = true;
+    try { localStorage.setItem(MORTGAGE_STORY_STORAGE, MORTGAGE_STORY_VERSION); } catch { /* Storage may be unavailable in private mode. */ }
+    recordPulseEvent({ eventType, entityType: "onboarding", entityId: MORTGAGE_STORY_VERSION });
     onDone();
-  },[onDone]);
+  }, [onDone]);
 
-  const goTo=React.useCallback((nextIndex:number)=>{
-    const safe=Math.max(0,Math.min(slides.length-1,nextIndex));
-    if(safe===index){setCycle(value=>value+1);return}
-    setIndex(safe);
-    setCycle(value=>value+1);
-    recordPulseEvent({eventType:"mortgage_intro_slide",entityType:"onboarding",entityId:String(safe+1)});
-  },[index]);
+  const goTo = React.useCallback((position: number) => {
+    const nextIndex = Math.max(0, Math.min(slides.length - 1, position));
+    setCycle(value => value + 1);
+    setPaused(false);
+    setIndex(nextIndex);
+    recordPulseEvent({ eventType: "mortgage_intro_slide", entityType: "onboarding", entityId: String(nextIndex + 1) });
+  }, []);
+  const next = () => index === slides.length - 1 ? finish("mortgage_intro_complete") : goTo(index + 1);
 
-  const next=React.useCallback(()=>{
-    if(index===slides.length-1){finish("mortgage_intro_complete");return}
-    goTo(index+1);
-  },[finish,goTo,index]);
-
-  const previous=React.useCallback(()=>{if(index>0)goTo(index-1)},[goTo,index]);
-
-  React.useEffect(()=>{
-    const nextSlide=slides[index+1];
-    if(!nextSlide)return;
-    const timer=window.setTimeout(()=>{
-      const preload=new Image();
-      preload.decoding="async";
-      preload.src=nextSlide.image;
-    },850);
-    return()=>window.clearTimeout(timer);
-  },[index]);
-
-  React.useEffect(()=>{
-    recordPulseEvent({eventType:"mortgage_intro_open",entityType:"onboarding",entityId:MORTGAGE_STORY_VERSION});
-    const previousOverflow=document.body.style.overflow;
-    document.body.style.overflow="hidden";
-    window.dispatchEvent(new CustomEvent("pulse:story-overlay",{detail:{open:true}}));
-    return()=>{
-      document.body.style.overflow=previousOverflow;
-      window.dispatchEvent(new CustomEvent("pulse:story-overlay",{detail:{open:false}}));
+  React.useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    dialog.current?.showModal();
+    dialog.current?.focus({ preventScroll: true });
+    document.body.style.overflow = "hidden";
+    window.dispatchEvent(new CustomEvent("pulse:story-overlay", { detail: { open: true } }));
+    recordPulseEvent({ eventType: "mortgage_intro_open", entityType: "onboarding", entityId: MORTGAGE_STORY_VERSION });
+    const onVisibility = () => { setHidden(document.hidden); setPaused(false); press.current = null; };
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const onMotion = () => setReducedMotion(media.matches);
+    onMotion();
+    media.addEventListener("change", onMotion);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.dispatchEvent(new CustomEvent("pulse:story-overlay", { detail: { open: false } }));
+      document.removeEventListener("visibilitychange", onVisibility);
+      media.removeEventListener("change", onMotion);
+      previousFocus?.focus({ preventScroll: true });
     };
-  },[]);
+  }, []);
 
-  const pointerDown=(event:React.PointerEvent<HTMLButtonElement>)=>{
-    press.current={x:event.clientX,at:performance.now()};
+  // Load the next PNG only after the visible artwork is decoded.
+  React.useEffect(() => {
+    if (ready !== slide.image || !slides[index + 1]) return;
+    const image = new Image();
+    image.decoding = "async";
+    image.src = slides[index + 1].image;
+  }, [index, ready, slide.image]);
+
+  const pointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    press.current = { x: event.clientX, at: performance.now() };
     event.currentTarget.setPointerCapture?.(event.pointerId);
     setPaused(true);
   };
-
-  const pointerUp=(side:"left"|"right")=>(event:React.PointerEvent<HTMLButtonElement>)=>{
-    const start=press.current;
-    press.current=null;
+  const pointerUp = (side: "left" | "right") => (event: React.PointerEvent<HTMLButtonElement>) => {
+    const start = press.current;
+    press.current = null;
     setPaused(false);
-    if(!start)return;
-    const delta=event.clientX-start.x;
-    const held=performance.now()-start.at;
-    if(Math.abs(delta)>42){delta<0?next():previous();return}
-    if(held<280){side==="right"?next():previous()}
+    if (!start) return;
+    const distance = event.clientX - start.x;
+    if (Math.abs(distance) > 42) { distance < 0 ? next() : goTo(index - 1); return; }
+    if (performance.now() - start.at < 280) side === "right" ? next() : goTo(index - 1);
   };
 
-  const story=<section className={styles.overlay} aria-label="Знакомство с ипотекой">
+  return createPortal(<dialog
+    ref={dialog}
+    tabIndex={-1}
+    className={styles.overlay}
+    aria-describedby="mortgage-story-description"
+    aria-label="Знакомство с ипотекой"
+    onCancel={event => { event.preventDefault(); finish("mortgage_intro_skip"); }}
+    onKeyDown={event => {
+      if (event.key === "ArrowRight") { event.preventDefault(); next(); }
+      if (event.key === "ArrowLeft") { event.preventDefault(); goTo(index - 1); }
+    }}
+  >
     <div className={styles.stage}>
-      <div className={styles.progress} aria-label={"Экран "+(index+1)+" из "+slides.length}>
-        {slides.map((_,i)=><span key={i} className={i<index?styles.progressDone:i===index?styles.progressCurrent:styles.progressFuture}>
-          {i===index&&<i
-            key={index+"-"+cycle}
-            style={{animationPlayState:paused?"paused":"running"}}
-            onAnimationEnd={next}
-          />}
+      <div className={styles.progress} aria-label={`Экран ${index + 1} из ${slides.length}`}>
+        {slides.map((_, position) => <span key={position} className={position < index ? styles.done : ""}>
+          {position === index && <i key={`${index}-${cycle}-${retry}`} style={{ animationPlayState: ready === slide.image && !paused && !hidden && !reducedMotion ? "running" : "paused" }} onAnimationEnd={next} />}
         </span>)}
       </div>
-
-      <button
-        className={styles.close}
-        type="button"
-        aria-label="Закрыть знакомство с ипотекой"
-        onClick={()=>finish("mortgage_intro_skip")}
-      ><X size={18} strokeWidth={1.8}/></button>
-
-      <div key={index} className={styles.slide}>
-        <div className={styles.art}>
-          <img
+      <header className={styles.header}>
+        <span className={styles.brand}>PULSE<span> · ИПОТЕКА</span></span>
+        <button className={styles.close} type="button" aria-label="Закрыть знакомство с ипотекой" onClick={() => finish("mortgage_intro_skip")}><X size={20} strokeWidth={1.6} /></button>
+      </header>
+      <div className={styles.slide}>
+        <div className={styles.art} aria-busy={ready !== slide.image && failed !== slide.image}>
+          {failed === slide.image ? <div className={styles.error}>
+            <p>Не удалось загрузить иллюстрацию</p>
+            <button type="button" onClick={() => { setFailed(null); setRetry(value => value + 1); }}>Повторить</button>
+          </div> : <img
+            key={`${slide.image}-${retry}`}
             className={styles.artImage}
             src={slide.image}
             alt={slide.alt}
-            draggable={false}
-            decoding="async"
-            loading="eager"
-            fetchPriority={index===0?"high":"auto"}
-          />
+            width={900} height={900}
+            draggable={false} decoding="async" loading="eager" fetchPriority={index === 0 ? "high" : "auto"}
+            onLoad={async event => {
+              const image = event.currentTarget;
+              try { await image.decode(); } catch { /* onLoad already confirms a usable image. */ }
+              if (image.isConnected) setReady(slide.image);
+            }}
+            onError={() => setFailed(slide.image)}
+          />}
         </div>
-
-        <div className={styles.copy}>
-          <div className={styles.meta}>
-            <span className={styles.eyebrow}><i/>{slide.eyebrow}</span>
-            <span className={styles.counter}>0{index+1}/0{slides.length}</span>
-          </div>
-          <h2>{slide.title}</h2>
-          <p>{slide.body}</p>
+        <div className={styles.copy} key={index} aria-live="polite">
+          <p className={styles.eyebrow}>{slide.eyebrow}</p>
+          <h2 id="mortgage-story-title">{slide.title}</h2>
+          <p id="mortgage-story-description" className={styles.description}>{slide.body}</p>
         </div>
       </div>
-
-      <button
-        type="button"
-        className={`${styles.tapZone} ${styles.tapLeft}`}
-        aria-label="Предыдущая история"
-        onPointerDown={pointerDown}
-        onPointerUp={pointerUp("left")}
-        onPointerCancel={()=>{press.current=null;setPaused(false)}}
-      />
-      <button
-        type="button"
-        className={`${styles.tapZone} ${styles.tapRight}`}
-        aria-label="Следующая история"
-        onPointerDown={pointerDown}
-        onPointerUp={pointerUp("right")}
-        onPointerCancel={()=>{press.current=null;setPaused(false)}}
-      />
+      <footer className={styles.hint}>Коснитесь справа, чтобы {index === slides.length - 1 ? "перейти к расчёту" : "продолжить"}</footer>
+      {(["left", "right"] as const).map(side => <button
+        key={side} type="button"
+        className={`${styles.tapZone} ${side === "left" ? styles.tapLeft : styles.tapRight}`}
+        aria-label={side === "left" ? "Предыдущая история" : index === slides.length - 1 ? "Перейти к расчёту" : "Следующая история"}
+        onPointerDown={pointerDown} onPointerUp={pointerUp(side)}
+        onPointerCancel={() => { press.current = null; setPaused(false); }}
+        onClick={event => { if (event.detail === 0) side === "right" ? next() : goTo(index - 1); }}
+      />)}
     </div>
-  </section>;
-
-  return createPortal(story,document.body);
+  </dialog>, document.body);
 }

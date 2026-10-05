@@ -1,272 +1,72 @@
-.overlay{
-  position:fixed;
-  z-index:2000;
-  top:0;
-  left:0;
-  right:0;
-  width:100vw;
-  height:100svh;
-  max-height:100dvh;
-  overflow:hidden;
-  background:#f8f9fb;
-  color:#0f1728;
-  overscroll-behavior:none;
-  touch-action:none;
-  font-family:var(--font-family-base);
-  -webkit-user-select:none;
-  user-select:none;
+.overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  overflow: auto;
+  overscroll-behavior: none;
+  background: #f6f7fa;
+  color: #171d29;
+  font-family: var(--font-family-base);
+  -webkit-user-select: none;
+  user-select: none;
 }
-
-.stage{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  overflow:hidden;
-  background:
-    radial-gradient(circle at 88% 4%,rgba(112,153,202,.13),transparent 25%),
-    radial-gradient(circle at 6% 77%,rgba(242,13,29,.055),transparent 24%),
-    linear-gradient(180deg,#fafbfd 0%,#f8f9fb 58%,#f8f9fb 100%);
+.overlay::backdrop { background: #f6f7fa; }
+.stage {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  width: min(100%, 480px);
+  height: 100%;
+  min-height: 460px;
+  margin: 0 auto;
+  padding: max(12px, env(safe-area-inset-top, 0px)) 24px max(20px, env(safe-area-inset-bottom, 0px));
+  display: grid;
+  grid-template-rows: 3px 56px minmax(0, 1fr) 30px;
 }
-
-.slide{
-  position:absolute;
-  inset:0;
-  z-index:5;
-  overflow:hidden;
-  animation:slideIn .22s ease-out both;
-  pointer-events:none;
+.progress { display: flex; gap: 5px; }
+.progress span { position: relative; flex: 1; overflow: hidden; border-radius: 99px; background: #dce0e7; }
+.progress .done { background: #f20d1d; }
+.progress i { position: absolute; inset: 0; background: #f20d1d; transform-origin: left; animation: fill 8s linear both; }
+.header { position: relative; z-index: 4; display: flex; align-items: center; justify-content: space-between; pointer-events: none; }
+.brand { font-size: 13px; font-weight: 800; letter-spacing: -.3px; }
+.brand span { color: #7b8492; font-weight: 500; letter-spacing: 1px; font-size: 10px; }
+.close { pointer-events: auto; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(40, 50, 65, .09); background: rgba(255, 255, 255, .45); color: #6e7786; padding: 0; cursor: pointer; }
+.slide { min-height: 0; display: grid; grid-template-rows: minmax(120px, 1fr) auto; gap: 12px; padding-bottom: clamp(12px, 4dvh, 36px); }
+.art { min-height: 0; position: relative; display: grid; place-items: center; margin: 0 -12px; }
+.artImage { display: block; width: 100%; height: 100%; min-height: 0; object-fit: contain; pointer-events: none; mix-blend-mode: multiply; }
+.copy { align-self: end; animation: appear .25s ease-out both; }
+.eyebrow { display: flex; align-items: center; gap: 9px; color: #737d8c; font-size: 10px; font-weight: 600; letter-spacing: 1.25px; line-height: 1.5; margin: 0 0 16px; }
+.eyebrow::before { content: ""; flex: 0 0 22px; height: 3px; background: #f20d1d; border-radius: 10px; }
+.copy h2 { max-width: 370px; margin: 0 0 16px; font-size: clamp(32px, 8.7vw, 42px); font-weight: 750; letter-spacing: -1.5px; line-height: 1.07; text-wrap: balance; }
+.description { margin: 0; max-width: 390px; font-size: clamp(15px, 4.1vw, 18px); line-height: 1.55; color: #737d8c; }
+.hint { align-self: end; color: #8b939f; font-size: 11px; text-align: center; line-height: 1.4; }
+.tapZone { position: absolute; z-index: 2; top: 74px; bottom: 0; border: 0; padding: 0; background: transparent; touch-action: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tapLeft { left: 0; width: 32%; }
+.tapRight { right: 0; width: 68%; }
+.close:focus-visible, .tapZone:focus-visible, .error button:focus-visible { outline: 2px solid #f20d1d; outline-offset: -3px; }
+.error { position: relative; z-index: 3; text-align: center; color: #737d8c; font-size: 14px; }
+.error button { padding: 10px 20px; border-radius: 99px; border: 1px solid #dce0e7; background: #fff; color: #171d29; font: inherit; }
+@keyframes fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes appear { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-height: 680px) {
+  .stage { padding-left: 22px; padding-right: 22px; grid-template-rows: 3px 48px minmax(0, 1fr) 24px; }
+  .slide { gap: 8px; padding-bottom: 12px; }
+  .eyebrow { margin-bottom: 10px; font-size: 9px; }
+  .copy h2 { font-size: 30px; margin-bottom: 12px; letter-spacing: -1px; }
+  .description { font-size: 15px; line-height: 1.45; }
 }
-
-.art{
-  position:absolute;
-  z-index:1;
-  top:0;
-  left:0;
-  right:0;
-  height:65%;
-  overflow:hidden;
+@media (orientation: landscape) and (max-height: 600px) {
+  .stage { width: min(100%, 900px); min-height: 300px; }
+  .slide { grid-template-columns: 1fr 1fr; grid-template-rows: minmax(0, 1fr); gap: 24px; }
+  .copy { align-self: center; }
+  .copy h2 { font-size: 28px; }
 }
-.art:after{
-  content:"";
-  position:absolute;
-  left:0;
-  right:0;
-  bottom:-1px;
-  height:18%;
-  background:linear-gradient(180deg,rgba(248,249,251,0),#f8f9fb 92%);
-  pointer-events:none;
-}
-.artImage{
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  height:auto;
-  min-height:0;
-  display:block;
-  pointer-events:none;
-  -webkit-user-drag:none;
-  transform-origin:50% 35%;
-  animation:artIn .34s cubic-bezier(.22,.7,.2,1) both;
-}
-
-.copy{
-  position:absolute;
-  z-index:8;
-  left:24px;
-  right:24px;
-  bottom:calc(env(safe-area-inset-bottom,0px) + 28px);
-  max-width:430px;
-  animation:copyIn .28s ease-out .03s both;
-}
-.meta{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:16px;
-  margin-bottom:13px;
-}
-.eyebrow{
-  display:flex;
-  align-items:center;
-  min-width:0;
-  gap:9px;
-  color:#7a8698;
-  font-size:9px;
-  line-height:1;
-  font-weight:760;
-  letter-spacing:.13em;
-  text-transform:uppercase;
-  white-space:nowrap;
-}
-.eyebrow i{
-  display:block;
-  flex:0 0 28px;
-  width:28px;
-  height:3px;
-  border-radius:999px;
-  background:#f20d1d;
-}
-.counter{
-  flex:0 0 auto;
-  color:#a1a9b5;
-  font-size:9px;
-  line-height:1;
-  font-weight:680;
-  letter-spacing:.08em;
-  font-variant-numeric:tabular-nums;
-}
-.copy h2{
-  margin:0;
-  max-width:430px;
-  color:#0e1729;
-  font-family:var(--font-family-display);
-  font-size:clamp(35px,10.6vw,44px);
-  line-height:.96;
-  letter-spacing:-.055em;
-  font-weight:790;
-  text-wrap:balance;
-}
-.copy p{
-  margin:15px 0 0;
-  max-width:400px;
-  color:#738094;
-  font-size:14.5px;
-  line-height:1.43;
-  letter-spacing:-.012em;
-  text-wrap:pretty;
-}
-
-.progress{
-  position:absolute;
-  z-index:30;
-  top:calc(env(safe-area-inset-top,0px) + 11px);
-  left:15px;
-  right:15px;
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:5px;
-}
-.progress>span{
-  height:3px;
-  border-radius:999px;
-  background:rgba(15,23,40,.12);
-  overflow:hidden;
-}
-.progressDone{background:#111827!important}
-.progressCurrent i{
-  display:block;
-  width:100%;
-  height:100%;
-  border-radius:inherit;
-  background:#111827;
-  transform-origin:left center;
-  animation:storyProgress 6.5s linear forwards;
-}
-.progressFuture{background:rgba(15,23,40,.12)!important}
-
-.close{
-  position:absolute;
-  z-index:32;
-  top:calc(env(safe-area-inset-top,0px) + 29px);
-  right:15px;
-  width:40px;
-  height:40px;
-  padding:0;
-  border-radius:50%;
-  border:1px solid rgba(15,23,40,.085);
-  background:rgba(255,255,255,.94);
-  color:#6b7482;
-  display:grid;
-  place-items:center;
-  box-shadow:0 6px 18px rgba(24,34,51,.055),inset 0 1px 0 #fff;
-  transition:transform .14s ease,background .14s ease,border-color .14s ease;
-}
-.close:active{
-  transform:scale(.94);
-  background:#fff;
-  border-color:rgba(15,23,40,.14);
-}
-
-.tapZone{
-  position:absolute;
-  z-index:22;
-  top:0;
-  bottom:0;
-  width:50%;
-  padding:0;
-  border:0;
-  background:transparent;
-  outline:none;
-  -webkit-tap-highlight-color:transparent;
-  touch-action:none;
-}
-.tapLeft{left:0}
-.tapRight{right:0}
-
-@keyframes storyProgress{
-  from{transform:scaleX(0)}
-  to{transform:scaleX(1)}
-}
-@keyframes slideIn{
-  from{opacity:.35}
-  to{opacity:1}
-}
-@keyframes artIn{
-  from{opacity:.45;transform:translateY(6px) scale(1.008)}
-  to{opacity:1;transform:translateY(0) scale(1)}
-}
-@keyframes copyIn{
-  from{opacity:0;transform:translateY(7px)}
-  to{opacity:1;transform:translateY(0)}
-}
-
-@media(max-height:800px){
-  .art{height:61%}
-  .copy{bottom:calc(env(safe-area-inset-bottom,0px) + 22px)}
-  .meta{margin-bottom:10px}
-  .copy h2{font-size:clamp(32px,9.5vw,38px)}
-  .copy p{margin-top:11px;font-size:13.2px;line-height:1.38}
-}
-@media(max-height:710px){
-  .art{height:57%}
-  .copy{left:21px;right:21px;bottom:calc(env(safe-area-inset-bottom,0px) + 16px)}
-  .meta{margin-bottom:8px}
-  .eyebrow,.counter{font-size:8px}
-  .eyebrow i{width:22px;flex-basis:22px;height:2px}
-  .copy h2{font-size:clamp(29px,8.8vw,34px);line-height:.98}
-  .copy p{margin-top:9px;font-size:12px;line-height:1.34}
-}
-@media(max-width:360px){
-  .progress{left:13px;right:13px}
-  .close{right:13px}
-  .copy{left:20px;right:20px}
-  .copy h2{font-size:32px}
-  .copy p{font-size:12.6px}
-}
-@media(min-width:500px){
-  .artImage{
-    left:50%;
-    width:min(500px,100%);
-    transform:translateX(-50%);
-  }
-  .copy{
-    left:50%;
-    right:auto;
-    width:min(430px,calc(100% - 48px));
-    transform:translateX(-50%);
-  }
-  @keyframes artIn{
-    from{opacity:.45;transform:translateX(-50%) translateY(6px) scale(1.008)}
-    to{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
-  }
-  @keyframes copyIn{
-    from{opacity:0;transform:translateX(-50%) translateY(7px)}
-    to{opacity:1;transform:translateX(-50%) translateY(0)}
-  }
-}
-@media(prefers-reduced-motion:reduce){
-  .slide,.artImage,.copy{animation:none}
-  .progressCurrent i{animation-duration:10s}
-}
+@media (prefers-reduced-motion: reduce) { .copy { animation: none; } }
