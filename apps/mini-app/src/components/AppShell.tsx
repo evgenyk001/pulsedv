@@ -30,7 +30,7 @@ export function AppShell({children}:{children:React.ReactNode}){
     return()=>window.removeEventListener("pulse:show-onboarding",replay);
   },[control.content.onboardingEnabled]);
 
-  React.useEffect(()=>{
+  React.useLayoutEffect(()=>{
     const handleStoryOverlay=(event:Event)=>{
       const detail=(event as CustomEvent<{open?:boolean}>).detail;
       setStoryOverlayOpen(Boolean(detail?.open));
@@ -72,6 +72,6 @@ export function AppShell({children}:{children:React.ReactNode}){
       <div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:""}`}>{children}</div>
     </main>
     {!hideNav&&!storyOverlayOpen&&<BottomNav/>}
-    {showOnboarding&&!hideNav&&control.content.onboardingEnabled&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}
+    {showOnboarding&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}
   </div>
 }

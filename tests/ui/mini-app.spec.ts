@@ -395,7 +395,7 @@ test('Mortgage story onboarding: fullscreen artwork, tap navigation, persistence
  await expect(page.getByRole('navigation',{name:'Основная навигация'})).toHaveCount(0);
  await expect(story.getByRole('button',{name:'Закрыть знакомство с ипотекой'})).toBeVisible();
  await expect(story.getByRole('button',{name:'Открыть калькулятор'})).toHaveCount(0);
- await expect(story.getByRole('heading',{name:'Ипотека без хаоса'})).toBeVisible();
+ await expect(story.getByRole('heading',{name:'Начните с выбора'})).toBeVisible();
 
  const firstImage=story.locator('img').first();
  await expect(firstImage).toBeVisible();
@@ -409,18 +409,18 @@ test('Mortgage story onboarding: fullscreen artwork, tap navigation, persistence
  expect(Math.abs(geometry!.height-844)).toBeLessThanOrEqual(2);
 
  await story.getByRole('button',{name:'Следующая история'}).click();
- await expect(story.getByRole('heading',{name:'Актуальные программы'})).toBeVisible();
- expect(await story.locator('img').first().evaluate((image:HTMLImageElement)=>image.naturalWidth)).toBeGreaterThan(200);
+ await expect(story.getByRole('heading',{name:'Настройте под себя'})).toBeVisible();
+ await expect.poll(()=>story.locator('img').first().evaluate((image:HTMLImageElement)=>image.naturalWidth)).toBeGreaterThan(200);
 
  await story.getByRole('button',{name:'Следующая история'}).click();
- await expect(story.getByRole('heading',{name:'Меняйте параметры — результат сразу'})).toBeVisible();
- expect(await story.locator('img').first().evaluate((image:HTMLImageElement)=>image.naturalWidth)).toBeGreaterThan(200);
+ await expect(story.getByRole('heading',{name:'От расчёта к решению'})).toBeVisible();
+ await expect.poll(()=>story.locator('img').first().evaluate((image:HTMLImageElement)=>image.naturalWidth)).toBeGreaterThan(200);
 
- await story.getByRole('button',{name:'Следующая история'}).click();
+ await story.getByRole('button',{name:'Перейти к расчёту'}).click();
  await expect(story).toBeHidden();
  await expect(page.getByRole('navigation',{name:'Основная навигация'})).toBeVisible();
  await expect(page.getByRole('heading',{name:'Ипотека',exact:true})).toBeVisible();
- expect(await page.evaluate(()=>localStorage.getItem('pulse_mortgage_intro_version'))).toBe('mortgage_intro_v1');
+ expect(await page.evaluate(()=>localStorage.getItem('pulse_mortgage_intro_version'))).toBe('mortgage_intro_v5');
 
  await page.reload();
  await expect(page.getByLabel('Знакомство с ипотекой')).toHaveCount(0);

@@ -53,6 +53,11 @@ const eventNames:Record<string,string>={
   lead_created:"Отправка заявки",
   return_visit:"Повторный визит",
   onboarding_complete:"Завершение онбординга",
+  mortgage_intro_open:"Открыл подсказки по ипотеке",
+  mortgage_intro_slide:"Просмотр подсказки по ипотеке",
+  mortgage_intro_skip:"Закрыл подсказки по ипотеке",
+  mortgage_intro_complete:"Завершил знакомство с ипотекой",
+  mortgage_intro_replay:"Повторно открыл подсказки по ипотеке",
   page_view:"Переход по приложению",
 };
 
@@ -96,6 +101,13 @@ export function describeEvent(event:PulseEvent,state:PulseState){
   const route=(event.entityId||"").split("?")[0].replace(/\/$/,"")||"/";
 
   switch(event.eventType){
+    case "mortgage_intro_open":
+    case "mortgage_intro_skip":
+    case "mortgage_intro_complete":
+    case "mortgage_intro_replay":
+      return {title:eventTypeName(event.eventType),detail:"Обучающие истории в разделе ипотеки"};
+    case "mortgage_intro_slide":
+      return {title:"Перешёл к подсказке по ипотеке",detail:/^[123]$/.test(event.entityId||"")?`Экран ${event.entityId} из 3`:"Обучающая история"};
     case 'collection_reaction':return {title:'Ответил на подборку · '+(propertyName||'ЖК'),detail:(reactionLabels[meta.reaction as Reaction]||'Ответ клиента')+(text(meta.reply)?' · '+text(meta.reply):'')};
     case 'showing_requested':return {title:'Запросил показ · '+(propertyName||'ЖК'),detail:'Ожидает подтверждения менеджером'};
     case 'comparison_view':return {title:'Открыл сравнение ЖК',detail:String(meta.propertyIds||'').split(',').map(id=>state.properties.find(p=>p.id===id)?.name||'ЖК из истории').join(' · ')};
