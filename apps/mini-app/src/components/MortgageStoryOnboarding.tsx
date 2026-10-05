@@ -66,6 +66,7 @@ export function MortgageStoryOnboarding({ onDone }: { onDone: () => void }) {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     dialog.current?.showModal();
+    dialog.current?.focus({ preventScroll: true });
     document.body.style.overflow = "hidden";
     window.dispatchEvent(new CustomEvent("pulse:story-overlay", { detail: { open: true } }));
     recordPulseEvent({ eventType: "mortgage_intro_open", entityType: "onboarding", entityId: MORTGAGE_STORY_VERSION });
@@ -109,6 +110,7 @@ export function MortgageStoryOnboarding({ onDone }: { onDone: () => void }) {
 
   return createPortal(<dialog
     ref={dialog}
+    tabIndex={-1}
     className={styles.overlay}
     aria-describedby="mortgage-story-description"
     aria-label="Знакомство с ипотекой"
