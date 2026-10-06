@@ -4,5 +4,5 @@ export async function getMapConfig():Promise<OutputType>{
  if(runtime.enabled)return api('/public/map');
  const key=import.meta.env.VITE_2GIS_KEY;
  if(key)return {provider:'2gis',key};
- throw new Error('Карта доступна после подключения сервера и ключа 2ГИС');
+ throw new Error('Карта пока недоступна. Посмотрите объекты в каталоге.');
 }
