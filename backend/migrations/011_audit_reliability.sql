@@ -34,3 +34,5 @@ insert into journey_uploads(url,lead_id,actor,size,attached,ready,metadata)
  on conflict(url) do nothing;
 
 create table media_cleanup (path text primary key, created_at timestamptz not null default now());
+
+create table worker_health (name text primary key, updated_at timestamptz not null);

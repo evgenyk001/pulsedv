@@ -1,4 +1,3 @@
-import {writeFile} from 'node:fs/promises';
 import {refreshStoredScores} from './refreshScores';
 import { setTimeout } from 'node:timers/promises';
 import { readConfig } from './config';
@@ -19,7 +18,7 @@ try{
     const result=await response.json() as {ok?:boolean;error_code?:number};
     if(!response.ok||!result.ok)throw new Error(`Telegram delivery failed (${result.error_code??response.status})`);
    }},5);
-   await writeFile('/tmp/pulse-worker-heartbeat',String(Date.now()));
+   await db.query("insert into worker_health(name,updated_at) values('notifications',now()) on conflict(name) do update set updated_at=excluded.updated_at");
   }catch{console.error('Notification batch failed; will retry');}
   await setTimeout(5000,undefined,{signal:abort.signal}).catch(()=>{});
  }
