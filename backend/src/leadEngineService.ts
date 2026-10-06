@@ -90,7 +90,7 @@ export async function processSessionIntent(
   now=new Date()
 ){
   const [events,config]=await Promise.all([repo.listEvents(sessionId),repo.getScoringConfig()]);
-  const result=scoreLeadEvents(events,config??DEFAULT_LEAD_ENGINE_CONFIG);
+  const result=scoreLeadEvents(events,config??DEFAULT_LEAD_ENGINE_CONFIG,now);
   const profile=await repo.upsertProfile(sessionId,result);
   const lead=await repo.findActiveLeadBySession(sessionId);
 

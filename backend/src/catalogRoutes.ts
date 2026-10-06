@@ -1,3 +1,4 @@
+import {validateMedia} from './mediaValidation';
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -42,13 +43,7 @@ const mediaSpec:Record<string,{ext:string;group:"image"|"pdf"}>={
   "application/pdf":{ext:"pdf",group:"pdf"},
 };
 
-function validMedia(type:string,body:Buffer){
-  if(type==="image/jpeg")return body.length>=3&&body[0]===0xff&&body[1]===0xd8&&body[2]===0xff;
-  if(type==="image/png")return body.length>=8&&body.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]));
-  if(type==="image/webp")return body.length>=12&&body.subarray(0,4).toString()==="RIFF"&&body.subarray(8,12).toString()==="WEBP";
-  if(type==="application/pdf")return body.length>=5&&body.subarray(0,5).toString()==="%PDF-";
-  return false;
-}
+
 
 function internalMediaPath(url:string){
   if(!url.startsWith("/media/"))return null;
@@ -188,7 +183,7 @@ export async function registerCatalogRoutes(
     if(!expectsPdf&&spec.group!=="image")return reply.code(400).send({error:"Для изображения нужен JPG, PNG или WebP"});
     const max=spec.group==="image"?15*1024*1024:50*1024*1024;
     let body:Buffer;try{body=await readBinaryBody(request.body,max)}catch(error){if(error instanceof BinaryBodyError)return reply.code(error.statusCode).send({error:error.statusCode===413?(spec.group==="image"?"Изображение больше 15 МБ":"PDF больше 50 МБ"):"Файл пустой"});throw error}
-    if(!validMedia(type,body))return reply.code(400).send({error:"Содержимое файла не соответствует заявленному формату"});
+    body=await validateMedia(type,body);
 
     const folder=spec.group==="image"?"images":"documents";
     const fileName=randomUUID()+"."+spec.ext;

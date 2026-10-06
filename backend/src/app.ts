@@ -26,7 +26,7 @@ const uuid=(value:unknown)=>z.uuid().parse(value);
 const memberView=(row:any)=>({id:row.id,name:row.name,email:row.email,role:row.role,active:row.active,cities:row.cities,telegramUserId:row.telegram_user_id?.toString()??null,mfaEnabled:!!row.mfa_enabled});
 
 export async function createApp(db:Database,config:RuntimeConfig){
- const app=Fastify({bodyLimit:1_500_000,trustProxy:config.TRUST_PROXY_HOPS?(_address:string,hop:number)=>hop<config.TRUST_PROXY_HOPS:false,logger:config.NODE_ENV!=='test'?{redact:['req.headers.authorization','req.headers.cookie','res.headers["set-cookie"]']}:false});
+ const app=Fastify({requestTimeout:60000,bodyLimit:1_500_000,trustProxy:config.TRUST_PROXY_HOPS?(_address:string,hop:number)=>hop<config.TRUST_PROXY_HOPS:false,logger:config.NODE_ENV!=='test'?{redact:['req.headers.authorization','req.headers.cookie','res.headers["set-cookie"]']}:false});
  await app.register(cookie);
  await app.register(rateLimit,{max:180,timeWindow:'1 minute'});
  const dummyPassword=await hashPassword('dummy-non-account-password');
@@ -60,6 +60,8 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const token=request.headers.authorization?.replace(/^Bearer /,'')||request.cookies.pulse_visitor;if(!token)throw new HttpError(401,'Сессия не создана');
   const row=(await db.query("select s.id,s.user_id from auth_tokens t join sessions s on s.id=t.session_id where t.token_hash=$1 and t.kind='visitor' and t.expires_at>now()",[tokenHash(token)])).rows[0];
   if(!row)throw new HttpError(401,'Сессия истекла');request.visitor={sessionId:row.id,userId:row.user_id};
+  await db.query("update sessions set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.id]);
+  if(row.user_id)await db.query("update app_users set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.user_id]);
  }
  const sessionLock=async(sql:Sql,id:string)=>{await sql.query('select id from sessions where id=$1 for update',[id]);};
  const cookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1/control',maxAge:8*3600};
@@ -67,6 +69,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.get('/health',async()=>({status:'ok'}));
  app.get('/ready',async()=>{await db.query('select 1');await readState(db);return {status:'ready'};});
  app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);const now=Date.now();const banners=state.banners.filter(b=>b.enabled&&(!b.startsAt||Date.parse(b.startsAt)<=now)&&(!b.endsAt||Date.parse(b.endsAt)>now));const {leadEngine:_privateLeadEngine,...publicState}=state;return {version,consentVersion:config.CONSENT_VERSION,state:{...publicState,properties:[],banners}};});
+ app.get('/api/v1/public/legal',async()=>({name:config.LEGAL_OPERATOR_NAME,inn:config.LEGAL_OPERATOR_INN,email:config.LEGAL_CONTACT_EMAIL,address:config.LEGAL_OPERATOR_ADDRESS,version:config.CONSENT_VERSION}));
  app.get('/api/v1/public/map',async()=>{if(!config.MAP_2GIS_KEY)throw new HttpError(503,'Карта временно недоступна');return {provider:'2gis',key:config.MAP_2GIS_KEY};});
  app.post('/api/v1/auth/session',{config:{rateLimit:{max:12,timeWindow:'1 minute'}}},async(request,reply)=>{
   const input=z.object({source:z.string().max(100).optional(),medium:z.string().max(100).optional(),campaign:z.string().max(100).optional()}).parse(request.body);
@@ -228,11 +231,26 @@ export async function createApp(db:Database,config:RuntimeConfig){
   return {counts,notifications};
  });
  app.get('/api/v1/control/leads',{preHandler:control},async request=>{
-  const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
-  const where=scoped?'where manager_id=$1':'';const values=scoped?[m.id]:[];
-  const total=Number((await db.query(`select count(*)::int as total from leads ${where}`,values)).rows[0]?.total||0);
-  const rows=(await db.query(`select * from leads ${where} order by score desc,created_at desc limit $${values.length+1} offset $${values.length+2}`,[...values,q.limit,offset])).rows.map(row=>{const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;return lead;});
+  const m=request.member!,q=pageQuery.extend({q:z.string().trim().max(200).default(''),status:z.enum(['new','contacted','qualified','showing','booking','deal','closed','lost']).optional(),mode:z.enum(['all','active','hot']).default('all'),unassigned:z.enum(['true','false']).default('false')}).parse(request.query);
+  const values:unknown[]=[];const conditions:string[]=[];
+  const param=(value:unknown)=>{values.push(value);return '$'+values.length};
+  if(m.role==='manager')conditions.push('l.manager_id='+param(m.id));
+  if(q.status)conditions.push('l.status='+param(q.status));
+  else if(q.mode==='active')conditions.push("l.status not in ('closed','lost','deal')");
+  else if(q.mode==='hot')conditions.push("l.priority in ('hot','urgent')");
+  if(q.unassigned==='true')conditions.push('l.manager_id is null');
+  if(q.q){const key=param(q.q);conditions.push(`(strpos(lower(concat_ws(' ',l.name,l.phone,l.source,p.name)),lower(${key}))>0)`);}
+  const where=conditions.length?'where '+conditions.join(' and '):'';
+  const from='from leads l left join catalog_properties p on p.id=coalesce(l.top_property_id,l.property_id)';
+  const total=Number((await db.query(`select count(*)::int as total ${from} ${where}`,values)).rows[0]?.total||0);
+  const rows=(await db.query(`select l.* ${from} ${where} order by l.score desc,l.created_at desc,l.id limit $${values.length+1} offset $${values.length+2}`,[...values,q.limit,(q.page-1)*q.limit])).rows.map(row=>{const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;return lead;});
   return {items:rows,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
+ });
+ app.get('/api/v1/control/leads/:id',{preHandler:control},async request=>{
+  const m=request.member!,leadId=uuid((request.params as any).id);
+  const row=(await db.query('select * from leads where id=$1'+(m.role==='manager'?' and manager_id=$2':''),m.role==='manager'?[leadId,m.id]:[leadId])).rows[0];
+  if(!row)throw new HttpError(404,'Клиент недоступен');
+  const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;return {lead};
  });
  app.get('/api/v1/control/tasks',{preHandler:control},async request=>{
   const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
@@ -355,6 +373,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const changed={...state,properties:[],updatedAt:new Date().toISOString()};
    const result=await sql.query('update app_config set document=$1::jsonb,version=version+1,updated_at=now() where singleton=true and version=$2 returning version',[JSON.stringify(changed),version]);
    if(!result.rows.length)throw new HttpError(409,'Настройки изменил другой сотрудник. Обновите данные и повторите правки');
+   await sql.query('update sessions set score_refreshed_at=null');
    await audit(sql,request.member!.id,'config.update',null,{version:result.rows[0].version});return {state:changed,version:result.rows[0].version};
   });
  });
@@ -365,6 +384,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const member=request.member!;if(member.role==='manager'&&(current.manager_id!==member.id||patch.manager!==undefined))throw new HttpError(403,'Недостаточно прав');
    if(new Date(current.updated_at).getTime()!==Date.parse(patch.expectedUpdatedAt))throw new HttpError(409,'Заявка изменена другим сотрудником. Обновите данные');
    if(patch.manager&&!(await sql.query('select id from team_members where id=$1 and active=true',[patch.manager])).rows.length)throw new HttpError(400,'Менеджер недоступен');
+   if('nextAction' in patch)await sql.query('update leads set next_action_manual=$2 where id=$1',[id,patch.nextAction!==null]);
    for(const [key,value] of Object.entries(patch)){if(key==='expectedUpdatedAt')continue;const column={status:'status',manager:'manager_id',comment:'comment',nextAction:'next_action'}[key]!;await sql.query(`update leads set ${column}=$2 where id=$1`,[id,value]);}
    if(patch.status&&patch.status!==current.status)await sql.query('insert into lead_stage_events(lead_id,status) values($1,$2)',[id,patch.status]);
    if(patch.manager!==undefined)await sql.query("update crm_tasks set assigned_to=$2 where lead_id=$1 and status<>'done'",[id,patch.manager]);
@@ -378,6 +398,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const current=(await sql.query('select * from crm_tasks where id=$1 for update',[id])).rows[0];if(!current)throw new HttpError(404,'Задача не найдена');
    if(request.member!.role==='manager'&&current.assigned_to!==request.member!.id)throw new HttpError(403,'Недостаточно прав');
    if(new Date(current.updated_at).getTime()!==Date.parse(patch.expectedUpdatedAt))throw new HttpError(409,'Задача уже изменилась');
+   if('nextAction' in patch)await sql.query('update leads set next_action_manual=$2 where id=$1',[id,patch.nextAction!==null]);
    for(const [key,value] of Object.entries(patch)){if(key==='expectedUpdatedAt')continue;const column={status:'status',title:'title',reason:'reason',dueAt:'due_at'}[key]!;await sql.query(`update crm_tasks set ${column}=$2 where id=$1`,[id,value]);}
    await audit(sql,request.member!.id,'task.update',id,{fields:Object.keys(patch)});return {ok:true};
   });

@@ -31,6 +31,10 @@ services:
       PUBLIC_ORIGIN: https://${SITE_DOMAIN:?Set SITE_DOMAIN}
       BOT_TOKEN: ${BOT_TOKEN:-}
       MAP_2GIS_KEY: ${MAP_2GIS_KEY:-}
+      LEGAL_OPERATOR_NAME: ${LEGAL_OPERATOR_NAME:-}
+      LEGAL_OPERATOR_INN: ${LEGAL_OPERATOR_INN:-}
+      LEGAL_CONTACT_EMAIL: ${LEGAL_CONTACT_EMAIL:-}
+      LEGAL_OPERATOR_ADDRESS: ${LEGAL_OPERATOR_ADDRESS:-}
       CONSENT_VERSION: ${CONSENT_VERSION:-2026-09-29}
       MEDIA_ROOT: /data/media
       TRUST_PROXY_HOPS: 1
@@ -65,6 +69,12 @@ services:
       dockerfile: deploy/Dockerfile.api
     restart: unless-stopped
     command: ["node", "--import", "tsx", "backend/src/worker.ts"]
+    healthcheck:
+      test: ["CMD", "node", "--import", "tsx", "backend/src/workerHealth.ts"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
     environment: *api_environment
     volumes:
       - media_data:/data/media

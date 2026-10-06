@@ -84,7 +84,7 @@ export function addPulseLead(payload:Omit<PulseLead,"id"|"status"|"manager"|"cre
   const lead:PulseLead={
     ...payload,id:id(),status:"new",manager:null,createdAt:created,updatedAt:created,
     sessionId:currentSession,userId:null,score:0,priority:"cold",scoreReasons:[],
-    topPropertyId:payload.propertyId,city:null,mortgageProgram:null,nextAction:null
+    topPropertyId:payload.propertyId,city:null,mortgageProgram:null,nextAction:null,nextActionManual:false
   };
   const leads=[lead,...listPulseLeads()];
   localStorage.setItem(LEADS_KEY,JSON.stringify(leads));
@@ -95,7 +95,7 @@ export function addPulseLead(payload:Omit<PulseLead,"id"|"status"|"manager"|"cre
 export function updatePulseLead(idValue:string,patch:Partial<Pick<PulseLead,"status"|"manager"|"comment"|"nextAction"|"requestContext">>){
   if(runtime.enabled){void updateRemote("leads",idValue,patch).catch(()=>{});return;}
   if(!canStore())return;
-  const leads=listPulseLeads().map(lead=>lead.id===idValue?{...lead,...patch,updatedAt:now()}:lead);
+  const leads=listPulseLeads().map(lead=>lead.id===idValue?{...lead,...patch,...('nextAction' in patch?{nextActionManual:patch.nextAction!==null}:{}),updatedAt:now()}:lead);
   localStorage.setItem(LEADS_KEY,JSON.stringify(leads));
   window.dispatchEvent(new CustomEvent(PULSE_LEADS_EVENT));
 }
@@ -188,7 +188,7 @@ function syncSessionSignals(session:string,events:PulseEvent[]){
       topPropertyId:profile.topPropertyId??lead.propertyId??null,
       city:profile.city,
       mortgageProgram:profile.mortgageProgram,
-      nextAction:profile.nextAction,
+      nextAction:(lead.nextActionManual??!!lead.nextAction)?lead.nextAction:profile.nextAction,
       updatedAt:now(),
     }:lead);
     localStorage.setItem(LEADS_KEY,JSON.stringify(nextLeads));

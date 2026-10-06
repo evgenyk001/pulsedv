@@ -97,17 +97,20 @@ export async function getPropertiesByIds(ids:string[]){
   return chunks.sort((a,b)=>(order.get(a.id)??9999)-(order.get(b.id)??9999));
 }
 
+async function allCatalogPages(filters:CatalogFilters){
+  const items:PropertyRecord[]=[];
+  for(let page=1;;page++){
+    const result=await getCatalogPage({...filters,page,limit:1000});
+    items.push(...result.items);
+    if(!result.hasMore)break;
+    if(!result.items.length)throw new Error('Каталог изменился. Повторите загрузку');
+  }
+  return [...new Map(items.map(item=>[item.id,item])).values()];
+}
 export async function getSelectionProperties(){
   if(!runtime.enabled)return getPulseState().properties.filter(property=>property.status==="published");
-  const first=await getCatalogPage({page:1,limit:1000,view:"match"});
-  if(!first.hasMore)return first.items;
-  const second=await getCatalogPage({page:2,limit:1000,view:"match"});
-  return [...first.items,...second.items];
+  return allCatalogPages({view:"match"});
 }
-
 export async function getMapProperties(filters:Omit<CatalogFilters,"page"|"limit"|"view">={}){
-  const first=await getCatalogPage({...filters,page:1,limit:1000,view:"card"});
-  if(!first.hasMore)return first.items;
-  const second=await getCatalogPage({...filters,page:2,limit:1000,view:"card"});
-  return [...first.items,...second.items];
+  return allCatalogPages({...filters,view:"card"});
 }

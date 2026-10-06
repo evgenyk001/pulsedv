@@ -13,17 +13,19 @@
     "test": "node --import tsx --test test/*.test.ts"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.10",
     "@types/node": "^22.10.0",
-    "typescript": "^5.9.2",
     "@types/pg": "^8.15.5",
-    "@electric-sql/pglite": "^0.3.10"
+    "typescript": "^5.9.2"
   },
   "dependencies": {
-    "fastify": "^5.6.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/rate-limit": "^10.3.0",
+    "fastify": "^5.6.0",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.16.3",
-    "zod": "^4.1.11",
-    "tsx": "^4.20.5"
+    "sharp": "^0.35.5",
+    "tsx": "^4.20.5",
+    "zod": "^4.1.11"
   }
 }

@@ -1,0 +1,8 @@
+[Unit]
+Description=Daily PULSE backup
+[Timer]
+OnCalendar=*-*-* 03:30:00 Asia/Vladivostok
+Persistent=true
+RandomizedDelaySec=300
+[Install]
+WantedBy=timers.target

@@ -1,3 +1,4 @@
+import {PDFDocument} from 'pdf-lib';
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -71,7 +72,7 @@ test('Journey API: доступ, конфликт версий, публикац
  assert.equal((await post(secondPath,{type:'showing_status',id:secondShow.id,status:'confirmed',result:''},1)).statusCode,409);
  response=await post(path,{type:'showing_status',id:show.id,status:'completed',result:'Клиент выбирает этаж'},5);assert.equal(response.statusCode,200,response.body);
  assert.equal((await mine()).showings[0].result,'');
- const uploaded=await app.inject({method:'POST',url:path+'/attachments?filename=offer.pdf',headers:{origin:config.PUBLIC_ORIGIN,'content-type':'application/pdf'},cookies,payload:Buffer.from('%PDF-1.4\nsecurity-test')});assert.equal(uploaded.statusCode,200,uploaded.body);
+ const uploaded=await app.inject({method:'POST',url:path+'/attachments?filename=offer.pdf',headers:{origin:config.PUBLIC_ORIGIN,'content-type':'application/pdf'},cookies,payload:await (async()=>{const pdf=await PDFDocument.create();pdf.addPage();return Buffer.from(await pdf.save())})()});assert.equal(uploaded.statusCode,200,uploaded.body);
  const attachment=uploaded.json().attachment;assert.match(attachment.url,new RegExp('^/api/v1/journey-media/'+lead.id+'/'));
  const messageId=randomUUID();response=await post(path,{type:'message',id:messageId,text:'Документы по квартире',attachment},6);assert.equal(response.statusCode,200,response.body);
  let clientJourneyState=await mine();assert.equal(clientJourneyState.messages[0].attachment.name,'offer.pdf');assert.equal(clientJourneyState.messages[0].readAt,undefined);

@@ -1,3 +1,4 @@
+import {useMessageHistory} from '../../../../packages/journey/useMessageHistory';
 import React from 'react';
 import {Link,useSearchParams} from 'react-router-dom';
 import {useQueryClient} from '@tanstack/react-query';
@@ -20,7 +21,7 @@ type Props={entry:JourneyEntry;properties:PulseProperty[];query:ReturnType<typeo
 export function ClientConversation({entry,properties,query,catalogError,onRetryCatalog}:Props){
  const [params,setParams]=useSearchParams();
  const tab=['collections','showings'].includes(params.get('tab')||'')?params.get('tab')!:'chat';
- const cache=useQueryClient();const j=entry.journey;
+ const cache=useQueryClient();const j=entry.journey;const history=useMessageHistory(j,true);
  const closed=['deal','closed','lost'].includes(entry.status);
  const [draft,setDraft]=React.useState(()=>draftFor(entry.leadId));
  const [busy,setBusy]=React.useState(false),[uploading,setUploading]=React.useState(false),[error,setError]=React.useState(''),[notice,setNotice]=React.useState('');
@@ -67,7 +68,7 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
  const requestShowing=async(e:React.FormEvent)=>{e.preventDefault();const date=Date.parse(at+'+10:00');if(!Number.isFinite(date)||date<=Date.now()){setError('Выберите дату и время в будущем');return}if(await run({type:'showing',id:crypto.randomUUID(),propertyId,at:new Date(date).toISOString(),note})){setAt('');setPropertyId('');setNote('')}};
  const minDateTime=vladivostokInputNow();
  const invalidShowingTime=!!at&&!isFutureVladivostokInput(at);
- const limitReached=(j.messages?.length||0)>=100;
+ const limitReached=false;
  return <div className={`${styles.conversation} ${tab==='chat'?'':styles.detailsMode}`} ref={root}>
   <header className={styles.chatHeader}><Link className={styles.iconButton} to="/journey" aria-label="Все мои обращения"><ArrowLeft size={21}/></Link><span className={styles.avatar}>{entry.managerName?entry.managerName.trim().split(/\s+/).map(n=>n[0]).slice(0,2).join(''):<MessageCircle size={21}/>}</span><div><h1>{entry.managerName||'Команда PULSE.DV'}</h1><small>{entry.managerName?'Ваш менеджер по недвижимости':'Менеджер пока не назначен'}</small></div><button className={styles.iconButton} aria-label="Обновить переписку" disabled={query.isFetching||busy} onClick={()=>void query.refetch()}><RefreshCw size={17}/></button></header>
   <div className={styles.subject}><span>{subject||'Обсуждение квартиры'}</span><small>{journeyStatus(entry.status)}</small></div>
@@ -85,10 +86,10 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
       <ChevronRight size={17}/>
     </Link>}
     {!j.messages?.length&&<div className={styles.chatWelcome}><span className={styles.emptyIcon}><MessageCircle size={27}/></span><h2>Начнём с ваших пожеланий</h2><p>Напишите, какую квартиру ищете, или задайте вопрос о проекте.</p>{!closed&&<div className={styles.prompts}>{['Хочу обсудить бюджет','Помогите сравнить ЖК','Как записаться на показ?'].map(text=><button key={text} disabled={busy} onClick={()=>{setDraft(text);input.current?.focus()}}>{text}<ChevronRight size={14}/></button>)}</div>}</div>}
-    {(j.messages||[]).map((m,index,all)=>{
+    {history.hasMore&&<button type="button" disabled={history.loading} onClick={()=>void history.load()}>{history.loading?'Загружаем…':'Предыдущие сообщения'}</button>}{history.error&&<p role="alert">{history.error}</p>}{history.messages.map((m,index,all)=>{
      const day=new Date(m.at).toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
      const previous=index?new Date(all[index-1].at).toLocaleDateString('ru-RU',{day:'numeric',month:'long'}):'';
-     return <React.Fragment key={m.id}>{day!==previous&&<div className={styles.dateDivider}>{day}</div>}{m.id===firstUnreadManagerId.current&&<div className={styles.unreadDivider}><span>Новые сообщения</span></div>}<article className={m.author==='client'?styles.outgoing:styles.incoming} aria-label={m.author==='client'?'Ваше сообщение':'Сообщение менеджера'}>{m.author==='manager'&&<strong>{entry.managerName||'Команда PULSE.DV'}</strong>}{m.attachment&&(m.attachment.kind==='image'?<a className={styles.messageImage} href={m.attachment.url} target="_blank" rel="noreferrer"><img src={m.attachment.url} alt={m.attachment.name}/></a>:<a className={styles.fileAttachment} href={m.attachment.url} target="_blank" rel="noreferrer"><FileText size={20}/><span><b>{m.attachment.name}</b><small>{Math.max(1,Math.round(m.attachment.size/1024))} КБ</small></span></a>)}{m.text&&<p>{m.text}</p>}<footer><time dateTime={m.at}>{clock(m.at)}</time>{m.author==='client'&&(m.readAt?<CheckCheck className={styles.readReceipt} size={15} aria-label="Прочитано"/>:<Check size={13} aria-label={runtime.enabled?'Отправлено':'Сохранено в демонстрации'}/>)}</footer></article></React.Fragment>;
+     return <React.Fragment key={m.id}>{day!==previous&&<div className={styles.dateDivider}>{day}</div>}{m.id===firstUnreadManagerId.current&&<div className={styles.unreadDivider}><span>Новые сообщения</span></div>}<article className={m.author==='client'?styles.outgoing:styles.incoming} aria-label={m.author==='client'?'Ваше сообщение':'Сообщение менеджера'}>{m.author==='manager'&&<strong>{entry.managerName||'Команда PULSE.DV'}</strong>}{m.attachment&&(m.attachment.kind==='image'?<a className={styles.messageImage} href={m.attachment.url.replace(/^\/media\/chat\//,'/api/v1/legacy-journey-media/')} target="_blank" rel="noreferrer"><img src={m.attachment.url.replace(/^\/media\/chat\//,'/api/v1/legacy-journey-media/')} alt={m.attachment.name}/></a>:<a className={styles.fileAttachment} href={m.attachment.url.replace(/^\/media\/chat\//,'/api/v1/legacy-journey-media/')} target="_blank" rel="noreferrer"><FileText size={20}/><span><b>{m.attachment.name}</b><small>{Math.max(1,Math.round(m.attachment.size/1024))} КБ</small></span></a>)}{m.text&&<p>{m.text}</p>}<footer><time dateTime={m.at}>{clock(m.at)}</time>{m.author==='client'&&(m.readAt?<CheckCheck className={styles.readReceipt} size={15} aria-label="Прочитано"/>:<Check size={13} aria-label={runtime.enabled?'Отправлено':'Сохранено в демонстрации'}/>)}</footer></article></React.Fragment>;
     })}
    </div>
    {newBelow&&<button className={styles.newMessages} onClick={scrollEnd}><ArrowDown size={16}/>К последним сообщениям</button>}
