@@ -1,5 +1,6 @@
 name: PULSE runtime and contracts
 on:
+  workflow_call:
   pull_request:
     branches: [main]
   push:
@@ -25,6 +26,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - run: npm audit --audit-level=high
       - run: npm run check
       - run: npm test
         env:

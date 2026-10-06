@@ -68,7 +68,7 @@ export type PulseLead={
   manager:string|null; createdAt:string; updatedAt:string;
   sessionId?:string|null; userId?:string|null; score?:number; priority?:LeadPriority;
   scoreReasons?:LeadScoreReason[]; topPropertyId?:string|null; city?:string|null;
-  mortgageProgram?:string|null; nextAction?:string|null;
+  mortgageProgram?:string|null; nextAction?:string|null; nextActionManual?:boolean;
 };
 
 export type PulseVisitorProfile={

@@ -1,3 +1,4 @@
+import {LegalOperator} from '../components/LegalOperator';
 import { Link } from "react-router-dom";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
 import styles from "./legal.module.css";
@@ -41,7 +42,7 @@ export default function PrivacyPage(){
 
       <section><h2>6. Права пользователя</h2><p>Пользователь может обратиться в PULSE.DV, чтобы уточнить сведения об обработке своих персональных данных, потребовать их уточнения или прекратить обработку в случаях, предусмотренных законодательством.</p></section>
 
-      <section><h2>7. Связь с оператором</h2><p>Обращение по вопросам персональных данных можно направить через форму связи с PULSE.DV в приложении. Юридические реквизиты оператора указываются в официальных документах и каналах PULSE.DV.</p></section>
+      <section><h2>7. Связь с оператором</h2><LegalOperator/></section>
     </article>
 
     <div className={styles.links}><Link to="/personal-data-consent">Согласие на обработку персональных данных</Link></div>

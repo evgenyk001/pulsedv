@@ -1,3 +1,4 @@
+import {publicEventTypes} from '../../packages/pulse-data/eventContract';
 import { z } from 'zod';
 const text=(max=200)=>z.string().trim().max(max);
 const https=z.string().max(2048).refine(value=>{try{return value.startsWith('/media/')||new URL(value).protocol==='https:';}catch{return false;}},'Нужна HTTPS-ссылка или внутренний /media/ путь');
@@ -45,8 +46,8 @@ export const stateSchema=z.object({
 }).superRefine((s,ctx)=>{for(const key of ['properties','banners','mortgagePrograms'] as const)if(new Set(s[key].map(x=>x.id)).size!==s[key].length)ctx.addIssue({code:'custom',message:`Повторяющиеся ID: ${key}`});});
 export const phoneSchema=text(30).transform(value=>value.replace(/[^\d+]/g,'').replace(/^8(?=\d{10}$)/,'+7').replace(/^7(?=\d{10}$)/,'+7')).pipe(z.string().regex(/^\+[1-9]\d{9,14}$/,'Укажите телефон в международном формате'));
 export const leadSchema=z.object({idempotencyKey:z.uuid(),source:text(100).min(1),propertyId:id.nullable().optional(),name:text(100).min(2),phone:phoneSchema,comment:nullableText(3000).optional(),context:z.record(z.string(),z.unknown()).optional(),consent:z.literal(true),consentVersion:text(100).min(1)}).strict();
-const eventTypes=['attribution','comparison_view','floorplan_view','page_view','onboarding_complete','property_view','favorite_add','favorite_remove','compare_add','compare_remove','catalog_filter','mortgage_program','mortgage_calculated','select_submit','property_share','lead_form_open','contact_click','return_visit','banner_impression','banner_click'] as const;
-export const eventsSchema=z.object({events:z.array(z.object({idempotencyKey:z.uuid(),eventType:z.enum(eventTypes),entityType:nullableText(80).optional(),entityId:nullableText(200).optional(),metadata:z.record(z.string(),z.unknown()).default({}),occurredAt:z.iso.datetime()})).min(1).max(100)});
+
+export const eventsSchema=z.object({events:z.array(z.object({idempotencyKey:z.uuid(),eventType:z.enum(publicEventTypes),entityType:nullableText(80).optional(),entityId:nullableText(200).optional(),metadata:z.record(z.string(),z.unknown()).default({}),occurredAt:z.iso.datetime()})).min(1).max(100)});
 export function safeMetadata(input:Record<string,unknown>){
  const allowed=['medium','campaign','propertyIds','city','district','priceFrom','min','max','rooms','delivery','sea','mortgage','topScore','strongCount','program','price','down','years','rate','payment','results','source','policyVersion','purchaseMode','preferences','method','outcome','propertyName','floorplanId','areaFrom','areaTo','kind','position','target'];
  const entries:[string,unknown][]=[];

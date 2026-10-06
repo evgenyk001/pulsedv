@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import { enqueueInterestChange } from '../src/interestNotifications';
 import { upsertCatalogProperty,listCatalog } from '../src/catalogRepository';
 import { matchesBudgetAndRooms,hasSea,deliveryMatches } from '../../packages/domain/propertyMatch';
@@ -77,7 +78,7 @@ test('SQL/API: заявки между устройствами, дедупли�
  await t.test('фото каталога загружается в persistent media storage',async()=>{
   const uploaded=await app.inject({
    method:'POST',url:'/api/v1/control/catalog/solnechniy/media?kind=gallery&filename=test.png',
-   headers:{origin:config.PUBLIC_ORIGIN,'content-type':'image/png'},cookies:ownerCookie,payload:Buffer.from([137,80,78,71,13,10,26,10])
+   headers:{origin:config.PUBLIC_ORIGIN,'content-type':'image/png'},cookies:ownerCookie,payload:await sharp({create:{width:2,height:2,channels:3,background:'#ffffff'}}).png().toBuffer()
   });
   assert.equal(uploaded.statusCode,200,uploaded.body);
   const image=uploaded.json().property.images.find((item:any)=>String(item.url).startsWith('/media/images/'));
@@ -86,7 +87,7 @@ test('SQL/API: заявки между устройствами, дедупли�
  await t.test('баннерные кампании: загрузка изображения, расписание и публичная выдача',async()=>{
   const uploaded=await app.inject({
    method:'POST',url:'/api/v1/control/content/banner-media?filename=campaign.png',
-   headers:{origin:config.PUBLIC_ORIGIN,'content-type':'image/png'},cookies:ownerCookie,payload:Buffer.from([137,80,78,71,13,10,26,10])
+   headers:{origin:config.PUBLIC_ORIGIN,'content-type':'image/png'},cookies:ownerCookie,payload:await sharp({create:{width:2,height:2,channels:3,background:'#ffffff'}}).png().toBuffer()
   });
   assert.equal(uploaded.statusCode,200,uploaded.body);assert.match(uploaded.json().imageUrl,/^\/media\/banners\//);
   assert.equal((await app.inject({method:'POST',url:'/api/v1/control/content/banner-media',headers:{origin:config.PUBLIC_ORIGIN,'content-type':'image/png'},cookies:managerCookie,payload:Buffer.from([1])})).statusCode,403);
@@ -108,7 +109,7 @@ test('SQL/API: заявки между устройствами, дедупли�
   const stale=await app.inject({method:'PUT',url,headers,cookies:ownerCookie,payload:{...original,description:'Устаревшая правка'}});
   assert.equal(stale.statusCode,409,stale.body);assert.equal((await read()).name,'Новое название ЖК');
   const current=await read();
-  const uploaded=await app.inject({method:'POST',url:url+'/media?kind=gallery',headers:{origin:config.PUBLIC_ORIGIN,'content-type':'image/png'},cookies:ownerCookie,payload:Buffer.from([137,80,78,71,13,10,26,10])});
+  const uploaded=await app.inject({method:'POST',url:url+'/media?kind=gallery',headers:{origin:config.PUBLIC_ORIGIN,'content-type':'image/png'},cookies:ownerCookie,payload:await sharp({create:{width:2,height:2,channels:3,background:'#ffffff'}}).png().toBuffer()});
   assert.equal(uploaded.statusCode,200,uploaded.body);
   assert.equal((await app.inject({method:'PUT',url,headers,cookies:ownerCookie,payload:current})).statusCode,409);
   assert.equal((await read()).images.length,current.images.length+1);

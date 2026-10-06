@@ -1,0 +1,10 @@
+[Unit]
+Description=PULSE encrypted off-host backup
+Requires=docker.service
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/pulsedv
+EnvironmentFile=/etc/pulsedv-backup.env
+ExecStart=/bin/bash /opt/pulsedv/deploy/backup.sh
+TimeoutStartSec=2h

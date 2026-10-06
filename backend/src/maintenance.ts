@@ -1,4 +1,5 @@
-import {rm,unlink} from 'node:fs/promises';
+import {cleanExpiredUploads} from './journeyUploads';
+import {rm} from 'node:fs/promises';
 import {join} from 'node:path';
 import type {Database} from './database';
 import type {RuntimeConfig} from './config';
@@ -8,6 +9,8 @@ type LegacyAttachment={url?:unknown};
 const cutoff=(days:number)=>new Date(Date.now()-days*86400_000).toISOString();
 
 export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
+ await cleanExpiredUploads(db,config.MEDIA_ROOT);
+ await drainMediaCleanup(db,config.MEDIA_ROOT);
  const clientCutoff=cutoff(config.CLIENT_DATA_RETENTION_DAYS);
  const analyticsCutoff=cutoff(config.ANALYTICS_RETENTION_DAYS);
  const auditCutoff=cutoff(config.AUDIT_RETENTION_DAYS);
@@ -19,14 +22,20 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
   await sql.query('delete from control_login_challenges where expires_at<now()-interval \'1 day\' or consumed_at is not null and consumed_at<now()-interval \'1 day\'');
   await sql.query("delete from outbox_events where topic='manager.security_code' and created_at<now()-interval '10 minutes'");
 
-  const old=(await sql.query("select l.id,j.document from leads l left join client_journeys j on j.lead_id=l.id where l.status in ('closed','lost') and l.updated_at<$1 and l.phone<>'Удалено' order by l.updated_at limit 500",[clientCutoff])).rows;
+  const old=(await sql.query("select l.id,jsonb_build_object('messages',coalesce((select jsonb_agg(m.document) from journey_messages m where m.lead_id=l.id),j.document->'messages','[]'::jsonb)) as document from leads l left join client_journeys j on j.lead_id=l.id where l.status in ('closed','lost') and l.updated_at<$1 and l.phone<>'Удалено' order by l.updated_at limit 500",[clientCutoff])).rows;
   const leadIds=old.map(row=>String(row.id));
   for(const row of old){
    const messages=Array.isArray(row.document?.messages)?row.document.messages:[];
    const legacy=messages.map((m:any)=>(m?.attachment as LegacyAttachment|undefined)?.url).filter((url:unknown):url is string=>typeof url==='string'&&/^\/media\/chat\/[A-Za-z0-9._-]+$/.test(url));
    media.push({leadId:String(row.id),legacy});
   }
+  for(const item of media){
+   await sql.query('insert into media_cleanup(path) values($1) on conflict do nothing',['private/chat/'+item.leadId]);
+   for(const url of item.legacy)await sql.query('insert into media_cleanup(path) values($1) on conflict do nothing',[url.slice('/media/'.length)]);
+  }
   if(leadIds.length){
+   await sql.query('delete from journey_uploads where lead_id=any($1::uuid[])',[leadIds]);
+   await sql.query('delete from journey_messages where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query('delete from client_journeys where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query('delete from crm_tasks where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query('delete from lead_score_history where lead_id=any($1::uuid[])',[leadIds]);
@@ -63,12 +72,16 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
   };
  });
 
- for(const item of media){
-  await rm(join(config.MEDIA_ROOT,'private','chat',item.leadId),{recursive:true,force:true}).catch(()=>{});
-  for(const url of item.legacy){
-   const file=url.slice('/media/chat/'.length);
-   await unlink(join(config.MEDIA_ROOT,'chat',file)).catch(()=>{});
-  }
- }
+ await drainMediaCleanup(db,config.MEDIA_ROOT);
  return result;
+}
+
+async function drainMediaCleanup(db:Database,root:string){
+ const paths=(await db.query('select path from media_cleanup order by created_at limit 500')).rows;
+ for(const {path} of paths){
+  const directory=/^private\/chat\/[0-9a-f-]{36}$/.test(path);
+  if(!directory&&!/^chat\/[A-Za-z0-9._-]+$/.test(path))throw new Error('Invalid media cleanup path');
+  await rm(join(root,path),{recursive:directory,force:true});
+  await db.query('delete from media_cleanup where path=$1',[path]);
+ }
 }

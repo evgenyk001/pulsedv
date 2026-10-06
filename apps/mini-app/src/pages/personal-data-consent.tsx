@@ -1,3 +1,4 @@
+import {LegalOperator} from '../components/LegalOperator';
 import { Link } from "react-router-dom";
 import { ArrowLeft, FileCheck2 } from "lucide-react";
 import styles from "./legal.module.css";
@@ -15,8 +16,9 @@ export default function PersonalDataConsentPage(){
     </section>
 
     <article className={styles.document}>
-      <section><p>Я свободно, своей волей и в своём интересе даю PULSE.DV согласие на обработку моих персональных данных для обработки моего обращения, связи со мной и подбора недвижимости.</p></section>
+      <section><p>Я свободно, своей волей и в своём интересе даю указанному ниже оператору PULSE.DV согласие на обработку моих персональных данных для обработки моего обращения, связи со мной и подбора недвижимости.</p></section>
 
+      <section><h2>Оператор и контакт для отзыва согласия</h2><LegalOperator/></section>
       <section><h2>Какие данные</h2><p>Имя, номер телефона, данные Telegram, если они передаются сервисом, а также сведения, которые я самостоятельно сообщаю в заявке или переписке.</p></section>
 
       <section><h2>Что можно делать с данными</h2><p>Собирать, записывать, систематизировать, хранить, уточнять, использовать и удалять данные в объёме, необходимом для указанных целей.</p></section>

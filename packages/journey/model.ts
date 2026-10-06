@@ -6,7 +6,7 @@ export type Showing={id:string;propertyId:string;at:string;status:'requested'|'c
 export const showingLabels:Record<Showing['status'],string>={requested:'Ожидает подтверждения',confirmed:'Подтверждён',completed:'Состоялся',cancelled:'Отменён'};
 export type JourneyAttachment={kind:'image'|'file';name:string;url:string;mimeType:string;size:number};
 export type JourneyMessage={id:string;text:string;author:'client'|'manager';at:string;attachment?:JourneyAttachment;readAt?:string};
-export type Journey={leadId:string;revision:number;collections:Collection[];showings:Showing[];nextStep:{title:string;dueAt:string;done:boolean}|null;messages?:JourneyMessage[]};
+export type Journey={leadId:string;revision:number;collections:Collection[];showings:Showing[];nextStep:{title:string;dueAt:string;done:boolean}|null;messagesBefore?:number|null;messages?:JourneyMessage[]};
 export type JourneyCommand=
  |{type:'collection';id:string;title:string;items:{propertyId:string;note:string}[];published:boolean}
  |{type:'reaction';collectionId:string;propertyId:string;reaction:Reaction;reply:string}
@@ -44,7 +44,6 @@ export function applyJourney(current:Journey,command:JourneyCommand,role:'client
    if(!['image','file'].includes(c.attachment.kind))throw new Error('Некорректный тип вложения');
   }
   if(j.messages?.some(m=>m.id===c.id))throw new Error('Сообщение уже отправлено');
-  if((j.messages?.length||0)>=100)throw new Error('Достигнут лимит сообщений по обращению');
   j.messages=[...(j.messages||[]),{id:c.id,text,author:role,at:iso,...(c.attachment?{attachment:c.attachment}:{})}];
  }else if(c.type==='showing_change'){
   const s=j.showings.find(s=>s.id===c.id);if(!s||!['requested','confirmed'].includes(s.status))throw new Error('Показ уже завершён или отменён');

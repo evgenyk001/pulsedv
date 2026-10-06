@@ -1,0 +1,9 @@
+[Unit]
+Description=PULSE operational checks
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/pulsedv
+EnvironmentFile=-/etc/pulsedv-monitor.env
+ExecStart=/bin/bash /opt/pulsedv/deploy/monitor.sh
+TimeoutStartSec=2min

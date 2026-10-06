@@ -1,0 +1,3 @@
+export const publicEventTypes=['attribution','comparison_view','floorplan_view','page_view','onboarding_complete','mortgage_intro_open','mortgage_intro_slide','mortgage_intro_skip','mortgage_intro_complete','mortgage_intro_replay','property_view','favorite_add','favorite_remove','compare_add','compare_remove','catalog_filter','mortgage_program','mortgage_calculated','select_submit','property_share','lead_form_open','contact_click','return_visit','banner_impression','banner_click'] as const;
+export type PublicEventType=typeof publicEventTypes[number];
+export const isPublicEvent=(type:string):type is PublicEventType=>(publicEventTypes as readonly string[]).includes(type);

@@ -4,6 +4,10 @@ on:
   push:
     branches: ["main"]
     paths:
+      - "backend/**"
+      - "deploy/**"
+      - "package*.json"
+      - ".github/workflows/runtime-check.yml"
       - "dist/**"
       - "apps/mini-app/**"
       - "apps/control-center/**"
@@ -28,6 +32,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  verified:
+    uses: ./.github/workflows/runtime-check.yml
+
   check:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -64,6 +71,7 @@ jobs:
         run: node --check dist/script.js
 
   deploy:
+    needs: verified
     if: github.event_name != 'pull_request'
     environment:
       name: github-pages

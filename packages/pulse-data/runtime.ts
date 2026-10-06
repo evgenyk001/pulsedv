@@ -1,3 +1,4 @@
+import {isPublicEvent} from './eventContract';
 import { attribution } from '../journey/attribution';
 import { DEFAULT_STATE, type PulseState, type PulseLead, type PulseTask, type PulseEvent, type PulseVisitorProfile } from './model';
 export type TeamMember={id:string;name:string;email:string;role:'owner'|'admin'|'manager';active:boolean;cities:string[];telegramUserId:string|null;mfaEnabled:boolean};
@@ -88,11 +89,10 @@ export async function refreshControlResource(kind:ControlResource,page=1,append=
    let items:any[];
    if(append){
     const seen=new Set(current.map(item=>item.id));items=[...current,...data.items.filter(item=>!seen.has(item.id))];
-   }else if(page===1&&current.length>limit){
-    const ids=new Set(data.items.map(item=>item.id));items=[...data.items,...current.filter(item=>!ids.has(item.id))];
+
    }else items=data.items;
    const previousPage=runtime.pages[kind].page;
-   const nextPage=append?Math.max(previousPage,page):page===1&&current.length>limit?Math.max(1,previousPage):page;
+   const nextPage=append?Math.max(previousPage,page):page;
    runtime.pages[kind]={page:nextPage,limit:data.limit,total:data.total,hasMore:items.length<data.total,loading:false};
    const limited=(Object.keys(runtime.pages) as ControlResource[]).some(resource=>runtime.pages[resource].hasMore);
    runtime.snapshot={...runtime.snapshot,[kind]:items,limited};
@@ -153,6 +153,7 @@ const QUEUE='pulse.dv.api.events.v1';
 let queue:QueuedEvent[]=[];let loaded=false;let flushing=false;let retry=0;let timer:ReturnType<typeof setTimeout>|undefined;
 const persist=()=>{try{localStorage.setItem(QUEUE,JSON.stringify(queue.slice(-500)));}catch{}};
 export function enqueueEvent(input:{eventType:string;entityType?:string|null;entityId?:string|null;metadata?:Record<string,unknown>}){
+ if(!isPublicEvent(input.eventType))return;
  if(!loaded){loaded=true;try{const saved=JSON.parse(localStorage.getItem(QUEUE)||'[]');queue=Array.isArray(saved)?saved.filter(x=>Date.parse(x.occurredAt)>Date.now()-7*86400_000).slice(-400):[];}catch{}}
  queue.push({idempotencyKey:crypto.randomUUID(),eventType:input.eventType,entityType:input.entityType??null,entityId:input.entityId??null,metadata:input.metadata??{},occurredAt:new Date().toISOString()});
  queue=queue.slice(-500);persist();schedule(800);
@@ -162,6 +163,13 @@ export async function flushEvents(){
  if(flushing||!queue.length||!runtime.enabled)return;flushing=true;
  const batch=queue.slice(0,100);
  try{await visitorApi('/events',{method:'POST',body:JSON.stringify({events:batch})});queue=queue.filter(x=>!batch.some(b=>b.idempotencyKey===x.idempotencyKey));retry=0;persist();}
- catch(error){retry++;if(error instanceof ApiError&&error.status===400){queue=queue.filter(x=>!batch.some(b=>b.idempotencyKey===x.idempotencyKey));persist();}}
+ catch(error){retry++;if(error instanceof ApiError&&error.status===400){
+   // Isolate rejected events: one stale client event must not discard valid neighbours.
+   for(const event of batch){
+    try{await visitorApi('/events',{method:'POST',body:JSON.stringify({events:[event]})});}
+    catch(singleError){if(!(singleError instanceof ApiError&&singleError.status===400))break;}
+    queue=queue.filter(x=>x.idempotencyKey!==event.idempotencyKey);persist();
+   }
+  }}
  finally{flushing=false;if(queue.length)schedule(Math.min(60000,1000*2**Math.min(retry,6)));}
 }
