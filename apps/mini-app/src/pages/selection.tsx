@@ -638,7 +638,7 @@ export default function SelectionPage(){
         <button type="button" className={styles.catalogButton} onClick={()=>navigate("/catalog")}>Весь каталог<ChevronRight size={16}/></button>
       </div>
 
-      <div className={styles.disclaimer}><ShieldCheck size={14}/>PULSE Select использует каталог, настройки PULSE Control и единый ипотечный движок. Финальные банковские условия подтверждаются отдельно.</div>
+      <div className={styles.disclaimer}><ShieldCheck size={14}/>Подбор учитывает ваши пожелания и бюджет. Окончательные условия ипотеки подтверждает банк.</div>
     </div>;
   }
 
@@ -739,9 +739,9 @@ export default function SelectionPage(){
             <div className={appliedMortgageScenario?styles.mortgageLinked:styles.mortgageLink}>
               <div>
                 <span>{appliedMortgageScenario?<CircleCheck size={14}/>:<ShieldCheck size={14}/>}</span>
-                <div><strong>{appliedMortgageScenario?"Сценарий ипотеки подключён":"Нужна точная льготная логика?"}</strong><small>{appliedMortgageScenario
-                  ?"Используем настройки из калькулятора · "+MORTGAGE_POLICY_VERSION
-                  :"Откройте ипотеку, задайте детей и условия — Select подхватит тот же policy engine."
+                <div><strong>{appliedMortgageScenario?"Сценарий ипотеки подключён":"Хотите учесть льготную ипотеку?"}</strong><small>{appliedMortgageScenario
+                  ?"Учитываем параметры, которые вы выбрали в калькуляторе"
+                  :"Рассчитайте ипотеку — учтём состав семьи, взнос и комфортный платёж при подборе."
                 }</small></div>
               </div>
               <button type="button" onClick={()=>navigate("/mortgage?from=select&program="+encodeURIComponent(mortgageProgram))}>{appliedMortgageScenario?"Изменить":"Настроить"}</button>
@@ -796,6 +796,5 @@ export default function SelectionPage(){
       <ArrowRight size={18}/>
     </button>
 
-    <div className={styles.note}><ShieldCheck size={14}/>Настройки Select приходят из PULSE Control, каталог — из API, ипотека — из общего policy engine.</div>
   </div>;
 }
