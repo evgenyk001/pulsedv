@@ -1,3 +1,5 @@
+import {CatalogFreshnessEditor,CatalogFreshnessBadge} from '../components/CatalogFreshnessEditor';
+import {needsCatalogReview} from '../../../../packages/pulse-data/business';
 import React from 'react';
 import {
   Archive,Building2,CheckCircle2,ChevronRight,Clock3,FileSpreadsheet,HardDrive,Images,
@@ -25,6 +27,7 @@ function PreviewObjectsPage(){
   const state=usePulseState();
   const [selected,setSelected]=React.useState<string|null>(null);
   const [query,setQuery]=React.useState('');
+  const [reviewOnly,setReviewOnly]=React.useState(false);
   const [status,setStatus]=React.useState<'all'|'published'|'draft'|'archived'>('all');
   const [notice,setNotice]=React.useState('');
   const p=state.properties.find(x=>x.id===selected);
@@ -33,6 +36,7 @@ function PreviewObjectsPage(){
   const add=()=>{const property=fresh();updatePulseState(s=>({...s,properties:[...s.properties,property]}));setSelected(property.id);};
   const list=state.properties.filter(property=>{
     if(status!=='all'&&property.status!==status)return false;
+    if(reviewOnly&&!needsCatalogReview(property.freshness))return false;
     return (property.name+' '+property.city+' '+property.developerName).toLowerCase().includes(query.toLowerCase());
   });
   const counts={
@@ -88,6 +92,7 @@ function PreviewObjectsPage(){
             <button key={value} className={status===value?'active':''} onClick={()=>setStatus(value)}>{label}</button>
           )}
         </div>
+        <button type="button" className="secondaryAction" aria-pressed={reviewOnly} onClick={()=>setReviewOnly(v=>!v)}>{reviewOnly?"Показать весь каталог":"Требуют проверки"}</button>
         <div className="catalogPageMeta"><b>{list.length}</b><span>объектов в preview</span></div>
       </div>
 
@@ -102,7 +107,7 @@ function PreviewObjectsPage(){
             <span><small>Цена от</small><b>{formatPrice(item.priceFrom)}</b></span>
             <span><small>Срок</small><b>{item.delivery||'Не указан'}</b></span>
           </div>
-          <div className="catalogObjectDeveloper">{item.developerName||'Застройщик не указан'}</div>
+          <CatalogFreshnessBadge value={item.freshness}/><div className="catalogObjectDeveloper">{item.developerName||'Застройщик не указан'}</div>
         </div>
       </button>)}</div>:<div className="emptyState"><PackageOpen size={26}/><strong>Объекты не найдены</strong><span>Измените фильтр или добавьте новый ЖК.</span></div>}
     </section>
@@ -119,6 +124,7 @@ function PreviewObjectsPage(){
         <small>{readiness(p)===100?'Основные данные заполнены — объект можно публиковать.':'Для публикации нужны обложка, цена, застройщик и срок сдачи.'}</small>
       </div>
 
+      <CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} autoSave/>
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>Карточка и страница ЖК</small></div></div>
         <div className="formGrid">

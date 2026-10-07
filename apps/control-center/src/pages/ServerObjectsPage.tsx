@@ -1,3 +1,5 @@
+import {CatalogFreshnessEditor,CatalogFreshnessBadge} from '../components/CatalogFreshnessEditor';
+import {needsCatalogReview} from '../../../../packages/pulse-data/business';
 import { useDialog } from "../components/useDialog";
 import React from "react";
 import {
@@ -103,6 +105,7 @@ export function ServerObjectsPage(){
   const [page,setPage]=React.useState(1);
   const [status,setStatus]=React.useState<StatusFilter>("all");
   const [query,setQuery]=React.useState("");
+  const [reviewOnly,setReviewOnly]=React.useState(false);
   const deferredQuery=React.useDeferredValue(query);
   const [data,setData]=React.useState<{items:PulseProperty[];total:number;hasMore:boolean}>({items:[],total:0,hasMore:false});
   const [counts,setCounts]=React.useState<CatalogCounts>({all:0,published:0,draft:0,archived:0});
@@ -130,15 +133,15 @@ export function ServerObjectsPage(){
     const sequence=++loadSequence.current;
     setLoading(true);setError("");
     try{
-      const result=await listAdminCatalog({page,limit:24,q:deferredQuery||undefined,status});
+      const result=await listAdminCatalog({page,limit:24,q:deferredQuery||undefined,status,needsReview:reviewOnly?"1":undefined});
       if(sequence===loadSequence.current)setData({items:result.items,total:result.total,hasMore:result.hasMore});
     }catch(e){if(sequence===loadSequence.current)setError(e instanceof Error?e.message:"Не удалось загрузить каталог")}
     finally{if(sequence===loadSequence.current)setLoading(false)}
-  },[page,status,deferredQuery]);
+  },[page,status,deferredQuery,reviewOnly]);
 
   React.useEffect(()=>{void load()},[load]);
   React.useEffect(()=>{void loadCounts().catch(()=>{})},[loadCounts]);
-  React.useEffect(()=>{setPage(1)},[status,deferredQuery]);
+  React.useEffect(()=>{setPage(1)},[status,deferredQuery,reviewOnly]);
 
   const reload=async()=>{await Promise.all([load(),loadCounts()])};
 
@@ -346,6 +349,7 @@ export function ServerObjectsPage(){
             <button key={value} className={status===value?"active":""} onClick={()=>setStatus(value)}>{label}</button>
           )}
         </div>
+        <button type="button" className="secondaryAction" aria-pressed={reviewOnly} onClick={()=>setReviewOnly(v=>!v)}>{reviewOnly?"Показать весь каталог":"Требуют проверки"}</button>
         <div className="catalogPageMeta"><b>{data.total}</b><span>объектов · страница {page} из {totalPages}</span></div>
       </div>
 
@@ -361,7 +365,7 @@ export function ServerObjectsPage(){
               <span><small>Цена от</small><b>{formatPrice(item.priceFrom)}</b></span>
               <span><small>Срок</small><b>{item.delivery||"Не указан"}</b></span>
             </div>
-            <div className="catalogObjectDeveloper">{item.developerName||"Застройщик не указан"}</div>
+            <CatalogFreshnessBadge value={item.freshness}/><div className="catalogObjectDeveloper">{item.developerName||"Застройщик не указан"}</div>
           </div>
         </button>)}</div>:
         <div className="emptyState"><PackageOpen size={26}/><strong>Объекты не найдены</strong><span>Измените фильтр или добавьте новый ЖК.</span></div>}
@@ -392,6 +396,7 @@ export function ServerObjectsPage(){
         <button className="primaryAction" disabled={!dirty||busy} onClick={()=>void save()}><Save size={15}/>{busy?"Сохраняем…":"Сохранить"}</button>
       </div>
 
+      <CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} disabled={busy}/>
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>То, что формирует карточку и страницу ЖК</small></div></div>
         <div className="formGrid">

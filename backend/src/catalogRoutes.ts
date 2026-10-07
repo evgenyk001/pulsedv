@@ -72,24 +72,26 @@ export async function registerCatalogRoutes(
   app.get("/api/v1/public/catalog",async request=>{
     const query=querySchema.parse(request.query);
     const ids=query.ids?query.ids.split(",").map(x=>x.trim()).filter(Boolean).slice(0,200):undefined;
-    return listCatalog(db,{
+    const result=await listCatalog(db,{
       page:query.page,limit:query.limit,q:query.q,city:query.city,delivery:query.delivery,rooms:query.rooms,
       sea:!!query.sea,min:query.min,max:query.max,sort:query.sort,ids,view:query.view,
     });
+    return {...result,items:result.items.map(({freshness,...property})=>property)};
   });
 
   app.get("/api/v1/public/catalog/:id",async(request,reply)=>{
     const id=z.string().min(1).max(120).parse((request.params as any).id);
     const property=await getCatalogProperty(db,id,"published");
     if(!property)return reply.code(404).send({error:"Объект не найден"});
-    return {property};
+    const {freshness,...publicProperty}=property;
+    return {property:publicProperty};
   });
 
   app.get("/api/v1/control/catalog",{preHandler:editor},async request=>{
-    const query=querySchema.extend({status:z.enum(["draft","published","archived","all"]).default("all")}).parse(request.query);
+    const query=querySchema.extend({status:z.enum(["draft","published","archived","all"]).default("all"),needsReview:z.literal("1").optional()}).parse(request.query);
     const ids=query.ids?query.ids.split(",").map(x=>x.trim()).filter(Boolean).slice(0,500):undefined;
     return listCatalog(db,{
-      status:query.status,page:query.page,limit:query.limit,q:query.q,city:query.city,delivery:query.delivery,
+      needsReview:!!query.needsReview,status:query.status,page:query.page,limit:query.limit,q:query.q,city:query.city,delivery:query.delivery,
       rooms:query.rooms,sea:!!query.sea,min:query.min,max:query.max,sort:query.sort,ids,view:query.view,
     });
   });
@@ -117,10 +119,10 @@ export async function registerCatalogRoutes(
     if(property.id!==id)return reply.code(400).send({error:"ID объекта нельзя менять этим запросом"});
     if(!property.revision)return reply.code(409).send({error:"Откройте карточку заново перед сохранением: версия не указана"});
     await db.transaction(async sql=>{
-      const current=(await sql.query("select revision from catalog_properties where id=$1 for update",[id])).rows[0];
+      const current=(await sql.query("select revision,freshness from catalog_properties where id=$1 for update",[id])).rows[0];
       if(!current)throw Object.assign(new Error("Объект не найден"),{statusCode:404});
       if(Number(current.revision)!==property.revision)throw Object.assign(new Error("Карточка изменена другим сотрудником. Ваши правки сохранены в форме. Сверьте их с актуальной версией перед повторным редактированием."),{statusCode:409});
-      await upsertCatalogProperty(sql,property);
+      await upsertCatalogProperty(sql,{...property,freshness:property.freshness??current.freshness});
       await audit(sql,request.member!.id,"catalog.update",id,{status:property.status});
     });
     return {property:await getCatalogProperty(db,id,"any")};
@@ -135,6 +137,7 @@ export async function registerCatalogRoutes(
         const exists=await getCatalogProperty(sql,incoming.id,"any");
         const property=exists?{
           ...incoming,
+          freshness:incoming.freshness??exists.freshness,
           images:input.replace.images?incoming.images:exists.images,
           features:input.replace.features?incoming.features:exists.features,
           floorplans:input.replace.floorplans?incoming.floorplans:exists.floorplans,

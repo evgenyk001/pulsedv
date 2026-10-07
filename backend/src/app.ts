@@ -1,3 +1,4 @@
+import {registerFinanceRoutes} from './financeRoutes';
 import {registerFavoriteRoutes,mergeFavorites} from './favoriteRoutes';
 import Fastify, { type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
@@ -9,7 +10,7 @@ import { camelRow } from './database';
 import type { RuntimeConfig } from './config';
 import { HttpError, tokenHash, checkPassword, hashPassword, issueToken, generateMfaCode, mfaCodeHash, checkMfaCode } from './security';
 import { verifyTelegramInitData } from './telegramInitData';
-import { stateSchema, leadSchema, eventsSchema, safeMetadata } from './validation';
+import { stateSchema, leadSchema, eventsSchema, safeMetadata, financeSchema } from './validation';
 import { audit, leadRepository, readState } from './repository';
 import { ingestEventBatch, processSessionIntent } from './leadEngineService';
 import { enqueueInterestChange } from './interestNotifications';
@@ -182,6 +183,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  });
  app.get('/api/v1/control/me',{preHandler:control},async request=>({member:request.member}));
  app.post('/api/v1/control/logout',{preHandler:control},async(request,reply)=>{await db.query('delete from auth_tokens where token_hash=$1',[tokenHash(request.cookies.pulse_control!)]);reply.clearCookie('pulse_control',cookieOptions);return {ok:true};});
+ await registerFinanceRoutes(app,db,control);
  await registerInterestRoutes(app,db,control);
  await registerFavoriteRoutes(app,db,visitor);
  await registerJourneyRoutes(app,db,control,visitor,editor,config.PUBLIC_ORIGIN,config);
@@ -378,14 +380,14 @@ export async function createApp(db:Database,config:RuntimeConfig){
   });
  });
  app.patch('/api/v1/control/leads/:id',{preHandler:control},async request=>{
-  const id=uuid((request.params as any).id);const patch=z.object({status:z.enum(['new','contacted','qualified','showing','booking','deal','closed','lost']).optional(),manager:z.uuid().nullable().optional(),comment:z.string().max(5000).nullable().optional(),nextAction:z.string().max(1000).nullable().optional(),expectedUpdatedAt:z.string().min(1)}).strict().parse(request.body);
+  const id=uuid((request.params as any).id);const patch=z.object({status:z.enum(['new','contacted','qualified','showing','booking','deal','closed','lost']).optional(),manager:z.uuid().nullable().optional(),comment:z.string().max(5000).nullable().optional(),nextAction:z.string().max(1000).nullable().optional(),finance:financeSchema.optional(),expectedUpdatedAt:z.string().min(1)}).strict().parse(request.body);
   return db.transaction(async sql=>{
    const current=(await sql.query('select * from leads where id=$1 for update',[id])).rows[0];if(!current)throw new HttpError(404,'Заявка не найдена');
    const member=request.member!;if(member.role==='manager'&&(current.manager_id!==member.id||patch.manager!==undefined))throw new HttpError(403,'Недостаточно прав');
    if(new Date(current.updated_at).getTime()!==Date.parse(patch.expectedUpdatedAt))throw new HttpError(409,'Заявка изменена другим сотрудником. Обновите данные');
    if(patch.manager&&!(await sql.query('select id from team_members where id=$1 and active=true',[patch.manager])).rows.length)throw new HttpError(400,'Менеджер недоступен');
    if('nextAction' in patch)await sql.query('update leads set next_action_manual=$2 where id=$1',[id,patch.nextAction!==null]);
-   for(const [key,value] of Object.entries(patch)){if(key==='expectedUpdatedAt')continue;const column={status:'status',manager:'manager_id',comment:'comment',nextAction:'next_action'}[key]!;await sql.query(`update leads set ${column}=$2 where id=$1`,[id,value]);}
+   for(const [key,value] of Object.entries(patch)){if(key==='expectedUpdatedAt')continue;const column={status:'status',manager:'manager_id',comment:'comment',nextAction:'next_action',finance:'finance'}[key]!;await sql.query(`update leads set ${column}=$2 where id=$1`,[id,key==='finance'?JSON.stringify(value):value]);}
    if(patch.status&&patch.status!==current.status)await sql.query('insert into lead_stage_events(lead_id,status) values($1,$2)',[id,patch.status]);
    if(patch.manager!==undefined)await sql.query("update crm_tasks set assigned_to=$2 where lead_id=$1 and status<>'done'",[id,patch.manager]);
    if(patch.status&&['deal','closed','lost'].includes(patch.status))await sql.query("update crm_tasks set status='done' where lead_id=$1 and status<>'done'",[id]);

@@ -9,7 +9,7 @@ const query=(input:Record<string,string|number|undefined>)=>{
   return params.toString();
 };
 
-export async function listAdminCatalog(input:{page:number;limit:number;q?:string;status?:"draft"|"published"|"archived"|"all"}){
+export async function listAdminCatalog(input:{page:number;limit:number;q?:string;needsReview?:"1";status?:"draft"|"published"|"archived"|"all"}){
   return api<AdminCatalogPage>("/control/catalog?"+query({...input,view:"card"}));
 }
 

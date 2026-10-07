@@ -92,7 +92,7 @@ export function addPulseLead(payload:Omit<PulseLead,"id"|"status"|"manager"|"cre
   recordPulseEvent({eventType:"lead_created",entityType:"lead",entityId:lead.id,metadata:{source:lead.source,propertyId:lead.propertyId}});
   return lead;
 }
-export function updatePulseLead(idValue:string,patch:Partial<Pick<PulseLead,"status"|"manager"|"comment"|"nextAction"|"requestContext">>){
+export function updatePulseLead(idValue:string,patch:Partial<Pick<PulseLead,"status"|"manager"|"comment"|"nextAction"|"requestContext"|"finance">>){
   if(runtime.enabled){void updateRemote("leads",idValue,patch).catch(()=>{});return;}
   if(!canStore())return;
   const leads=listPulseLeads().map(lead=>lead.id===idValue?{...lead,...patch,...('nextAction' in patch?{nextActionManual:patch.nextAction!==null}:{}),updatedAt:now()}:lead);

@@ -7,7 +7,20 @@ const image=https.nullable();
 const id=text(120).regex(/^[a-zA-Z0-9_-]+$/);
 const rule=z.object({id,eventType:text(80).min(1),label:text(160).min(1),weight:z.number().int().min(-100).max(100),maxCount:z.number().int().min(1).max(100)}).strict();
 export const engineSchema=z.object({rules:z.array(rule).max(50),thresholds:z.object({warm:z.number().int().min(1).max(100),hot:z.number().int().min(1).max(100),urgent:z.number().int().min(1).max(100)})}).refine(x=>x.thresholds.warm<x.thresholds.hot&&x.thresholds.hot<x.thresholds.urgent,'Пороги должны возрастать: warm < hot < urgent');
+export const freshnessSchema=z.object({
+ source:text(1000).default(''),responsible:text(200).default(''),
+ verifiedAt:z.iso.datetime({offset:true}).nullable().default(null),reviewDueOn:z.iso.date().nullable().default(null)
+}).strict().refine(v=>!v.verifiedAt||Date.parse(v.verifiedAt)<=Date.now()+60000,'Дата проверки не может быть в будущем').refine(v=>!v.verifiedAt||!!(v.source&&v.responsible),'Для отметки проверки укажите источник и ответственного');
+const money=z.number().int().min(0).max(1_000_000_000).nullable().default(null);
+export const financeSchema=z.object({commissionRub:money,agentPayoutRub:money,expectedPaymentOn:z.iso.date().nullable().default(null),receivedOn:z.iso.date().nullable().default(null),agentPaidOn:z.iso.date().nullable().default(null)}).strict().superRefine((v,ctx)=>{
+ if(v.agentPayoutRub!==null&&v.commissionRub!==null&&v.agentPayoutRub>v.commissionRub)ctx.addIssue({code:'custom',message:'Выплата агенту не может превышать комиссию'});
+ if(v.receivedOn&&!(v.commissionRub&&v.commissionRub>0))ctx.addIssue({code:'custom',message:'Для поступления укажите сумму комиссии'});
+ if(v.agentPaidOn&&!(v.agentPayoutRub&&v.agentPayoutRub>0))ctx.addIssue({code:'custom',message:'Для выплаты укажите сумму агенту'});
+ const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Vladivostok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ if([v.receivedOn,v.agentPaidOn].some(d=>d&&d>today))ctx.addIssue({code:'custom',message:'Фактическая оплата не может быть в будущем'});
+});
 const property=z.object({
+ freshness:freshnessSchema.optional(),
  id,name:text().min(1),city:text(100).min(1),district:text(100),address:nullableText(400),latitude:z.number().min(-90).max(90).nullable(),longitude:z.number().min(-180).max(180).nullable(),priceFrom:z.number().min(0).max(10000),delivery:text(100),className:text(100),status:z.enum(['draft','published','archived']),description:text(10000),developerName:text(),tags:z.array(text(100)).max(20),coverImageUrl:image,sortOrder:z.number().int(),
  images:z.array(z.object({id:id.optional(),url:https,alt:text(),sortOrder:z.number().int()})).max(50),
  features:z.array(z.object({id:id.optional(),label:text(),icon:text(50),sortOrder:z.number().int()})).max(30),
@@ -69,6 +82,7 @@ const mediaUrl=z.string().max(2048).refine(value=>{
 },'Нужна HTTPS-ссылка или внутренний /media/ путь');
 
 export const catalogPropertySchema=z.object({
+ freshness:freshnessSchema.optional(),
  id,revision:z.number().int().positive().optional(),
  name:text().min(1),
  city:text(100).min(1),

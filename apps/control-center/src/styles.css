@@ -2349,3 +2349,5 @@ main{
   .control .pulseChart svg{height:175px!important}
   .pulseChartTooltip{min-width:74px;padding:6px 7px}
 }
+
+.freshnessBadge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:12px;font-size:11px;font-weight:600;margin:8px 0}.reviewDue{background:#fff0dc;color:#935914}.reviewFresh{background:#e8f5ee;color:#247047}.freshnessActions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.freshnessActions small{flex-basis:100%;color:var(--muted,#78808e)}.financeHelp{color:var(--muted,#78808e);font-size:13px;line-height:1.6}.financePeriod{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}.financePanel{margin-bottom:24px}.financePeriod label{flex:1;min-width:140px}
