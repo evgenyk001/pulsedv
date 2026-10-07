@@ -2,7 +2,11 @@ import { DEFAULT_LEAD_ENGINE_CONFIG, scoreLeadEvents, type LeadEngineConfig, typ
 
 export type PropertyStatus="draft"|"published"|"archived";
 
+export type CatalogFreshness={source:string;responsible:string;verifiedAt:string|null;reviewDueOn:string|null};
+export type DealFinance={commissionRub:number|null;agentPayoutRub:number|null;expectedPaymentOn:string|null;receivedOn:string|null;agentPaidOn:string|null};
+
 export type PulseProperty={
+  freshness?:CatalogFreshness;
   revision?:number;
   id:string; name:string; city:string; district:string; address:string|null;
   latitude:number|null; longitude:number|null; priceFrom:number; delivery:string;
@@ -63,6 +67,7 @@ export type PulseState={
 };
 
 export type PulseLead={
+  finance?:DealFinance;
   id:string; source:string; propertyId:string|null; name:string; phone:string; comment:string|null; requestContext?:Record<string,unknown>;
   status:"new"|"contacted"|"qualified"|"showing"|"booking"|"deal"|"closed"|"lost";
   manager:string|null; createdAt:string; updatedAt:string;
