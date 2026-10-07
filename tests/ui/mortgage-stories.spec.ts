@@ -44,7 +44,7 @@ for (const [width, height] of [[320,568],[375,667],[390,844],[430,932],[844,390]
 test('Mortgage story waits for artwork and recovers after an image error', async ({ page }) => {
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
-  await page.route('**/mortgage-v5-programs.png', async route => { await gate; await route.abort(); });
+  await page.route('**/mortgage-v5-programs.webp', async route => { await gate; await route.abort(); });
   await page.goto('/pulsedv/mini-app/#/mortgage', { waitUntil: 'domcontentloaded' });
   const story = page.locator('dialog[aria-label="Знакомство с ипотекой"]');
   await expect(story).toBeVisible();
@@ -52,7 +52,7 @@ test('Mortgage story waits for artwork and recovers after an image error', async
   await expect(story.getByRole('heading')).toHaveText('Начните с выбора');
   release();
   await expect(story.getByText('Не удалось загрузить иллюстрацию')).toBeVisible();
-  await page.unroute('**/mortgage-v5-programs.png');
+  await page.unroute('**/mortgage-v5-programs.webp');
   await story.getByRole('button', { name: 'Повторить' }).click();
   await expect(story.locator('i')).toHaveCSS('animation-play-state', 'running');
   const next = story.getByRole('button', { name: 'Следующая история' });

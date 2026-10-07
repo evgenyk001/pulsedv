@@ -54,13 +54,21 @@ test('Finance: save commission and actual payment, reload, check period totals',
  await page.screenshot({path:'test-results/deal-finance.png',fullPage:true});
 });
 
-test('Initial load does not request mortgage and journey bundles before navigation',async({page})=>{
- const chunks:string[]=[];page.on('request',r=>{if(r.url().includes('/assets/'))chunks.push(r.url())});
+test('Primary navigation and mortgage work without extra JavaScript downloads',async({page})=>{
  await page.goto('/pulsedv/mini-app/');
  await expect(page.getByRole('button',{name:'Пропустить онбординг'})).toBeVisible();
- expect(chunks.filter(url=>/\/(mortgage|journey)-.*\.js/.test(url))).toEqual([]);
  await page.getByRole('button',{name:'Пропустить онбординг'}).click();
- await page.goto('/pulsedv/mini-app/#/mortgage');
+ const extraScripts:string[]=[];
+ await page.route('**/assets/*.js',route=>{extraScripts.push(route.request().url());return route.abort()});
+ const nav=page.getByRole('navigation',{name:'Основная навигация'});
+ await nav.getByRole('button',{name:'Подбор',exact:true}).click();
+ await expect(page.getByRole('heading',{name:/Опишите, что ищете/})).toBeVisible();
+ await nav.getByRole('button',{name:'Каталог',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Новостройки',exact:true})).toBeVisible();
+ await nav.getByRole('button',{name:'Избранное',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Избранное',exact:true})).toBeVisible();
+ await page.evaluate(()=>{location.hash='/mortgage'});
  await expect(page.getByRole('dialog',{name:'Знакомство с ипотекой',exact:true})).toBeVisible();
- expect(chunks.some(url=>/\/mortgage-.*\.js/.test(url))).toBe(true);
+ expect(extraScripts).toEqual([]);
+ await expect(page.getByText('Открываем раздел…',{exact:true})).toHaveCount(0);
 });
