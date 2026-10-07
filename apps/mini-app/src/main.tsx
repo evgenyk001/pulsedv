@@ -8,16 +8,16 @@ import "./floot-runtime.css";
 import "./base.css";
 import { AppShell } from "./components/AppShell";
 import HomePage from "./pages/_index";
-const JourneyPage=React.lazy(()=>import('./pages/journey'));
-const CatalogPage=React.lazy(()=>import("./pages/catalog"));
-const MapPage=React.lazy(()=>import("./pages/map"));
-const MortgagePage=React.lazy(()=>import("./pages/mortgage"));
-const SelectionPage=React.lazy(()=>import("./pages/selection"));
-const FavoritesPage=React.lazy(()=>import("./pages/favorites"));
-const ProfilePage=React.lazy(()=>import("./pages/profile"));
-const PropertyPage=React.lazy(()=>import("./pages/property.$propertyId"));
-const PrivacyPage=React.lazy(()=>import("./pages/privacy"));
-const PersonalDataConsentPage=React.lazy(()=>import("./pages/personal-data-consent"));
+import JourneyPage from "./pages/journey";
+import CatalogPage from "./pages/catalog";
+import MapPage from "./pages/map";
+import MortgagePage from "./pages/mortgage";
+import SelectionPage from "./pages/selection";
+import FavoritesPage from "./pages/favorites";
+import ProfilePage from "./pages/profile";
+import PropertyPage from "./pages/property.$propertyId";
+import PrivacyPage from "./pages/privacy";
+import PersonalDataConsentPage from "./pages/personal-data-consent";
 
 configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.meta.env.VITE_API_BASE_URL,role:"public"});
 
@@ -30,7 +30,7 @@ class ScreenBoundary extends React.Component<{children:React.ReactNode},{failed:
 }
 function ScreenContent({children}:{children:React.ReactNode}){
  const location=useLocation();
- return <ScreenBoundary key={location.pathname}><React.Suspense fallback={<div className="screenLoadState" role="status" aria-live="polite">Открываем раздел…</div>}>{children}</React.Suspense></ScreenBoundary>;
+ return <ScreenBoundary key={location.pathname}>{children}</ScreenBoundary>;
 }
 function App(){
   return <QueryClientProvider client={queryClient}>

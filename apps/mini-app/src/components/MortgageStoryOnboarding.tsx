@@ -12,24 +12,31 @@ const slides = [
     eyebrow: "ПРОГРАММА ПОД ВАШУ ЗАДАЧУ",
     title: "Начните с выбора",
     body: "Выберите ипотечную программу и тип недвижимости. Условия расчёта изменятся под ваш сценарий.",
-    image: `${base}/_cdn/static/mortgage-v5-programs.png`,
+    image: `${base}/_cdn/static/mortgage-v5-programs.webp`,
     alt: "Современный дом и карточки ипотечных программ",
   },
   {
     eyebrow: "ВАШ КОМФОРТНЫЙ ПЛАТЁЖ",
     title: "Настройте под себя",
     body: "Меняйте стоимость, первый взнос и срок. Сразу увидите, как меняется ежемесячный платёж.",
-    image: `${base}/_cdn/static/mortgage-v5-payment.png`,
+    image: `${base}/_cdn/static/mortgage-v5-payment.webp`,
     alt: "Калькулятор и три регулятора параметров ипотеки",
   },
   {
     eyebrow: "СЛЕДУЮЩИЙ ШАГ — ВМЕСТЕ",
     title: "От расчёта к решению",
     body: "Расчёт здесь предварительный. Нажмите «Получить точный расчёт» в разделе ипотеки — обсудим условия с вами.",
-    image: `${base}/_cdn/static/mortgage-v5-adviser.png`,
+    image: `${base}/_cdn/static/mortgage-v5-adviser.webp`,
     alt: "Результат расчёта, сообщения и ключ от квартиры",
   },
 ];
+
+export function warmMortgageArtwork(){
+  const image=new Image();
+  image.decoding="async";
+  image.fetchPriority="low";
+  image.src=slides[0].image;
+}
 
 export function MortgageStoryOnboarding({ onDone }: { onDone: () => void }) {
   const [index, setIndex] = React.useState(0);
@@ -85,11 +92,12 @@ export function MortgageStoryOnboarding({ onDone }: { onDone: () => void }) {
     };
   }, []);
 
-  // Load the next PNG only after the visible artwork is decoded.
+  // Give the visible artwork priority, then warm the next slide.
   React.useEffect(() => {
     if (ready !== slide.image || !slides[index + 1]) return;
     const image = new Image();
     image.decoding = "async";
+    image.fetchPriority = "low";
     image.src = slides[index + 1].image;
   }, [index, ready, slide.image]);
 
