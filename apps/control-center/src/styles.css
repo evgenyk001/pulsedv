@@ -2351,3 +2351,21 @@ main{
 }
 
 .freshnessBadge{display:inline-flex;align-items:center;padding:5px 9px;border-radius:12px;font-size:11px;font-weight:600;margin:8px 0}.reviewDue{background:#fff0dc;color:#935914}.reviewFresh{background:#e8f5ee;color:#247047}.freshnessActions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}.freshnessActions small{flex-basis:100%;color:var(--muted,#78808e)}.financeHelp{color:var(--muted,#78808e);font-size:13px;line-height:1.6}.financePeriod{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}.financePanel{margin-bottom:24px}.financePeriod label{flex:1;min-width:140px}
+
+/* Finance controls must fit native date fields on mobile Safari. */
+.control .financePanel{min-width:0;max-width:100%}
+.control .financeHeading{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:16px}
+.control .financeHeading h2{margin:6px 0 0;line-height:1.2}
+.control .financeHeading p{margin:10px 0 0;font-size:12px;line-height:1.6;color:#a1a6ad}
+.control .financeHeading>.secondaryAction{margin:0;min-height:40px;white-space:nowrap}
+.control .financePeriod{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.control .financePeriod>.controlField{min-width:0;max-width:100%;width:100%}
+.control .financePeriod input[type="date"]{appearance:none;-webkit-appearance:none;display:block;box-sizing:border-box;width:100%;min-width:0;max-width:100%;min-height:44px;overflow:hidden;font-size:12px}
+.control .financePeriod input::-webkit-date-and-time-value{min-width:0;text-align:left}
+.control .financePanel .metrics article{min-width:0}
+.control .financePanel .metrics article strong{max-width:100%;font-size:clamp(18px,2vw,29px)!important;line-height:1.25;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+@media(max-width:640px){
+ .control .financeHeading{grid-template-columns:minmax(0,1fr);gap:12px}
+ .control .financeHeading>.secondaryAction{width:100%;justify-content:center}
+ .control .financePeriod{grid-template-columns:minmax(0,1fr)}
+}

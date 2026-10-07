@@ -32,14 +32,21 @@ jobs:
         env:
           TEST_DATABASE_URL: postgres://pulse:ci-only-password@localhost:5432/pulse_test
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright test
+      - run: npx playwright test --config=playwright.finance-webkit.config.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pulse-finance-safari-review
+          path: test-results/finance-webkit-*.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: pulse-ui-review
           path: |
             playwright-report
+            playwright-report-finance-webkit
             test-results
       - name: Validate VPS images
         run: |
