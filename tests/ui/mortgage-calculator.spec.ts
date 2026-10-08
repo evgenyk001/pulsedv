@@ -16,7 +16,7 @@ for(const width of [320,390,430]){
   await expect(down).toHaveValue(rub(1507500));
   await expect(page.getByText('Минимальный взнос: 20,1% · 1 507 500 ₽',{exact:true})).toBeVisible();
   await expect(page.getByText('20,1% · 1 507 500 ₽',{exact:true})).toBeVisible();
-  await expect(page.getByText(/Льготная часть — до 8 000 000 ₽ под 8%/)).toBeVisible();
+  await expect(page.getByText('Льготная часть — до 8 000 000 ₽ под 8%')).toBeVisible();
   await expect(page.getByText('5 992 500 ₽',{exact:true}).first()).toBeVisible();
   const rate=.08/12,months=180;
   const payment=Math.round(5_992_500*rate*Math.pow(1+rate,months)/(Math.pow(1+rate,months)-1));
@@ -62,7 +62,7 @@ test('Mortgage configuration, exact credit ceiling and short term stay consisten
  await expect(page.getByText(/Проверьте документы с менеджером\./)).toBeVisible();
  await page.getByRole('button',{name:/Дальневосточная/}).click();
  await expect(down).toHaveValue(rub(1516188));
- await expect(page.getByText(/Увеличьте первоначальный взнос минимум до 1 543 219 ₽/)).toBeVisible();
+ await expect(page.getByText('Увеличьте первоначальный взнос минимум до 1 543 219 ₽')).toBeVisible();
  await down.fill('1543219');await down.blur();
  await expect(page.getByText('6 000 000 ₽',{exact:true}).first()).toBeVisible();
  await expect(page.getByText('Сумма кредита выше доступного лимита',{exact:true})).toHaveCount(0);
