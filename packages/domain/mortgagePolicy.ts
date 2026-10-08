@@ -13,6 +13,8 @@ export type MortgageScenarioSettings={
   largeArea?:boolean;
   marketRate?:number;
   years?:number;
+  price?:number;
+  down?:number;
   updatedAt?:string;
 };
 
@@ -73,8 +75,11 @@ export function defaultMarketRate(programs:MortgageProgramRule[],propertyKind:Mo
   return DEFAULT_MARKET_RATES[propertyKind];
 }
 
-const MONEY_STEP=100_000;
-const ceilStep=(value:number,step=MONEY_STEP)=>Math.ceil(value/step)*step;
+// The program minimum is a financial boundary, not a slider increment.
+// Round only a fractional ruble, avoiding binary floating-point artifacts.
+export function minimumMortgageDown(price:number,percent:number){
+  return Math.ceil(Number((price*percent/100).toFixed(6)));
+}
 
 export function annuityPayment(principal:number,annualRate:number,months:number){
   if(principal<=0||months<=0)return 0;
@@ -144,7 +149,7 @@ export function calculateMortgageScenario(input:{
   }
 
   const minDownPct=rule.minDownPct;
-  const minDown=ceilStep(input.price*minDownPct/100);
+  const minDown=minimumMortgageDown(input.price,minDownPct);
   const loan=Math.max(input.price-input.down,0);
   const exceedsHardLimit=rule.id!=="standard"&&loan>totalLimit;
   if(exceedsHardLimit){
@@ -165,7 +170,7 @@ export function calculateMortgageScenario(input:{
   const totalKnown=!(rule.id==="family"&&years>FAMILY_SUBSIDY_YEARS);
   const total=totalKnown?payment*months:0;
   const overpayment=totalKnown?Math.max(total-loan,0):0;
-  const requiredDown=ceilStep(Math.max(minDown,input.price-totalLimit));
+  const requiredDown=Math.ceil(Math.max(minDown,input.price-totalLimit));
 
   return {
     status,
@@ -201,6 +206,20 @@ export function readMortgageScenario(storage:Pick<Storage,"getItem">|null|undefi
     if(!raw||typeof raw!=="object")return null;
     if(!["family","farEast","it","standard"].includes(raw.programId))return null;
     if(!["newbuild","secondary","house"].includes(raw.propertyKind))return null;
-    return raw as MortgageScenarioSettings;
+    const finite=(value:unknown,min:number,max:number)=>typeof value==="number"&&Number.isFinite(value)&&value>=min&&value<=max?value:undefined;
+    const children=finite(raw.childrenCount,1,5);
+    return {
+      programId:raw.programId,
+      propertyKind:raw.propertyKind,
+      childrenCount:children&&Number.isInteger(children)?children as FamilyChildren:undefined,
+      hasYoungChild:typeof raw.hasYoungChild==="boolean"?raw.hasYoungChild:undefined,
+      disabledChild:typeof raw.disabledChild==="boolean"?raw.disabledChild:undefined,
+      largeArea:typeof raw.largeArea==="boolean"?raw.largeArea:undefined,
+      marketRate:finite(raw.marketRate,.1,40),
+      years:finite(raw.years,1,30),
+      price:finite(raw.price,3_000_000,45_000_000),
+      down:finite(raw.down,0,45_000_000),
+      updatedAt:typeof raw.updatedAt==="string"?raw.updatedAt:undefined,
+    };
   }catch{return null;}
 }

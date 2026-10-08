@@ -21,8 +21,8 @@ const Slider = React.forwardRef<
       <SliderPrimitive.Track className={styles.track}>
         <SliderPrimitive.Range className={styles.range} />
       </SliderPrimitive.Track>
-      <SliderPrimitive.Thumb className={styles.thumb} />
-      {isRange && <SliderPrimitive.Thumb className={styles.thumb} />}
+      <SliderPrimitive.Thumb className={styles.thumb} aria-label={props["aria-label"]} />
+      {isRange && <SliderPrimitive.Thumb className={styles.thumb} aria-label={props["aria-label"]} />}
     </SliderPrimitive.Root>
   );
 });
