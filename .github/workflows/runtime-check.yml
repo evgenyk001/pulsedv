@@ -35,17 +35,17 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright test
       - run: npx playwright test --config=playwright.finance-webkit.config.ts
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: pulse-mortgage-calculator-review
           path: test-results/mortgage-calculator-webkit-*.png
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: pulse-finance-safari-review
           path: test-results/finance-webkit-*.png
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: always()
         with:
           name: pulse-ui-review
