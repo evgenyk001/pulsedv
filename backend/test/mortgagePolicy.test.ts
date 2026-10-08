@@ -4,6 +4,8 @@ import { DEFAULT_MORTGAGE_PROGRAMS } from "../../packages/pulse-data/model";
 import {
   calculateMortgageScenario,
   MORTGAGE_POLICY_VERSION,
+  minimumMortgageDown,
+  readMortgageScenario,
 } from "../../packages/domain/mortgagePolicy";
 import { bestMortgageFit } from "../../packages/domain/propertyMatch";
 import { safeMetadata } from "../src/validation";
@@ -143,4 +145,42 @@ test("PULSE Control market rates feed every shared mortgage scenario",()=>{
   });
   assert.ok(familyMixed);
   assert.equal(familyMixed.marketRate,14.2);
+});
+
+
+test("mortgage minimum is exact to a ruble, not a 100k slider step",()=>{
+  for(const [price,minimum] of [[7_500_000,1_507_500],[9_000_000,1_809_000],[7_543_219,1_516_188],[10_000_000,2_010_000]]){
+    assert.equal(minimumMortgageDown(price,20.1),minimum);
+    const settings={programId:"family" as const,propertyKind:"newbuild" as const,childrenCount:2 as const,hasYoungChild:true,years:15};
+    const exact=calculateMortgageScenario({programs:DEFAULT_MORTGAGE_PROGRAMS,settings,price,down:minimum});
+    assert.ok(exact);
+    assert.equal(exact.minDown,minimum);
+    assert.equal(exact.invalid,false);
+    const below=calculateMortgageScenario({programs:DEFAULT_MORTGAGE_PROGRAMS,settings,price,down:minimum-1});
+    assert.equal(below?.invalid,true);
+  }
+});
+
+test("required deposit for the credit limit has no extra 100k rounding",()=>{
+  const c=calculateMortgageScenario({programs:DEFAULT_MORTGAGE_PROGRAMS,settings:{programId:"farEast",propertyKind:"newbuild"},price:7_543_219,down:1_516_188});
+  assert.ok(c);
+  assert.equal(c.requiredDown,1_543_219);
+  const corrected=calculateMortgageScenario({programs:DEFAULT_MORTGAGE_PROGRAMS,settings:{programId:"farEast",propertyKind:"newbuild"},price:7_543_219,down:c.requiredDown});
+  assert.equal(corrected?.invalid,false);
+  assert.equal(corrected?.loan,6_000_000);
+});
+
+test("saved mortgage scenario restores exact cash and discards malformed optional data",()=>{
+  const load=(value:unknown)=>readMortgageScenario({getItem:()=>JSON.stringify(value)});
+  const saved=load({programId:"family",propertyKind:"newbuild",price:7_500_000,down:1_507_500,years:15});
+  assert.equal(saved?.price,7_500_000);
+  assert.equal(saved?.down,1_507_500);
+  const malformed=load({programId:"family",propertyKind:"newbuild",childrenCount:99,years:-2,marketRate:"bad",price:1,down:-100});
+  assert.ok(malformed);
+  assert.equal(malformed.childrenCount,undefined);
+  assert.equal(malformed.years,undefined);
+  assert.equal(malformed.marketRate,undefined);
+  assert.equal(malformed.price,undefined);
+  assert.equal(malformed.down,undefined);
+  assert.equal(calculateMortgageScenario({programs:DEFAULT_MORTGAGE_PROGRAMS,settings:malformed,price:7_500_000,down:1_507_500})?.invalid,false);
 });

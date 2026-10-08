@@ -28,6 +28,7 @@ import {
   MORTGAGE_POLICY_VERSION,
   MORTGAGE_SCENARIO_KEY,
   readMortgageScenario,
+  minimumMortgageDown,
   type FamilyChildren,
   type MortgagePropertyKind,
   type MortgageScenarioSettings,
@@ -44,10 +45,10 @@ const RULES_UPDATED="02.10.2026";
 
 const formatRub=(value:number)=>new Intl.NumberFormat("ru-RU").format(Math.round(value));
 const formatRate=(value:number)=>String(Math.round(value*10)/10).replace(".",",")+"%";
+const formatYears=(value:number)=>value+" "+(value%100>=11&&value%100<=14?"лет":value%10===1?"год":value%10>=2&&value%10<=4?"года":"лет");
 const parseNumber=(value:string)=>Number(value.replace(/[^0-9.,]/g,"").replace(",","."));
 const clamp=(value:number,min:number,max:number)=>Math.min(max,Math.max(min,value));
 const snap=(value:number,step:number)=>Math.round(value/step)*step;
-const ceilStep=(value:number,step:number)=>Math.ceil(value/step)*step;
 
 const propertyLabels:Record<PropertyKind,string>={
   newbuild:"Новостройка",
@@ -59,7 +60,6 @@ export default function MortgagePage(){
   const navigate=useNavigate();
   const [params]=useSearchParams();
   const requested=Number(params.get("price"));
-  const initialPrice=Number.isFinite(requested)&&requested>0?clamp(requested,PRICE_MIN,PRICE_MAX):9_000_000;
   const control=usePulseControlState();
   const programs=control.mortgagePrograms;
   const storedScenario=React.useMemo(()=>readMortgageScenario(typeof localStorage==="undefined"?null:localStorage),[]);
@@ -68,6 +68,15 @@ export default function MortgagePage(){
   const initialProgram:ProgramId=programs.some(item=>item.id===requestedProgram)
     ?requestedProgram as ProgramId
     :storedProgram??programs[0]?.id??"family";
+  const savedPrice=storedScenario?.price;
+  const initialPrice=Number.isFinite(requested)&&requested>0
+    ?clamp(Math.round(requested),PRICE_MIN,PRICE_MAX)
+    :typeof savedPrice==="number"&&Number.isFinite(savedPrice)
+      ?clamp(Math.round(savedPrice),PRICE_MIN,PRICE_MAX):9_000_000;
+  const initialMin=minimumMortgageDown(initialPrice,programs.find(item=>item.id===initialProgram)?.minDownPct??20.1);
+  const savedDown=storedScenario?.down;
+  const initialDown=typeof savedDown==="number"&&Number.isFinite(savedDown)
+    ?clamp(Math.round(savedDown),initialMin,initialPrice-1):initialMin;
   const initialKind:PropertyKind=params.get("from")==="select"?"newbuild":storedScenario?.propertyKind??"newbuild";
   const initialMarketRate=storedScenario?.propertyKind===initialKind&&storedScenario.marketRate
     ?storedScenario.marketRate
@@ -76,7 +85,7 @@ export default function MortgagePage(){
   const [program,setProgram]=React.useState<ProgramId>(initialProgram);
   const [propertyKind,setPropertyKind]=React.useState<PropertyKind>(initialKind);
   const [price,setPrice]=React.useState(initialPrice);
-  const [down,setDown]=React.useState(2_000_000);
+  const [down,setDown]=React.useState(initialDown);
   const [years,setYears]=React.useState(storedScenario?.years??15);
   const [marketRate,setMarketRate]=React.useState(initialMarketRate);
   const [marketRateDraft,setMarketRateDraft]=React.useState(String(initialMarketRate).replace(".",","));
@@ -85,7 +94,7 @@ export default function MortgagePage(){
   const [disabledChild,setDisabledChild]=React.useState(storedScenario?.disabledChild??false);
   const [largeArea,setLargeArea]=React.useState(storedScenario?.largeArea??false);
   const [priceDraft,setPriceDraft]=React.useState(formatRub(initialPrice));
-  const [downDraft,setDownDraft]=React.useState(formatRub(2_000_000));
+  const [downDraft,setDownDraft]=React.useState(formatRub(initialDown));
   const [interacted,setInteracted]=React.useState(false);
   const [showMortgageStory,setShowMortgageStory]=React.useState(()=>{
     try{return localStorage.getItem(MORTGAGE_STORY_STORAGE)!==MORTGAGE_STORY_VERSION}catch{return true}
@@ -116,7 +125,7 @@ export default function MortgagePage(){
   const totalLimit=calculation.totalLimit;
   const maxYears=calculation.maxYears;
   const minDown=calculation.minDown;
-  const maxDown=Math.max(minDown,price-MONEY_STEP);
+  const maxDown=Math.max(minDown,price-1);
   const loan=calculation.loan;
   const subsidizedPrincipal=calculation.subsidizedPrincipal;
   const marketPrincipal=calculation.marketPrincipal;
@@ -174,8 +183,9 @@ export default function MortgagePage(){
   },[maxYears,years]);
 
   React.useEffect(()=>{
-    if(down<minDown){setDown(minDown);setDownDraft(formatRub(minDown))}
-  },[minDown,down]);
+    const next=clamp(down,minDown,maxDown);
+    if(next!==down){setDown(next);setDownDraft(formatRub(next))}
+  },[minDown,maxDown,down]);
 
   React.useEffect(()=>{
     if(!propertyKindMounted.current){
@@ -191,10 +201,12 @@ export default function MortgagePage(){
   React.useEffect(()=>{
     const shared:MortgageScenarioSettings={
       ...settings,
+      price,
+      down,
       updatedAt:new Date().toISOString(),
     };
     try{localStorage.setItem(MORTGAGE_SCENARIO_KEY,JSON.stringify(shared));}catch{}
-  },[program,propertyKind,childrenCount,hasYoungChild,disabledChild,largeArea,marketRate,years]);
+  },[program,propertyKind,childrenCount,hasYoungChild,disabledChild,largeArea,marketRate,years,price,down]);
 
   React.useEffect(()=>{
     if(!interacted||invalid)return;
@@ -220,17 +232,22 @@ export default function MortgagePage(){
     setInteracted(true);
     const next=programs.find(item=>item.id===id);
     if(!next)return;
+    const nextMin=minimumMortgageDown(price,next.minDownPct);
+    const nextDown=clamp(down===minDown?nextMin:down,nextMin,price-1);
+    setDown(nextDown);
+    setDownDraft(formatRub(nextDown));
     setProgram(id);
     setYears(current=>Math.min(current,next.maxYears));
     if(id!=="farEast")setLargeArea(false);
     recordPulseEvent({eventType:"mortgage_program",entityType:"mortgage_program",entityId:id});
   };
 
-  const updatePrice=(value:number)=>{
+  const updatePrice=(value:number,fromSlider=false)=>{
     setInteracted(true);
-    const next=clamp(snap(value,MONEY_STEP),PRICE_MIN,PRICE_MAX);
-    const nextMin=ceilStep(next*rule.minDownPct/100,MONEY_STEP);
-    const nextDown=clamp(down,nextMin,next-MONEY_STEP);
+    const next=clamp(fromSlider?snap(value,MONEY_STEP):Math.round(value),PRICE_MIN,PRICE_MAX);
+    const nextMin=minimumMortgageDown(next,rule.minDownPct);
+    // Keep a minimum-position slider at the minimum; otherwise preserve exact cash.
+    const nextDown=clamp(down===minDown?nextMin:down,nextMin,next-1);
     setDown(nextDown);
     setDownDraft(formatRub(nextDown));
     setPrice(next);
@@ -239,7 +256,7 @@ export default function MortgagePage(){
 
   const updateDown=(value:number)=>{
     setInteracted(true);
-    const next=clamp(snap(value,MONEY_STEP),minDown,maxDown);
+    const next=clamp(Math.round(value),minDown,maxDown);
     setDown(next);
     setDownDraft(formatRub(next));
   };
@@ -268,11 +285,18 @@ export default function MortgagePage(){
       .replace("Ставки по типу объекта управляются из PULSE Control и остаются ориентировочными.","Ставка зависит от типа недвижимости и условий банка. Расчёт ориентировочный.")
       .replace(" Mini App рассчитывает шкалу динамически.","");
     if(program==="family"){
-      if(propertyKind==="house")return "Для строительства или завершения частного дома ставка — 6% независимо от числа детей. Базовое право на программу сохраняется.";
-      if(disabledChild)return "Для семьи с ребёнком-инвалидом ставка не выше 6%. Возраст ребёнка — до 18 лет.";
-      if(downPercent>=50)return "Первоначальный взнос 50% и более: ставка не выше 6%, но право на Семейную ипотеку всё равно должно быть.";
-      if(mixed)return hint+" Часть сверх льготного лимита показана как комбо-сценарий и требует подтверждения банка.";
-      return hint;
+      // Replace legacy numeric boilerplate while retaining an editor's own note.
+      const customHint=hint
+        .replace(/Льготная часть[^.]*\./giu,"")
+        .replace(/Увеличенный лимит[^.]*\./giu,"")
+        .replace(/^С 01\.10\.2026 в Приморье[\s\S]*$/u,"").trim();
+      const limitHint="Льготная часть — до "+formatRub(subsidizedLimit)+" ₽ под "+formatRate(preferredRate)+".";
+      const condition=propertyKind==="house"
+        ?" Для строительства или завершения частного дома. Базовое право на программу сохраняется."
+        :disabledChild?" Для семьи с ребёнком с инвалидностью до 18 лет."
+        :downPercent>=50?" Взнос от 50%. Право на программу подтверждает банк."
+        :" Условия зависят от числа детей и права на программу.";
+      return limitHint+condition+(mixed?" Часть сверх льготного лимита рассчитана по рыночной ставке; доступность подтверждает банк.":"")+(customHint?" "+customHint:"");
     }
     return hint;
   };
@@ -365,32 +389,32 @@ export default function MortgagePage(){
       <div className={styles.field}>
         <div className={styles.label}><span>Стоимость недвижимости</span><b>{formatRub(price)} ₽</b></div>
         <div className={styles.moneyInput}>
-          <Input inputMode="numeric" value={priceDraft} onChange={e=>setPriceDraft(e.target.value.replace(/[^0-9 ]/g,""))} onBlur={()=>commitMoney("price")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
+          <Input aria-label="Стоимость недвижимости" inputMode="numeric" value={priceDraft} onChange={e=>setPriceDraft(e.target.value.replace(/[^0-9 ]/g,""))} onBlur={()=>commitMoney("price")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
           <span>₽</span>
         </div>
-        <Slider min={PRICE_MIN} max={PRICE_MAX} step={MONEY_STEP} value={[price]} onValueChange={values=>updatePrice(values[0]??price)}/>
+        <Slider aria-label="Стоимость недвижимости" min={PRICE_MIN} max={PRICE_MAX} step={MONEY_STEP} value={[price]} onValueChange={values=>updatePrice(values[0]??price,true)}/>
       </div>
 
       <div className={styles.field}>
         <div className={styles.label}><span>Первоначальный взнос</span><b>{downPercent.toFixed(1).replace(".",",")}% · {formatRub(down)} ₽</b></div>
         <div className={styles.moneyInput}>
-          <Input inputMode="numeric" value={downDraft} onChange={e=>setDownDraft(e.target.value.replace(/[^0-9 ]/g,""))} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
+          <Input aria-label="Первоначальный взнос" inputMode="numeric" value={downDraft} onChange={e=>setDownDraft(e.target.value.replace(/[^0-9 ]/g,""))} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
           <span>₽</span>
         </div>
-        <Slider min={minDown} max={maxDown} step={MONEY_STEP} value={[clamp(down,minDown,maxDown)]} onValueChange={values=>updateDown(values[0]??down)}/>
-        <div className={styles.fieldMeta}>Минимум по настройкам программы: {String(rule.minDownPct).replace(".",",")}% · {formatRub(minDown)} ₽</div>
+        <Slider aria-label="Первоначальный взнос, %" min={calculation.minDownPct} max={100} step={0.1} value={[downPercent]} onValueChange={values=>updateDown(price*(values[0]??downPercent)/100)}/>
+        <div className={styles.fieldMeta}>Минимальный взнос: {String(rule.minDownPct).replace(".",",")}% · {formatRub(minDown)} ₽</div>
         {program==="family"&&downPercent>=50&&<div className={styles.inlineSuccess}><CircleCheck size={13}/>Взнос 50%+: для подходящей семьи ставка не выше 6%</div>}
       </div>
 
       <div className={styles.twoFields}>
         <div className={styles.field}>
-          <div className={styles.label}><span>Срок</span><b>{years} лет</b></div>
-          <Slider min={5} max={maxYears} step={1} value={[years]} onValueChange={values=>{setInteracted(true);setYears(Math.min(values[0]??years,maxYears))}}/>
+          <div className={styles.label}><span>Срок</span><b>{formatYears(years)}</b></div>
+          <Slider aria-label="Срок кредита, лет" min={1} max={maxYears} step={1} value={[years]} onValueChange={values=>{setInteracted(true);setYears(Math.min(values[0]??years,maxYears))}}/>
         </div>
         <div className={styles.rateField}>
           <label>{program==="standard"?"Рыночная ставка":"Рыночная часть"}</label>
           <div>
-            <Input inputMode="decimal" value={marketRateDraft} onChange={e=>setMarketRateDraft(e.target.value)} onBlur={commitMarketRate} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
+            <Input aria-label="Рыночная ставка, %" inputMode="decimal" value={marketRateDraft} onChange={e=>setMarketRateDraft(e.target.value)} onBlur={commitMarketRate} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
             <Percent size={15}/>
           </div>
         </div>
