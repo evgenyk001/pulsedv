@@ -49,5 +49,8 @@ export async function currentShowingReminder(db:Sql,event:OutboxRecord,lease:str
  const recipient=event.topic.startsWith('manager.')?row.manager_id:row.user_id;
  if(!recipient||recipient!==event.payload[event.topic.startsWith('manager.')?'managerId':'userId'])return false;
  const showing=(row.document?.showings??[]).find((s:any)=>s.id===event.payload.showingId);
- return !!showing&&showing.status==='confirmed'&&new Date(showing.at).getTime()===new Date(String(event.payload.at)).getTime()&&new Date(showing.at).getTime()>now.getTime();
+ const at=new Date(showing?.at??'').getTime(),hours=Number(event.payload.hours);
+ // Do not release a burst of stale reminders when the worker recovers after downtime.
+ const latestDelivery=at-hours*3600000+30*60000;
+ return !!showing&&showing.status==='confirmed'&&at===new Date(String(event.payload.at)).getTime()&&at>now.getTime()&&[24,2].includes(hours)&&now.getTime()<=latestDelivery;
 }

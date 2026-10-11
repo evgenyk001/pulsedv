@@ -9,7 +9,7 @@ import {hashPassword} from '../src/security';
 import {DEFAULT_STATE} from '../../packages/pulse-data/model';
 import {upsertCatalogProperty} from '../src/catalogRepository';
 import {emptyJourney} from '../../packages/journey/model';
-import {scheduleShowingReminders} from '../src/showingReminders';
+import {scheduleShowingReminders,currentShowingReminder} from '../src/showingReminders';
 import {outboxRepository} from '../src/outboxRepository';
 import {processNotificationOutbox} from '../src/notificationWorker';
 import {lossSummary} from '../../packages/pulse-data/loss';
@@ -48,6 +48,8 @@ test('Showing reminders: confirmed only, dedup, short notice, reschedule, cancel
  await db.query("delete from outbox_events where topic not in ('manager.showing_reminder','user.showing_reminder')");
  await db.query("update outbox_events set available_at=now()-interval '1 second' where processed_at is null");
  const repo=outboxRepository(db),claimed=await repo.claimBatch(10);assert.equal(claimed.length,4);
+ // Recovery one hour before the showing must not send stale 24h/2h jobs together.
+ for(const event of claimed){const lease=(await db.query('select lock_token from outbox_events where id=$1',[event.id])).rows[0].lock_token;assert.equal(await currentShowingReminder(db,event,lease,new Date(Date.parse(proposedAt)-3600000)),false);}
  response=await post({type:'showing_status',id:showing.id,status:'cancelled',result:''},2);assert.equal(response.statusCode,200,response.body);
  for(const event of claimed)assert.equal(await repo.canDeliver!(event),false);
  await scheduleShowingReminders(db,config.PUBLIC_ORIGIN);assert.equal((await pending()).length,0);
