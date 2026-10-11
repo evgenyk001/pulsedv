@@ -1,3 +1,6 @@
+import {registerLossRoutes} from './lossRoutes';
+import {LOSS_REASON_IDS,lossError} from '../../packages/pulse-data/loss';
+import {syncShowingReminders} from './showingReminders';
 import {registerFinanceRoutes} from './financeRoutes';
 import {registerFavoriteRoutes,mergeFavorites} from './favoriteRoutes';
 import Fastify, { type FastifyRequest } from 'fastify';
@@ -150,13 +153,16 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.post('/api/v1/control/login/verify',{config:{rateLimit:{max:8,timeWindow:'1 minute'}}},async(request,reply)=>{
   if(!config.BOT_TOKEN)throw new HttpError(503,'Telegram пока не настроен');
   const input=z.object({challengeId:z.uuid(),code:z.string().regex(/^\d{6}$/)}).strict().parse(request.body);
-  return db.transaction(async sql=>{
+  const outcome=await db.transaction(async sql=>{
    const row=(await sql.query('select c.*,m.* from control_login_challenges c join team_members m on m.id=c.member_id where c.id=$1 for update',[input.challengeId])).rows[0];
    if(!row||!row.active||row.consumed_at||new Date(row.expires_at).getTime()<=Date.now()||row.attempts>=5)throw new HttpError(401,'Код недействителен или истёк');
-   if(!checkMfaCode(config.BOT_TOKEN,input.challengeId,input.code,row.code_hash)){await sql.query('update control_login_challenges set attempts=attempts+1 where id=$1',[input.challengeId]);throw new HttpError(401,'Неверный код');}
+   if(!checkMfaCode(config.BOT_TOKEN,input.challengeId,input.code,row.code_hash)){await sql.query('update control_login_challenges set attempts=attempts+1 where id=$1',[input.challengeId]);return {invalidCode:true as const};}
    await sql.query('update control_login_challenges set consumed_at=now() where id=$1',[input.challengeId]);
    const auth=await issueToken(sql,'control',row.member_id);reply.setCookie('pulse_control',auth.token,cookieOptions);await audit(sql,row.member_id,'login.mfa',row.member_id);return {member:memberView(row)};
   });
+  // Reject after COMMIT so a failed verification spends its attempt budget.
+  if('invalidCode' in outcome)throw new HttpError(401,'Неверный код');
+  return outcome;
  });
  app.post('/api/v1/control/mfa',{preHandler:control,config:{rateLimit:{max:5,timeWindow:'1 minute'}}},async(request)=>{
   const input=z.object({enabled:z.boolean(),currentPassword:z.string().min(1).max(200),telegramUserId:z.string().regex(/^\d{1,16}$/).optional()}).strict().parse(request.body);
@@ -184,6 +190,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.get('/api/v1/control/me',{preHandler:control},async request=>({member:request.member}));
  app.post('/api/v1/control/logout',{preHandler:control},async(request,reply)=>{await db.query('delete from auth_tokens where token_hash=$1',[tokenHash(request.cookies.pulse_control!)]);reply.clearCookie('pulse_control',cookieOptions);return {ok:true};});
  await registerFinanceRoutes(app,db,control);
+ await registerLossRoutes(app,db,control);
  await registerInterestRoutes(app,db,control);
  await registerFavoriteRoutes(app,db,visitor);
  await registerJourneyRoutes(app,db,control,visitor,editor,config.PUBLIC_ORIGIN,config);
@@ -193,7 +200,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const scoped=m.role==='manager';
   return (await db.query(scoped?'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members where id=$1':'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members order by name',scoped?[m.id]:[])).rows.map(memberView);
  };
- const controlNotifications=async(m:Member)=>m.role==='manager'?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
+ const controlNotifications=async(m:Member)=>m.role==='manager'?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at,available_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
  const controlCounts=async(m:Member)=>{
   const scoped=m.role==='manager';
   const leadValues=scoped?[m.id]:[];
@@ -366,7 +373,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const events=(await db.query(`select id,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at as created_at from user_events ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by occurred_at desc limit 2000`,scoped?[m.id]:[])).rows.map(camelRow);
   const profiles=(await db.query(`select * from visitor_profiles ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by score desc limit 1000`,scoped?[m.id]:[])).rows.map(camelRow);
   const members=(await db.query(scoped?'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members where id=$1':'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members order by name',scoped?[m.id]:[])).rows.map(memberView);
-  const notifications=scoped?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
+  const notifications=scoped?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at,available_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
   return {state,version,leads,tasks,events,profiles,members,notifications,limited:leads.length===1000||events.length===2000||profiles.length===1000||tasks.length===1000};
  });
  app.put('/api/v1/control/state',{preHandler:editor},async request=>{
@@ -380,17 +387,25 @@ export async function createApp(db:Database,config:RuntimeConfig){
   });
  });
  app.patch('/api/v1/control/leads/:id',{preHandler:control},async request=>{
-  const id=uuid((request.params as any).id);const patch=z.object({status:z.enum(['new','contacted','qualified','showing','booking','deal','closed','lost']).optional(),manager:z.uuid().nullable().optional(),comment:z.string().max(5000).nullable().optional(),nextAction:z.string().max(1000).nullable().optional(),finance:financeSchema.optional(),expectedUpdatedAt:z.string().min(1)}).strict().parse(request.body);
+  const id=uuid((request.params as any).id);const patch=z.object({status:z.enum(['new','contacted','qualified','showing','booking','deal','closed','lost']).optional(),manager:z.uuid().nullable().optional(),comment:z.string().max(5000).nullable().optional(),nextAction:z.string().max(1000).nullable().optional(),finance:financeSchema.optional(),lossReason:z.enum(LOSS_REASON_IDS as [typeof LOSS_REASON_IDS[number],...typeof LOSS_REASON_IDS[number][]]).nullable().optional(),lossNote:z.string().trim().max(1000).nullable().optional(),expectedUpdatedAt:z.string().min(1)}).strict().parse(request.body);
   return db.transaction(async sql=>{
    const current=(await sql.query('select * from leads where id=$1 for update',[id])).rows[0];if(!current)throw new HttpError(404,'Заявка не найдена');
    const member=request.member!;if(member.role==='manager'&&(current.manager_id!==member.id||patch.manager!==undefined))throw new HttpError(403,'Недостаточно прав');
    if(new Date(current.updated_at).getTime()!==Date.parse(patch.expectedUpdatedAt))throw new HttpError(409,'Заявка изменена другим сотрудником. Обновите данные');
    if(patch.manager&&!(await sql.query('select id from team_members where id=$1 and active=true',[patch.manager])).rows.length)throw new HttpError(400,'Менеджер недоступен');
+   const nextStatus=patch.status??current.status;
+   const reason=nextStatus==='lost'?(patch.lossReason===undefined?current.loss_reason:patch.lossReason):null;
+   const lossNote=nextStatus==='lost'?(patch.lossNote===undefined?current.loss_note:patch.lossNote):null;
+   const invalidLoss=lossError(nextStatus,reason,lossNote);if(invalidLoss)throw new HttpError(400,invalidLoss);
+   if(nextStatus!=='lost'&&(patch.lossReason||patch.lossNote))throw new HttpError(400,'Причина потери доступна только для потерянного клиента');
    if('nextAction' in patch)await sql.query('update leads set next_action_manual=$2 where id=$1',[id,patch.nextAction!==null]);
-   for(const [key,value] of Object.entries(patch)){if(key==='expectedUpdatedAt')continue;const column={status:'status',manager:'manager_id',comment:'comment',nextAction:'next_action',finance:'finance'}[key]!;await sql.query(`update leads set ${column}=$2 where id=$1`,[id,key==='finance'?JSON.stringify(value):value]);}
+   for(const [key,value] of Object.entries(patch)){if(key==='expectedUpdatedAt')continue;const column={status:'status',manager:'manager_id',comment:'comment',nextAction:'next_action',finance:'finance',lossReason:'loss_reason',lossNote:'loss_note'}[key]!;await sql.query(`update leads set ${column}=$2 where id=$1`,[id,key==='finance'?JSON.stringify(value):value]);}
+   if(nextStatus==='lost')await sql.query("update leads set loss_reason=$2,loss_note=$3,lost_at=case when status='lost' and $4='lost' then lost_at else now() end where id=$1",[id,reason,lossNote||null,current.status]);
+   else await sql.query('update leads set loss_reason=null,loss_note=null,lost_at=null where id=$1',[id]);
    if(patch.status&&patch.status!==current.status)await sql.query('insert into lead_stage_events(lead_id,status) values($1,$2)',[id,patch.status]);
    if(patch.manager!==undefined)await sql.query("update crm_tasks set assigned_to=$2 where lead_id=$1 and status<>'done'",[id,patch.manager]);
    if(patch.status&&['deal','closed','lost'].includes(patch.status))await sql.query("update crm_tasks set status='done' where lead_id=$1 and status<>'done'",[id]);
+   if(patch.manager!==undefined||patch.status!==undefined)await syncShowingReminders(sql,id,config.PUBLIC_ORIGIN);
    await audit(sql,member.id,'lead.update',id,{fields:Object.keys(patch).filter(k=>k!=='expectedUpdatedAt')});return {ok:true};
   });
  });

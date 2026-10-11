@@ -1,3 +1,4 @@
+import {LossReasonsPanel} from '../components/LossReasonsPanel';
 import {FinancePanel} from '../components/FinancePanel';
 import React from "react";
 import {AcquisitionPanel} from '../components/AcquisitionPanel';
@@ -52,7 +53,7 @@ export function AnalyticsPage(){
   ];
 
   return <PageFrame eyebrow="АНАЛИТИКА ПОВЕДЕНИЯ" title="Аналитика" description="Воронка показывает путь клиента до контакта и реальные действия внутри приложения.">
-    <FinancePanel/><AcquisitionPanel/><section className="metrics">
+    <FinancePanel/><LossReasonsPanel/><AcquisitionPanel/><section className="metrics">
       <article><span>Сессии</span><strong>{sessions}</strong><small>визиты в приложение</small></article>
       <article><span>Тёплые и выше</span><strong>{priorities.warm+priorities.hot+priorities.urgent}</strong><small>заметный интерес</small></article>
       <article><span>Лиды</span><strong>{leadsTotal}</strong><small>оставили контакты</small></article>

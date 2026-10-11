@@ -2,7 +2,7 @@ import {isPublicEvent} from './eventContract';
 import { attribution } from '../journey/attribution';
 import { DEFAULT_STATE, type PulseState, type PulseLead, type PulseTask, type PulseEvent, type PulseVisitorProfile } from './model';
 export type TeamMember={id:string;name:string;email:string;role:'owner'|'admin'|'manager';active:boolean;cities:string[];telegramUserId:string|null;mfaEnabled:boolean};
-export type Delivery={id:string;topic:string;attempts:number;lastError:string|null;processedAt:string|null;deadAt:string|null;createdAt:string};
+export type Delivery={id:string;topic:string;attempts:number;lastError:string|null;processedAt:string|null;deadAt:string|null;createdAt:string;availableAt?:string};
 export type Snapshot={state:PulseState;version:number;leads:PulseLead[];tasks:PulseTask[];events:PulseEvent[];profiles:PulseVisitorProfile[];members:TeamMember[];notifications:Delivery[];limited:boolean};
 export type ControlCounts={leadsTotal:number;activeLeads:number;newLeads:number;unassignedLeads:number;openTasks:number;overdueTasks:number;hotProfiles:number;leadStages:Record<PulseLead['status'],number>};
 export type ControlResource='leads'|'tasks'|'events'|'profiles';

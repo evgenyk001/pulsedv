@@ -13,7 +13,8 @@
     "check": "npm run check --workspaces && node --check dist/script.js",
     "build": "npm run build -w apps/mini-app && npm run build -w apps/control-center",
     "test": "npm run test -w backend",
-    "verify": "npm run check && npm test && npm run build"
+    "verify": "npm run check && npm test && npm run build",
+    "test:scale": "node --import tsx --test backend/test/scale.test.ts"
   },
   "engines": {
     "node": ">=22"

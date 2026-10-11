@@ -53,6 +53,14 @@ jobs:
             playwright-report
             playwright-report-finance-webkit
             test-results
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pulse-prelaunch-review
+          path: |
+            test-results/mortgage-periods-*.png
+            test-results/loss-reasons-*.png
+            test-results/catalog-scale-1000.png
       - name: Validate VPS images
         run: |
           docker build -f deploy/Dockerfile.api -t pulse-api-test .

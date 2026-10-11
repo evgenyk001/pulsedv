@@ -70,3 +70,21 @@ test('Mortgage configuration, exact credit ceiling and short term stay consisten
  await term.focus();await page.keyboard.press('Home');
  await expect(page.getByText('1 год',{exact:true})).toBeVisible();
 });
+
+for(const width of [320,390,430])test(`Mortgage second-period scenario stays explicit and restores at ${width}px`,async({page,browserName})=>{
+ await page.setViewportSize({width,height:844});
+ await page.goto('/pulsedv/mini-app/#/mortgage?price=7500000');
+ await page.getByRole('button',{name:'Закрыть знакомство с ипотекой'}).click();
+ const term=page.getByRole('slider',{name:'Срок кредита, лет'});await term.focus();await page.keyboard.press('End');
+ const panel=page.getByRole('region',{name:'Расчёт после льготного периода'}),rate=panel.getByRole('textbox',{name:'Ставка после льготного периода, %'});
+ await expect(rate).toHaveValue('');await expect(panel.getByText('Следующий платёж, сценарий')).toHaveCount(0);
+ const first=await page.getByText(/₽ \/ мес$/).first().innerText();
+ await rate.fill('18,55');await expect(panel.getByText('Следующий платёж, сценарий')).toBeVisible();await expect(panel).toContainText('Расчёт при вашей ставке 18,55%.');await expect(panel).not.toContainText('%%');
+ await expect(page.getByText('Первые 15 лет · платёж')).toBeVisible();await expect(page.getByText(first,{exact:true}).first()).toBeVisible();
+ await page.reload();await expect(rate).toHaveValue('18,55');await expect(panel.getByText('Переплата по сценарию')).toBeVisible();
+ await rate.fill('41');await expect(panel.getByRole('alert')).toHaveText('Введите ставку от 0 до 40%.');await expect(panel.getByText('Следующий платёж, сценарий')).toHaveCount(0);
+ await rate.fill('0');await expect(panel.getByText('Следующий платёж, сценарий')).toBeVisible();
+ await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await panel.screenshot({path:`test-results/mortgage-periods-${browserName}-${width}.png`});
+ await term.focus();await page.keyboard.press('Home');await expect(panel).toHaveCount(0);
+});

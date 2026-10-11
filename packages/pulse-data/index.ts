@@ -1,3 +1,4 @@
+import {lossError} from './loss';
 import { runtime, stageState, updateRemote, enqueueEvent } from "./runtime";
 import { DEFAULT_LEAD_ENGINE_CONFIG, scoreLeadEvents, type LeadPriority } from "../lead-engine";
 import { DEFAULT_STATE, DEFAULT_PROPERTIES, DEFAULT_BANNERS, DEFAULT_MORTGAGE_PROGRAMS, type PropertyStatus, type PulseProperty, type PulseBanner, type MortgageProgramRule, type PulseSelectConfig, type PulseContentConfig, type PulseState, type PulseLead, type PulseVisitorProfile, type PulseTask, type PulseEvent } from "./model";
@@ -92,10 +93,18 @@ export function addPulseLead(payload:Omit<PulseLead,"id"|"status"|"manager"|"cre
   recordPulseEvent({eventType:"lead_created",entityType:"lead",entityId:lead.id,metadata:{source:lead.source,propertyId:lead.propertyId}});
   return lead;
 }
-export function updatePulseLead(idValue:string,patch:Partial<Pick<PulseLead,"status"|"manager"|"comment"|"nextAction"|"requestContext"|"finance">>){
+export function updatePulseLead(idValue:string,patch:Partial<Pick<PulseLead,"status"|"manager"|"comment"|"nextAction"|"requestContext"|"finance"|"lossReason"|"lossNote">>){
   if(runtime.enabled){void updateRemote("leads",idValue,patch).catch(()=>{});return;}
   if(!canStore())return;
-  const leads=listPulseLeads().map(lead=>lead.id===idValue?{...lead,...patch,...('nextAction' in patch?{nextActionManual:patch.nextAction!==null}:{}),updatedAt:now()}:lead);
+  const leads=listPulseLeads().map(lead=>{
+    if(lead.id!==idValue)return lead;
+    const next={...lead,...patch};
+    if(next.status==='lost'){
+      const error=lossError(next.status,next.lossReason,next.lossNote);if(error)throw new Error(error);
+      next.lostAt=lead.status==='lost'?lead.lostAt??null:now();
+    }else{next.lossReason=null;next.lossNote=null;next.lostAt=null;}
+    return {...next,...('nextAction' in patch?{nextActionManual:patch.nextAction!==null}:{}),updatedAt:now()};
+  });
   localStorage.setItem(LEADS_KEY,JSON.stringify(leads));
   window.dispatchEvent(new CustomEvent(PULSE_LEADS_EVENT));
 }

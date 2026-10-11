@@ -184,3 +184,27 @@ test("saved mortgage scenario restores exact cash and discards malformed optiona
   assert.equal(malformed.down,undefined);
   assert.equal(calculateMortgageScenario({programs:DEFAULT_MORTGAGE_PROGRAMS,settings:malformed,price:7_500_000,down:1_507_500})?.invalid,false);
 });
+
+test('two-period mortgage uses remaining principal, explicit future rate and unchanged market tranche',()=>{
+ const base={programs:DEFAULT_MORTGAGE_PROGRAMS,price:12_000_000,down:3_000_000,years:30,settings:{programId:'family' as const,propertyKind:'newbuild' as const,childrenCount:2 as const,hasYoungChild:true,marketRate:15.7}};
+ const unknown=calculateMortgageScenario(base)!;assert.equal(unknown.projection,null);assert.equal(unknown.totalKnown,false);
+ const scenario=calculateMortgageScenario({...base,settings:{...base.settings,futureRate:18}})!;
+ assert.equal(scenario.payment,unknown.payment);assert.equal(scenario.totalKnown,false);assert.ok(scenario.projection);
+ // Independent month-by-month amortization, rather than repeating the production formula.
+ const amortize=(principal:number,rate:number,payment:number,months:number)=>{for(let i=0;i<months;i++)principal=principal*(1+rate/1200)-payment;return principal};
+ const preferred=amortize(scenario.subsidizedPrincipal,scenario.preferredRate,scenario.preferredPayment,180);
+ const market=amortize(scenario.marketPrincipal,scenario.marketRate,scenario.marketPayment,180);
+ assert.ok(Math.abs(preferred-scenario.projection.remainingPreferred)<.001);
+ assert.ok(Math.abs(market-scenario.projection.remainingMarket)<.001);
+ assert.ok(Math.abs(amortize(preferred,18,scenario.projection.futurePayment-scenario.marketPayment,180))<.001);
+ assert.ok(Math.abs(amortize(market,15.7,scenario.marketPayment,180))<.001);
+ const same=calculateMortgageScenario({...base,settings:{...base.settings,futureRate:scenario.preferredRate}})!.projection!;
+ assert.ok(Math.abs(same.futurePayment-scenario.payment)<.001);
+ assert.ok(Math.abs(same.total-scenario.payment*360)<.01);
+ const free=calculateMortgageScenario({...base,settings:{...base.settings,futureRate:0}})!.projection!;
+ assert.ok(Math.abs(free.futurePayment-free.remainingPreferred/180-scenario.marketPayment)<.001);
+ for(const futureRate of [-1,41,NaN,Infinity])assert.equal(calculateMortgageScenario({...base,settings:{...base.settings,futureRate}})!.projection,null);
+ assert.equal(calculateMortgageScenario({...base,years:15,settings:{...base.settings,futureRate:18}})!.projection,null);
+ assert.equal(calculateMortgageScenario({...base,down:1,settings:{...base.settings,futureRate:18}})!.projection,null);
+ const saved=readMortgageScenario({getItem:()=>JSON.stringify({...base.settings,futureRate:0})});assert.equal(saved?.futureRate,0);
+});
