@@ -477,7 +477,7 @@ export default function MortgagePage(){
           <div><span>Всего выплат по сценарию</span><b>{formatRub(calculation.projection.total)} ₽</b></div>
           <div><span>Переплата по сценарию</span><b>{formatRub(calculation.projection.overpayment)} ₽</b></div>
         </div>
-        <div className={styles.incomeNote}>Расчёт при вашей ставке {formatRate(futureRate!)}%. {mixed?'Рыночная часть продолжает рассчитываться по текущей ставке. ':''}Без страховок, комиссий и досрочных платежей. Это сценарий, а не предложение банка.</div>
+        <div className={styles.incomeNote}>Расчёт при вашей ставке {String(futureRate).replace('.',',')}%. {mixed?'Рыночная часть продолжает рассчитываться по текущей ставке. ':''}Без страховок, комиссий и досрочных платежей. Это сценарий, а не предложение банка.</div>
       </>:<div className={styles.incomeNote}>{invalid?'Сначала исправьте условия основного расчёта.':'Укажите ставку, чтобы увидеть остаток долга, следующий платёж и общую переплату.'}</div>}
     </section>}
 
