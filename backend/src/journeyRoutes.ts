@@ -1,4 +1,5 @@
 import {messagePage,withMessages} from './journeyMessages';
+import {syncShowingReminders} from './showingReminders';
 import {reserveUpload,bindUpload} from './journeyUploads';
 import {validateMedia} from './mediaValidation';
 import {z} from 'zod';
@@ -155,6 +156,7 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
     if(c.type==='message'){const message=next.messages!.at(-1)!;await sql.query('insert into journey_messages(id,lead_id,document) values($1,$2,$3::jsonb)',[message.id,leadId,JSON.stringify(message)]);}
     const {messages:_messages,messagesBefore:_cursor,...document}=next;
     await sql.query(`insert into client_journeys(lead_id,revision,document) values($1,$2,$3::jsonb) on conflict(lead_id) do update set revision=excluded.revision,document=excluded.document,updated_at=now()`,[leadId,next.revision,JSON.stringify(document)]);
+    if(c.type.startsWith('showing'))await syncShowingReminders(sql,leadId,origin);
     
     if(client)await sql.query('insert into user_events(idempotency_key,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at) values($1,$2,$3,$4,$5,$6,$7::jsonb,now())',[randomUUID(),r.visitor!.sessionId,r.visitor!.userId,c.type==='reaction'?'collection_reaction':c.type==='message'?'client_message':c.type==='showing_change'?(c.action==='cancel'?'showing_cancelled':'showing_reschedule_requested'):'showing_requested','property',c.type==='reaction'||c.type==='showing'?c.propertyId:null,JSON.stringify(c.type==='reaction'?{reaction:c.reaction,reply:c.reply.slice(0,150)}:{})]);
     const recipient=client?l.manager_id:l.user_id;

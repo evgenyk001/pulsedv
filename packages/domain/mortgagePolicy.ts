@@ -12,6 +12,7 @@ export type MortgageScenarioSettings={
   disabledChild?:boolean;
   largeArea?:boolean;
   marketRate?:number;
+  futureRate?:number;
   years?:number;
   price?:number;
   down?:number;
@@ -43,6 +44,7 @@ export type MortgageCalculation={
   mixed:boolean;
   requiredDown:number;
   familySubsidyYears:number|null;
+  projection:{firstMonths:number;remainingMonths:number;remainingPreferred:number;remainingMarket:number;futureRate:number;futurePayment:number;total:number;overpayment:number}|null;
   policyVersion:string;
 };
 
@@ -87,6 +89,15 @@ export function annuityPayment(principal:number,annualRate:number,months:number)
   if(monthlyRate===0)return principal/months;
   const factor=(1+monthlyRate)**months;
   return principal*(monthlyRate*factor)/(factor-1);
+}
+
+export function remainingMortgagePrincipal(principal:number,annualRate:number,months:number,paidMonths:number){
+  if(principal<=0||paidMonths>=months)return 0;
+  const remaining=Math.max(0,months-paidMonths);
+  // Present value of the remaining annuity avoids subtracting two large balances.
+  const rate=annualRate/1200;
+  const payment=annuityPayment(principal,annualRate,months);
+  return rate===0?payment*remaining:payment*(-Math.expm1(-remaining*Math.log1p(rate)))/rate;
 }
 
 export function mortgageProgram(programs:MortgageProgramRule[],id:MortgageProgramId){
@@ -171,6 +182,17 @@ export function calculateMortgageScenario(input:{
   const total=totalKnown?payment*months:0;
   const overpayment=totalKnown?Math.max(total-loan,0):0;
   const requiredDown=Math.ceil(Math.max(minDown,input.price-totalLimit));
+  const futureRate=input.settings.futureRate;
+  const firstMonths=FAMILY_SUBSIDY_YEARS*12;
+  const remainingMonths=months-firstMonths;
+  let projection:MortgageCalculation['projection']=null;
+  if(!invalid&&!totalKnown&&typeof futureRate==='number'&&Number.isFinite(futureRate)&&futureRate>=0&&futureRate<=40){
+    const remainingPreferred=remainingMortgagePrincipal(subsidizedPrincipal,preferredRate,months,firstMonths);
+    const remainingMarket=remainingMortgagePrincipal(marketPrincipal,marketRate,months,firstMonths);
+    const futurePayment=annuityPayment(remainingPreferred,futureRate,remainingMonths)+marketPayment;
+    const projectedTotal=payment*firstMonths+futurePayment*remainingMonths;
+    projection={firstMonths,remainingMonths,remainingPreferred,remainingMarket,futureRate,futurePayment,total:projectedTotal,overpayment:Math.max(projectedTotal-loan,0)};
+  }
 
   return {
     status,
@@ -195,6 +217,7 @@ export function calculateMortgageScenario(input:{
     mixed:marketPrincipal>0&&rule.id!=="standard",
     requiredDown,
     familySubsidyYears,
+    projection,
     policyVersion:MORTGAGE_POLICY_VERSION,
   };
 }
@@ -216,6 +239,7 @@ export function readMortgageScenario(storage:Pick<Storage,"getItem">|null|undefi
       disabledChild:typeof raw.disabledChild==="boolean"?raw.disabledChild:undefined,
       largeArea:typeof raw.largeArea==="boolean"?raw.largeArea:undefined,
       marketRate:finite(raw.marketRate,.1,40),
+      futureRate:finite(raw.futureRate,0,40),
       years:finite(raw.years,1,30),
       price:finite(raw.price,3_000_000,45_000_000),
       down:finite(raw.down,0,45_000_000),

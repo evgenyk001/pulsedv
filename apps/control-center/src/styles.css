@@ -2369,3 +2369,5 @@ main{
  .control .financeHeading>.secondaryAction{width:100%;justify-content:center}
  .control .financePeriod{grid-template-columns:minmax(0,1fr)}
 }
+
+.lossSummaryTotal{display:flex;align-items:baseline;gap:12px;margin:20px 0;color:var(--muted)}.lossSummaryTotal b{font-size:32px;color:inherit;font-variant-numeric:tabular-nums}.lossReasonList{display:grid;gap:18px}.lossReasonList>div>div:first-child{display:flex;justify-content:space-between;align-items:baseline;gap:16px;font-size:14px}.lossReasonList span{min-width:0;overflow-wrap:anywhere}.lossReasonList b{flex:none;font-variant-numeric:tabular-nums}.lossReasonTrack{height:7px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px}.lossReasonTrack i{display:block;height:100%;border-radius:inherit;background:var(--red)}

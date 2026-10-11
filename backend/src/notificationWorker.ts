@@ -1,3 +1,4 @@
+import {isShowingReminder} from './showingReminders';
 export type OutboxRecord={
   id:string;
   topic:string;
@@ -8,6 +9,7 @@ export type OutboxRecord={
 };
 
 export type NotificationOutboxRepository={
+  canDeliver(event:OutboxRecord):Promise<boolean>;
   claimBatch(limit:number):Promise<OutboxRecord[]>;
   managerTelegramUserId(managerId:string):Promise<string|null>;
   userTelegramUserId(userId:string):Promise<string|null>;
@@ -24,6 +26,7 @@ function asString(value:unknown){
 }
 
 function managerText(event:OutboxRecord){
+  if(event.topic==='manager.showing_reminder')return userText(event);
   if(event.topic==="manager.security_code")return `PULSE.DV · подтверждение входа\nКод: ${asString(event.payload.code)??"—"}\nНикому не сообщайте этот код. Он действует 5 минут.`;
   if(event.topic==="manager.interest_changed"||event.topic==="manager.journey")return `PULSE.DV · Изменение интереса\n${asString(event.payload.title)??"Клиент уточнил запрос"}\n${asString(event.payload.body)??"Откройте карточку клиента"}`;
   const score=event.payload.score??"—";
@@ -59,6 +62,7 @@ export async function processNotificationOutbox(
         if(!managerId)throw new Error("managerId missing");
         const chatId=await repo.managerTelegramUserId(managerId);
         if(!chatId)throw new Error("manager Telegram id missing");
+        if(isShowingReminder(event.topic)&&!await repo.canDeliver(event)){await repo.markProcessed(event.id);continue;}
         await telegram.sendMessage({
           chatId,
           text:managerText(event),
@@ -69,6 +73,7 @@ export async function processNotificationOutbox(
         if(!userId)throw new Error("userId missing");
         const chatId=await repo.userTelegramUserId(userId);
         if(!chatId)throw new Error("user Telegram id missing");
+        if(isShowingReminder(event.topic)&&!await repo.canDeliver(event)){await repo.markProcessed(event.id);continue;}
         await telegram.sendMessage({
           chatId,
           text:userText(event),

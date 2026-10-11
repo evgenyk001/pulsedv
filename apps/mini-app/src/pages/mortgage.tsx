@@ -89,6 +89,9 @@ export default function MortgagePage(){
   const [years,setYears]=React.useState(storedScenario?.years??15);
   const [marketRate,setMarketRate]=React.useState(initialMarketRate);
   const [marketRateDraft,setMarketRateDraft]=React.useState(String(initialMarketRate).replace(".",","));
+  const [futureRateDraft,setFutureRateDraft]=React.useState(storedScenario?.futureRate===undefined?'':String(storedScenario.futureRate).replace('.',','));
+  const parsedFutureRate=futureRateDraft.trim()===''?NaN:Number(futureRateDraft.replace(',','.'));
+  const futureRate=Number.isFinite(parsedFutureRate)&&parsedFutureRate>=0&&parsedFutureRate<=40?parsedFutureRate:undefined;
   const [childrenCount,setChildrenCount]=React.useState<FamilyChildren>(storedScenario?.childrenCount??1);
   const [hasYoungChild,setHasYoungChild]=React.useState(storedScenario?.hasYoungChild??true);
   const [disabledChild,setDisabledChild]=React.useState(storedScenario?.disabledChild??false);
@@ -113,6 +116,7 @@ export default function MortgagePage(){
     disabledChild:program==="family"?disabledChild:undefined,
     largeArea:program==="farEast"?largeArea:undefined,
     marketRate,
+    futureRate,
     years,
   };
 
@@ -206,7 +210,7 @@ export default function MortgagePage(){
       updatedAt:new Date().toISOString(),
     };
     try{localStorage.setItem(MORTGAGE_SCENARIO_KEY,JSON.stringify(shared));}catch{}
-  },[program,propertyKind,childrenCount,hasYoungChild,disabledChild,largeArea,marketRate,years,price,down]);
+  },[program,propertyKind,childrenCount,hasYoungChild,disabledChild,largeArea,marketRate,futureRate,years,price,down]);
 
   React.useEffect(()=>{
     if(!interacted||invalid)return;
@@ -439,13 +443,13 @@ export default function MortgagePage(){
     </section>}
 
     {program==="family"&&years>FAMILY_SUBSIDY_YEARS&&<section className={styles.warning}>
-      <Info size={18}/><div><strong>Льготная ставка действует первые {FAMILY_SUBSIDY_YEARS} лет</strong><span>После этого ставка определяется правилами программы. Поэтому будущую переплату PULSE не выдумывает.</span></div>
+      <Info size={18}/><div><strong>Льготная ставка действует первые {FAMILY_SUBSIDY_YEARS} лет</strong><span>Платёж ниже рассчитан для первого периода. Чтобы оценить следующий, укажите предполагаемую ставку — точные условия определит банк.</span></div>
     </section>}
 
     <section className={styles.result}>
       <div className={styles.resultTop}>
         <div className={styles.resultIcon}><WalletCards size={20}/></div>
-        <div><span>Ориентировочный платёж</span><strong>{invalid?"—":formatRub(payment)+" ₽ / мес"}</strong></div>
+        <div><span>{totalKnown?'Ориентировочный платёж':'Первые 15 лет · платёж'}</span><strong>{invalid?"—":formatRub(payment)+" ₽ / мес"}</strong></div>
         <BadgePercent size={20}/>
       </div>
       {mixed&&!invalid&&<div className={styles.splitResult}>
@@ -460,6 +464,22 @@ export default function MortgagePage(){
       </div>
       <div className={styles.incomeNote}>Ориентир дохода рассчитан при условной долговой нагрузке 45%. Банк считает платёжеспособность индивидуально.</div>
     </section>
+
+    {!totalKnown&&<section className={styles.scenario} aria-label="Расчёт после льготного периода">
+      <div className={styles.scenarioHead}><div><strong>После льготного периода</strong><span>Следующие {years-FAMILY_SUBSIDY_YEARS} лет · ваш сценарий</span></div><BadgePercent size={20}/></div>
+      <label className={styles.label} htmlFor="future-mortgage-rate"><span>Предполагаемая ставка после 15 лет</span><b>% годовых</b></label>
+      <Input id="future-mortgage-rate" aria-label="Ставка после льготного периода, %" inputMode="decimal" placeholder="Введите ставку" value={futureRateDraft} onChange={e=>setFutureRateDraft(e.target.value)} aria-invalid={futureRateDraft.trim()!==''&&futureRate===undefined}/>
+      {futureRateDraft.trim()!==''&&futureRate===undefined&&<p role="alert" className={styles.incomeNote}>Введите ставку от 0 до 40%.</p>}
+      {calculation.projection?<>
+        <div className={styles.resultGrid}>
+          <div><span>Остаток кредита через 15 лет</span><b>{formatRub(calculation.projection.remainingPreferred+calculation.projection.remainingMarket)} ₽</b></div>
+          <div><span>Следующий платёж, сценарий</span><b>{formatRub(calculation.projection.futurePayment)} ₽ / мес</b></div>
+          <div><span>Всего выплат по сценарию</span><b>{formatRub(calculation.projection.total)} ₽</b></div>
+          <div><span>Переплата по сценарию</span><b>{formatRub(calculation.projection.overpayment)} ₽</b></div>
+        </div>
+        <div className={styles.incomeNote}>Расчёт при вашей ставке {formatRate(futureRate!)}%. {mixed?'Рыночная часть продолжает рассчитываться по текущей ставке. ':''}Без страховок, комиссий и досрочных платежей. Это сценарий, а не предложение банка.</div>
+      </>:<div className={styles.incomeNote}>{invalid?'Сначала исправьте условия основного расчёта.':'Укажите ставку, чтобы увидеть остаток долга, следующий платёж и общую переплату.'}</div>}
+    </section>}
 
     {params.get("from")==="select"&&<button type="button" className={styles.returnSelect} onClick={()=>navigate("/selection")}>
       <ChevronLeft size={17}/> Использовать этот сценарий в PULSE Select

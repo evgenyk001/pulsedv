@@ -1,3 +1,4 @@
+import type {LossReason} from './loss';
 import { DEFAULT_LEAD_ENGINE_CONFIG, scoreLeadEvents, type LeadEngineConfig, type LeadPriority, type LeadScoreReason } from "../lead-engine";
 
 export type PropertyStatus="draft"|"published"|"archived";
@@ -68,6 +69,7 @@ export type PulseState={
 
 export type PulseLead={
   finance?:DealFinance;
+  lossReason?:LossReason|null;lossNote?:string|null;lostAt?:string|null;
   id:string; source:string; propertyId:string|null; name:string; phone:string; comment:string|null; requestContext?:Record<string,unknown>;
   status:"new"|"contacted"|"qualified"|"showing"|"booking"|"deal"|"closed"|"lost";
   manager:string|null; createdAt:string; updatedAt:string;
