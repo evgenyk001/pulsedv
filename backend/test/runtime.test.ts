@@ -228,13 +228,13 @@ test('retention: старые закрытые лиды и идентифика�
  const userId=randomUUID(),sessionId=randomUUID(),leadId=randomUUID(),old=new Date(Date.now()-45*86400_000).toISOString(),file=randomUUID()+'.pdf';
  await db.query("insert into app_users(id,telegram_user_id,first_name,last_seen_at,updated_at) values($1,$2,'Старый клиент',$3,$3)",[userId,99112233,old]);
  await db.query("insert into sessions(id,user_id,source,first_seen_at,last_seen_at) values($1,$2,'test',$3,$3)",[sessionId,userId,old]);
- await db.query("insert into leads(id,user_id,session_id,source,name,phone,status,created_at,updated_at) values($1,$2,$3,'test','Старый клиент','+79990000000','closed',$4,$4)",[leadId,userId,sessionId,old]);
+ await db.query("insert into leads(id,user_id,session_id,source,name,phone,status,loss_reason,loss_note,created_at,updated_at) values($1,$2,$3,'test','Старый клиент','+79990000000','lost','other','Телефон в заметке +79990000000',$4,$4)",[leadId,userId,sessionId,old]);
  const attachmentUrl='/api/v1/journey-media/'+leadId+'/'+file;
  await db.query("insert into client_journeys(lead_id,revision,document,updated_at) values($1,1,$2::jsonb,$3)",[leadId,JSON.stringify({leadId,revision:1,collections:[],showings:[],messages:[{id:randomUUID(),author:'client',text:'старое',createdAt:old,attachment:{kind:'file',name:'old.pdf',url:attachmentUrl,mimeType:'application/pdf',size:12}}],nextStep:null}),old]);
  await db.query("insert into favorite_sets(owner,property_ids) values($1,'{}'),($2,'{}')",['session:'+sessionId,'user:'+userId]);
  const dir=join(mediaRoot,'private','chat',leadId);await mkdir(dir,{recursive:true});await writeFile(join(dir,file),'%PDF-old');
  const result=await runSecurityMaintenance(db,config);assert.equal(result.anonymizedLeads,1);assert.equal(result.deletedSessions,1);assert.equal(result.deletedUsers,1);
- const lead=(await db.query('select * from leads where id=$1',[leadId])).rows[0];assert.equal(lead.name,'Удалено');assert.equal(lead.phone,'Удалено');assert.deepEqual(lead.request_context,{});assert.equal(lead.user_id,null);assert.equal(lead.session_id,null);
+ const lead=(await db.query('select * from leads where id=$1',[leadId])).rows[0];assert.equal(lead.name,'Удалено');assert.equal(lead.phone,'Удалено');assert.deepEqual(lead.request_context,{});assert.equal(lead.user_id,null);assert.equal(lead.session_id,null);assert.equal(lead.loss_note,null);assert.equal(lead.loss_reason,'other');
  assert.equal((await db.query('select * from client_journeys where lead_id=$1',[leadId])).rows.length,0);
  assert.equal((await db.query('select * from sessions where id=$1',[sessionId])).rows.length,0);assert.equal((await db.query('select * from app_users where id=$1',[userId])).rows.length,0);
  await assert.rejects(access(join(dir,file)));
