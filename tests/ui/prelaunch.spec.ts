@@ -5,12 +5,12 @@ for(const width of [320,390,430])test(`Loss reason editing and analytics at ${wi
  await page.setViewportSize({width,height:844});
  await page.addInitScript(lead=>{if(!localStorage.getItem('pulse.dv.control.leads.v1'))localStorage.setItem('pulse.dv.control.leads.v1',JSON.stringify([lead]))},seedLead);
  await page.goto('/pulsedv/control-center/#/leads');await page.locator('.leadRowButton').filter({hasText:seedLead.name}).click();
- const editor=page.getByRole('dialog',{name:'Карточка клиента'});await editor.getByLabel('Статус',{exact:true}).selectOption('lost');
+ const editor=page.getByRole('dialog',{name:'Карточка клиента'});await editor.getByRole('combobox',{name:'Статус',exact:true}).selectOption('lost');
  await editor.getByRole('button',{name:'Сохранить карточку'}).click();await expect(editor.getByRole('alert')).toContainText('Выберите причину');
- await editor.getByLabel('Причина потери *',{exact:true}).selectOption('other');await editor.getByLabel('Уточнение причины *',{exact:true}).fill('Пока арендует, вернуться в январе');
+ await editor.getByRole('combobox',{name:'Причина потери *',exact:true}).selectOption('other');await editor.getByRole('textbox',{name:'Уточнение причины *',exact:true}).fill('Пока арендует, вернуться в январе');
  await editor.getByRole('button',{name:'Сохранить карточку'}).click();await expect(editor).toHaveCount(0);
  await page.getByRole('button',{name:'Все',exact:true}).click();await page.locator('.leadRowButton').filter({hasText:seedLead.name}).click();
- await expect(editor.getByLabel('Причина потери *',{exact:true})).toHaveValue('other');await expect(editor.getByLabel('Уточнение причины *',{exact:true})).toHaveValue('Пока арендует, вернуться в январе');
+ await expect(editor.getByRole('combobox',{name:'Причина потери *',exact:true})).toHaveValue('other');await expect(editor.getByRole('textbox',{name:'Уточнение причины *',exact:true})).toHaveValue('Пока арендует, вернуться в январе');
  await editor.getByRole('button',{name:'Закрыть',exact:true}).click();await page.goto('/pulsedv/control-center/#/analytics');
  const panel=page.getByRole('region',{name:'Причины потери клиентов'});await expect(panel.getByText('Другая причина',{exact:true})).toBeVisible();await expect(panel.getByText('1 · 100%',{exact:true})).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);

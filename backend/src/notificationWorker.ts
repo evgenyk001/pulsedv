@@ -14,6 +14,7 @@ export type NotificationOutboxRepository={
   managerTelegramUserId(managerId:string):Promise<string|null>;
   userTelegramUserId(userId:string):Promise<string|null>;
   markProcessed(id:string):Promise<void>;
+  markSkipped(id:string):Promise<void>;
   markFailed(id:string,error:string,nextAttemptAt:string):Promise<void>;
 };
 
@@ -62,7 +63,7 @@ export async function processNotificationOutbox(
         if(!managerId)throw new Error("managerId missing");
         const chatId=await repo.managerTelegramUserId(managerId);
         if(!chatId)throw new Error("manager Telegram id missing");
-        if(isShowingReminder(event.topic)&&!await repo.canDeliver(event)){await repo.markProcessed(event.id);continue;}
+        if(isShowingReminder(event.topic)&&!await repo.canDeliver(event)){await repo.markSkipped(event.id);continue;}
         await telegram.sendMessage({
           chatId,
           text:managerText(event),
@@ -73,7 +74,7 @@ export async function processNotificationOutbox(
         if(!userId)throw new Error("userId missing");
         const chatId=await repo.userTelegramUserId(userId);
         if(!chatId)throw new Error("user Telegram id missing");
-        if(isShowingReminder(event.topic)&&!await repo.canDeliver(event)){await repo.markProcessed(event.id);continue;}
+        if(isShowingReminder(event.topic)&&!await repo.canDeliver(event)){await repo.markSkipped(event.id);continue;}
         await telegram.sendMessage({
           chatId,
           text:userText(event),

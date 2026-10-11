@@ -200,7 +200,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const scoped=m.role==='manager';
   return (await db.query(scoped?'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members where id=$1':'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members order by name',scoped?[m.id]:[])).rows.map(memberView);
  };
- const controlNotifications=async(m:Member)=>m.role==='manager'?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
+ const controlNotifications=async(m:Member)=>m.role==='manager'?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at,available_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
  const controlCounts=async(m:Member)=>{
   const scoped=m.role==='manager';
   const leadValues=scoped?[m.id]:[];
@@ -373,7 +373,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const events=(await db.query(`select id,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at as created_at from user_events ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by occurred_at desc limit 2000`,scoped?[m.id]:[])).rows.map(camelRow);
   const profiles=(await db.query(`select * from visitor_profiles ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by score desc limit 1000`,scoped?[m.id]:[])).rows.map(camelRow);
   const members=(await db.query(scoped?'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members where id=$1':'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members order by name',scoped?[m.id]:[])).rows.map(memberView);
-  const notifications=scoped?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
+  const notifications=scoped?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at,available_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
   return {state,version,leads,tasks,events,profiles,members,notifications,limited:leads.length===1000||events.length===2000||profiles.length===1000||tasks.length===1000};
  });
  app.put('/api/v1/control/state',{preHandler:editor},async request=>{

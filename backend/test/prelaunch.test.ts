@@ -68,6 +68,13 @@ test('Showing reminders: confirmed only, dedup, short notice, reschedule, cancel
  const newId=doc.showings.at(-1).id;doc.showings.at(-1).at=new Date(Date.now()-1000).toISOString();await db.query('update client_journeys set document=$2::jsonb where lead_id=$1',[lead,JSON.stringify(doc)]);
  await db.query("update outbox_events set available_at=now()-interval '1 second' where payload->>'showingId'=$1",[newId]);
  await processNotificationOutbox(outboxRepository(db),{async sendMessage(){assert.fail('expired reminder sent')}},10);
+ assert.ok((await reminders()).filter(r=>r.payload.showingId===newId).every(r=>r.processed_at&&r.last_error==='Showing reminder superseded'));
+ // Delivery failure keeps a retry; closing the lead removes it atomically.
+ doc.showings.push({...short,id:randomUUID(),at:new Date(Date.now()+5*3600000).toISOString()});await db.query('update client_journeys set document=$2::jsonb where lead_id=$1',[lead,JSON.stringify(doc)]);await scheduleShowingReminders(db,config.PUBLIC_ORIGIN);
+ await db.query("update outbox_events set available_at=now()-interval '1 second' where processed_at is null");
+ await processNotificationOutbox(outboxRepository(db),{async sendMessage(){throw new Error('temporary test delivery failure')}},10);assert.equal((await pending()).length,2);assert.ok((await pending()).every(r=>r.attempts===1&&r.last_error==='temporary test delivery failure'));
+ const current=(await app.inject({url:'/api/v1/control/leads/'+lead,cookies:cookies[0]})).json().lead;
+ const closed=await app.inject({method:'PATCH',url:'/api/v1/control/leads/'+lead,headers,cookies:cookies[0],payload:{status:'closed',expectedUpdatedAt:current.updatedAt}});assert.equal(closed.statusCode,200,closed.body);assert.equal((await pending()).length,0);
 });
 
 test('Loss reason API: required, atomic, optimistic, scoped, Vladivostok dates and reopening',async t=>{
