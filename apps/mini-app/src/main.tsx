@@ -15,6 +15,7 @@ import MortgagePage from "./pages/mortgage";
 import SelectionPage from "./pages/selection";
 import FavoritesPage from "./pages/favorites";
 import ProfilePage from "./pages/profile";
+import MySearchPage from "./pages/my-search";
 import PropertyPage from "./pages/property.$propertyId";
 import PrivacyPage from "./pages/privacy";
 import PersonalDataConsentPage from "./pages/personal-data-consent";
@@ -45,6 +46,7 @@ function App(){
           <Route path="/favorites" element={<FavoritesPage/>}/>
           <Route path="/journey" element={<JourneyPage/>}/>
           <Route path="/profile" element={<ProfilePage/>}/>
+          <Route path="/my-search" element={<MySearchPage/>}/>
           <Route path="/privacy" element={<PrivacyPage/>}/>
           <Route path="/personal-data-consent" element={<PersonalDataConsentPage/>}/>
           <Route path="/property/:propertyId" element={<PropertyPage/>}/>

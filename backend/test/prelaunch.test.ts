@@ -63,7 +63,7 @@ test('Showing reminders: confirmed only, dedup, short notice, reschedule, cancel
  await db.query("update outbox_events set available_at=now()-interval '1 second' where processed_at is null");
  await db.query("delete from outbox_events where topic not in ('manager.showing_reminder','user.showing_reminder')");
  const sent:any[]=[];const delivered=await processNotificationOutbox(outboxRepository(db),{async sendMessage(input){sent.push(input)}},10);
- assert.equal(delivered.processed,2);assert.equal(sent.length,2);assert.ok(sent.every(s=>s.text.includes('Показ через 2 часа')));assert.ok(sent.some(s=>s.chatId==='1002'));assert.ok(sent.some(s=>s.chatId==='2000'));
+ assert.equal(delivered.processed,2);assert.equal(sent.length,2);assert.ok(sent.every(s=>s.text.includes('Показ через 2 часа')));assert.ok(sent.some(s=>s.chatId==='1000'));assert.ok(!sent.some(s=>s.chatId==='1001'||s.chatId==='1002'));assert.ok(sent.some(s=>s.chatId==='2000'));
  await scheduleShowingReminders(db,config.PUBLIC_ORIGIN);assert.equal((await pending()).length,0);
  // Retry cannot deliver an expired showing even if the job was left due during downtime.
  doc.showings.push({...short,id:randomUUID(),at:new Date(Date.now()+3*3600000).toISOString()});await db.query('update client_journeys set document=$2::jsonb where lead_id=$1',[lead,JSON.stringify(doc)]);await scheduleShowingReminders(db,config.PUBLIC_ORIGIN);

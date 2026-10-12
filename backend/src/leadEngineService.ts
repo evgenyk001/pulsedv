@@ -137,7 +137,7 @@ export async function processSessionIntent(
   const becameUrgent=result.priority==="urgent"&&previousPriority!=="urgent";
   const isNewLead=lead.status==="new"&&lead.score===0;
 
-  if(managerId&&!isNewLead&&(crossedHotBoundary||becameUrgent)){
+  if(!isNewLead&&(crossedHotBoundary||becameUrgent)){
     await repo.enqueueOutbox({
       topic:managerTopic(result.priority),
       aggregateType:"lead",

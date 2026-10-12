@@ -1,0 +1,28 @@
+import {test,expect} from '@playwright/test';
+import {DEFAULT_STATE} from '../../packages/pulse-data/model';
+for(const width of [320,390,430])test(`My search ${width}px: save criteria, retain favorites updates, disable tracking and no overflow`,async({page,browserName})=>{
+ await page.setViewportSize({width,height:844});
+ await page.addInitScript(state=>{if(!localStorage.getItem('pulse.dv.control.state.v1'))localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state));localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion);},DEFAULT_STATE);
+ await page.goto('/pulsedv/mini-app/#/catalog?city=Владивосток&rooms=2&min=4000000&max=18000000');
+ await page.getByRole('link',{name:/Сохранить этот поиск/}).click();
+ const dialog=page.getByRole('dialog');await expect(dialog.getByRole('heading',{name:'Ваш поиск квартиры'})).toBeVisible();
+ await expect(dialog.getByRole('button',{name:'Сохранить поиск',exact:true})).toBeInViewport();
+ await expect(dialog.getByLabel('Город',{exact:true})).toHaveValue('Владивосток');await expect(dialog.getByLabel('Комнатность',{exact:true})).toHaveValue('2');
+ await dialog.getByLabel('Бюджет поиска до').fill('100');await expect(dialog.getByRole('button',{name:'Сохранить поиск',exact:true})).toBeDisabled();
+ await dialog.getByLabel('Бюджет поиска до').fill('18000000');await dialog.getByRole('button',{name:'Сохранить поиск',exact:true}).click();await expect(dialog).toHaveCount(0);
+ const search=page.getByRole('region',{name:'Сохранённый поиск'});await expect(search.getByText('Ваш запрос сохранён')).toBeVisible();
+ await expect(page.getByRole('switch',{name:'Уведомления моего поиска в Telegram'})).toBeDisabled();
+ const id=DEFAULT_STATE.properties.find(p=>p.status==='published')!.id;
+ await page.evaluate(id=>localStorage.setItem('pulse.dv.favorites.v1',JSON.stringify([id])),id);
+ await page.getByRole('switch',{name:'Следить за избранным'}).click();await expect(page.getByRole('switch',{name:'Следить за избранным'})).toBeChecked();
+ await page.evaluate(id=>{const state=JSON.parse(localStorage.getItem('pulse.dv.control.state.v1')!);const p=state.properties.find((p:any)=>p.id===id);p.priceFrom+=1;p.floorplans.push({...p.floorplans[0],id:'test-new-plan',roomLabel:'3',areaFrom:100,areaTo:110});localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state));},id);
+ await page.getByRole('button',{name:'Обновить мой поиск'}).click();
+ const feed=page.getByRole('region',{name:'Обновления моего поиска'});await expect(feed.getByText(/Цена в каталоге:/)).toBeVisible();await expect(feed.getByText('Добавлена планировка в избранном ЖК')).toBeVisible();
+ await page.reload();await expect(search.getByText('Ваш запрос сохранён')).toBeVisible();await expect(feed.getByText(/Цена в каталоге:/)).toBeVisible();
+ await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:`test-results/my-search-${browserName}-${width}.png`,fullPage:true});
+ await page.getByRole('button',{name:'Изменить параметры'}).click();await expect(dialog.getByLabel('Бюджет поиска до')).toHaveValue('18000000');
+ await dialog.screenshot({path:`test-results/my-search-editor-${browserName}-${width}.png`});
+ await page.keyboard.press('Escape');await page.getByRole('switch',{name:'Следить за избранным'}).click();await expect(page.getByRole('switch',{name:'Следить за избранным'})).not.toBeChecked();
+ await page.getByRole('button',{name:'Удалить сохранённый поиск'}).click();await expect(search.getByText('Квартира под ваши планы')).toBeVisible();
+});
