@@ -132,7 +132,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    await repo.insertEvents([{idempotencyKey:'lead:'+row.id,sessionId:session.sessionId,userId:session.userId,eventType:'lead_created',entityType:'lead',entityId:row.id,metadata:{source:input.source},createdAt:new Date().toISOString()}]);
    const processed=await processSessionIntent(repo,session.sessionId);
    const propertyName=input.propertyId?(await sql.query('select name from catalog_properties where id=$1',[input.propertyId])).rows[0]?.name:null;
-   await repo.enqueueOutbox({topic:'manager.new_lead',aggregateType:'lead',aggregateId:row.id,payload:{name:input.name,phone:input.phone,propertyName,source:input.source,contextSummary:leadContextText(requestContext),comment:input.comment?.slice(0,500)??null,score:processed.result.score,priority:processed.result.priority,city:processed.result.city,nextAction:processed.result.recommendedAction,deepLink:config.PUBLIC_ORIGIN+'/pulsedv/control-center/#/leads?lead='+row.id}});
+   await repo.enqueueOutbox({topic:'manager.new_lead',aggregateType:'lead',aggregateId:row.id,payload:{name:input.name,phone:input.phone,propertyName,source:input.source,contextSummary:leadContextText(requestContext),comment:input.comment?.slice(0,500)??null,score:processed.result.score,priority:processed.result.priority,city:typeof requestContext.city==='string'?requestContext.city:processed.result.city,nextAction:processed.result.recommendedAction,deepLink:config.PUBLIC_ORIGIN+'/pulsedv/control-center/#/leads?lead='+row.id}});
    return {ok:true,id:row.id,duplicate:false};
   });
  });

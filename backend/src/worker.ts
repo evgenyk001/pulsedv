@@ -18,7 +18,7 @@ try{
    // Leave pending messages untouched until Telegram is configured.
    if(config.BOT_TOKEN&&Date.now()>=nextReminders){await scheduleShowingReminders(db,config.PUBLIC_ORIGIN);nextReminders=Date.now()+60_000;}
    if(config.BOT_TOKEN)await processNotificationOutbox(outboxRepository(db),{async sendMessage(input){
-    const response=await fetch(`https://api.telegram.org/bot${config.BOT_TOKEN}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(10000),body:JSON.stringify({chat_id:input.chatId,text:input.text,...(input.deepLink?.startsWith(config.PUBLIC_ORIGIN+'/')?{reply_markup:{inline_keyboard:[[{text:input.deepLink.includes('/control-center/')?'Открыть PULSE Control':'Открыть обращение',url:input.deepLink}]]}}:{})})});
+    const response=await fetch(`https://api.telegram.org/bot${config.BOT_TOKEN}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(10000),body:JSON.stringify({chat_id:input.chatId,text:input.text,...(input.deepLink?.startsWith(config.PUBLIC_ORIGIN+'/')?{reply_markup:{inline_keyboard:[[{text:input.deepLink.includes('/control-center/')?'Открыть PULSE Control':input.deepLink.includes('/my-search')?'Открыть мой поиск':'Открыть обращение',url:input.deepLink}]]}}:{})})});
     const result=await response.json() as {ok?:boolean;error_code?:number};
     if(!response.ok||!result.ok)throw new Error(`Telegram delivery failed (${result.error_code??response.status})`);
    }},5);
