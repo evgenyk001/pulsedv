@@ -1,4 +1,5 @@
 import React from "react";
+import {NativeSelect} from "../components/NativeSelect";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -326,39 +327,16 @@ export default function MortgagePage(){
 
     <section className={styles.programSection}>
       <div className={styles.sectionLabel}><span>Программа</span><small>Приморский край</small></div>
-      <div className={styles.programs}>
-        {programs.map(item=><button
-          type="button"
-          key={item.id}
-          className={program===item.id?styles.programActive:""}
-          onClick={()=>chooseProgram(item.id)}
-        >
-          <span>{item.label}</span><b>{cardRate(item.id)}</b>
-        </button>)}
-      </div>
+      <NativeSelect aria-label="Ипотечная программа" value={program} onChange={e=>chooseProgram(e.target.value as ProgramId)}>{programs.map(item=><option key={item.id} value={item.id}>{item.label} · {cardRate(item.id)}</option>)}</NativeSelect>
 
-      <div className={styles.objectSwitch} aria-label="Тип недвижимости">
-        {(Object.keys(propertyLabels) as PropertyKind[]).map(kind=><button
-          type="button"
-          key={kind}
-          className={propertyKind===kind?styles.objectActive:""}
-          onClick={()=>{setInteracted(true);setPropertyKind(kind)}}
-        >{propertyLabels[kind]}</button>)}
-      </div>
+      <NativeSelect className={styles.nativeObject} aria-label="Тип недвижимости" value={propertyKind} onChange={e=>{setInteracted(true);setPropertyKind(e.target.value as PropertyKind)}}>{(Object.keys(propertyLabels) as PropertyKind[]).map(kind=><option key={kind} value={kind}>{propertyLabels[kind]}</option>)}</NativeSelect>
 
       {program==="family"&&<div className={styles.scenario}>
         <div className={styles.scenarioHead}>
           <div><strong>Сколько детей в семье?</strong><span>Для Приморья ставка зависит от их количества</span></div>
           <span className={styles.liveRate}>{formatRate(preferredRate)}</span>
         </div>
-        <div className={styles.childGrid}>
-          {([1,2,3,4,5] as FamilyChildren[]).map(count=><button
-            type="button"
-            key={count}
-            className={childrenCount===count?styles.chipActive:styles.chip}
-            onClick={()=>{setInteracted(true);setChildrenCount(count)}}
-          >{count===5?"5+":count}</button>)}
-        </div>
+        <NativeSelect aria-label="Количество детей" value={String(childrenCount)} onChange={e=>{setInteracted(true);setChildrenCount(Number(e.target.value) as FamilyChildren)}}>{([1,2,3,4,5] as FamilyChildren[]).map(count=><option key={count} value={String(count)}>{count===5?"5 и больше":count}</option>)}</NativeSelect>
         <div className={styles.toggleRows}>
           <div className={styles.toggleRow}>
             <div><strong>Есть ребёнок младше 7 лет</strong><span>Базовое условие для новых договоров</span></div>

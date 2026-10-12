@@ -35,7 +35,7 @@ import {
 } from "../../../../packages/domain/mortgagePolicy";
 import { Slider } from "../components/Slider";
 import { Input } from "../components/Input";
-import { SegmentedControl } from "../components/SegmentedControl";
+import {NativeSelect} from "../components/NativeSelect";
 import { usePriceBounds } from "../helpers/usePriceBounds";
 import { useSelectionProperties } from "../helpers/useCatalog";
 import { usePulseControlState } from "../helpers/usePulseControlState";
@@ -686,15 +686,11 @@ export default function SelectionPage(){
         {openPanel==="essentials"&&<div className={styles.selectPanelBody}>
           <div className={styles.fieldBlock}>
             <label>Город</label>
-            <div className={styles.choiceGrid}>
-              {control.select.cities.map(value=><button type="button" key={value} aria-pressed={city===value} onClick={()=>{setStarted(true);setCity(value);safeHaptic();}} className={city===value?styles.active:""}>{value}</button>)}
-            </div>
+            <NativeSelect aria-label="Город" value={city} onChange={e=>{setStarted(true);setCity(e.target.value);safeHaptic();}}>{control.select.cities.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
           </div>
           <div className={styles.fieldBlock}>
             <label>Комнатность</label>
-            <div className={styles.roomGrid}>
-              {control.select.roomOptions.map(value=><button type="button" key={value} aria-pressed={rooms===value} onClick={()=>{setStarted(true);setRooms(value);safeHaptic();}} className={rooms===value?styles.active:""}>{value}</button>)}
-            </div>
+            <NativeSelect aria-label="Комнатность" value={rooms} onChange={e=>{setStarted(true);setRooms(e.target.value);safeHaptic();}}>{control.select.roomOptions.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
           </div>
         </div>}
       </article>
@@ -702,24 +698,12 @@ export default function SelectionPage(){
       <article className={openPanel==="finance"?styles.selectPanelOpen:styles.selectPanel}>
         {panelHeader("finance","Как покупаем","Бюджет или ипотечный сценарий",<WalletCards size={18}/>)}
         {openPanel==="finance"&&<div className={styles.selectPanelBody}>
-          {control.select.mortgageEnabled&&<SegmentedControl
-            className={styles.purchaseTabs}
-            value={purchaseMode}
-            onChange={value=>{setStarted(true);setPurchaseMode(value as PurchaseMode);safeHaptic();}}
-            ariaLabel="Способ покупки"
-            options={[{value:"mortgage",label:"Ипотека"},{value:"cash",label:"По стоимости"}]}
-          />}
+          {control.select.mortgageEnabled&&<NativeSelect aria-label="Способ покупки" value={purchaseMode} onChange={e=>{setStarted(true);setPurchaseMode(e.target.value as PurchaseMode);safeHaptic();}}><option value="mortgage">Ипотека</option><option value="cash">По стоимости</option></NativeSelect>}
 
           {purchaseMode==="mortgage"?<>
             <div className={styles.fieldBlock}>
               <label>Сценарий для расчёта</label>
-              <div className={styles.choiceGrid}>{control.mortgagePrograms.map(item=><button
-                type="button"
-                key={item.id}
-                aria-pressed={mortgageProgram===item.id}
-                className={mortgageProgram===item.id?styles.active:""}
-                onClick={()=>{setStarted(true);setMortgageProgram(item.id);safeHaptic();}}
-              >{item.label}</button>)}</div>
+              <NativeSelect aria-label="Сценарий для расчёта" value={mortgageProgram} onChange={e=>{setStarted(true);setMortgageProgram(e.target.value as typeof mortgageProgram);safeHaptic();}}>{control.mortgagePrograms.map(item=><option key={item.id} value={item.id}>{item.label}</option>)}</NativeSelect>
             </div>
 
             <div className={styles.financeGrid}>
@@ -763,12 +747,7 @@ export default function SelectionPage(){
       <article className={openPanel==="delivery"?styles.selectPanelOpen:styles.selectPanel}>
         {panelHeader("delivery","Когда нужны ключи","Срок — мягкий приоритет",<CalendarDays size={18}/>)}
         {openPanel==="delivery"&&<div className={styles.selectPanelBody}>
-          <div className={styles.deliveryGrid}>
-            {deliveryOptions.map(value=><button type="button" key={value} aria-pressed={delivery===value} onClick={()=>{setStarted(true);setDelivery(value);safeHaptic();}} className={delivery===value?styles.active:""}>
-              {value==="Сдан"&&<Check size={14}/>}
-              {value}
-            </button>)}
-          </div>
+          <NativeSelect aria-label="Срок сдачи" value={delivery} onChange={e=>{setStarted(true);setDelivery(e.target.value);safeHaptic();}}>{deliveryOptions.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
           <div className={styles.timelineNote}><CalendarDays size={16}/><span>Срок не убивает сильный вариант: он влияет на порядок, а не превращает хороший ЖК в «неподходящий».</span></div>
         </div>}
       </article>
