@@ -1,7 +1,7 @@
 import {useClientJourneys} from "../helpers/useClientJourneys";
 import React from "react";
 import { Link } from "react-router-dom";
-import { UserRound, MessageCircle, Phone, ChevronRight, ShieldCheck, Heart, Clock3, Info, PlayCircle } from "lucide-react";
+import { Search, UserRound, MessageCircle, Phone, ChevronRight, ShieldCheck, Heart, Clock3, Info, PlayCircle } from "lucide-react";
 import { LeadSheet } from "../components/LeadSheet";
 import { PageHeader } from "../components/PageHeader";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
@@ -41,6 +41,7 @@ export default function ProfilePage(){
 
     <section className={styles.menu}>
       <Link to="/journey"><Clock3 size={18}/><span><b>Мои подборки и показы</b><small>Варианты от менеджера и встречи</small></span><ChevronRight size={17}/></Link>
+      <Link to="/my-search"><Search size={18}/><span><b>Мой поиск</b><small>Ваш запрос и полезные обновления ЖК</small></span><ChevronRight size={17}/></Link>
       <Link to="/favorites"><Heart size={18}/><span><b>Избранное</b><small>Ваш шорт-лист объектов</small></span><ChevronRight size={17}/></Link>
       <Link to="/privacy"><ShieldCheck size={18}/><span><b>Персональные данные</b><small>Политика и согласие на обработку</small></span><ChevronRight size={17}/></Link>
       <Sheet>

@@ -1,4 +1,6 @@
 import {registerLossRoutes} from './lossRoutes';
+import {registerSearchRoutes,mergeSearch} from './searchRoutes';
+import {leadContextText} from './notificationWorker';
 import {LOSS_REASON_IDS,lossError} from '../../packages/pulse-data/loss';
 import {syncShowingReminders} from './showingReminders';
 import {registerFinanceRoutes} from './financeRoutes';
@@ -97,6 +99,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    if(current?.telegram_user_id&&String(current.telegram_user_id)!==String(user.id))throw new HttpError(409,'Эта сессия уже принадлежит другому пользователю');
    const row=(await sql.query('insert into app_users(telegram_user_id,telegram_username,first_name,last_name) values($1,$2,$3,$4) on conflict(telegram_user_id) do update set telegram_username=excluded.telegram_username,first_name=excluded.first_name,last_name=excluded.last_name,last_seen_at=now() returning id',[user.id,user.username??null,user.first_name,user.last_name??null])).rows[0];
    await mergeFavorites(sql,request.visitor!.sessionId,row.id);
+   await mergeSearch(sql,request.visitor!.sessionId,row.id);
    await sql.query('update sessions set user_id=$2,telegram_start_param=$3 where id=$1',[request.visitor!.sessionId,row.id,verified.startParam]);
    for(const table of ['user_events','visitor_profiles','leads'])await sql.query(`update ${table} set user_id=$2 where session_id=$1`,[request.visitor!.sessionId,row.id]);
   });return {ok:true};
@@ -128,7 +131,8 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const repo=leadRepository(sql);
    await repo.insertEvents([{idempotencyKey:'lead:'+row.id,sessionId:session.sessionId,userId:session.userId,eventType:'lead_created',entityType:'lead',entityId:row.id,metadata:{source:input.source},createdAt:new Date().toISOString()}]);
    const processed=await processSessionIntent(repo,session.sessionId);
-   if(processed.lead?.managerId)await repo.enqueueOutbox({topic:'manager.new_lead',aggregateType:'lead',aggregateId:row.id,payload:{managerId:processed.lead.managerId,score:processed.result.score,priority:processed.result.priority,city:processed.result.city,nextAction:processed.result.recommendedAction,deepLink:config.PUBLIC_ORIGIN+'/pulsedv/control-center/#/leads?lead='+row.id}});
+   const propertyName=input.propertyId?(await sql.query('select name from catalog_properties where id=$1',[input.propertyId])).rows[0]?.name:null;
+   await repo.enqueueOutbox({topic:'manager.new_lead',aggregateType:'lead',aggregateId:row.id,payload:{name:input.name,phone:input.phone,propertyName,source:input.source,contextSummary:leadContextText(requestContext),comment:input.comment?.slice(0,500)??null,score:processed.result.score,priority:processed.result.priority,city:processed.result.city,nextAction:processed.result.recommendedAction,deepLink:config.PUBLIC_ORIGIN+'/pulsedv/control-center/#/leads?lead='+row.id}});
    return {ok:true,id:row.id,duplicate:false};
   });
  });
@@ -193,6 +197,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  await registerLossRoutes(app,db,control);
  await registerInterestRoutes(app,db,control);
  await registerFavoriteRoutes(app,db,visitor);
+ await registerSearchRoutes(app,db,visitor);
  await registerJourneyRoutes(app,db,control,visitor,editor,config.PUBLIC_ORIGIN,config);
 
  const pageQuery=z.object({page:z.coerce.number().int().min(1).default(1),limit:z.coerce.number().int().min(1).max(1000).default(250)}).strict();

@@ -5,7 +5,7 @@ import type { PulseEvent } from '../../packages/pulse-data/model';
 import { readState } from './repository';
 /** Run inside the ingest transaction. Reuse the durable outbox; no second queue. */
 export async function enqueueInterestChange(sql:Sql,sessionId:string,publicOrigin:string,now=new Date()){
- const lead=(await sql.query("select id,manager_id from leads where session_id=$1 and manager_id is not null and status not in ('closed','lost','deal') order by created_at desc limit 1 for update",[sessionId])).rows[0];
+ const lead=(await sql.query("select id,manager_id from leads where session_id=$1 and status not in ('closed','lost','deal') order by created_at desc limit 1 for update",[sessionId])).rows[0];
  if(!lead)return false;
  const rows=(await sql.query("select id,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at as created_at from user_events where session_id=$1 and occurred_at >= $2 order by occurred_at desc,id limit 2000",[sessionId,new Date(now.getTime()-30*86400000).toISOString()])).rows;
  const {state}=await readState(sql);const dna=buildInterestDNA(rows.map(row=>camelRow(row) as PulseEvent),state,now);
