@@ -41,7 +41,7 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
  await page.goto('/pulsedv/mini-app/#/mortgage');
  const mortgageIntroSmoke=page.getByRole('dialog',{name:'Знакомство с ипотекой',exact:true});await expect(mortgageIntroSmoke).toBeVisible();await mortgageIntroSmoke.getByRole('button',{name:'Закрыть знакомство с ипотекой'}).click();
- await page.getByRole('button',{name:/Дальневосточная/}).click();
+ await page.getByRole('combobox',{name:'Ипотечная программа'}).selectOption('farEast');
  const switches=page.getByRole('switch');await expect(switches.first()).toBeVisible();
  for(const item of await switches.all()){
   const thumb=item.locator('[data-state]').first();
@@ -474,12 +474,12 @@ test('Control mortgage settings are the same rules used by Mini App',async({page
  await page.goto('/pulsedv/mini-app/#/mortgage');
  const mortgageIntroSync=page.getByRole('dialog',{name:'Знакомство с ипотекой',exact:true});await expect(mortgageIntroSync).toBeVisible();await mortgageIntroSync.getByRole('button',{name:'Закрыть знакомство с ипотекой'}).click();
 
- const familyProgram=page.getByRole('button',{name:/Семейная/});
- await familyProgram.click();
+ const familyProgram=page.getByRole('combobox',{name:'Ипотечная программа'});
+ await familyProgram.selectOption('family');
  await expect(page.getByText('21%',{exact:false}).first()).toBeVisible();
  await expect(page.getByText(/Проверка синхронизации ипотечных правил/)).toBeVisible();
 
- const standardProgram=page.getByRole('button',{name:/Базовая/});
+ const standardProgram=page.getByRole('combobox',{name:'Ипотечная программа'}).locator('option[value=standard]');
  await expect(standardProgram).toContainText('14,9%');
 });
 
@@ -504,10 +504,10 @@ for(const width of [390,1440])test(`Interest DNA ${width}px: facts, evidence, ch
  await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:'Пропустить онбординг'}).click();
  await page.getByRole('navigation',{name:'Основная навигация'}).getByRole('button',{name:'Подбор',exact:true}).click();
  await page.getByRole('button',{name:/Как покупаем/}).click();
- await page.getByRole('tab',{name:'По стоимости',exact:true}).click();
+ await page.getByRole('combobox',{name:'Способ покупки'}).selectOption('cash');
  await page.getByRole('button',{name:/Показать подходящие/}).click();await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
  await page.getByRole('button',{name:'Изменить запрос',exact:true}).click();
- await page.getByRole('button',{name:'Артём',exact:true}).click();
+ await page.getByRole('combobox',{name:'Город',exact:true}).selectOption('Артём');
  await page.getByRole('button',{name:/Показать подходящие/}).click();await expect(page.getByLabel('Результат PULSE Select')).toBeVisible();
  await page.goto('/pulsedv/control-center/#/users');await page.locator('.leadRowButton').first().click();
  const dna=page.getByRole('region',{name:'Interest DNA'});
@@ -805,14 +805,10 @@ test('Catalog filters: live count, draft reset and applied URL stay in one flow'
 
  const dialog=page.getByRole('dialog');
  await expect(dialog.getByRole('heading',{name:'Фильтры',exact:true})).toBeVisible();
- const cityGroup=dialog.getByRole('group',{name:'Город'});
- const cityButtons=cityGroup.getByRole('button');
- expect(await cityButtons.count()).toBeGreaterThan(1);
-
- const cityButton=cityButtons.nth(1);
- const cityName=(await cityButton.innerText()).trim();
- await cityButton.click();
- await expect(cityButton).toHaveAttribute('aria-pressed','true');
+ const citySelect=dialog.getByRole('combobox',{name:'Город',exact:true});
+ const cityOptions=citySelect.locator('option');expect(await cityOptions.count()).toBeGreaterThan(1);
+ const cityName=(await cityOptions.nth(1).getAttribute('value'))!;
+ await citySelect.selectOption(cityName);await expect(citySelect).toHaveValue(cityName);
 
  const apply=dialog.getByRole('button',{name:/Показать \d+ проект/});
  await expect(apply).toBeVisible();
@@ -833,7 +829,7 @@ test('Catalog filters: live count, draft reset and applied URL stay in one flow'
  await reset.click();
  await expect(reopened).toBeVisible();
  expect(page.url()).toContain('city=');
- await expect(reopened.getByRole('group',{name:'Город'}).getByRole('button',{name:'Все',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect(reopened.getByRole('combobox',{name:'Город',exact:true})).toHaveValue('Все');
 
  await reopened.getByRole('button',{name:/Показать \d+ проект/}).click();
  await expect(reopened).toBeHidden();

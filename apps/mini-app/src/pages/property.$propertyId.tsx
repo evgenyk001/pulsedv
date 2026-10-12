@@ -1,5 +1,6 @@
 import { PropertyFreshness } from '../components/PropertyFreshness';
 import React from "react";
+import {NativeSelect} from "../components/NativeSelect";
 import {propertyReturn} from "../helpers/navigationMemory";
 import {FloorplanViewer} from "../components/FloorplanViewer";
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
@@ -163,16 +164,7 @@ export default function PropertyPage(){
           {p.floorplans.length>0&&<small>{p.floorplans.length} вариантов</small>}
         </div>
 
-        {roomOptions.length>0&&<div className={styles.roomTabs} role="tablist" aria-label="Комнатность планировок">
-          {roomOptions.map(room=><button
-            type="button"
-            key={room}
-            role="tab"
-            aria-selected={activeRoom===room}
-            className={activeRoom===room?styles.roomActive:""}
-            onClick={()=>setSelectedRoom(room)}
-          >{room}</button>)}
-        </div>}
+        {roomOptions.length>0&&<NativeSelect aria-label="Комнатность планировок" value={activeRoom} onChange={e=>setSelectedRoom(e.target.value)}>{roomOptions.map(room=><option key={room} value={room}>{room}</option>)}</NativeSelect>}
 
         {visiblePlans.length?<div className={styles.planRail}>
           {visiblePlans.map((plan,index)=><TrackedFloorplan property={p} plan={plan} className={styles.planCard} key={plan.id||plan.roomLabel+"-"+index}>

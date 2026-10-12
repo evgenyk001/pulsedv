@@ -65,3 +65,5 @@ button.headerIcon{
 }
 button.headerIcon:active{transform:scale(.95)}
 button.headerIcon:focus-visible{outline:0;box-shadow:var(--app-card-shadow),var(--shadow-focus)}
+
+.nativeObject{margin-top:12px}

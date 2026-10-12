@@ -1,8 +1,10 @@
 import { hasSea, matchScore, matchesBudgetAndRooms } from "../../../../packages/domain/propertyMatch";
 import { usePulseControlState } from "../helpers/usePulseControlState";
+import {Switch} from "../components/Switch";
+import {NativeSelect} from "../components/NativeSelect";
 import React, { useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Bell, Search, SlidersHorizontal, List, MapPinned, ArrowUpDown, Check, ChevronRight, MapPin, X, Sparkles } from "lucide-react";
+import { Bell, Search, SlidersHorizontal, List, MapPinned, ChevronRight, MapPin, X, Sparkles } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger, SheetClose } from "../components/Sheet";
 import { Slider } from "../components/Slider";
 import { PropertyCard } from "../components/PropertyCard";
@@ -334,22 +336,24 @@ export default function CatalogPage(){
 
             <section className={styles.filterGroup}>
               <label className={styles.filterTitle}><span>Срок сдачи</span></label>
-              <div className={styles.sheetChips} role="group" aria-label="Срок сдачи">{deliveryOptions.map(v=><button type="button" aria-pressed={delivery===v} onClick={()=>setDelivery(v)} key={v} className={delivery===v?styles.sheetActive:""}>{delivery===v&&<Check size={13}/>} {v}</button>)}</div>
+              <NativeSelect aria-label="Срок сдачи" value={delivery} onChange={e=>setDelivery(e.target.value)}>{deliveryOptions.map(v=><option key={v} value={v}>{v}</option>)}</NativeSelect>
             </section>
 
+            <div className={styles.filterChoiceGrid}>
             <section className={styles.filterGroup}>
               <label className={styles.filterTitle}><span>Город</span></label>
-              <div className={styles.sheetChips} role="group" aria-label="Город">{cityOptions.map(v=><button type="button" aria-pressed={city===v} onClick={()=>selectCity(v)} key={v} className={city===v?styles.sheetActive:""}>{city===v&&<Check size={13}/>} {v}</button>)}</div>
+              <NativeSelect aria-label="Город" value={city} onChange={e=>selectCity(e.target.value)}>{cityOptions.map(v=><option key={v} value={v}>{v}</option>)}</NativeSelect>
             </section>
 
             <section className={styles.filterGroup}>
               <label className={styles.filterTitle}><span>Комнатность</span></label>
-              <div className={styles.sheetChips} role="group" aria-label="Комнатность">{roomOptions.map(v=><button type="button" aria-pressed={rooms===v} onClick={()=>setRooms(v)} key={v} className={rooms===v?styles.sheetActive:""}>{rooms===v&&<Check size={13}/>} {v}</button>)}</div>
+              <NativeSelect aria-label="Комнатность" value={rooms} onChange={e=>setRooms(e.target.value)}>{roomOptions.map(v=><option key={v} value={v}>{v}</option>)}</NativeSelect>
             </section>
+            </div>
 
             {control.select.seaEnabled&&(city==="Все"||city==="Владивосток")&&<section className={styles.filterGroup}>
               <label className={styles.filterTitle}><span>Особенности</span></label>
-              <div className={styles.sheetChips} role="group" aria-label="Особенности"><button type="button" aria-pressed={sea} onClick={()=>setSea(value=>!value)} className={sea?styles.sheetActive:""}>{sea&&<Check size={13}/>} Вид на море</button></div>
+              <label className={styles.seaChoice}><span>Вид на море</span><Switch aria-label="Вид на море" checked={sea} onCheckedChange={setSea}/></label>
             </section>}
           </div>
 
@@ -371,17 +375,7 @@ export default function CatalogPage(){
 
     {view==="list"&&<div className={styles.meta}>
       <span className={styles.metaSummary}>{pulseMode?<Sparkles size={13}/>:appliedCity!=="Все"?<MapPin size={13}/>:null} {pulseMode?"Лучшие совпадения · ":""}{total} {pluralProject(total)}{!pulseMode&&appliedCity!=="Все"?" · "+appliedCity:""}</span>
-      <Sheet>
-        <SheetTrigger asChild><button><ArrowUpDown size={14}/>{sortLabels[sort]}</button></SheetTrigger>
-        <SheetContent side="bottom" className={styles.sortSheet}>
-          <SheetHeader><SheetTitle>Сортировка</SheetTitle><SheetDescription>Выберите порядок проектов в каталоге.</SheetDescription></SheetHeader>
-          <div className={styles.sortOptions}>
-            {(Object.keys(sortLabels) as SortMode[]).map(mode=><SheetClose asChild key={mode}>
-              <button onClick={()=>selectSort(mode)} className={sort===mode?styles.sortActive:""}><span>{sortLabels[mode]}</span>{sort===mode?<Check size={17}/>:<ChevronRight size={17}/>}</button>
-            </SheetClose>)}
-          </div>
-        </SheetContent>
-      </Sheet>
+      <NativeSelect className={styles.sortSelect} aria-label="Сортировка" value={sort} onChange={e=>selectSort(e.target.value as SortMode)}>{(Object.keys(sortLabels) as SortMode[]).map(mode=><option key={mode} value={mode}>{sortLabels[mode]}</option>)}</NativeSelect>
     </div>}
 
     {view==="list"?<div className={styles.list}>

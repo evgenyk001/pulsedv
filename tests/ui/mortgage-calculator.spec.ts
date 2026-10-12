@@ -12,7 +12,7 @@ for(const width of [320,390,430]){
   const price=page.getByRole('textbox',{name:'Стоимость недвижимости',exact:true});
   const down=page.getByRole('textbox',{name:'Первоначальный взнос',exact:true});
   const slider=page.getByRole('slider',{name:'Первоначальный взнос, %'});
-  await page.getByRole('button',{name:'2',exact:true}).click();
+  await page.getByRole('combobox',{name:'Количество детей',exact:true}).selectOption('2');
   await expect(down).toHaveValue(rub(1507500));
   await expect(page.getByText('Минимальный взнос: 20,1% · 1 507 500 ₽',{exact:true})).toBeVisible();
   await expect(page.getByText('20,1% · 1 507 500 ₽',{exact:true})).toBeVisible();
@@ -60,7 +60,7 @@ test('Mortgage configuration, exact credit ceiling and short term stay consisten
  const down=page.getByRole('textbox',{name:'Первоначальный взнос',exact:true});
  await expect(down).toHaveValue(rub(1885805));
  await expect(page.getByText(/Проверьте документы с менеджером\./)).toBeVisible();
- await page.getByRole('button',{name:/Дальневосточная/}).click();
+ await page.getByRole('combobox',{name:'Ипотечная программа'}).selectOption('farEast');
  await expect(down).toHaveValue(rub(1516188));
  await expect(page.getByText('Увеличьте первоначальный взнос минимум до 1 543 219 ₽')).toBeVisible();
  await down.fill('1543219');await down.blur();
