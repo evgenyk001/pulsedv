@@ -6,6 +6,7 @@ for(const width of [320,390,430])test(`My search ${width}px: save criteria, reta
  await page.goto('/pulsedv/mini-app/#/catalog?city=Владивосток&rooms=2&min=4000000&max=18000000');
  await page.getByRole('link',{name:/Сохранить этот поиск/}).click();
  const dialog=page.getByRole('dialog');await expect(dialog.getByRole('heading',{name:'Ваш поиск квартиры'})).toBeVisible();
+ await expect(dialog.getByRole('button',{name:'Сохранить поиск',exact:true})).toBeInViewport();
  await expect(dialog.getByLabel('Город',{exact:true})).toHaveValue('Владивосток');await expect(dialog.getByLabel('Комнатность',{exact:true})).toHaveValue('2');
  await dialog.getByLabel('Бюджет поиска до').fill('100');await expect(dialog.getByRole('button',{name:'Сохранить поиск',exact:true})).toBeDisabled();
  await dialog.getByLabel('Бюджет поиска до').fill('18000000');await dialog.getByRole('button',{name:'Сохранить поиск',exact:true}).click();await expect(dialog).toHaveCount(0);
