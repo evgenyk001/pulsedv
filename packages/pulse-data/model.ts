@@ -108,7 +108,7 @@ export const DEFAULT_PROPERTIES:PulseProperty[]=[
 
 export const DEFAULT_PARTNER_BANNER:PulseBanner={
   id:"partner-program",title:"Зарабатывайте с PULSE",body:"Знакомый ищет квартиру? Пригласите его и получите вознаграждение после сделки.",
-  imageUrl:"https://evgenyk001.github.io/pulsedv/assets/partner-referral.webp",ctaLabel:"Стать партнёром",actionUrl:"/partners",
+  imageUrl:"https://evgenyk001.github.io/pulsedv/mini-app/_cdn/static/partner-referral.webp",ctaLabel:"Стать партнёром",actionUrl:"/partners",
   city:"",audience:"",kind:"partner",eyebrow:"РЕКОМЕНДУЙТЕ PULSE",enabled:true,sortOrder:0
 };
 export const DEFAULT_BANNERS:PulseBanner[]=[
