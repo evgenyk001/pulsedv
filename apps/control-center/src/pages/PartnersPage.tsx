@@ -28,7 +28,7 @@ export function PartnersPage(){
  const referrals=data?.referrals||[],pending=referrals.filter(r=>r.status==='pending'),requested=referrals.filter(r=>r.reward?.status==='requested'),conflicts=referrals.filter(r=>r.conflict);
  const visible=referrals.filter(r=>filter==='all'||filter==='pending'&&r.status==='pending'||filter==='conflicts'&&r.conflict||filter==='payouts'&&['accrued','requested'].includes(r.reward?.status||''));
  const w=selected?.reward;
- React.useEffect(()=>{if(selected?.dealConfirmedOn)setDealOn(selected.dealConfirmedOn)},[selectedId,selected?.dealConfirmedOn]);
+ React.useLayoutEffect(()=>{if(selected?.dealConfirmedOn)setDealOn(selected.dealConfirmedOn)},[selectedId,selected?.dealConfirmedOn]);
  return <PageFrame className="partnersWorkspace" eyebrow="ПАРТНЁРСКАЯ ПРОГРАММА" title="Партнёры" description="Кто привёл покупателя, проверка уникальности и расчёты по полученной комиссии." action={<button className="secondaryAction" onClick={refresh} disabled={loading}><RefreshCw size={16}/>Обновить</button>}>
  {!runtime.enabled&&<p className="partnersNotice">Демонстрация: данные мини-аппа и Control связаны в этом браузере. Банковские переводы не выполняются.</p>}
  <div className="metrics"><article><span>Рекомендации</span><strong>{data?.total||0}</strong><small>Всего в CRM</small></article><article><span>На проверке</span><strong>{pending.length}</strong><small>На текущей странице</small></article><article><span>Совпадения</span><strong>{conflicts.length}</strong><small>Требуют разбора до закрепления</small></article><article><span>Запросили выплату</span><strong>{requested.length}</strong><small>На текущей странице</small></article></div>
