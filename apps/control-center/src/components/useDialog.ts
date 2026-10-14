@@ -1,8 +1,8 @@
 import React from 'react';
-/** Keep keyboard focus inside the active drawer and restore it on close. */
+/** Set focus before first paint so a delayed effect cannot steal the first input edit. */
 export function useDialog(open:boolean,onClose:()=>void){
  const close=React.useRef(onClose);close.current=onClose;
- React.useEffect(()=>{
+ React.useLayoutEffect(()=>{
   if(!open)return;
   const previous=document.activeElement as HTMLElement|null;
   const dialog=document.querySelector<HTMLElement>('[role="dialog"]');

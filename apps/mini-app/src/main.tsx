@@ -15,6 +15,7 @@ import MortgagePage from "./pages/mortgage";
 import SelectionPage from "./pages/selection";
 import FavoritesPage from "./pages/favorites";
 import PartnersPage from "./pages/partners";
+import PartnerOfferPage from './pages/partner-offer';
 import PartnerInvitePage from "./pages/partner-invite";
 import {referralCodeFromStart} from "../../../packages/partners/model";
 import ProfilePage from "./pages/profile";
@@ -55,6 +56,7 @@ function App(){
           <Route path="/selection" element={<SelectionPage/>}/>
           <Route path="/favorites" element={<FavoritesPage/>}/>
           <Route path="/journey" element={<JourneyPage/>}/>
+          <Route path="/partner-offer" element={<PartnerOfferPage/>}/>
           <Route path="/partners" element={<PartnersPage/>}/>
           <Route path="/partner-invite" element={<PartnerInvitePage/>}/>
           <Route path="/profile" element={<ProfilePage/>}/>

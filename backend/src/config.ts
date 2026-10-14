@@ -12,6 +12,8 @@ const schema=z.object({
   LEGAL_OPERATOR_INN:z.string().trim().max(12).default(''),
   LEGAL_CONTACT_EMAIL:z.union([z.email(),z.literal('')]).default(''),
   LEGAL_OPERATOR_ADDRESS:z.string().trim().max(500).default(''),
+  LEGAL_OPERATOR_REGISTRATION:z.string().trim().max(15).default(''),
+  PARTNER_OFFER_PUBLISHED:z.enum(['true','false']).default('false').transform(v=>v==='true'),
   CONSENT_VERSION:z.string().default('2026-09-29'),
   MEDIA_ROOT:z.string().min(1).default('/data/media'),
   CLIENT_DATA_RETENTION_DAYS:z.coerce.number().int().min(30).max(3650).default(365),
