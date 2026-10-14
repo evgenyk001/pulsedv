@@ -75,8 +75,8 @@ test('Catalog freshness and finance API persist safely and respect CRM scope',as
   const r=await app.inject({method:'PATCH',url:'/api/v1/control/leads/'+other.id,headers,cookies:owner,payload:{finance:pending,expectedUpdatedAt:(await getLead(other.id)).updatedAt}});assert.equal(r.statusCode,200,r.body);
   const url='/api/v1/control/finance-summary?from='+today+'&to='+today;
   assert.equal((await app.inject(url)).statusCode,401);
-  assert.deepEqual((await app.inject({url,cookies:owner})).json(),financeSummary([{finance},{finance:pending}],today,today));
-  assert.deepEqual((await app.inject({url,cookies:manager})).json(),{expected:0,received:250000,agentPaid:100000,balance:150000,receivedDeals:1});
+  assert.deepEqual((await app.inject({url,cookies:owner})).json(),{...financeSummary([{finance},{finance:pending}],today,today),partnerPaid:0});
+  assert.deepEqual((await app.inject({url,cookies:manager})).json(),{expected:0,received:250000,agentPaid:100000,partnerPaid:0,balance:150000,receivedDeals:1});
   assert.equal((await app.inject({url:'/api/v1/control/finance-summary?from=2020-01-01&to='+today,cookies:owner})).statusCode,400);
   await migrate(db);
   assert.deepEqual((await getLead(lead.id)).finance,finance);

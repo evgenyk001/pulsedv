@@ -1,4 +1,5 @@
 import {registerLossRoutes} from './lossRoutes';
+import {registerPartnerRoutes,lockBuyerIdentity,preparePartnerReferral,attachPartnerReferral,guardPartnerFinance,partnerLeadChanged} from './partnerRoutes';
 import {registerSearchRoutes,mergeSearch} from './searchRoutes';
 import {leadContextText} from './notificationWorker';
 import {LOSS_REASON_IDS,lossError} from '../../packages/pulse-data/loss';
@@ -8,7 +9,7 @@ import {registerFavoriteRoutes,mergeFavorites} from './favoriteRoutes';
 import Fastify, { type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
 import rateLimit from '@fastify/rate-limit';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { z, ZodError } from 'zod';
 import type { Database, Sql } from './database';
 import { camelRow } from './database';
@@ -117,22 +118,27 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.post('/api/v1/leads',{preHandler:visitor,config:{rateLimit:{max:10,timeWindow:'1 minute'}}},async request=>{
   const input=leadSchema.parse(request.body);if(input.consentVersion!==config.CONSENT_VERSION)throw new HttpError(409,'Условия обработки данных обновились. Обновите страницу');
   return db.transaction(async sql=>{
-   const session=request.visitor!;await sessionLock(sql,session.sessionId);
+   const session=request.visitor!;await sessionLock(sql,session.sessionId);await lockBuyerIdentity(sql,input.phone,session.userId);
+   const source=input.referralCode?'partner':input.source;
    const requestContext=safeMetadata(input.context??{});
-   const existing=(await sql.query('select id,name,phone,source,property_id,comment,request_context from leads where session_id=$1 and idempotency_key=$2',[session.sessionId,input.idempotencyKey])).rows[0];
+   const fingerprint=createHash('sha256').update(JSON.stringify({name:input.name,phone:input.phone,source,propertyId:input.propertyId??null,comment:input.comment??null,context:Object.entries(requestContext).sort(([a],[b])=>a.localeCompare(b)),referralCode:input.referralCode??null})).digest('hex');
+   const existing=(await sql.query('select id,name,phone,source,property_id,comment,request_context,submission_fingerprint from leads where session_id=$1 and idempotency_key=$2',[session.sessionId,input.idempotencyKey])).rows[0];
    if(existing){
     const oldContext=JSON.stringify(Object.entries(existing.request_context??{}).sort(([a],[b])=>a.localeCompare(b)));
     const newContext=JSON.stringify(Object.entries(requestContext).sort(([a],[b])=>a.localeCompare(b)));
-    if(existing.name!==input.name||existing.phone!==input.phone||existing.source!==input.source||existing.property_id!==(input.propertyId??null)||existing.comment!==(input.comment??null)||oldContext!==newContext)throw new HttpError(409,'Ключ заявки уже использован');
+    const priorReferral=(await sql.query('select attribution_code from partner_referrals where lead_id=$1',[existing.id])).rows[0];
+    if(existing.submission_fingerprint?existing.submission_fingerprint!==fingerprint:(existing.name!==input.name||existing.phone!==input.phone||existing.source!==source||existing.property_id!==(input.propertyId??null)||existing.comment!==(input.comment??null)||oldContext!==newContext||(priorReferral?.attribution_code??null)!==(input.referralCode??null)))throw new HttpError(409,'Ключ заявки уже использован');
     return {ok:true,id:existing.id,duplicate:true};
    }
    if(input.propertyId&&!await getCatalogProperty(sql,input.propertyId,'published'))throw new HttpError(400,'Объект больше не опубликован');
-   const row=(await sql.query('insert into leads(session_id,user_id,idempotency_key,source,property_id,name,phone,comment,request_context,consent_at,consent_version) values($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,now(),$10) returning id',[session.sessionId,session.userId,input.idempotencyKey,input.source,input.propertyId??null,input.name,input.phone,input.comment??null,JSON.stringify(requestContext),config.CONSENT_VERSION])).rows[0];
+   const referringPartner=await preparePartnerReferral(sql,input.referralCode,session.userId);
+   const row=(await sql.query('insert into leads(session_id,user_id,idempotency_key,source,property_id,name,phone,comment,request_context,consent_at,consent_version,submission_fingerprint) values($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,now(),$10,$11) returning id',[session.sessionId,session.userId,input.idempotencyKey,source,input.propertyId??null,input.name,input.phone,input.comment??null,JSON.stringify(requestContext),config.CONSENT_VERSION,fingerprint])).rows[0];
+   if(referringPartner)await attachPartnerReferral(sql,row.id,session.userId,input.phone,input.referralCode!,referringPartner);
    const repo=leadRepository(sql);
-   await repo.insertEvents([{idempotencyKey:'lead:'+row.id,sessionId:session.sessionId,userId:session.userId,eventType:'lead_created',entityType:'lead',entityId:row.id,metadata:{source:input.source},createdAt:new Date().toISOString()}]);
+   await repo.insertEvents([{idempotencyKey:'lead:'+row.id,sessionId:session.sessionId,userId:session.userId,eventType:'lead_created',entityType:'lead',entityId:row.id,metadata:{source},createdAt:new Date().toISOString()}]);
    const processed=await processSessionIntent(repo,session.sessionId);
    const propertyName=input.propertyId?(await sql.query('select name from catalog_properties where id=$1',[input.propertyId])).rows[0]?.name:null;
-   await repo.enqueueOutbox({topic:'manager.new_lead',aggregateType:'lead',aggregateId:row.id,payload:{name:input.name,phone:input.phone,propertyName,source:input.source,contextSummary:leadContextText(requestContext),comment:input.comment?.slice(0,500)??null,score:processed.result.score,priority:processed.result.priority,city:typeof requestContext.city==='string'?requestContext.city:processed.result.city,nextAction:processed.result.recommendedAction,deepLink:config.PUBLIC_ORIGIN+'/pulsedv/control-center/#/leads?lead='+row.id}});
+   await repo.enqueueOutbox({topic:'manager.new_lead',aggregateType:'lead',aggregateId:row.id,payload:{name:input.name,phone:input.phone,propertyName,source,contextSummary:leadContextText(requestContext)+(referringPartner?' · Рекомендация от '+referringPartner.name:''),comment:input.comment?.slice(0,500)??null,score:processed.result.score,priority:processed.result.priority,city:typeof requestContext.city==='string'?requestContext.city:processed.result.city,nextAction:processed.result.recommendedAction,deepLink:config.PUBLIC_ORIGIN+'/pulsedv/control-center/#/leads?lead='+row.id}});
    return {ok:true,id:row.id,duplicate:false};
   });
  });
@@ -194,6 +200,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.get('/api/v1/control/me',{preHandler:control},async request=>({member:request.member}));
  app.post('/api/v1/control/logout',{preHandler:control},async(request,reply)=>{await db.query('delete from auth_tokens where token_hash=$1',[tokenHash(request.cookies.pulse_control!)]);reply.clearCookie('pulse_control',cookieOptions);return {ok:true};});
  await registerFinanceRoutes(app,db,control);
+ await registerPartnerRoutes(app,{db,config,visitor,editor,owner});
  await registerLossRoutes(app,db,control);
  await registerInterestRoutes(app,db,control);
  await registerFavoriteRoutes(app,db,visitor);
@@ -257,14 +264,14 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const where=conditions.length?'where '+conditions.join(' and '):'';
   const from='from leads l left join catalog_properties p on p.id=coalesce(l.top_property_id,l.property_id)';
   const total=Number((await db.query(`select count(*)::int as total ${from} ${where}`,values)).rows[0]?.total||0);
-  const rows=(await db.query(`select l.* ${from} ${where} order by l.score desc,l.created_at desc,l.id limit $${values.length+1} offset $${values.length+2}`,[...values,q.limit,(q.page-1)*q.limit])).rows.map(row=>{const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;return lead;});
+  const rows=(await db.query(`select l.* ${from} ${where} order by l.score desc,l.created_at desc,l.id limit $${values.length+1} offset $${values.length+2}`,[...values,q.limit,(q.page-1)*q.limit])).rows.map(row=>{const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;delete lead.submissionFingerprint;return lead;});
   return {items:rows,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
  });
  app.get('/api/v1/control/leads/:id',{preHandler:control},async request=>{
   const m=request.member!,leadId=uuid((request.params as any).id);
   const row=(await db.query('select * from leads where id=$1'+(m.role==='manager'?' and manager_id=$2':''),m.role==='manager'?[leadId,m.id]:[leadId])).rows[0];
   if(!row)throw new HttpError(404,'Клиент недоступен');
-  const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;return {lead};
+  const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;delete lead.submissionFingerprint;return {lead};
  });
  app.get('/api/v1/control/tasks',{preHandler:control},async request=>{
   const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
@@ -373,7 +380,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const m=request.member!;const scoped=m.role==='manager';const {state:storedState,version}=await readState(db);
   const catalog=(await listCatalog(db,{status:'all',page:1,limit:2000,view:'match'})).items;
   const state={...storedState,properties:catalog};
-  const leads=(await db.query(`select * from leads ${scoped?'where manager_id=$1':''} order by score desc,created_at desc limit 1000`,scoped?[m.id]:[])).rows.map(row=>{const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;return lead;});
+  const leads=(await db.query(`select * from leads ${scoped?'where manager_id=$1':''} order by score desc,created_at desc limit 1000`,scoped?[m.id]:[])).rows.map(row=>{const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;delete lead.submissionFingerprint;return lead;});
   const tasks=(await db.query(`select * from crm_tasks ${scoped?'where assigned_to=$1':''} order by due_at limit 1000`,scoped?[m.id]:[])).rows.map(camelRow);
   const events=(await db.query(`select id,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at as created_at from user_events ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by occurred_at desc limit 2000`,scoped?[m.id]:[])).rows.map(camelRow);
   const profiles=(await db.query(`select * from visitor_profiles ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by score desc limit 1000`,scoped?[m.id]:[])).rows.map(camelRow);
@@ -399,6 +406,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    if(new Date(current.updated_at).getTime()!==Date.parse(patch.expectedUpdatedAt))throw new HttpError(409,'Заявка изменена другим сотрудником. Обновите данные');
    if(patch.manager&&!(await sql.query('select id from team_members where id=$1 and active=true',[patch.manager])).rows.length)throw new HttpError(400,'Менеджер недоступен');
    const nextStatus=patch.status??current.status;
+   await guardPartnerFinance(sql,id,patch.finance??current.finance,nextStatus);
    const reason=nextStatus==='lost'?(patch.lossReason===undefined?current.loss_reason:patch.lossReason):null;
    const lossNote=nextStatus==='lost'?(patch.lossNote===undefined?current.loss_note:patch.lossNote):null;
    const invalidLoss=lossError(nextStatus,reason,lossNote);if(invalidLoss)throw new HttpError(400,invalidLoss);
@@ -411,6 +419,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    if(patch.manager!==undefined)await sql.query("update crm_tasks set assigned_to=$2 where lead_id=$1 and status<>'done'",[id,patch.manager]);
    if(patch.status&&['deal','closed','lost'].includes(patch.status))await sql.query("update crm_tasks set status='done' where lead_id=$1 and status<>'done'",[id]);
    if(patch.manager!==undefined||patch.status!==undefined)await syncShowingReminders(sql,id,config.PUBLIC_ORIGIN);
+   const changed=(await sql.query('select status,finance from leads where id=$1',[id])).rows[0];await partnerLeadChanged(sql,id,current,changed);
    await audit(sql,member.id,'lead.update',id,{fields:Object.keys(patch).filter(k=>k!=='expectedUpdatedAt')});return {ok:true};
   });
  });

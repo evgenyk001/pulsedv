@@ -1,3 +1,4 @@
+import {PartnerEntryCard} from "../components/PartnerEntryCard";
 import {useClientJourneys} from "../helpers/useClientJourneys";
 import React from "react";
 import { Link } from "react-router-dom";
@@ -39,6 +40,7 @@ export default function ProfilePage(){
       {active?<Link to={"/journey?lead="+active.leadId} aria-label="Открыть переписку с менеджером"><ChevronRight size={18}/></Link>:<LeadSheet source="profile-manager"><button aria-label="Оставить заявку менеджеру"><ChevronRight size={18}/></button></LeadSheet>}
     </section>
 
+    <PartnerEntryCard/>
     <section className={styles.menu}>
       <Link to="/journey"><Clock3 size={18}/><span><b>Мои подборки и показы</b><small>Варианты от менеджера и встречи</small></span><ChevronRight size={17}/></Link>
       <Link to="/my-search"><Search size={18}/><span><b>Мой поиск</b><small>Ваш запрос и полезные обновления ЖК</small></span><ChevronRight size={17}/></Link>

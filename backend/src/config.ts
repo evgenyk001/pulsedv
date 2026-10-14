@@ -5,6 +5,7 @@ const schema=z.object({
   PORT:z.coerce.number().int().min(1).max(65535).default(3000),
   PUBLIC_ORIGIN:z.url().default('http://localhost:8080'),
   BOT_TOKEN:z.string().default(''),
+  TELEGRAM_BOT_USERNAME:z.string().regex(/^[a-zA-Z0-9_]{5,32}$/).default('pulsedvbot'),
   MAP_2GIS_KEY:z.string().default(''),
   TRUST_PROXY_HOPS:z.coerce.number().int().min(0).max(3).default(0),
   LEGAL_OPERATOR_NAME:z.string().trim().max(300).default(''),

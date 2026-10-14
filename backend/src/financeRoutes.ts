@@ -14,6 +14,8 @@ export async function registerFinanceRoutes(app:FastifyInstance,db:Database,cont
    coalesce(sum(commission) filter(where received_on between $1::date and $2::date),0) as received,
    coalesce(sum(payout) filter(where paid_on between $1::date and $2::date),0) as agent_paid,
    count(*) filter(where received_on between $1::date and $2::date)::int as received_deals from entries`,values)).rows[0];
-  return {expected:Number(row.expected),received:Number(row.received),agentPaid:Number(row.agent_paid),balance:Number(row.received)-Number(row.agent_paid),receivedDeals:Number(row.received_deals)};
+  const paid=(await db.query("select coalesce(sum(w.gross_minor),0) as gross from partner_rewards w join partner_referrals r on r.id=w.referral_id join leads l on l.id=r.lead_id where w.status='paid' and w.paid_on between $1::date and $2::date"+(member.role==='manager'?' and l.manager_id=$3':''),values)).rows[0];
+  const partnerPaid=Number(paid.gross)/100;
+  return {expected:Number(row.expected),received:Number(row.received),agentPaid:Number(row.agent_paid),partnerPaid,balance:Number(row.received)-Number(row.agent_paid)-partnerPaid,receivedDeals:Number(row.received_deals)};
  });
 }
