@@ -1,4 +1,0 @@
-.root{position:relative;padding-top:var(--pull-distance,0px);overscroll-behavior-y:contain}
-.root[data-refreshing=true]{transition:padding-top .2s var(--motion-soft)}
-.indicator{position:absolute;top:0;left:0;right:0;height:var(--pull-distance,0px);overflow:hidden;display:flex;align-items:center;justify-content:center;gap:9px;font-size:11px;color:var(--muted-foreground);pointer-events:none}
-.indicator svg{color:var(--primary);flex:none}.spin{animation:pullSpin 1s linear infinite}.error{font-size:11px;color:var(--error);line-height:1.5;margin:0}@keyframes pullSpin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.spin{animation:none}.root{transition:none!important}}
