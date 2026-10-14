@@ -1,4 +1,5 @@
 import {lossError} from './loss';
+import {guardLocalPartnerFinance} from '../partners/finance';
 import { runtime, stageState, updateRemote, enqueueEvent } from "./runtime";
 import { DEFAULT_LEAD_ENGINE_CONFIG, scoreLeadEvents, type LeadPriority } from "../lead-engine";
 import { DEFAULT_STATE, DEFAULT_PROPERTIES, DEFAULT_BANNERS, DEFAULT_MORTGAGE_PROGRAMS, type PropertyStatus, type PulseProperty, type PulseBanner, type MortgageProgramRule, type PulseSelectConfig, type PulseContentConfig, type PulseState, type PulseLead, type PulseVisitorProfile, type PulseTask, type PulseEvent } from "./model";
@@ -99,6 +100,7 @@ export function updatePulseLead(idValue:string,patch:Partial<Pick<PulseLead,"sta
   const leads=listPulseLeads().map(lead=>{
     if(lead.id!==idValue)return lead;
     const next={...lead,...patch};
+    guardLocalPartnerFinance(lead.id,next.finance,next.status);
     if(next.status==='lost'){
       const error=lossError(next.status,next.lossReason,next.lossNote);if(error)throw new Error(error);
       next.lostAt=lead.status==='lost'?lead.lostAt??null:now();

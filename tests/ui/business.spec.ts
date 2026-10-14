@@ -50,7 +50,7 @@ test('Finance: save commission and actual payment, reload, check period totals',
  await summary.getByLabel('С',{exact:true}).fill('2020-01-01');
  await expect(summary.getByRole('alert')).toContainText('Выберите корректный период');
  await summary.getByLabel('С',{exact:true}).fill(businessDay());
- await expect(summary.locator('article')).toHaveCount(4);
+ await expect(summary.locator('article')).toHaveCount(5);
  await page.screenshot({path:'test-results/deal-finance.png',fullPage:true});
 });
 

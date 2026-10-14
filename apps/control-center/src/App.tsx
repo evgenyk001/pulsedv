@@ -1,3 +1,4 @@
+import {PartnersPage} from "./pages/PartnersPage";
 import { JourneyPage } from './pages/JourneyPage';
 import { runtime } from "../../../packages/pulse-data/runtime";
 import { useRuntime } from "./RuntimeShell";
@@ -22,6 +23,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 const sections=[
   {to:"/",label:"Обзор",group:"Работа",icon:LayoutDashboard,end:true},
   {to:"/leads",label:"Лиды",group:"Работа",icon:Handshake,end:false},
+  {to:"/partners",label:"Партнёры",group:"Работа",icon:UsersRound,end:false},
   {to:"/users",label:"Пользователи",group:"Работа",icon:UsersRound,end:false},
   {to:"/journey",label:"Подборки и показы",group:"Работа",icon:Handshake,end:false},
   {to:"/tasks",label:"Задачи",group:"Работа",icon:ListChecks,end:false},
@@ -96,6 +98,7 @@ export function App(){
       <Routes>
         <Route path="/" element={<OverviewPage/>}/>
         <Route path="/leads" element={<LeadsPage/>}/>
+        <Route path="/partners" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<PartnersPage/>}/>
         <Route path="/users" element={<UsersPage/>}/>
         <Route path="/journey" element={<JourneyPage/>}/>
         <Route path="/tasks" element={<TasksPage/>}/>

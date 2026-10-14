@@ -24,6 +24,6 @@ for(const width of [320,390,430])test(`Finance mobile ${width}px: header, native
  for(const amount of bounds.amounts){expect(amount.left).toBeGreaterThanOrEqual(amount.cardLeft);expect(amount.right).toBeLessThanOrEqual(amount.cardRight)}
  await panel.getByLabel('С',{exact:true}).fill(businessDay());
  await panel.getByRole('button',{name:'Обновить',exact:true}).click();
- await expect(panel.locator('article')).toHaveCount(4);
+ await expect(panel.locator('article')).toHaveCount(5);
  await panel.screenshot({path:`test-results/finance-${browserName}-${width}.png`});
 });

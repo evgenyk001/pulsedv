@@ -8,6 +8,8 @@ const routeNames:Record<string,string>={
   "/selection":"Подбор",
   "/favorites":"Избранное",
   "/profile":"Профиль",
+  "/partners":"Партнёрский кабинет",
+  "/partner-invite":"Партнёрское приглашение",
   "/journey":"Мои подборки и показы",
 };
 
@@ -20,7 +22,7 @@ export const mortgageNames:Record<string,string>={
 
 const sourceNames:Record<string,string>={
   presentation:"Презентация ЖК",
-  app:"Мини-приложение",
+  partner:"Рекомендация партнёра",app:"Мини-приложение",
   property:"Карточка ЖК",
   mortgage:"Ипотека",
   selection:"Подбор",

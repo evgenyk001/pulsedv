@@ -34,13 +34,16 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
    for(const url of item.legacy)await sql.query('insert into media_cleanup(path) values($1) on conflict do nothing',[url.slice('/media/'.length)]);
   }
   if(leadIds.length){
+   await sql.query("update partner_invitations set label='Архивная рекомендация' where id in(select invitation_id from partner_referrals where lead_id=any($1::uuid[]))",[leadIds]);
+   await sql.query('update partner_client_claims set normalized_phone=null,buyer_user_id=null where referral_id in(select id from partner_referrals where lead_id=any($1::uuid[]))',[leadIds]);
+   await sql.query('update partner_referrals set normalized_phone=null,buyer_user_id=null,review_note=null where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query("delete from outbox_events where aggregate_type='lead' and aggregate_id=any($1::uuid[])",[leadIds]);
    await sql.query('delete from journey_uploads where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query('delete from journey_messages where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query('delete from client_journeys where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query('delete from crm_tasks where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query('delete from lead_score_history where lead_id=any($1::uuid[])',[leadIds]);
-   await sql.query("update leads set user_id=null,session_id=null,idempotency_key=null,name='Удалено',phone='Удалено',comment=null,loss_note=null,request_context='{}'::jsonb,manager_id=null,score=0,priority='cold',score_reasons='[]'::jsonb,top_property_id=null,city=null,mortgage_program=null,next_action=null where id=any($1::uuid[])",[leadIds]);
+   await sql.query("update leads set user_id=null,session_id=null,idempotency_key=null,submission_fingerprint=null,name='Удалено',phone='Удалено',comment=null,loss_note=null,request_context='{}'::jsonb,manager_id=null,score=0,priority='cold',score_reasons='[]'::jsonb,top_property_id=null,city=null,mortgage_program=null,next_action=null where id=any($1::uuid[])",[leadIds]);
   }
 
   const sessionRows=(await sql.query("select s.id from sessions s where s.last_seen_at<$1 and not exists(select 1 from leads l where l.session_id=s.id) limit 2000",[clientCutoff])).rows;
@@ -51,7 +54,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
    await sql.query('delete from sessions where id=any($1::uuid[])',[sessionIds]);
   }
 
-  const userRows=(await sql.query("select u.id from app_users u where u.last_seen_at<$1 and not exists(select 1 from leads l where l.user_id=u.id) and not exists(select 1 from sessions s where s.user_id=u.id) limit 2000",[clientCutoff])).rows;
+  const userRows=(await sql.query("select u.id from app_users u where u.last_seen_at<$1 and not exists(select 1 from leads l where l.user_id=u.id) and not exists(select 1 from sessions s where s.user_id=u.id) and not exists(select 1 from partner_profiles p where p.user_id=u.id) limit 2000",[clientCutoff])).rows;
   const userIds=userRows.map(row=>String(row.id));
   if(userIds.length){
    await sql.query('delete from search_profiles where owner=any($1::text[])',[userIds.map(id=>'user:'+id)]);

@@ -7,11 +7,12 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Input } from "./Input";
 import { postLead } from "../endpoints/leads_POST.schema";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
+import {rememberedPartnerInvite,subscribePartners} from "../../../../packages/partners/client";
 import styles from "./LeadSheet.module.css";
 
-type LeadSheetProps={children:React.ReactNode;title?:string;project?:string;propertyId?:string;source?:string;context?:Record<string,unknown>};
+type LeadSheetProps={children:React.ReactNode;title?:string;project?:string;propertyId?:string;source?:string;context?:Record<string,unknown>;referralCode?:string;referralName?:string};
 
-export function LeadSheet({children,title="Получить консультацию",project,propertyId,source="app",context}:LeadSheetProps){
+export function LeadSheet({children,title="Получить консультацию",project,propertyId,source="app",context,referralCode,referralName}:LeadSheetProps){
   const cache=useQueryClient();
   const [leadId,setLeadId]=React.useState<string>();
   const key=React.useRef(crypto.randomUUID());
@@ -23,13 +24,19 @@ export function LeadSheet({children,title="Получить консультац
   const [consent,setConsent]=React.useState(false);
   const [error,setError]=React.useState<string|null>(null);
 
+  const [invitation,setInvitation]=React.useState(rememberedPartnerInvite);
+  const [referralConsent,setReferralConsent]=React.useState(false);
+  React.useEffect(()=>subscribePartners(()=>setInvitation(rememberedPartnerInvite())),[]);
+  const activeCode=referralCode||invitation?.code;
+  const activeName=referralName||invitation?.partnerName;
+
   const submit=async(e:React.FormEvent)=>{
     e.preventDefault();
     if(locked.current)return;locked.current=true;
     setSending(true);setError(null);
     try{
       const requestContext=context?{...context,...(project?{propertyName:project}:{})}:project?{propertyName:project}:undefined;
-      const result=await postLead({idempotencyKey:key.current,source,propertyId:propertyId||null,name,phone,consent,comment:null,context:requestContext});
+      const result=await postLead({idempotencyKey:key.current,source,propertyId:propertyId||null,name,phone,consent,comment:null,context:requestContext,...(activeCode&&referralConsent?{referralCode:activeCode,referralConsent:true}:{})});
       setLeadId(result.id);
       void cache.invalidateQueries({queryKey:["my-journeys"]});
       setSent(true);
@@ -40,7 +47,7 @@ export function LeadSheet({children,title="Получить консультац
   return <Sheet onOpenChange={(open)=>{
     if(open){
       recordPulseEvent({eventType:"lead_form_open",entityType:propertyId?"property":"funnel",entityId:propertyId||source,metadata:{source,project:project||null}});
-    }else{if(sent){key.current=crypto.randomUUID();setName("");setPhone("");}setConsent(false);setSent(false);setError(null)}
+    }else{if(sent){key.current=crypto.randomUUID();setName("");setPhone("");}setConsent(false);setReferralConsent(false);setSent(false);setError(null)}
   }}>
     <SheetTrigger asChild>{children}</SheetTrigger>
     <SheetContent side="bottom" className={styles.sheet}>
@@ -51,6 +58,7 @@ export function LeadSheet({children,title="Получить консультац
           <label><span>Как к вам обращаться</span><Input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Имя" autoComplete="given-name" maxLength={100} required/></label>
           <label><span>Телефон</span><Input value={phone} onChange={(e)=>setPhone(e.target.value)} placeholder="+7 999 000-00-00" type="tel" inputMode="tel" autoComplete="tel" maxLength={24} required/></label>
           <label className={styles.consentRow}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} required/><span>Я даю <Link to="/personal-data-consent">согласие на обработку персональных данных</Link> для обработки моего обращения и подбора недвижимости.</span></label>
+          {activeCode&&<label className={styles.consentRow}><input type="checkbox" checked={referralConsent} onChange={e=>setReferralConsent(e.target.checked)}/><span>Подтверждаю, что меня пригласил(а) {activeName||"партнёр PULSE"}. Согласен передавать этому партнёру моё имя, этапы покупки и результат рекомендации, включая начисление и выплату вознаграждения. Телефон, переписка и документы ему не передаются.</span></label>}
           {error&&<div className={styles.error}>{error}</div>}
           <button className={styles.submit} type="submit" disabled={sending||!consent}>{sending?"Отправляем…":"Отправить заявку"} <Send size={16}/></button>
           <small>{runtime.enabled?<><Link to="/privacy">Политика обработки персональных данных</Link></>:"Демонстрационный режим: заявка сохранится только в этом браузере и не будет отправлена менеджеру."}</small>

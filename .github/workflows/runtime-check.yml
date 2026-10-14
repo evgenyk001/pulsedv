@@ -64,6 +64,7 @@ jobs:
             test-results/my-search-*.png
             test-results/native-*.png
             test-results/property-*.png
+            test-results/partner-*.png
       - name: Validate VPS images
         run: |
           docker build -f deploy/Dockerfile.api -t pulse-api-test .

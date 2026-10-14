@@ -143,8 +143,8 @@ export async function saveState(){
 }
 export async function discardState(){runtime.dirty=false;await refreshControl();}
 export async function updateRemote(kind:'leads'|'tasks',id:string,patch:Record<string,unknown>){
- const item=runtime.snapshot[kind].find(x=>x.id===id);if(!item)throw new Error('Запись не найдена');
- try{await api('/control/'+kind+'/'+id,{method:'PATCH',body:JSON.stringify({...patch,expectedUpdatedAt:patch.expectedUpdatedAt??item.updatedAt})});await Promise.all([refreshControlResource(kind),refreshControlPulse()]);}catch(error){runtimeError(error);throw error;}
+ const item=runtime.snapshot[kind].find(x=>x.id===id);if(!item&&!patch.expectedUpdatedAt)throw new Error('Запись не найдена');
+ try{await api('/control/'+kind+'/'+id,{method:'PATCH',body:JSON.stringify({...patch,expectedUpdatedAt:patch.expectedUpdatedAt??item?.updatedAt})});await Promise.all([refreshControlResource(kind),refreshControlPulse()]);}catch(error){runtimeError(error);throw error;}
 }
 export async function createRemoteLead(payload:Record<string,unknown>){return visitorApi('/leads',{method:'POST',body:JSON.stringify({...payload,consent:true,consentVersion:runtime.consentVersion})});}
 

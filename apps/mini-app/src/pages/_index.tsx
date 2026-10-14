@@ -1,3 +1,4 @@
+import {PartnerEntryCard} from "../components/PartnerEntryCard";
 import {ClientUpdates} from "../components/ClientUpdates";
 import {ContinueChoice} from "../components/ContinueChoice";
 import React from "react";
@@ -54,5 +55,6 @@ export default function HomePage(){
       <div><span>Не хочется искать самому?</span><strong>Соберём подборку под ваш бюджет</strong><small>Менеджер поможет сравнить варианты</small></div>
       <ChevronRight size={18}/>
     </Link>
+    <PartnerEntryCard/>
   </div>
 }
