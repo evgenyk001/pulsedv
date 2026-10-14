@@ -4,7 +4,7 @@ import {businessDay} from '../../packages/pulse-data/business';
 async function seed(page:Page){await page.addInitScript(state=>{if(!localStorage.getItem('pulse.dv.control.state.v1'))localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state));localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion)},DEFAULT_STATE)}
 for(const width of [320,390,430])test(`Partners ${width}px: invitation, buyer consent, Control review, progress, exact accrual and payout`,async({page,browserName})=>{
  await page.setViewportSize({width,height:844});await seed(page);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/pulsedv/mini-app/#/profile');await page.getByRole('link',{name:/Рекомендуйте PULSE/}).click();
+ await page.goto('/pulsedv/mini-app/#/profile');await page.getByRole('link',{name:/Партнёрская программа/}).click();
  await expect(page.getByRole('heading',{name:'Рекомендуйте PULSE',exact:true})).toBeVisible();await page.screenshot({path:`test-results/partner-start-${browserName}-${width}.png`,fullPage:true});
  await page.getByRole('textbox',{name:'Ваше имя для приглашения'}).fill('Анна Партнёр');await page.getByRole('textbox',{name:'Ваш контактный телефон'}).fill('+79995550101');await page.getByRole('checkbox',{name:/Принимаю условия программы/}).check();await page.getByRole('button',{name:'Стать партнёром PULSE'}).click();
  await expect(page.getByRole('heading',{name:'Мои рекомендации',exact:true})).toBeVisible();await expect(page.getByText('Рекомендаций пока нет',{exact:true})).toBeVisible();
