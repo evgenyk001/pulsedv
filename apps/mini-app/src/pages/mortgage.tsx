@@ -404,7 +404,7 @@ function MortgageCalculator(){
       <div className={styles.field}>
         <div className={styles.label}><span>Стоимость недвижимости</span><b>{formatRub(price)} ₽</b></div>
         <div className={styles.moneyInput}>
-          <Input aria-label="Стоимость недвижимости" inputMode="numeric" value={priceDraft} onChange={e=>setPriceDraft(e.target.value.replace(/[^0-9 ]/g,""))} onBlur={()=>commitMoney("price")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
+          <Input aria-label="Стоимость недвижимости" inputMode="numeric" value={priceDraft} onChange={e=>{priceTouched.current=true;setPriceDraft(e.target.value.replace(/[^0-9 ]/g,""))}} onBlur={()=>commitMoney("price")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
           <span>₽</span>
         </div>
         <Slider aria-label="Стоимость недвижимости" min={priceMin} max={priceMax} step={MONEY_STEP} value={[price]} onValueChange={values=>updatePrice(values[0]??price,true)}/>
@@ -413,7 +413,7 @@ function MortgageCalculator(){
       <div className={styles.field}>
         <div className={styles.label}><span>Первоначальный взнос</span><b>{downPercent.toFixed(1).replace(".",",")}% · {formatRub(down)} ₽</b></div>
         <div className={styles.moneyInput}>
-          <Input aria-label="Первоначальный взнос" inputMode="numeric" value={downDraft} onChange={e=>setDownDraft(e.target.value.replace(/[^0-9 ]/g,""))} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
+          <Input aria-label="Первоначальный взнос" inputMode="numeric" value={downDraft} onChange={e=>{priceTouched.current=true;setDownDraft(e.target.value.replace(/[^0-9 ]/g,""))}} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
           <span>₽</span>
         </div>
         <Slider aria-label="Первоначальный взнос, %" min={calculation.minDownPct} max={100} step={0.1} value={[downPercent]} onValueChange={values=>updateDown(price*(values[0]??downPercent)/100)}/>

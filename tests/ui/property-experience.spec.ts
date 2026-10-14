@@ -67,6 +67,18 @@ test('Control changes exact ruble prices, gallery order and captions used in Min
  await viewer.getByRole('button',{name:'Закрыть фотографии'}).click();await page.getByRole('link',{name:'Рассчитать ипотеку',exact:true}).click();await expect(page.getByRole('textbox',{name:'Стоимость недвижимости',exact:true})).toHaveValue(rub(8123456));await expect(page.getByRole('textbox',{name:'Первоначальный взнос',exact:true})).toHaveValue(rub(1632815));
 });
 
+test('Open floorplan shows whole-ruble price and opens its mortgage calculation',async({page})=>{
+ await seed(page);await page.goto('/pulsedv/mini-app/#/property/primorskiy');
+ await page.getByRole('button',{name:'Открыть планировку 2',exact:true}).click();
+ const plan=page.getByRole('dialog',{name:'ЖК Приморский · 2 комн.',exact:true});
+ await expect(plan).toContainText('от '+rub(8765432)+' ₽');
+ await plan.getByRole('link',{name:'Рассчитать эту планировку',exact:true}).click();
+ await expect(plan).toHaveCount(0);
+ await expect(page.getByRole('textbox',{name:'Стоимость недвижимости',exact:true})).toHaveValue(rub(8765432));
+ await expect(page.getByRole('textbox',{name:'Первоначальный взнос',exact:true})).toHaveValue(rub(1761852));
+ await expect(page.getByRole('region',{name:'Расчёт выбранного ЖК'})).toContainText('2 комн. · 62 м²');
+});
+
 test('Property price outside previous slider bounds is exact; unavailable plan is explicit',async({page})=>{
  const state=fixture();state.properties[0].priceFrom=2.543219;await seed(page,state);
  await page.goto('/pulsedv/mini-app/#/mortgage?property=primorskiy&price=99000000&floorplan=removed&from=property&down=min');
