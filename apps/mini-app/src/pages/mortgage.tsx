@@ -21,6 +21,8 @@ import { PageHeader } from "../components/PageHeader";
 import { Input } from "../components/Input";
 import { MortgageStoryOnboarding, MORTGAGE_STORY_STORAGE, MORTGAGE_STORY_VERSION } from "../components/MortgageStoryOnboarding";
 import { usePulseControlState } from "../helpers/usePulseControlState";
+import {usePropertyDetail} from "../helpers/useCatalog";
+import {propertyPlan,propertyPriceRub} from "../../../../packages/domain/propertyPresentation";
 import { recordPulseEvent, type MortgageProgramRule } from "../../../../packages/pulse-data";
 import {
   calculateMortgageScenario,
@@ -58,8 +60,19 @@ const propertyLabels:Record<PropertyKind,string>={
 };
 
 export default function MortgagePage(){
+  const [params]=useSearchParams();
+  return <MortgageCalculator key={params.toString()}/>;
+}
+
+function MortgageCalculator(){
   const navigate=useNavigate();
   const [params]=useSearchParams();
+  const sourcePropertyId=params.get('property')||'';
+  const fromProperty=!!sourcePropertyId;
+  const {data:sourceProperty,isLoading:sourceLoading,error:sourceError}=usePropertyDetail(sourcePropertyId);
+  const sourcePlan=sourceProperty?propertyPlan(sourceProperty,params.get('floorplan')):undefined;
+  const sourcePrice=sourceProperty?propertyPriceRub(sourcePlan?.priceFrom??sourceProperty.priceFrom):null;
+  const sourceUnavailable=fromProperty&&!sourceLoading&&(!sourceProperty||!!sourceError);
   const requested=Number(params.get("price"));
   const control=usePulseControlState();
   const programs=control.mortgagePrograms;
@@ -70,15 +83,15 @@ export default function MortgagePage(){
     ?requestedProgram as ProgramId
     :storedProgram??programs[0]?.id??"family";
   const savedPrice=storedScenario?.price;
-  const initialPrice=Number.isFinite(requested)&&requested>0
-    ?clamp(Math.round(requested),PRICE_MIN,PRICE_MAX)
+  const initialPrice=sourcePrice&&sourcePrice>1?sourcePrice:Number.isFinite(requested)&&requested>1
+    ?fromProperty?Math.min(10_000_000_000,Math.round(requested)):clamp(Math.round(requested),PRICE_MIN,PRICE_MAX)
     :typeof savedPrice==="number"&&Number.isFinite(savedPrice)
       ?clamp(Math.round(savedPrice),PRICE_MIN,PRICE_MAX):9_000_000;
   const initialMin=minimumMortgageDown(initialPrice,programs.find(item=>item.id===initialProgram)?.minDownPct??20.1);
   const savedDown=storedScenario?.down;
-  const initialDown=typeof savedDown==="number"&&Number.isFinite(savedDown)
+  const initialDown=!fromProperty&&params.get('down')!=='min'&&typeof savedDown==="number"&&Number.isFinite(savedDown)
     ?clamp(Math.round(savedDown),initialMin,initialPrice-1):initialMin;
-  const initialKind:PropertyKind=params.get("from")==="select"?"newbuild":storedScenario?.propertyKind??"newbuild";
+  const initialKind:PropertyKind=fromProperty||params.get("from")==="select"?"newbuild":storedScenario?.propertyKind??"newbuild";
   const initialMarketRate=storedScenario?.propertyKind===initialKind&&storedScenario.marketRate
     ?storedScenario.marketRate
     :defaultMarketRate(programs,initialKind);
@@ -96,7 +109,7 @@ export default function MortgagePage(){
   const [childrenCount,setChildrenCount]=React.useState<FamilyChildren>(storedScenario?.childrenCount??1);
   const [hasYoungChild,setHasYoungChild]=React.useState(storedScenario?.hasYoungChild??true);
   const [disabledChild,setDisabledChild]=React.useState(storedScenario?.disabledChild??false);
-  const [largeArea,setLargeArea]=React.useState(storedScenario?.largeArea??false);
+  const [largeArea,setLargeArea]=React.useState(fromProperty?false:storedScenario?.largeArea??false);
   const [priceDraft,setPriceDraft]=React.useState(formatRub(initialPrice));
   const [downDraft,setDownDraft]=React.useState(formatRub(initialDown));
   const [interacted,setInteracted]=React.useState(false);
@@ -105,6 +118,8 @@ export default function MortgagePage(){
   });
   const lastCalculation=React.useRef("");
   const propertyKindMounted=React.useRef(false);
+  const appliedSource=React.useRef(false);
+  const priceTouched=React.useRef(false);
 
   const rule=programs.find(item=>item.id===program)??programs[0];
   if(!rule)return null;
@@ -131,6 +146,8 @@ export default function MortgagePage(){
   const maxYears=calculation.maxYears;
   const minDown=calculation.minDown;
   const maxDown=Math.max(minDown,price-1);
+  const priceMin=fromProperty?Math.min(PRICE_MIN,initialPrice,sourcePrice??PRICE_MIN):PRICE_MIN;
+  const priceMax=fromProperty?Math.max(PRICE_MAX,initialPrice,sourcePrice??PRICE_MAX):PRICE_MAX;
   const loan=calculation.loan;
   const subsidizedPrincipal=calculation.subsidizedPrincipal;
   const marketPrincipal=calculation.marketPrincipal;
@@ -188,6 +205,15 @@ export default function MortgagePage(){
   },[maxYears,years]);
 
   React.useEffect(()=>{
+    if(!fromProperty||!sourcePrice||sourcePrice<=1||appliedSource.current)return;
+    appliedSource.current=true;
+    if(priceTouched.current)return;
+    const nextMin=minimumMortgageDown(sourcePrice,rule.minDownPct);
+    setPrice(sourcePrice);setPriceDraft(formatRub(sourcePrice));
+    setDown(nextMin);setDownDraft(formatRub(nextMin));
+  },[fromProperty,sourcePrice,rule.minDownPct]);
+
+  React.useEffect(()=>{
     const next=clamp(down,minDown,maxDown);
     if(next!==down){setDown(next);setDownDraft(formatRub(next))}
   },[minDown,maxDown,down]);
@@ -223,6 +249,7 @@ export default function MortgagePage(){
       rate:preferredRate,
       payment:Math.round(payment),
       source:"mortgage-policy-"+MORTGAGE_POLICY_VERSION,
+      ...(sourceProperty?{propertyIds:[sourceProperty.id],propertyName:sourceProperty.name,floorplanId:sourcePlan?.id}:{}),
     };
     const key=JSON.stringify(metadata);
     if(lastCalculation.current===key)return;
@@ -231,7 +258,7 @@ export default function MortgagePage(){
       recordPulseEvent({eventType:"mortgage_calculated",entityType:"mortgage",entityId:program,metadata});
     },800);
     return()=>window.clearTimeout(timer);
-  },[interacted,invalid,program,price,down,years,preferredRate,payment]);
+  },[interacted,invalid,program,price,down,years,preferredRate,payment,sourceProperty,sourcePlan]);
 
   const chooseProgram=(id:ProgramId)=>{
     setInteracted(true);
@@ -249,7 +276,8 @@ export default function MortgagePage(){
 
   const updatePrice=(value:number,fromSlider=false)=>{
     setInteracted(true);
-    const next=clamp(fromSlider?snap(value,MONEY_STEP):Math.round(value),PRICE_MIN,PRICE_MAX);
+    priceTouched.current=true;
+    const next=clamp(fromSlider?snap(value,MONEY_STEP):Math.round(value),priceMin,priceMax);
     const nextMin=minimumMortgageDown(next,rule.minDownPct);
     // Keep a minimum-position slider at the minimum; otherwise preserve exact cash.
     const nextDown=clamp(down===minDown?nextMin:down,nextMin,next-1);
@@ -261,6 +289,7 @@ export default function MortgagePage(){
 
   const updateDown=(value:number)=>{
     setInteracted(true);
+    priceTouched.current=true;
     const next=clamp(Math.round(value),minDown,maxDown);
     setDown(next);
     setDownDraft(formatRub(next));
@@ -325,6 +354,10 @@ export default function MortgagePage(){
 
     <div className={styles.freshness}><CircleCheck size={14}/><span>Правила проверены {RULES_UPDATED}</span></div>
 
+    {fromProperty&&<section className={styles.propertyContext} aria-label="Расчёт выбранного ЖК">
+      {sourceProperty?<><div>{sourceProperty.coverImageUrl&&<img src={sourceProperty.coverImageUrl} alt=""/>}<span><small>{sourcePlan?'Выбранная планировка':'Расчёт по объекту'}</small><strong>{sourceProperty.name}</strong><em>{sourcePlan?[sourcePlan.roomLabel==='Студия'?'Студия':sourcePlan.roomLabel+' комн.',sourcePlan.areaFrom!==null?sourcePlan.areaFrom+(sourcePlan.areaTo&&sourcePlan.areaTo!==sourcePlan.areaFrom?'–'+sourcePlan.areaTo:'')+' м²':''].filter(Boolean).join(' · '):[sourceProperty.city,sourceProperty.district].filter(Boolean).join(' · ')}</em></span></div><p>{price===sourcePrice?'Цена подставлена из карточки. Взнос можно изменить.':'Вы изменили стоимость для своего расчёта.'}{params.has('floorplan')&&!sourcePlan?' Планировка больше не доступна; используем стартовую цену ЖК.':''}</p><button type="button" onClick={()=>navigate('/property/'+encodeURIComponent(sourceProperty.id))}><ChevronLeft size={15}/>Вернуться к ЖК</button></>:<p role={sourceUnavailable?'alert':undefined}>{sourceUnavailable?'Не удалось подтвердить актуальную карточку ЖК. Расчёт по указанной цене можно продолжить.':'Загружаем данные выбранного ЖК…'}</p>}
+    </section>}
+
     <section className={styles.programSection}>
       <div className={styles.sectionLabel}><span>Программа</span><small>Приморский край</small></div>
       <NativeSelect aria-label="Ипотечная программа" value={program} onChange={e=>chooseProgram(e.target.value as ProgramId)}>{programs.map(item=><option key={item.id} value={item.id}>{item.label} · {cardRate(item.id)}</option>)}</NativeSelect>
@@ -374,7 +407,7 @@ export default function MortgagePage(){
           <Input aria-label="Стоимость недвижимости" inputMode="numeric" value={priceDraft} onChange={e=>setPriceDraft(e.target.value.replace(/[^0-9 ]/g,""))} onBlur={()=>commitMoney("price")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
           <span>₽</span>
         </div>
-        <Slider aria-label="Стоимость недвижимости" min={PRICE_MIN} max={PRICE_MAX} step={MONEY_STEP} value={[price]} onValueChange={values=>updatePrice(values[0]??price,true)}/>
+        <Slider aria-label="Стоимость недвижимости" min={priceMin} max={priceMax} step={MONEY_STEP} value={[price]} onValueChange={values=>updatePrice(values[0]??price,true)}/>
       </div>
 
       <div className={styles.field}>
@@ -500,8 +533,9 @@ export default function MortgagePage(){
     <LeadSheet
       title="Проверить ипотечные программы"
       source="mortgage"
-      propertyId={params.get("property")||undefined}
-      context={{program,propertyKind,price,down,years,preferredRate,marketRate,payment,subsidizedLimit,marketPrincipal,policyVersion:MORTGAGE_POLICY_VERSION}}
+      propertyId={sourceProperty?.id}
+      project={sourceProperty?.name}
+      context={{program,propertyKind,price,down,years,rate:preferredRate,preferredRate,marketRate,payment,subsidizedLimit,marketPrincipal,policyVersion:MORTGAGE_POLICY_VERSION,...(sourcePlan?{floorplanId:sourcePlan.id,rooms:sourcePlan.roomLabel,areaFrom:sourcePlan.areaFrom,areaTo:sourcePlan.areaTo}:{})}}
     >
       <button className={styles.cta}>Получить точный расчёт <ChevronRight size={18}/></button>
     </LeadSheet>

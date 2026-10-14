@@ -204,6 +204,8 @@ export async function registerCatalogRoutes(
           await sql.query("update catalog_properties set cover_image_url=$2 where id=$1",[id,url]);
           if(old&&old!==url)oldFiles.push(old);
         }else if(query.kind==="gallery"){
+          const count=Number((await sql.query('select count(*) as total from catalog_property_images where property_id=$1',[id])).rows[0]?.total??0);
+          if(count>=100)throw Object.assign(new Error('Можно добавить до 100 фотографий в галерею'),{statusCode:400});
           const order=Number((await sql.query("select coalesce(max(sort_order),-1)+1 as next from catalog_property_images where property_id=$1",[id])).rows[0]?.next??0);
           await sql.query("insert into catalog_property_images(id,property_id,url,alt,sort_order) values($1,$2,$3,$4,$5)",[randomUUID(),id,url,property.name,order]);
         }else if(query.kind==="floorplan"){

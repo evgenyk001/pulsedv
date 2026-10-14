@@ -46,6 +46,8 @@ export function describeLeadRequestContext(context:Record<string,unknown>,source
     const years=number(context.years);if(years!==null)lines.push("Срок "+years+" "+(years%10===1&&years%100!==11?"год":years%10>=2&&years%10<=4&&(years%100<10||years%100>=20)?"года":"лет"));
     const rate=number(context.rate);if(rate!==null)lines.push("Ставка "+rate.toLocaleString("ru-RU")+"%");
     const payment=rub(context.payment);if(payment)lines.push("Платёж ≈ "+payment+"/мес");
+    const rooms=text(context.rooms);if(rooms)lines.push(rooms==='Студия'?rooms:rooms+' комн.');
+    const square=area(context.areaFrom,context.areaTo);if(square)lines.push('Площадь '+square);
     return {title:"Ипотечный расчёт",lines};
   }
   if(source==="floorplan"||context.floorplanId||context.rooms){
