@@ -45,7 +45,7 @@ export default function PartnersPage(){
  const shareUrl=partnerLink(inviteCode||p?.code||'',window.location.origin+window.location.pathname,runtime.enabled?program.data?.botUsername:undefined);
  const run=async(fn:()=>Promise<unknown>)=>{
   if(busy)return false;setBusy(true);setError('');
-  try{await fn();await cache.invalidateQueries({queryKey:['partner-cabinet']});return true}
+  try{await fn();await cache.invalidateQueries({queryKey:['partner-cabinet']},{throwOnError:true});return true}
   catch(e){setError(e instanceof Error?e.message:'Не удалось выполнить действие');return false}
   finally{setBusy(false)}
  };
@@ -121,7 +121,7 @@ export default function PartnersPage(){
     <Link className={styles.inlineLink} to="/partner-offer">Прочитать оферту<ChevronRight size={14}/></Link>
     <label className={styles.consent}><input type="checkbox" checked={upgradeConsent} disabled={busy} onChange={e=>setUpgradeConsent(e.target.checked)}/><span>Принимаю новую редакцию условий программы</span></label>
     {!offerReady&&<p className={styles.hint}>Принятие станет доступно после публикации окончательных условий.</p>}
-    <button className={styles.primary} disabled={busy||!upgradeConsent||!offerReady} onClick={()=>void(async()=>{if(await run(()=>acceptPartnerTerms({consent:upgradeConsent,termsVersion:PARTNER_TERMS_VERSION}))){setSheet(null);setNotice('Условия приняты. Приглашения доступны.')}})()}>{busy?'Сохраняем…':'Принять новую редакцию'}</button>
+    <button className={styles.primary} disabled={busy||!upgradeConsent||!offerReady} onClick={()=>void(async()=>{if(await run(()=>acceptPartnerTerms({consent:upgradeConsent,termsVersion:PARTNER_TERMS_VERSION}))){setSheet(null);setNotice('Условия приняты')}})()}>{busy?'Сохраняем…':'Принять новую редакцию'}</button>
    </div>}
    {sheet==='demo'&&<div className={styles.sheetInfo}><span className={styles.largeIcon}><Info size={23}/></span><h3>Познакомьтесь с программой</h3><p>Рекомендации и выплаты в демоверсии сохраняются в этом браузере. Можно создать приглашение, оставить заявку и проверить её в PULSE Control.</p><p>Переводы не выполняются. Для работы с реальными клиентами будет подключена общая база сервиса.</p><button className={styles.secondary} onClick={()=>setSheet(null)}>Понятно</button></div>}
    {sheet==='calculation'&&<div className={styles.sheetInfo}><div className={styles.calculation}><span>Комиссия агентства<b>100 000 ₽</b></span><span>Вычет 6%<b>6 000 ₽</b></span><span>База для расчёта<b>94 000 ₽</b></span><span>Вознаграждение 30%<b>28 200 ₽</b></span></div><p>Это пример расчёта до налогов получателя. Начисление появляется после покупки, получения комиссии и проверки агентством.</p><Link className={styles.inlineLink} to="/partner-offer">Подробнее в оферте<ChevronRight size={14}/></Link></div>}
