@@ -67,3 +67,39 @@ test('Existing demo receives the partner campaign once and preserves later remov
  await page.evaluate(()=>{const key='pulse.dv.control.state.v1',state=JSON.parse(localStorage.getItem(key)!);state.banners=state.banners.filter((b:{id:string})=>b.id!=='partner-program');localStorage.setItem(key,JSON.stringify(state))});
  await page.reload();await expect(page.getByRole('link',{name:'Зарабатывайте с PULSE',exact:true})).toHaveCount(0);
 });
+
+for(const width of [320,390])test(`Partner offer ${width}px: full document, public URL, archive and left back button`,async({page,browserName})=>{
+ await page.setViewportSize({width,height:844});await seed(page);await page.goto('/pulsedv/mini-app/#/partner-offer');
+ await expect(page.getByRole('heading',{name:'Оферта партнёрской программы',exact:true})).toBeVisible();
+ await expect(page.getByText('Шаблон публичной оферты',{exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'5. Закрепление на 6 календарных месяцев'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'8. Недобросовестные действия и ответственность'})).toBeVisible();
+ await expect(page.getByText(/В = К ×/)).toContainText('0,30');
+ const back=page.getByRole('link',{name:'Вернуться к партнёрской программе'}),box=await back.boundingBox();expect(box!.x+box!.width).toBeLessThan(width/2);
+ await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:`test-results/partner-offer-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
+ await back.click();await expect(page).toHaveURL(/#\/partners$/);
+ await page.goto('/pulsedv/mini-app/#/partner-offer?version=partners-v1');await expect(page.getByText(/Срок закрепления в этой редакции не установлен/)).toBeVisible();
+ await page.goto('/pulsedv/partner-offer/');await expect(page.getByRole('heading',{name:'Оферта партнёрской программы',exact:true})).toBeVisible();await expect(page.getByText('Шаблон для подготовки к запуску',{exact:true})).toBeVisible();await expect(page.locator('body')).toHaveAttribute('data-version','partners-v2-2026-10-14');
+ await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test('Partner cabinet refreshes by pull and return, with no thirty-second polling',async({page})=>{
+ await seed(page);await page.goto('/pulsedv/mini-app/#/partners');await page.getByRole('textbox',{name:'Ваше имя для приглашения'}).fill('Анна');await page.getByRole('textbox',{name:'Ваш контактный телефон'}).fill('+79995550101');await page.getByRole('checkbox',{name:/Принимаю условия программы/}).check();await page.getByRole('button',{name:'Стать партнёром PULSE'}).click();
+ const invite=page.getByRole('button',{name:'Пригласить покупателя',exact:true});await expect(invite).toBeEnabled();await page.clock.install();
+ await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('pulse.partners.v1')!);s.partners[0].status='paused';localStorage.setItem('pulse.partners.v1',JSON.stringify(s))});
+ await page.clock.runFor(35000);await expect(invite).toBeEnabled();await expect(page.getByText(/Новые приглашения временно недоступны/)).toHaveCount(0);
+ await page.evaluate(()=>{window.scrollTo(0,0);const root=document.querySelector('[data-refreshing]')!;for(const [type,y] of [['touchstart',30],['touchmove',180],['touchend',180]] as const){const e=new Event(type,{bubbles:true,cancelable:true});Object.defineProperty(e,'touches',{value:type==='touchend'?[]:[{clientX:150,clientY:y}]});root.dispatchEvent(e)}});
+ await expect(page.getByText(/Новые приглашения временно недоступны/)).toBeVisible();await expect(invite).toBeDisabled();
+ await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('pulse.partners.v1')!);s.partners[0].status='active';localStorage.setItem('pulse.partners.v1',JSON.stringify(s));window.dispatchEvent(new Event('focus'))});
+ await expect(invite).toBeEnabled();await expect(page.getByText(/Новые приглашения временно недоступны/)).toHaveCount(0);
+});
+
+test('Existing partner reads the archive and explicitly accepts the new offer before inviting again',async({page})=>{
+ await seed(page);await page.addInitScript(()=>{if(localStorage.getItem('pulse.partners.v1'))return;localStorage.setItem('pulse.partners.v1',JSON.stringify({myPartnerId:'old-partner',partners:[{id:'old-partner',userId:null,name:'Анна',phone:'+79995550101',code:'p01234567890123456789',status:'active',termsVersion:'partners-v1',createdAt:new Date().toISOString()}],invitations:[],referrals:[],rewards:[]}))});
+ await page.goto('/pulsedv/mini-app/#/partners');const invite=page.getByRole('button',{name:'Пригласить покупателя',exact:true});await expect(invite).toBeDisabled();
+ const accept=page.getByRole('button',{name:'Принять новую редакцию'});await expect(accept).toBeDisabled();
+ await page.getByRole('link',{name:'Оферта и принятая редакция'}).click();await expect(page.getByText(/Срок закрепления в этой редакции не установлен/)).toBeVisible();await page.getByRole('link',{name:'Вернуться к партнёрской программе'}).click();
+ await page.getByRole('checkbox',{name:'Принимаю новую редакцию условий программы'}).check();await accept.click();await expect(invite).toBeEnabled();await expect(accept).toHaveCount(0);
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pulse.partners.v1')!).partners[0].termsVersion)).toBe('partners-v2-2026-10-14');
+});

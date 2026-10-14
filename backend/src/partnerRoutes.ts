@@ -1,4 +1,6 @@
-import {randomBytes} from 'node:crypto';
+import {randomBytes,createHash} from 'node:crypto';
+import {offerText,offerSections,OFFER_VERSION} from '../../packages/partners/offer';
+import {claimExpiresOn,claimDateError} from '../../packages/partners/policy';
 import {z} from 'zod';
 import type {FastifyInstance,FastifyRequest} from 'fastify';
 import type {Database,Sql} from './database';
@@ -10,6 +12,7 @@ import {phoneSchema} from './validation';
 import {businessDay} from '../../packages/pulse-data/business';
 import {PARTNER_TERMS_VERSION,PARTNER_REWARD_BPS,PARTNER_RESERVE_BPS,partnerReward,partnerRejectReasons,partnerStageLabels,publicClientName,normalizePartnerPhone,type PartnerReferral,type PartnerReward} from '../../packages/partners/model';
 
+const dateOnly=(v:any)=>v?(v instanceof Date?v.toISOString():String(v)).slice(0,10):null;
 const codeSchema=z.string().regex(/^[a-zA-Z0-9_-]{12,64}$/);
 const token=(prefix:string)=>prefix+randomBytes(12).toString('hex');
 export async function partnerEvent(sql:Sql,id:string,kind:string,label:string){await sql.query('insert into partner_referral_events(referral_id,kind,label) values($1,$2,$3)',[id,kind,label]);}
@@ -20,7 +23,7 @@ export async function lockBuyerIdentity(sql:Sql,phone:string,userId:string|null)
 async function resolveCode(sql:Sql,code:string,lock=false){
  let p=(await sql.query('select *,null::uuid as invitation_id from partner_profiles where code=$1'+(lock?' for update':''),[code])).rows[0];
  if(!p){const invite=(await sql.query('select * from partner_invitations where code=$1',[code])).rows[0];if(invite)p={...(await sql.query('select * from partner_profiles where id=$1'+(lock?' for update':''),[invite.partner_id])).rows[0],invitation_id:invite.id};}
- if(!p||p.status!=='active')throw new HttpError(404,'Приглашение недоступно. Свяжитесь с PULSE.DV');
+ if(!p||p.status!=='active'||p.terms_version!==PARTNER_TERMS_VERSION)throw new HttpError(404,'Приглашение недоступно. Свяжитесь с PULSE.DV');
  return p;
 }
 export async function preparePartnerReferral(sql:Sql,code:string|undefined,buyerUserId:string|null){
@@ -31,7 +34,7 @@ export async function preparePartnerReferral(sql:Sql,code:string|undefined,buyer
 }
 export async function attachPartnerReferral(sql:Sql,leadId:string,buyerUserId:string|null,phone:string,code:string,partner:any){
  if(normalizePartnerPhone(partner.phone)===phone)throw new HttpError(400,'Собственная покупка не участвует в программе рекомендаций');
- const row=(await sql.query('insert into partner_referrals(partner_id,invitation_id,lead_id,buyer_user_id,normalized_phone,terms_version,attribution_code) values($1,$2,$3,$4,$5,$6,$7) returning id',[partner.id,partner.invitation_id,leadId,buyerUserId,phone,PARTNER_TERMS_VERSION,code])).rows[0];
+ const row=(await sql.query('insert into partner_referrals(partner_id,invitation_id,lead_id,buyer_user_id,normalized_phone,terms_version,attribution_code) values($1,$2,$3,$4,$5,$6,$7) returning id',[partner.id,partner.invitation_id,leadId,buyerUserId,phone,partner.terms_version,code])).rows[0];
  await partnerEvent(sql,row.id,'submitted','Покупатель подтвердил рекомендацию. Проверяем уникальность');return row.id as string;
 }
 async function conflicts(sql:Sql,r:any){
@@ -45,7 +48,7 @@ async function conflicts(sql:Sql,r:any){
 }
 function rewardDto(row:any,privateView:boolean):PartnerReward{
  const r=camelRow(row);
- return {id:r.id,referralId:r.referralId,commissionRub:Number(r.commissionRub),receivedOn:String(r.receivedOn).slice(0,10),reserveMinor:Number(r.reserveMinor),baseMinor:Number(r.baseMinor),grossMinor:Number(r.grossMinor),status:r.status,recipientType:r.recipientType,requestedAt:r.requestedAt,paidOn:r.paidOn?String(r.paidOn).slice(0,10):null,withheldMinor:Number(r.withheldMinor),paidMinor:Number(r.paidMinor),revision:r.revision,createdAt:r.createdAt,...(privateView?{payoutReference:r.payoutReference,documentReference:r.documentReference}:{})};
+ return {id:r.id,referralId:r.referralId,commissionRub:Number(r.commissionRub),receivedOn:String(r.receivedOn).slice(0,10),dealOn:r.dealOn?String(r.dealOn).slice(0,10):null,reserveMinor:Number(r.reserveMinor),baseMinor:Number(r.baseMinor),grossMinor:Number(r.grossMinor),status:r.status,recipientType:r.recipientType,requestedAt:r.requestedAt,paidOn:r.paidOn?String(r.paidOn).slice(0,10):null,withheldMinor:Number(r.withheldMinor),paidMinor:Number(r.paidMinor),revision:r.revision,createdAt:r.createdAt,...(privateView?{payoutReference:r.payoutReference,documentReference:r.documentReference}:{})};
 }
 async function referralDtos(sql:Sql,rows:any[],privateView:boolean):Promise<PartnerReferral[]>{
  if(!rows.length)return [];
@@ -54,7 +57,7 @@ async function referralDtos(sql:Sql,rows:any[],privateView:boolean):Promise<Part
  const rewards=(await sql.query("select * from partner_rewards where referral_id=any($1::uuid[]) order by (status='void'),created_at desc,id desc",[ids])).rows.map(r=>rewardDto(r,privateView));
  return Promise.all(rows.map(async r=>{
   const clash=privateView?await conflicts(sql,r):null;
-  return {id:r.id,partnerId:r.partner_id,partnerName:r.partner_name,leadId:privateView?r.lead_id:null,invitationId:r.invitation_id,clientName:privateView?r.client_name:publicClientName(r.client_name||'Покупатель'),...(privateView?{clientPhone:r.client_phone,reviewNote:r.review_note||'',conflictLeads:clash!.matches.map(m=>({id:m.id,label:m.name+' · '+m.phone})),conflictDetails:clash!.matches.map(m=>m.name+' · '+m.phone+(m.partner_name?' · партнёр '+m.partner_name:' · прямое обращение')).join('\n')+(clash!.claimed.length?'\nЕсть подтверждённое закрепление':'')}:{ }),status:r.status,stage:r.stage,stageLabel:partnerStageLabels[r.stage]||'Обращение',conflict:!!clash&&(clash.matches.length>0||clash.claimed.length>0),rejectionReason:r.rejection_reason,revision:r.revision,createdAt:r.created_at instanceof Date?r.created_at.toISOString():r.created_at,acceptedAt:r.accepted_at instanceof Date?r.accepted_at.toISOString():r.accepted_at,events:events.filter(e=>e.referralId===r.id) as any,reward:rewards.find(w=>w.referralId===r.id)??null};
+  return {id:r.id,partnerId:r.partner_id,partnerName:r.partner_name,leadId:privateView?r.lead_id:null,invitationId:r.invitation_id,clientName:privateView?r.client_name:publicClientName(r.client_name||'Покупатель'),...(privateView?{clientPhone:r.client_phone,reviewNote:r.review_note||'',conflictLeads:clash!.matches.map(m=>({id:m.id,label:m.name+' · '+m.phone})),conflictDetails:clash!.matches.map(m=>m.name+' · '+m.phone+(m.partner_name?' · партнёр '+m.partner_name:' · прямое обращение')).join('\n')+(clash!.claimed.length?'\nЕсть подтверждённое закрепление':'')}:{ }),termsVersion:r.terms_version,claimStartedOn:dateOnly(r.claim_started_on),claimExpiresOn:dateOnly(r.claim_expires_on),dealConfirmedOn:dateOnly(r.deal_confirmed_on),status:r.status,stage:r.stage,stageLabel:partnerStageLabels[r.stage]||'Обращение',conflict:!!clash&&(clash.matches.length>0||clash.claimed.length>0),rejectionReason:r.rejection_reason,revision:r.revision,createdAt:r.created_at instanceof Date?r.created_at.toISOString():r.created_at,acceptedAt:r.accepted_at instanceof Date?r.accepted_at.toISOString():r.accepted_at,events:events.filter(e=>e.referralId===r.id) as any,reward:rewards.find(w=>w.referralId===r.id)??null};
  }));
 }
 const referralSelect=`select r.*,p.name as partner_name,l.name as client_name,l.phone as client_phone,l.status as stage from partner_referrals r join partner_profiles p on p.id=r.partner_id left join leads l on l.id=r.lead_id`;
@@ -64,14 +67,20 @@ export async function guardPartnerFinance(sql:Sql,leadId:string,finance:any,stat
 }
 export async function partnerLeadChanged(sql:Sql,leadId:string,previous:any,next:any){
  const r=(await sql.query("select id from partner_referrals where lead_id=$1 and status='accepted'",[leadId])).rows[0];if(!r)return;
+ if(['deal','closed'].includes(next.status))await sql.query('update partner_referrals set deal_confirmed_on=coalesce(deal_confirmed_on,$2::date) where id=$1',[r.id,businessDay()]);
  if(previous.status!==next.status)await partnerEvent(sql,r.id,'stage',partnerStageLabels[next.status]||'Статус обращения обновлён');
  if(previous.finance?.receivedOn!==next.finance?.receivedOn&&next.finance?.receivedOn)await partnerEvent(sql,r.id,'commission','Комиссия получена агентством. Вознаграждение ожидает проверки');
 }
 export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visitor,editor,owner}:{db:Database;config:RuntimeConfig;visitor:(r:FastifyRequest)=>Promise<void>;editor:(r:FastifyRequest)=>Promise<void>;owner:(r:FastifyRequest)=>Promise<void>}){
+ const operator={name:config.LEGAL_OPERATOR_NAME,inn:config.LEGAL_OPERATOR_INN,email:config.LEGAL_CONTACT_EMAIL,address:config.LEGAL_OPERATOR_ADDRESS,registration:config.LEGAL_OPERATOR_REGISTRATION};
+ const published=config.PARTNER_OFFER_PUBLISHED&&Object.values(operator).every(Boolean);
+ const acceptance=async(sql:Sql,p:any)=>{const text=offerText(),hash=createHash('sha256').update(JSON.stringify({version:OFFER_VERSION,text,operator})).digest('hex');await sql.query('insert into partner_terms_acceptances(partner_id,terms_version,document_text,document_sha256,operator_snapshot,publication_state) values($1,$2,$3,$4,$5::jsonb,$6)',[p.id,OFFER_VERSION,text,hash,JSON.stringify(operator),published?'published':'draft']);};
+ const requirePublished=()=>{if(!published)throw new HttpError(409,'Программа ещё готовится к запуску: окончательная оферта не опубликована');};
  const authenticated=async(r:FastifyRequest)=>{await visitor(r);if(!r.visitor!.userId)throw new HttpError(403,'Откройте приложение в Telegram для подключения к программе');};
  const profile=async(sql:Sql,userId:string)=>{const p=(await sql.query('select * from partner_profiles where user_id=$1',[userId])).rows[0];if(!p)throw new HttpError(403,'Подключитесь к партнёрской программе');return p;};
  const pageSchema=z.object({page:z.coerce.number().int().min(1).max(100000).default(1),limit:z.coerce.number().int().min(1).max(100).default(30)}).strict();
- app.get('/api/v1/public/partner-program',async()=>({termsVersion:PARTNER_TERMS_VERSION,rewardBps:PARTNER_REWARD_BPS,reserveBps:PARTNER_RESERVE_BPS,botUsername:config.TELEGRAM_BOT_USERNAME}));
+ app.get('/api/v1/public/partner-program',async()=>({termsVersion:PARTNER_TERMS_VERSION,rewardBps:PARTNER_REWARD_BPS,reserveBps:PARTNER_RESERVE_BPS,botUsername:config.TELEGRAM_BOT_USERNAME,offerUrl:'/partner-offer/',offerPublished:published}));
+ app.get('/api/v1/public/partner-offer',async request=>{const version=z.enum([OFFER_VERSION,'partners-v1']).default(OFFER_VERSION).parse((request.query as any).version);return {version,sections:offerSections(version),operator,published:version===OFFER_VERSION&&published};});
  app.get('/api/v1/public/partner-invites/:code',{config:{rateLimit:{max:40,timeWindow:'1 minute'}}},async request=>{
   const p=await resolveCode(db,codeSchema.parse((request.params as any).code));return {partnerName:p.name,code:(request.params as any).code,termsVersion:PARTNER_TERMS_VERSION};
  });
@@ -89,14 +98,19 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
  });
  app.post('/api/v1/me/partner/join',{preHandler:authenticated,config:{rateLimit:{max:5,timeWindow:'1 minute'}}},async request=>{
   const input=z.object({name:z.string().trim().min(2).max(80),phone:phoneSchema,consent:z.literal(true),termsVersion:z.literal(PARTNER_TERMS_VERSION)}).strict().parse(request.body);
+  requirePublished();
   return db.transaction(async sql=>{await sql.query('select id from app_users where id=$1 for update',[request.visitor!.userId]);
    const existing=(await sql.query('select * from partner_profiles where user_id=$1',[request.visitor!.userId])).rows[0];if(existing)return {partner:camelRow(existing)};
-   const p=(await sql.query('insert into partner_profiles(user_id,name,phone,code,terms_version) values($1,$2,$3,$4,$5) returning *',[request.visitor!.userId,input.name,input.phone,token('p'),input.termsVersion])).rows[0];return {partner:camelRow(p)};
+   const p=(await sql.query('insert into partner_profiles(user_id,name,phone,code,terms_version) values($1,$2,$3,$4,$5) returning *',[request.visitor!.userId,input.name,input.phone,token('p'),input.termsVersion])).rows[0];await acceptance(sql,p);return {partner:camelRow(p)};
   });
+ });
+ app.post('/api/v1/me/partner/terms',{preHandler:authenticated},async request=>{
+  z.object({consent:z.literal(true),termsVersion:z.literal(OFFER_VERSION)}).strict().parse(request.body);requirePublished();
+  return db.transaction(async sql=>{const p=(await sql.query('select * from partner_profiles where user_id=$1 for update',[request.visitor!.userId])).rows[0];if(!p)throw new HttpError(404,'Партнёр не найден');if(p.terms_version===OFFER_VERSION)return {ok:true};await acceptance(sql,p);await sql.query('update partner_profiles set terms_version=$2,terms_accepted_at=now() where id=$1',[p.id,OFFER_VERSION]);return {ok:true};});
  });
  app.post('/api/v1/me/partner/invitations',{preHandler:authenticated,config:{rateLimit:{max:10,timeWindow:'1 minute'}}},async request=>{
   const input=z.object({label:z.string().trim().min(2).max(100),idempotencyKey:z.uuid()}).strict().parse(request.body);
-  return db.transaction(async sql=>{const p=await profile(sql,request.visitor!.userId!);if(p.status!=='active')throw new HttpError(403,'Новые приглашения временно недоступны');
+  return db.transaction(async sql=>{const p=await profile(sql,request.visitor!.userId!);if(p.status!=='active'||p.terms_version!==OFFER_VERSION)throw new HttpError(403,'Новые приглашения временно недоступны');
    const old=(await sql.query('select * from partner_invitations where id=$1 and partner_id=$2',[input.idempotencyKey,p.id])).rows[0];if(old){if(old.label!==input.label)throw new HttpError(409,'Ключ приглашения уже использован');return {invitation:camelRow(old)};}
    const locked=(await sql.query('select status from partner_profiles where id=$1 for update',[p.id])).rows[0];if(locked.status!=='active')throw new HttpError(403,'Новые приглашения временно недоступны');
    const again=(await sql.query('select * from partner_invitations where id=$1',[input.idempotencyKey])).rows[0];if(again){if(again.partner_id!==p.id||again.label!==input.label)throw new HttpError(409,'Ключ приглашения уже использован');return {invitation:camelRow(again)};}
@@ -126,7 +140,7 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
   return db.transaction(async sql=>{const changed=await sql.query('update partner_profiles set status=$2 where id=$1 returning id',[id,input.status]);if(!changed.rows.length)throw new HttpError(404,'Партнёр не найден');await audit(sql,request.member!.id,'partner.status',id,input);return {ok:true};});
  });
  app.post('/api/v1/control/partner-referrals/:id/review',{preHandler:owner},async request=>{
-  const id=z.uuid().parse((request.params as any).id),input=z.object({revision:z.number().int().positive(),decision:z.enum(['accept','reject']),contactConfirmed:z.boolean(),reason:z.enum(['existing','duplicate','self','unconfirmed','other']).optional(),note:z.string().trim().min(2).max(1000)}).strict().parse(request.body);
+  const id=z.uuid().parse((request.params as any).id),input=z.object({revision:z.number().int().positive(),decision:z.enum(['accept','reject']),contactConfirmed:z.boolean(),reason:z.enum(['existing','duplicate','self','unconfirmed','fraud','other']).optional(),note:z.string().trim().min(2).max(1000)}).strict().parse(request.body);
   return db.transaction(async sql=>{
    const base=(await sql.query('select * from partner_referrals where id=$1',[id])).rows[0];if(!base)throw new HttpError(404,'Рекомендация не найдена');
    await lockBuyerIdentity(sql,base.normalized_phone||'',base.buyer_user_id);
@@ -139,7 +153,8 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
     if((p.user_id&&p.user_id===r.buyer_user_id)||p.phone===r.normalized_phone)throw new HttpError(409,'Собственная покупка не участвует в программе');
     const clash=await conflicts(sql,r);if(clash.matches.length||clash.claimed.length)throw new HttpError(409,'Найдено совпадение в CRM или более ранняя рекомендация. Разберите совпадение перед закреплением');
     await sql.query('insert into partner_client_claims(referral_id,normalized_phone,buyer_user_id) values($1,$2,$3)',[id,r.normalized_phone,r.buyer_user_id]);
-    await sql.query("update partner_referrals set status='accepted',accepted_at=now(),reviewed_by=$2,review_note=$3,revision=revision+1 where id=$1",[id,request.member!.id,input.note]);
+    const start=r.terms_version===OFFER_VERSION?businessDay():null;
+    await sql.query("update partner_referrals set status='accepted',accepted_at=now(),reviewed_by=$2,review_note=$3,claim_started_on=$4,claim_expires_on=$5,deal_confirmed_on=$6,revision=revision+1 where id=$1",[id,request.member!.id,input.note,start,start?claimExpiresOn(start):null,['deal','closed'].includes(lead.status)?businessDay():null]);
     await partnerEvent(sql,id,'accepted','Клиент проверен и закреплён за партнёром');await partnerEvent(sql,id,'stage',partnerStageLabels[lead.status]||'Обращение принято');
    }else{
     if(!input.reason)throw new HttpError(400,'Укажите причину отказа');
@@ -149,17 +164,18 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
   });
  });
  app.post('/api/v1/control/partner-referrals/:id/accrue',{preHandler:owner},async request=>{
-  const id=z.uuid().parse((request.params as any).id);z.object({revision:z.number().int().positive()}).strict().parse(request.body);
-  const revision=(request.body as any).revision;
+  const id=z.uuid().parse((request.params as any).id);const {revision,dealOn:inputDealOn}=z.object({revision:z.number().int().positive(),dealOn:z.iso.date().optional()}).strict().parse(request.body);
   return db.transaction(async sql=>{
    const base=(await sql.query('select * from partner_referrals where id=$1',[id])).rows[0];if(!base)throw new HttpError(404,'Рекомендация не найдена');
    const lead=(await sql.query('select * from leads where id=$1 for update',[base.lead_id])).rows[0];const r=(await sql.query('select * from partner_referrals where id=$1 for update',[id])).rows[0];
    const old=(await sql.query("select * from partner_rewards where referral_id=$1 and status<>'void'",[id])).rows[0];if(old)return {ok:true,reward:rewardDto(old,true)};
    if(r.revision!==revision||r.status!=='accepted')throw new HttpError(409,'Сначала подтвердите актуальное закрепление');
    if(!lead||!['deal','closed'].includes(lead.status)||!lead.finance?.receivedOn||!lead.finance?.commissionRub||lead.finance.receivedOn>businessDay())throw new HttpError(400,'Нужны завершённая сделка и фактическое поступление комиссии в карточке клиента');
+   const date=dateOnly;const dealOn=inputDealOn||date(r.deal_confirmed_on)||businessDay();const error=claimDateError(date(r.claim_started_on),date(r.claim_expires_on),dealOn);if(error)throw new HttpError(400,error);
+   await sql.query('update partner_referrals set deal_confirmed_on=$2 where id=$1',[id,dealOn]);
    const amount=partnerReward(lead.finance.commissionRub,r.reserve_bps,r.reward_bps);
-   const w=(await sql.query('insert into partner_rewards(referral_id,commission_rub,received_on,reserve_minor,base_minor,gross_minor,approved_by) values($1,$2,$3,$4,$5,$6,$7) returning *',[id,amount.commissionRub,lead.finance.receivedOn,amount.reserveMinor,amount.baseMinor,amount.grossMinor,request.member!.id])).rows[0];
-   await partnerEvent(sql,id,'accrued','Вознаграждение начислено после проверки полученной комиссии');await audit(sql,request.member!.id,'partner.accrue',id,{grossMinor:amount.grossMinor});return {ok:true,reward:rewardDto(w,true)};
+   const w=(await sql.query('insert into partner_rewards(referral_id,commission_rub,received_on,reserve_minor,base_minor,gross_minor,approved_by,deal_on) values($1,$2,$3,$4,$5,$6,$7,$8) returning *',[id,amount.commissionRub,lead.finance.receivedOn,amount.reserveMinor,amount.baseMinor,amount.grossMinor,request.member!.id,dealOn])).rows[0];
+   await partnerEvent(sql,id,'accrued','Вознаграждение начислено после проверки полученной комиссии');await audit(sql,request.member!.id,'partner.accrue',id,{grossMinor:amount.grossMinor,dealOn});return {ok:true,reward:rewardDto(w,true)};
   });
  });
  app.post('/api/v1/control/partner-rewards/:id/pay',{preHandler:owner},async request=>{

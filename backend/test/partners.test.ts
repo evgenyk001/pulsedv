@@ -1,6 +1,8 @@
 import {test} from 'node:test';
+import {claimExpiresOn,claimDateError} from '../../packages/partners/policy';
+import {offerText,OFFER_VERSION} from '../../packages/partners/offer';
 import assert from 'node:assert/strict';
-import {randomUUID,createHmac} from 'node:crypto';
+import {randomUUID,createHmac,createHash} from 'node:crypto';
 import {testDatabase} from './database';
 import {migrate} from '../src/migrate';
 import {createApp} from '../src/app';
@@ -15,8 +17,17 @@ test('Partner amounts use kopecks, exact commission and valid Telegram invitatio
  assert.equal(partnerReward(7543219).grossMinor,212718776);assert.throws(()=>partnerReward(100.2));assert.throws(()=>partnerReward(-1));
  assert.equal(referralCodeFromStart('ref_p01234567890123456789'),'p01234567890123456789');assert.equal(referralCodeFromStart('ref_../../leads'),null);
 });
+test('Six calendar months clamp month end; deal date must be real, inclusive and within the claim',()=>{
+ assert.equal(claimExpiresOn('2025-08-31'),'2026-02-28');assert.equal(claimExpiresOn('2023-08-31'),'2024-02-29');assert.equal(claimExpiresOn('2026-10-14'),'2027-04-14');
+ assert.equal(claimDateError('2025-01-01','2025-07-01','2025-07-01','2026-10-14'),'');
+ assert.match(claimDateError('2025-01-01','2025-07-01','2025-07-02','2026-10-14'),/окончания/);
+ assert.match(claimDateError('2025-01-01','2025-07-01','2024-12-31','2026-10-14'),/раньше/);
+ assert.match(claimDateError(null,null,'2026-02-30','2026-10-14'),/фактическую/);
+ assert.match(claimDateError(null,null,'2026-10-15','2026-10-14'),/сегодняшнего/);
+ assert.equal(claimDateError(null,null,'2025-07-02','2026-10-14'),'');
+});
 test('Partners API: identity, attribution, uniqueness, own cabinet, immutable accrual and manual payout',async t=>{
- const db=await testDatabase();await migrate(db);const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',BOT_TOKEN:'partner-test-token'});const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close()});
+ const db=await testDatabase();await migrate(db);const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',BOT_TOKEN:'partner-test-token',PARTNER_OFFER_PUBLISHED:'true',LEGAL_OPERATOR_NAME:'Тестовый организатор',LEGAL_OPERATOR_INN:'2540123456',LEGAL_OPERATOR_ADDRESS:'Тестовый адрес',LEGAL_OPERATOR_REGISTRATION:'1234567890123',LEGAL_CONTACT_EMAIL:'offer@test.local'});const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close()});
  const headers={origin:config.PUBLIC_ORIGIN,'content-type':'application/json'},password='partner-long-password',hash=await hashPassword(password);
  const members=(await db.query("insert into team_members(name,email,password_hash,role) values('Owner','partner-owner@test.local',$1,'owner'),('Manager','partner-manager@test.local',$1,'manager'),('Admin','partner-admin@test.local',$1,'admin') returning *",[hash])).rows;
  const cookies=[];for(const m of members){const login=await app.inject({method:'POST',url:'/api/v1/control/login',headers,payload:{email:m.email,password}});assert.equal(login.statusCode,200,login.body);cookies.push({pulse_control:login.cookies.find(c=>c.name==='pulse_control')!.value})}
@@ -133,4 +144,43 @@ test('Partners API: identity, attribution, uniqueness, own cabinet, immutable ac
   const r=(await db.query('select * from partner_referrals where id=$1',[ref.id])).rows[0],claim=(await db.query('select * from partner_client_claims where referral_id=$1',[ref.id])).rows[0];assert.equal(r.normalized_phone,null);assert.equal(r.buyer_user_id,null);assert.equal(r.review_note,null);assert.equal(claim.normalized_phone,null);
   assert.equal((await get('/api/v1/me/partner')).json().summary.paidMinor,2453400);assert.equal((await get('/api/v1/me/partner')).json().partner.id,partnerA.id);
  });
+ await t.test('published offer and acceptance keep full text, issuer, hash and version; retries do not duplicate',async()=>{
+  const offer=(await get('/api/v1/public/partner-offer')).json();assert.equal(offer.published,true);assert.equal(offer.version,OFFER_VERSION);assert.equal(offer.operator.registration,config.LEGAL_OPERATOR_REGISTRATION);
+  assert.equal((await get('/api/v1/public/partner-offer?version=unknown')).statusCode,400);
+  assert.equal((await get('/api/v1/public/partner-offer?version=partners-v1')).json().published,false);
+  const snapshots=(await db.query('select * from partner_terms_acceptances where partner_id=$1',[partnerB.id])).rows;assert.equal(snapshots.length,1);const saved=snapshots[0];
+  assert.equal(saved.document_text,offerText());assert.equal(saved.terms_version,OFFER_VERSION);assert.equal(saved.publication_state,'published');assert.ok(saved.accepted_at);
+  assert.equal(saved.document_sha256,createHash('sha256').update(JSON.stringify({version:OFFER_VERSION,text:offerText(),operator:offer.operator})).digest('hex'));
+  assert.equal((await post('/api/v1/me/partner/terms',{consent:true,termsVersion:OFFER_VERSION},b)).statusCode,200);
+  assert.equal(Number((await db.query('select count(*) as n from partner_terms_acceptances where partner_id=$1',[partnerB.id])).rows[0].n),1);
+  const draft=await createApp(db,readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:config.PUBLIC_ORIGIN,BOT_TOKEN:config.BOT_TOKEN}));await draft.ready();
+  try{assert.equal((await draft.inject('/api/v1/public/partner-offer')).json().published,false);assert.equal((await draft.inject({method:'POST',url:'/api/v1/me/partner/terms',headers:b,payload:{consent:true,termsVersion:OFFER_VERSION}})).statusCode,409)}finally{await draft.close()}
+ });
+ await t.test('new claims expire in six months; late commission is allowed only for a deal within the claim',async()=>{
+  const v=await visitor(),submitted=await post('/api/v1/leads',leadInput('+79990000020',partnerB.code),v);assert.equal(submitted.statusCode,200,submitted.body);const id=submitted.json().id;
+  let r=(await referral(id)).json().referral;assert.equal(r.termsVersion,OFFER_VERSION);assert.equal((await review(r)).statusCode,200);r=(await referral(id)).json().referral;
+  assert.equal(r.claimStartedOn,businessDay());assert.equal(r.claimExpiresOn,claimExpiresOn(businessDay()));
+  assert.equal((await patch(id,{status:'deal',finance:{...emptyFinance(),commissionRub:100000,receivedOn:businessDay()}})).statusCode,200);
+  await db.query("update partner_referrals set claim_started_on='2025-01-01',claim_expires_on='2025-07-01' where id=$1",[r.id]);
+  const url='/api/v1/control/partner-referrals/'+r.id+'/accrue';
+  const outside=await control(url,{revision:r.revision,dealOn:'2025-07-02'});assert.equal(outside.statusCode,400,outside.body);
+  assert.equal((await control(url,{revision:r.revision,dealOn:'2024-12-31'})).statusCode,400);
+  assert.equal((await control(url,{revision:r.revision,dealOn:'2025-02-30'})).statusCode,400);
+  const inside=await control(url,{revision:r.revision,dealOn:'2025-07-01'});assert.equal(inside.statusCode,200,inside.body);assert.equal(inside.json().reward.dealOn,'2025-07-01');assert.equal(inside.json().reward.grossMinor,2820000);
+  const duplicate=await post('/api/v1/leads',leadInput('+79990000020',partnerB.code),await visitor());const duplicateRef=(await referral(duplicate.json().id)).json().referral;assert.equal(duplicateRef.conflict,true);assert.equal((await review(duplicateRef)).statusCode,409);
+ });
+ await t.test('new acceptance is explicit, preserves legacy referrals and enables invitations again',async()=>{
+  const v=await visitor(),submitted=await post('/api/v1/leads',leadInput('+79990000021',partnerB.code),v);assert.equal(submitted.statusCode,200,submitted.body);const id=submitted.json().id;
+  await db.query("update partner_profiles set terms_version='partners-v1' where id=$1",[partnerB.id]);await db.query("update partner_referrals set terms_version='partners-v1' where lead_id=$1",[id]);
+  assert.equal((await get('/api/v1/public/partner-invites/'+partnerB.code)).statusCode,404);
+  assert.equal((await post('/api/v1/me/partner/invitations',{label:'Старая редакция',idempotencyKey:randomUUID()},b)).statusCode,403);
+  assert.equal((await join(b,partnerB.name,partnerB.phone)).json().partner.termsVersion,'partners-v1');
+  assert.equal((await post('/api/v1/me/partner/terms',{consent:false,termsVersion:OFFER_VERSION},b)).statusCode,400);
+  assert.equal((await post('/api/v1/me/partner/terms',{consent:true,termsVersion:OFFER_VERSION},b)).statusCode,200);
+  assert.equal((await get('/api/v1/public/partner-invites/'+partnerB.code)).statusCode,200);
+  let old=(await referral(id)).json().referral;assert.equal((await review(old)).statusCode,200);old=(await referral(id)).json().referral;assert.equal(old.termsVersion,'partners-v1');assert.equal(old.claimStartedOn,null);assert.equal(old.claimExpiresOn,null);
+  const submitted2=await post('/api/v1/leads',leadInput('+79990000022',partnerB.code),await visitor());const current=(await referral(submitted2.json().id)).json().referral;assert.equal(current.termsVersion,OFFER_VERSION);
+  assert.equal((await review(current,'reject','fraud')).statusCode,200);assert.equal((await referral(submitted2.json().id)).json().referral.rejectionReason,'fraud');
+ });
+
 });

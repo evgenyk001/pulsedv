@@ -1,20 +1,21 @@
-export const PARTNER_TERMS_VERSION='partners-v1';
+import {OFFER_VERSION} from './offer';
+export const PARTNER_TERMS_VERSION=OFFER_VERSION;
 export const PARTNER_REWARD_BPS=3000;
 export const PARTNER_RESERVE_BPS=600;
 export type PartnerStatus='active'|'paused';
 export type ReferralStatus='pending'|'accepted'|'rejected';
 export type RewardStatus='accrued'|'requested'|'paid'|'void';
-export type Partner={id:string;userId:string|null;name:string;phone:string;code:string;status:PartnerStatus;termsVersion:string;createdAt:string};
+export type Partner={id:string;userId:string|null;name:string;phone:string;code:string;status:PartnerStatus;termsVersion:string;termsAcceptedAt?:string;createdAt:string};
 export type PartnerInvite={id:string;partnerId:string;code:string;label:string;createdAt:string};
 export type PartnerEvent={id:string;referralId:string;kind:string;label:string;createdAt:string};
-export type PartnerReward={id:string;referralId:string;commissionRub:number;receivedOn?:string;reserveMinor:number;baseMinor:number;grossMinor:number;status:RewardStatus;recipientType:string|null;requestedAt:string|null;paidOn:string|null;withheldMinor:number;paidMinor:number;payoutReference?:string|null;documentReference?:string|null;revision:number;createdAt:string};
-export type PartnerReferral={id:string;partnerId:string;partnerName:string;leadId:string|null;invitationId:string|null;clientName:string;clientPhone?:string;status:ReferralStatus;stage:string;stageLabel:string;conflict:boolean;conflictDetails?:string;conflictLeads?:Array<{id:string;label:string}>;reviewNote?:string;rejectionReason:string|null;revision:number;createdAt:string;acceptedAt:string|null;events:PartnerEvent[];reward:PartnerReward|null};
+export type PartnerReward={id:string;referralId:string;commissionRub:number;receivedOn?:string;dealOn?:string|null;reserveMinor:number;baseMinor:number;grossMinor:number;status:RewardStatus;recipientType:string|null;requestedAt:string|null;paidOn:string|null;withheldMinor:number;paidMinor:number;payoutReference?:string|null;documentReference?:string|null;revision:number;createdAt:string};
+export type PartnerReferral={id:string;partnerId:string;partnerName:string;leadId:string|null;invitationId:string|null;clientName:string;clientPhone?:string;status:ReferralStatus;stage:string;stageLabel:string;conflict:boolean;conflictDetails?:string;conflictLeads?:Array<{id:string;label:string}>;reviewNote?:string;rejectionReason:string|null;revision:number;createdAt:string;acceptedAt:string|null;termsVersion?:string;claimStartedOn?:string|null;claimExpiresOn?:string|null;dealConfirmedOn?:string|null;events:PartnerEvent[];reward:PartnerReward|null};
 export type PartnerSummary={accruedMinor:number;paidMinor:number;pendingCount:number;acceptedCount:number};
 export type PartnerCabinet={authenticated:boolean;partner:Partner|null;referrals:PartnerReferral[];invitations:PartnerInvite[];hasMore:boolean;page:number;total:number;summary:PartnerSummary};
 export const partnerStageLabels:Record<string,string>={new:'Новое обращение',contacted:'Связались с покупателем',qualified:'Уточнили задачу',showing:'Организуем показ',booking:'Бронирование',deal:'Сделка состоялась',closed:'Работа завершена',lost:'Покупка не состоялась'};
 export const referralLabels:Record<ReferralStatus,string>={pending:'На проверке',accepted:'Клиент закреплён',rejected:'Рекомендация не принята'};
 export const rewardLabels:Record<RewardStatus,string>={accrued:'Вознаграждение начислено',requested:'Выплата на оформлении',paid:'Выплачено',void:'Начисление отменено'};
-export const partnerRejectReasons={existing:'Покупатель уже обращался в агентство',duplicate:'Рекомендация уже закреплена',self:'Собственная покупка',unconfirmed:'Обращение не подтверждено',other:'Условия программы не выполнены'};
+export const partnerRejectReasons={existing:'Покупатель уже обращался в агентство',duplicate:'Рекомендация уже закреплена',self:'Собственная покупка',unconfirmed:'Обращение не подтверждено',fraud:'Подтверждено нарушение правил программы',other:'Условия программы не выполнены'};
 export type PartnerRejectReason=keyof typeof partnerRejectReasons;
 export function normalizePartnerPhone(value:string){return value.replace(/[^\d+]/g,'').replace(/^8(?=\d{10}$)/,'+7').replace(/^7(?=\d{10}$)/,'+7')}
 export function partnerReward(commissionRub:number,reserveBps=PARTNER_RESERVE_BPS,rewardBps=PARTNER_REWARD_BPS){
