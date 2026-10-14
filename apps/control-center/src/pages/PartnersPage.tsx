@@ -18,7 +18,8 @@ export function PartnersPage(){
  const owner=!runtime.enabled||runtime.member?.role==='owner';
  React.useEffect(()=>{let cancelled=false;setLoading(true);void getControlPartners(page).then(v=>{if(!cancelled){setData(v);setError('')}}).catch(e=>{if(!cancelled)setError(e.message)}).finally(()=>{if(!cancelled)setLoading(false)});return()=>{cancelled=true}},[page,version]);
  React.useEffect(()=>{const unsubscribe=subscribePartners(refresh),timer=setInterval(()=>{if(document.visibilityState==='visible')refresh()},30000),focus=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',focus);return()=>{unsubscribe();clearInterval(timer);document.removeEventListener('visibilitychange',focus)}},[]);
- React.useEffect(()=>{setConfirmed(false);setNote('');setWithheld('0');setPaidOn(businessDay());setPayment('');setDocument('');setDocs(false);setVoidReason('')},[params.get('referral')]);
+ // Initialise the draft before the browser can accept input; a passive effect can erase the first Safari edit.
+ React.useLayoutEffect(()=>{setConfirmed(false);setNote('');setWithheld('0');setPaidOn(businessDay());setPayment('');setDocument('');setDocs(false);setVoidReason('')},[selectedId]);
  const close=()=>{if(!busy){const p=new URLSearchParams(params);p.delete('referral');setParams(p)}};
  useDialog(!!selected,close);
  const run=async(fn:()=>Promise<unknown>)=>{if(busy)return;setBusy(true);setError('');try{await fn();refresh()}catch(e){setError(e instanceof Error?e.message:'Не удалось выполнить действие')}finally{setBusy(false)}};
