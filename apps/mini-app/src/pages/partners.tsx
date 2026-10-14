@@ -28,7 +28,8 @@ export default function PartnersPage(){
  const share=async()=>{try{if(navigator.share)await navigator.share({title:'PULSE.DV',text:'Поможем выбрать квартиру и разобраться с ипотекой. Оставьте заявку по моему приглашению.',url:shareUrl});else await copy()}catch(e){if(!(e instanceof DOMException&&e.name==='AbortError'))setNotice('Откройте приглашение и скопируйте ссылку')}};
  React.useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),3500);return()=>clearTimeout(timer)},[notice]);
  return <div className={styles.page}>
-  <PageHeader eyebrow="PULSE.DV · ПАРТНЁРАМ" title={p?'Мои рекомендации':'Рекомендуйте PULSE'} subtitle={p?'Покупатели, результат и вознаграждение.':'Знакомый ищет квартиру? Познакомьте его с нашей командой.'} action={<Link to="/profile" className={styles.back} aria-label="Вернуться в профиль"><ArrowLeft size={18}/></Link>}/>
+  <nav className={styles.topbar} aria-label="Навигация"><Link to="/profile" className={styles.back} aria-label="Вернуться в профиль"><ArrowLeft size={20}/></Link><span>В профиль</span></nav>
+  <PageHeader eyebrow="PULSE.DV · ПАРТНЁРАМ" title={p?'Мои рекомендации':'Рекомендуйте PULSE'} subtitle={p?'Покупатели, результат и вознаграждение.':'Знакомый ищет квартиру? Познакомьте его с нашей командой.'}/>
   {!runtime.enabled&&<p className={styles.demo}>Демонстрация · рекомендации и выплаты сохраняются в этом браузере. Переводы не выполняются.</p>}
   {q.isLoading&&<div className={styles.card} role="status">Загружаем партнёрский кабинет…</div>}
   {q.error&&<div className={styles.error} role="alert">{q.error.message}<button onClick={()=>void q.refetch()}>Повторить</button></div>}
@@ -41,7 +42,7 @@ export default function PartnersPage(){
   </>}
   {p&&q.data&&<>
    {p.status==='paused'&&<div className={styles.warning}>Новые приглашения временно недоступны. История рекомендаций и начислений сохранена.</div>}
-   <div className={styles.tabs}><button aria-pressed={tab==='clients'} onClick={()=>setTab('clients')}>Мои клиенты</button><button aria-pressed={tab==='payments'} onClick={()=>setTab('payments')}>Выплаты</button></div>
+   <div className={styles.tabs} data-selected={tab}><button aria-pressed={tab==='clients'} onClick={()=>setTab('clients')}>Мои клиенты</button><button aria-pressed={tab==='payments'} onClick={()=>setTab('payments')}>Выплаты</button></div>
    <section className={styles.balance}><span>Начислено · до удержаний</span><strong>{partnerMoney(q.data.summary.accruedMinor)}</strong><div><span>Подтверждено {q.data.summary.acceptedCount}</span><span>На проверке {q.data.summary.pendingCount}</span></div><button onClick={()=>setTab('payments')}>Посмотреть начисления <ChevronRight size={15}/></button></section>
    {tab==='clients'?<>
     <button className={styles.primary} disabled={p.status!=='active'} onClick={()=>{setInviteCode(null);setSheet('invite')}}><Send size={17}/>Пригласить покупателя</button>

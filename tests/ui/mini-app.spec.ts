@@ -119,6 +119,8 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
   const skip=page.getByRole('button',{name:'Пропустить онбординг'});
   if(await skip.count())await skip.click();
 
+  await page.getByRole('tab',{name:'Баннер 2 из 4',exact:true}).click();
+  await expect.poll(()=>page.getByRole('heading',{name:'Квартира, которую хочется показывать друзьям'}).evaluate(el=>{const banner=el.closest('article')!,wrap=banner.closest('[role=group]')?.parentElement?.parentElement?.parentElement?.parentElement;return wrap?Math.abs(banner.getBoundingClientRect().left-wrap.getBoundingClientRect().left):Infinity})).toBeLessThan(1.1);
   await expect(page.getByRole('heading',{name:'Квартира, которую хочется показывать друзьям'})).toBeVisible();
   await expect(page.getByRole('button',{name:'Скрыть баннеры на эту сессию'})).toHaveCount(0);
   await expect(page.getByText(/01\s*\/\s*03/)).toHaveCount(0);
@@ -153,14 +155,14 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
   let tabs=page.getByRole('tablist',{name:'Баннеры'});
   await expect(tabs).toBeVisible();
   let dots=tabs.getByRole('tab');
-  await expect(dots).toHaveCount(3);
+  await expect(dots).toHaveCount(4);
   const firstWidth=(await dots.nth(0).boundingBox())!.width;
   const secondWidth=(await dots.nth(1).boundingBox())!.width;
   expect(Math.abs(firstWidth-secondWidth)).toBeLessThan(1);
   let activePill=tabs.locator('[class*="activePill"]').first();
   await expect(activePill).toBeVisible();
   await expect.poll(async()=>{
-    const pill=await activePill.boundingBox(),dot=await dots.nth(0).boundingBox();
+    const pill=await activePill.boundingBox(),dot=await dots.nth(1).boundingBox();
     return pill&&dot?Math.abs((pill.x+pill.width/2)-(dot.x+dot.width/2)):Infinity;
   }).toBeLessThan(1);
 
@@ -183,14 +185,14 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
 
   tabs=page.getByRole('tablist',{name:'Баннеры'});
   dots=tabs.getByRole('tab');
-  await dots.nth(1).click();
+  await dots.nth(2).click();
   tabs=page.getByRole('tablist',{name:'Баннеры'});
   dots=tabs.getByRole('tab');
-  await expect(dots.nth(1)).toHaveAttribute('aria-selected','true');
-  await expect(dots.nth(0)).toHaveAttribute('aria-selected','false');
+  await expect(dots.nth(2)).toHaveAttribute('aria-selected','true');
+  await expect(dots.nth(1)).toHaveAttribute('aria-selected','false');
   activePill=tabs.locator('[class*="activePill"]').first();
   await expect.poll(async()=>{
-    const pill=await activePill.boundingBox(),dot=await dots.nth(1).boundingBox();
+    const pill=await activePill.boundingBox(),dot=await dots.nth(2).boundingBox();
     return pill&&dot?Math.abs((pill.x+pill.width/2)-(dot.x+dot.width/2)):Infinity;
   }).toBeLessThan(1);
 

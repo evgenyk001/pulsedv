@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
-export function PageFrame({eyebrow,title,description,action,children}:{eyebrow:string;title:string;description:string;action?:ReactNode;children:ReactNode}){
-  return <div className="page">
+export function PageFrame({eyebrow,title,description,action,children,className}:{eyebrow:string;title:string;description:string;action?:ReactNode;children:ReactNode;className?:string}){
+  return <div className={["page",className].filter(Boolean).join(" ")}>
     <header className="pageHeader">
       <div className="pageHeading">
         <span>{eyebrow}</span>
