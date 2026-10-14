@@ -55,6 +55,7 @@ export function PromoCarousel(){
 
   const [api,setApi]=React.useState<CarouselApi>();
   const [selected,setSelected]=React.useState(0);
+  const [navigationReady,setNavigationReady]=React.useState(false);
   const autoplay=React.useRef(Autoplay({delay:6200,stopOnInteraction:false,stopOnMouseEnter:true,playOnInit:false}));
   const [mediaReady,setMediaReady]=React.useState(false);
   const impressed=React.useRef(new Set<string>());
@@ -87,8 +88,8 @@ export function PromoCarousel(){
   },[api,mediaReady,slides.length]);
 
   React.useEffect(()=>{
-    if(!api)return;
-    const sync=()=>setSelected(api.selectedScrollSnap());
+    if(!api){setNavigationReady(false);return;}
+    const sync=()=>{setSelected(api.selectedScrollSnap());setNavigationReady(api.scrollSnapList().length===slides.length)};
     const onPointerDown=()=>autoplay.current.stop();
     const onSettle=()=>{
       const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -164,7 +165,8 @@ export function PromoCarousel(){
                   role={isCurrent?"tab":undefined}
                   aria-selected={isCurrent?active:undefined}
                   aria-label={isCurrent?`Баннер ${slideIndex+1} из ${slides.length}`:undefined}
-                  tabIndex={isCurrent?0:-1}
+                  disabled={!navigationReady}
+                  tabIndex={isCurrent&&navigationReady?0:-1}
                   className={styles.dot+" "+(active?styles.dotCurrent:"")+" "+((edgeBefore||edgeAfter)&&!active?styles.dotEdge:"")}
                   onClick={()=>{
                     if(!isCurrent)return;
