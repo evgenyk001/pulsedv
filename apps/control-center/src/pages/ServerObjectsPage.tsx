@@ -1,4 +1,6 @@
 import {CatalogFreshnessEditor,CatalogFreshnessBadge} from '../components/CatalogFreshnessEditor';
+import {CatalogPhotosEditor} from '../components/CatalogPhotosEditor';
+import {propertyPriceRub} from '../../../../packages/domain/propertyPresentation';
 import {needsCatalogReview} from '../../../../packages/pulse-data/business';
 import { useDialog } from "../components/useDialog";
 import React from "react";
@@ -401,7 +403,7 @@ export function ServerObjectsPage(){
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>То, что формирует карточку и страницу ЖК</small></div></div>
         <div className="formGrid">
           {([["name","Название"],["city","Город"],["district","Район"],["address","Адрес"],["developerName","Застройщик"],["delivery","Срок сдачи"],["className","Класс"],["coverImageUrl","Обложка · URL"]] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input value={(p as any)[key]||""} onChange={e=>patch({[key]:e.target.value||(["address","coverImageUrl"].includes(key)?null:"")} as any)}/></label>)}
-          {([["priceFrom","Цена от, млн ₽"],["latitude","Широта"],["longitude","Долгота"],["sortOrder","Порядок"]] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input type="number" step="any" value={(p as any)[key]??""} onChange={e=>patch({[key]:e.target.value===""&&["latitude","longitude"].includes(key)?null:Number(e.target.value)} as any)}/></label>)}
+          {([["priceFrom","Цена от, ₽"],["latitude","Широта"],["longitude","Долгота"],["sortOrder","Порядок"]] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input type="number" step={key==='priceFrom'?'1':'any'} value={(key==='priceFrom'?propertyPriceRub(p.priceFrom):(p as any)[key])??""} onChange={e=>patch({[key]:e.target.value===""&&["latitude","longitude"].includes(key)?null:key==='priceFrom'?Math.round(Number(e.target.value))/1_000_000:Number(e.target.value)} as any)}/></label>)}
           <label className="controlField"><span>Статус</span><select value={p.status} onChange={e=>patch({status:e.target.value as PulseProperty["status"]})}><option value="draft">Черновик</option><option value="published">Опубликован</option><option value="archived">Архив</option></select></label>
           <label className="controlField"><span>Теги через запятую</span><input value={p.tags.join(", ")} onChange={e=>patch({tags:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})}/></label>
           <label className="controlField wide"><span>Описание</span><textarea rows={5} value={p.description} onChange={e=>patch({description:e.target.value})}/></label>
@@ -417,17 +419,14 @@ export function ServerObjectsPage(){
             <label className="secondaryAction fileButton"><Images size={15}/>Добавить фото<input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={e=>void upload(e.target.files,"gallery")}/></label>
           </div>
         </div>
-        <div className="mediaGrid">
-          {p.coverImageUrl&&<div className="mediaThumb coverThumb"><img src={p.coverImageUrl} alt=""/><span>Обложка</span></div>}
-          {p.images.map((photo,index)=><div className="mediaThumb" key={photo.id||index}><img src={photo.url} alt=""/><button aria-label="Удалить фото" onClick={()=>photo.id&&photo.url.startsWith("/media/")?void removeMedia(photo.id,"gallery"):patch({images:p.images.filter((_,i)=>i!==index)})}><Trash2 size={14}/></button><span>Фото {index+1}</span></div>)}
-        </div>
+        <CatalogPhotosEditor key={p.id} property={p} disabled={busy} onChange={images=>patch({images})} onRemove={index=>{const photo=p.images[index];if(photo.id&&photo.url.startsWith('/media/'))void removeMedia(photo.id,'gallery');else patch({images:p.images.filter((_,i)=>i!==index)})}}/>
       </section>
 
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:"1",areaFrom:null,areaTo:null,priceFrom:null,imageUrl:null,sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
         <div className="catalogEditorStack">{p.floorplans.map((plan,i)=><div className="editorRow floorplanEditor" key={plan.id||i}>
           <div className="formGrid">
-            {([["roomLabel","Комнатность"],["areaFrom","Площадь от, м²"],["areaTo","Площадь до, м²"],["priceFrom","Цена от, млн ₽"],["imageUrl","Изображение · URL"]] as const).map(([key,label])=><label className="controlField" key={key}><span>{label}</span><input type={["roomLabel","imageUrl"].includes(key)?"text":"number"} step="any" value={(plan as any)[key]??""} onChange={e=>patch({floorplans:p.floorplans.map((x,j)=>j!==i?x:{...x,[key]:["roomLabel","imageUrl"].includes(key)?e.target.value||null:e.target.value===""?null:Number(e.target.value)})})}/></label>)}
+            {([["roomLabel","Комнатность"],["areaFrom","Площадь от, м²"],["areaTo","Площадь до, м²"],["priceFrom","Цена от, ₽"],["imageUrl","Изображение · URL"]] as const).map(([key,label])=><label className="controlField" key={key}><span>{label}</span><input type={["roomLabel","imageUrl"].includes(key)?"text":"number"} step={key==='priceFrom'?'1':'any'} value={(key==='priceFrom'&&plan.priceFrom!==null?propertyPriceRub(plan.priceFrom):(plan as any)[key])??""} onChange={e=>patch({floorplans:p.floorplans.map((x,j)=>j!==i?x:{...x,[key]:["roomLabel","imageUrl"].includes(key)?e.target.value||null:e.target.value===""?null:key==='priceFrom'?Math.round(Number(e.target.value))/1_000_000:Number(e.target.value)})})}/></label>)}
           </div>
           <div className="rowActions">
             <label className="secondaryAction fileButton"><Upload size={14}/>Фото планировки<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>void uploadFloorplan(e.target.files?.[0],plan.id)}/></label>

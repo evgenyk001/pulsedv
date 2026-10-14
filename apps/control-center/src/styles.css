@@ -2373,3 +2373,8 @@ main{
 }
 
 .lossSummaryTotal{display:flex;align-items:baseline;gap:12px;margin:20px 0}.lossSummaryTotal span{color:var(--muted)}.lossSummaryTotal b{font-size:32px;color:inherit;font-variant-numeric:tabular-nums}.lossReasonList{display:grid;gap:18px}.lossReasonList>div>div:first-child{display:flex;justify-content:space-between;align-items:baseline;gap:16px;font-size:14px}.lossReasonList span{min-width:0;overflow-wrap:anywhere}.lossReasonList b{flex:none;font-variant-numeric:tabular-nums}.lossReasonTrack{height:7px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:8px}.lossReasonTrack i{display:block;height:100%;border-radius:inherit;background:var(--red)}
+
+.catalogPhotoHint{font-size:11px;line-height:1.5;color:var(--pc-muted);margin:0 0 14px}
+.catalogPhotoItem{min-width:0;display:flex;flex-direction:column;gap:8px}.catalogPhotoItem .controlField{min-width:0}.catalogPhotoItem input{width:100%;min-width:0}
+.catalogPhotoOrder{display:flex;gap:6px}.catalogPhotoOrder button{min-width:44px;min-height:36px;border-radius:10px;border:1px solid var(--pc-line);background:var(--pc-surface);color:var(--pc-text);display:grid;place-items:center}.catalogPhotoOrder button:disabled{opacity:.3}
+.catalogPhotoLink{margin-top:16px;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}.catalogPhotoLink label{flex:1;min-width:180px}.catalogPhotoLink button{min-height:44px}

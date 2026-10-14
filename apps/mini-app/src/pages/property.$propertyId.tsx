@@ -3,12 +3,16 @@ import React from "react";
 import {NativeSelect} from "../components/NativeSelect";
 import {propertyReturn} from "../helpers/navigationMemory";
 import {FloorplanViewer} from "../components/FloorplanViewer";
+import {PropertyGallery} from "../components/PropertyGallery";
+import {usePulseControlState} from "../helpers/usePulseControlState";
+import {propertyPhotos,propertyMortgageLink,propertyPriceLabel,propertyPriceRub} from "../../../../packages/domain/propertyPresentation";
+import {minimumMortgageDown,readMortgageScenario} from "../../../../packages/domain/mortgagePolicy";
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
 import { Link, useParams, useLocation } from "react-router-dom";
 import {
   ArrowLeft, Heart, Share2, MapPin, CalendarDays, Building2, Waves, Trees, CarFront,
   Baby, ShieldCheck, ChevronRight, Send, Sparkles, MapPinned, LayoutGrid, Ruler,
-  WalletCards, Image as ImageIcon, FileText
+  WalletCards, FileText, ArrowDown, MessageCircle
 } from "lucide-react";
 import { LeadSheet } from "../components/LeadSheet";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
@@ -27,7 +31,7 @@ const featureIcon=(name:string)=>{
   return Sparkles;
 };
 
-const priceLabel=(value:number)=>"от "+value.toFixed(1).replace(".",",")+" млн ₽";
+const priceLabel=propertyPriceLabel;
 
 export default function PropertyPage(){
   const {propertyId=""}=useParams();
@@ -36,9 +40,14 @@ export default function PropertyPage(){
   const rememberedReturn=propertyReturn();
   const returnTo=stateReturn??rememberedReturn;
   const {data:p,isLoading,error}=usePropertyDetail(propertyId);
+  const control=usePulseControlState();
+  const savedScenario=React.useMemo(()=>readMortgageScenario(localStorage),[]);
   const {toggle,isFavorite}=useFavoriteIds();
   const [photoIndex,setPhotoIndex]=React.useState(0);
   const [selectedRoom,setSelectedRoom]=React.useState("");
+  const [shareNotice,setShareNotice]=React.useState("");
+
+  React.useEffect(()=>{setPhotoIndex(0);setSelectedRoom("");setShareNotice("")},[propertyId]);
 
   React.useEffect(()=>{
     if(!p)return;
@@ -51,10 +60,11 @@ export default function PropertyPage(){
 
   const favorite=isFavorite(p.id);
   const developer=p.developerName&&p.developerName!=="Партнёр PULSE.DV"?p.developerName:"";
-  const gallery=[
-    ...(p.coverImageUrl?[p.coverImageUrl]:[]),
-    ...[...p.images].sort((a,b)=>a.sortOrder-b.sortOrder).map(x=>x.url).filter(url=>url!==p.coverImageUrl),
-  ].filter((url,index,all)=>all.indexOf(url)===index);
+  const gallery=propertyPhotos(p);
+  const mortgageRule=control.mortgagePrograms.find(rule=>rule.id===savedScenario?.programId)??control.mortgagePrograms[0];
+  const minDown=mortgageRule?minimumMortgageDown(propertyPriceRub(p.priceFrom),mortgageRule.minDownPct):null;
+  const presentation=p.documents?.find(doc=>doc.kind==="presentation");
+  const jump=(id:string)=>document.getElementById(id)?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
 
   const roomOptions=[
     ...new Set([...p.floorplans].sort((a,b)=>a.sortOrder-b.sortOrder).map(plan=>plan.roomLabel)),
@@ -74,36 +84,21 @@ export default function PropertyPage(){
         recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city,method:"share",outcome:"completed"}});
       }else if(navigator.clipboard){
         await navigator.clipboard.writeText(window.location.href);
+        setShareNotice("Ссылка скопирована");
         recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city,method:"clipboard",outcome:"completed"}});
       }
     }catch{/* Cancellation or denied clipboard access is not a completed action. */}
   };
 
-  const onGalleryScroll=(event:React.UIEvent<HTMLDivElement>)=>{
-    const node=event.currentTarget;
-    if(!node.clientWidth)return;
-    setPhotoIndex(Math.max(0,Math.min(gallery.length-1,Math.round(node.scrollLeft/node.clientWidth))));
-  };
-
   return <div className={styles.page}>
     <section className={styles.hero}>
-      <div className={styles.gallery} onScroll={onGalleryScroll} aria-label={"Фотографии "+p.name}>
-        {gallery.length
-          ?gallery.map((url,index)=><div className={styles.heroSlide} key={url}>
-              <img src={url} alt={index===0?p.name:""} loading={index===0?"eager":"lazy"}/>
-            </div>)
-          :<div className={styles.heroSlide}><div className={styles.heroFallback}><ImageIcon size={34}/><span>Фото проекта готовится</span></div></div>}
-      </div>
+      <PropertyGallery key={p.id} name={p.name} photos={gallery} index={photoIndex} onIndexChange={setPhotoIndex}/>
       <div className={styles.fade}/>
       <Link to={returnTo} className={styles.back} aria-label="Назад"><ArrowLeft size={19}/></Link>
       <div className={styles.actions}>
         <button onClick={()=>toggle(p.id)} className={favorite?styles.favorited:""} aria-label={favorite?"Убрать из избранного":"В избранное"}><Heart size={18} fill={favorite?"currentColor":"none"}/></button>
         <button onClick={share} aria-label="Поделиться"><Share2 size={18}/></button>
       </div>
-      <span className={styles.count}>{gallery.length>1?photoIndex+1+" / "+gallery.length:gallery.length===1?"1 фото":"Фото"}</span>
-      {gallery.length>1&&<div className={styles.galleryDots} aria-hidden="true">
-        {gallery.map((_,index)=><i key={index} className={index===photoIndex?styles.galleryDotActive:""}/>)}
-      </div>}
     </section>
 
     <main className={styles.content}>
@@ -115,19 +110,28 @@ export default function PropertyPage(){
         <h1>{p.name}</h1><PropertyFreshness id={p.id}/>
         <div className={styles.location}><MapPin size={14}/>{p.city} · {p.district}</div>
         <div className={styles.developerLine}><Building2 size={13}/>{developer||"Застройщик уточняется"}</div>
+        {shareNotice&&<span className={styles.shareNotice} role="status">{shareNotice}</span>}
       </section>
+
+      <nav className={styles.sectionNav} aria-label="Разделы жилого комплекса">
+        {p.floorplans.length>0&&<button type="button" onClick={()=>jump('property-plans')}><LayoutGrid size={15}/>Планировки</button>}
+        <button type="button" onClick={()=>jump('property-location')}><MapPin size={15}/>Расположение</button>
+        {!!p.documents?.length&&<button type="button" onClick={()=>jump('property-materials')}><FileText size={15}/>Документы</button>}
+      </nav>
 
       <section className={styles.priceCard}>
         <div>
-          <span>Квартиры</span>
+          <span>Стоимость квартиры</span>
           <strong>{priceLabel(p.priceFrom)}</strong>
-          <small>Актуальное наличие уточнит менеджер PULSE.DV</small>
+          <small>Стартовая цена. Стоимость зависит от планировки.</small>
         </div>
-        <Link to={"/mortgage?price="+Math.round(p.priceFrom*1_000_000)+"&property="+encodeURIComponent(p.id)}>
+        {minDown!==null&&mortgageRule&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(mortgageRule.minDownPct).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
+        <Link to={propertyMortgageLink(p)}>
           <WalletCards size={17}/>
           <span>Рассчитать ипотеку</span>
           <ChevronRight size={16}/>
         </Link>
+        {p.floorplans.length>0&&<button type="button" className={styles.pricePlans} onClick={()=>jump('property-plans')}>Выбрать планировку и её цену <ArrowDown size={14}/></button>}
       </section>
 
       <section className={styles.decisionCard} aria-label="Ключевые характеристики">
@@ -139,7 +143,7 @@ export default function PropertyPage(){
           <div><span><CalendarDays size={17}/></span><div><small>Срок сдачи</small><strong>{p.delivery||"Уточняется"}</strong></div></div>
           <div><span><MapPin size={17}/></span><div><small>Локация</small><strong>{p.district||"Уточняется"}</strong></div></div>
           <div><span><HighlightIcon size={17}/></span><div><small>Сильная сторона</small><strong>{highlightFeature?.label||p.className||"Параметры проекта"}</strong></div></div>
-          <div><span><LayoutGrid size={17}/></span><div><small>Выбор квартир</small><strong>{p.floorplans.length?p.floorplans.length+" вариантов":"Уточняется"}</strong></div></div>
+          <div><span><LayoutGrid size={17}/></span><div><small>Планировки</small><strong>{p.floorplans.length?p.floorplans.length+" в каталоге":"Уточняются"}</strong></div></div>
         </div>
       </section>
 
@@ -158,11 +162,12 @@ export default function PropertyPage(){
         </div>
       </section>}
 
-      <section className={styles.section} aria-label="Планировки ЖК">
+      <section id="property-plans" className={styles.section} aria-label="Планировки ЖК">
         <div className={styles.sectionHead}>
           <div><span>ПЛАНИРОВКИ</span><h2>Выберите квартиру</h2></div>
-          {p.floorplans.length>0&&<small>{p.floorplans.length} вариантов</small>}
+          {p.floorplans.length>0&&<small>{p.floorplans.length} планировок</small>}
         </div>
+        <p className={styles.sectionHint}>Откройте планировку, посмотрите её подробнее и рассчитайте платёж по выбранной цене.</p>
 
         {roomOptions.length>0&&<NativeSelect aria-label="Комнатность планировок" value={activeRoom} onChange={e=>setSelectedRoom(e.target.value)}>{roomOptions.map(room=><option key={room} value={room}>{room}</option>)}</NativeSelect>}
 
@@ -177,10 +182,16 @@ export default function PropertyPage(){
                 ?plan.areaFrom+(plan.areaTo&&plan.areaTo!==plan.areaFrom?"–"+plan.areaTo:"")+" м²"
                 :"Площадь уточняется"}</strong>
               <b>{plan.priceFrom!==null?priceLabel(plan.priceFrom):"Цена уточняется"}</b>
-              {plan.priceFrom!==null&&<Link to={"/mortgage?price="+Math.round(plan.priceFrom*1_000_000)+"&property="+encodeURIComponent(p.id)}>Рассчитать платёж <ChevronRight size={14}/></Link>}
+              {plan.priceFrom!==null&&<Link to={propertyMortgageLink(p,plan)}>Рассчитать платёж <ChevronRight size={14}/></Link>}
             </div>
           </TrackedFloorplan>)}
         </div>:<div className={styles.emptyPlans}>Планировки появятся после загрузки данных по проекту.</div>}
+      </section>
+
+      <section id="property-location" className={styles.section} aria-label="Расположение ЖК">
+        <div className={styles.sectionHead}><div><span>РАСПОЛОЖЕНИЕ</span><h2>Где находится дом</h2></div><MapPinned size={22}/></div>
+        <div className={styles.addressCard}><span><MapPin size={21}/></span><div><strong>{p.address||p.city}</strong><small>{[p.city,p.district].filter(Boolean).join(' · ')}</small></div></div>
+        <Link className={styles.mapLink} to={'/catalog?'+new URLSearchParams({view:'map',city:p.city,q:p.name})}>Посмотреть ЖК на карте <ChevronRight size={16}/></Link>
       </section>
 
       <section className={styles.section}>
@@ -195,7 +206,7 @@ export default function PropertyPage(){
         </div>
       </section>
 
-      {(p.documents??[]).length>0&&<section className={styles.section}>
+      {(p.documents??[]).length>0&&<section id="property-materials" className={styles.section}>
         <div className={styles.sectionHead}><div><span>МАТЕРИАЛЫ</span><h2>Документы проекта</h2></div><small>{(p.documents??[]).length} файлов</small></div>
         <div className={styles.materials}>
           {(p.documents??[]).map(doc=><a key={doc.id||doc.url} href={doc.url} target="_blank" rel="noreferrer">
@@ -205,6 +216,8 @@ export default function PropertyPage(){
           </a>)}
         </div>
       </section>}
+
+      <section className={styles.helpCard}><span><MessageCircle size={22}/></span><h2>Разберёмся в деталях вместе</h2><p>Уточним наличие, сравним планировки и подберём условия покупки именно для вас.</p><LeadSheet title="Задать вопрос по ЖК" project={p.name} propertyId={p.id} source="property"><button>Задать вопрос <ChevronRight size={16}/></button></LeadSheet></section>
 
       <Sheet>
         <SheetTrigger asChild>
@@ -222,9 +235,9 @@ export default function PropertyPage(){
     </main>
 
     <div className={styles.ctaBar}>
-      <LeadSheet title="Получить презентацию" project={p.name} propertyId={p.id} source="presentation">
+      {presentation?<a className={styles.secondary} href={presentation.url} target="_blank" rel="noreferrer"><FileText size={17}/><span>Презентация</span></a>:<LeadSheet title="Получить презентацию" project={p.name} propertyId={p.id} source="presentation">
         <button className={styles.secondary}><Send size={17}/><span>Презентация</span></button>
-      </LeadSheet>
+      </LeadSheet>}
       <LeadSheet title="Узнать наличие" project={p.name} propertyId={p.id} source="property">
         <button className={styles.primary}>Узнать наличие <ChevronRight size={18}/></button>
       </LeadSheet>
