@@ -92,4 +92,8 @@
  .partnerCalculation>div { gap:10px; align-items:start; }
  .partnerForm .partnerForm { padding:15px; }
 }
+@media(max-width:380px) {
+ .partnersWorkspace .segmented { display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; overflow:visible; }
+ .partnersWorkspace .segmented button { width:100%; white-space:normal; }
+}
 @media(prefers-reduced-motion:reduce) { .partnersWorkspace .partnerReferralRow { transition:none; } }

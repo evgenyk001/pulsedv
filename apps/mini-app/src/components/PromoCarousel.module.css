@@ -204,7 +204,7 @@
 
 /* The referral programme is a bright PULSE campaign; other partner ads keep their own look. */
 .partnerProgram{background:#f20d1d}
-.partnerProgram>img,.partnerProgram.bannerActive>img{filter:none;object-position:60% center}
+.partnerProgram>img,.partnerProgram.bannerActive>img{filter:none;object-position:right center}
 .partnerProgram .scrim{background:linear-gradient(90deg,rgba(218,5,25,.92),rgba(232,5,27,.72) 38%,rgba(242,13,29,.05) 77%)}
 .partnerProgram .ambient{background:radial-gradient(circle,rgba(255,124,75,.22),transparent 70%)}
 .partnerProgram .content h1{max-width:67%;font-size:27px;line-height:1.03;margin-top:14px;text-shadow:0 2px 15px rgba(160,0,16,.18)}
