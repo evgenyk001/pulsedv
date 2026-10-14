@@ -115,6 +115,7 @@ test('Mini App home polish: property rail shadow fades before crop',async({page}
 
 test('Mini App banners: premium chrome without dismiss or counters',async({page})=>{
   await page.setViewportSize({width:390,height:844});
+  await page.emulateMedia({reducedMotion:'reduce'});
   await page.goto('/pulsedv/mini-app/');
   const skip=page.getByRole('button',{name:'Пропустить онбординг'});
   if(await skip.count())await skip.click();
