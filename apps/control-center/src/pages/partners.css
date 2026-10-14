@@ -86,9 +86,9 @@
  .partnerDrawer { padding:20px!important; padding-bottom:calc(24px + env(safe-area-inset-bottom))!important; }
  .partnerDrawer .primaryAction,.partnerDrawer .secondaryAction { min-height:46px!important; white-space:normal; text-align:center; line-height:1.45; }
  .partnerDrawer .partnerIdentity .secondaryAction { width:100%; }
- .partnerDrawer .controlField input,.partnerDrawer .controlField select,.partnerDrawer .controlField textarea { font-size:16px!important; width:100%; }
- .partnerDrawer input[type=date] { min-height:48px!important; -webkit-appearance:none; appearance:none; }
- .partnerDrawer input[type=date]::-webkit-date-and-time-value { text-align:left; }
+ .control .partnerDrawer .controlField input,.control .partnerDrawer .controlField select,.control .partnerDrawer .controlField textarea { font-size:16px!important; width:100%; }
+ .control .partnerDrawer input[type=date] { min-height:48px!important; -webkit-appearance:none; appearance:none; }
+ .control .partnerDrawer input[type=date]::-webkit-date-and-time-value { text-align:left; }
  .partnerCalculation>div { gap:10px; align-items:start; }
  .partnerForm .partnerForm { padding:15px; }
 }
