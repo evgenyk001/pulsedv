@@ -110,7 +110,7 @@ export function ContentPage(){
     const url=banner.actionUrl||"";
     if(!url)return "none";
     if(url.startsWith("/property/"))return "property";
-    if(["/catalog","/selection","/mortgage","/journey"].includes(url))return url;
+    if(["/catalog","/selection","/mortgage","/journey","/partners"].includes(url))return url;
     if(url.startsWith("https://"))return "external";
     return "custom";
   };
@@ -179,7 +179,7 @@ export function ContentPage(){
                 <div className="bannerActionBox">
                   <div className="bannerSectionTitle"><ExternalLink size={16}/><div><b>Действие по нажатию</b><small>Весь баннер кликабелен. Если действие отключено, кнопка в баннере не показывается.</small></div></div>
                   <div className="formGrid">
-                    <label className="controlField"><span>Куда ведёт</span><select value={preset} onChange={e=>applyActionPreset(banner,e.target.value)}><option value="/catalog">Каталог</option><option value="/selection">PULSE Select</option><option value="/mortgage">Ипотека</option><option value="/journey">Мои подборки и показы</option><option value="property">Конкретный ЖК</option><option value="external">Внешний сайт HTTPS</option><option value="custom">Другой экран Mini App</option><option value="none">Без перехода</option></select></label>
+                    <label className="controlField"><span>Куда ведёт</span><select value={preset} onChange={e=>applyActionPreset(banner,e.target.value)}><option value="/catalog">Каталог</option><option value="/selection">PULSE Select</option><option value="/mortgage">Ипотека</option><option value="/journey">Мои подборки и показы</option><option value="/partners">Партнёрская программа</option><option value="property">Конкретный ЖК</option><option value="external">Внешний сайт HTTPS</option><option value="custom">Другой экран Mini App</option><option value="none">Без перехода</option></select></label>
                     <label className="controlField"><span>Текст кнопки</span><input value={banner.ctaLabel||""} disabled={!banner.actionUrl} maxLength={100} onChange={e=>patchBanner(banner.id,{ctaLabel:e.target.value||null})}/></label>
                     {preset==="property"&&<label className="controlField wide"><span>Жилой комплекс</span><select value={(banner.actionUrl||"").replace("/property/","")} onChange={e=>patchBanner(banner.id,{actionUrl:"/property/"+e.target.value})}>{state.properties.filter(item=>item.status==="published").map(property=><option key={property.id} value={property.id}>{property.name}</option>)}</select></label>}
                     {(preset==="external"||preset==="custom")&&<label className="controlField wide"><span>{preset==="external"?"HTTPS-ссылка":"Внутренний путь"}</span><input value={banner.actionUrl||""} placeholder={preset==="external"?"https://example.com":"/catalog?city=Владивосток"} onChange={e=>patchBanner(banner.id,{actionUrl:e.target.value||null})}/></label>}

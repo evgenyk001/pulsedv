@@ -106,7 +106,13 @@ export const DEFAULT_PROPERTIES:PulseProperty[]=[
   {id:"artem",name:"ЖК Аэропорт",city:"Артём",district:"Северный",address:"Артём",latitude:43.35,longitude:132.18,priceFrom:4.9,delivery:"2026",className:"Комфорт",status:"published",description:"Современный проект в Артёме с удобным выездом и базовой инфраструктурой рядом.",developerName:"Партнёр PULSE.DV",tags:["Новый район"],coverImageUrl:"https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=1000&q=85",sortOrder:4,images:[{url:"https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=1200&q=85",alt:"ЖК Аэропорт",sortOrder:1}],features:[{label:"Удобный выезд",icon:"map-pin",sortOrder:1},{label:"Парковка",icon:"car",sortOrder:2}],floorplans:[{roomLabel:"Студия",areaFrom:25,areaTo:30,priceFrom:4.9,imageUrl:null,sortOrder:1},{roomLabel:"1",areaFrom:33,areaTo:42,priceFrom:5.3,imageUrl:null,sortOrder:2},{roomLabel:"2",areaFrom:50,areaTo:64,priceFrom:6.7,imageUrl:null,sortOrder:3}]}
 ];
 
+export const DEFAULT_PARTNER_BANNER:PulseBanner={
+  id:"partner-program",title:"Зарабатывайте с PULSE",body:"Знакомый ищет квартиру? Пригласите его и получите вознаграждение после сделки.",
+  imageUrl:"https://evgenyk001.github.io/pulsedv/mini-app/_cdn/static/partner-referral.webp",ctaLabel:"Стать партнёром",actionUrl:"/partners",
+  city:"",audience:"",kind:"promo",eyebrow:"РЕКОМЕНДУЙТЕ PULSE",enabled:true,sortOrder:0
+};
 export const DEFAULT_BANNERS:PulseBanner[]=[
+  DEFAULT_PARTNER_BANNER,
   {id:"b1",title:"Квартира, которую хочется показывать друзьям",body:"Проекты Владивостока, Артёма и Уссурийска в одном каталоге.",imageUrl:null,ctaLabel:"Смотреть проекты",actionUrl:"/catalog",city:"Приморье",audience:"",enabled:true,sortOrder:1},
   {id:"b2",title:"Сначала платёж. Потом — подходящие квартиры",body:"Подберём проекты под комфортный ежемесячный платёж.",imageUrl:null,ctaLabel:"Рассчитать",actionUrl:"/mortgage",city:"Ипотека",audience:"",enabled:true,sortOrder:2},
   {id:"b3",title:"Не листайте сотни квартир вручную",body:"Ответьте на несколько вопросов — покажем подходящие ЖК.",imageUrl:null,ctaLabel:"Начать подбор",actionUrl:"/selection",city:"PULSE Select",audience:"",enabled:true,sortOrder:3}

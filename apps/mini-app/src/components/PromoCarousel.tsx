@@ -4,7 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "./Carousel";
 import Autoplay from "embla-carousel-autoplay";
 import { usePromoBanners } from "../helpers/usePromoBanners";
-import { recordPulseEvent } from "../../../../packages/pulse-data";
+import { recordPulseEvent, DEFAULT_PARTNER_BANNER } from "../../../../packages/pulse-data";
 import styles from "./PromoCarousel.module.css";
 
 type Slide={
@@ -44,7 +44,7 @@ export function PromoCarousel(){
   const {data:managed=[]}=usePromoBanners();
   const slides=React.useMemo<Slide[]>(()=>managed.length?managed.map((banner,index)=>({
     id:banner.id,
-    image:banner.imageUrl||fallbackSlides[index%fallbackSlides.length].image,
+    image:banner.imageUrl===DEFAULT_PARTNER_BANNER.imageUrl?asset("_cdn/static/partner-referral.webp"):banner.imageUrl||(fallbackSlides.find(slide=>slide.to===banner.actionUrl)||fallbackSlides[index%fallbackSlides.length]).image,
     eyebrow:banner.eyebrow||banner.city||banner.audience||(banner.kind==="partner"?"Партнёр PULSE.DV":banner.kind==="giveaway"?"Специальное предложение":"PULSE.DV"),
     title:banner.title,
     text:banner.body,
@@ -55,6 +55,7 @@ export function PromoCarousel(){
 
   const [api,setApi]=React.useState<CarouselApi>();
   const [selected,setSelected]=React.useState(0);
+  const [navigationReady,setNavigationReady]=React.useState(false);
   const autoplay=React.useRef(Autoplay({delay:6200,stopOnInteraction:false,stopOnMouseEnter:true,playOnInit:false}));
   const [mediaReady,setMediaReady]=React.useState(false);
   const impressed=React.useRef(new Set<string>());
@@ -87,8 +88,8 @@ export function PromoCarousel(){
   },[api,mediaReady,slides.length]);
 
   React.useEffect(()=>{
-    if(!api)return;
-    const sync=()=>setSelected(api.selectedScrollSnap());
+    if(!api){setNavigationReady(false);return;}
+    const sync=()=>{setSelected(api.selectedScrollSnap());setNavigationReady(api.scrollSnapList().length===slides.length)};
     const onPointerDown=()=>autoplay.current.stop();
     const onSettle=()=>{
       const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -133,7 +134,7 @@ export function PromoCarousel(){
           const isCurrent=selected===index;
           return <CarouselItem key={id} className={styles.slide}>
             <BannerLink to={to} className={styles.bannerLink} label={title} onActivate={()=>recordPulseEvent({eventType:"banner_click",entityType:"banner",entityId:id,metadata:{kind,position:index+1,target:to}})}>
-              <article className={styles.banner+" "+styles[kind]+" "+(isCurrent?styles.bannerActive:"")}>
+              <article className={styles.banner+" "+styles[kind]+" "+(to&&/^\/partners(?:[/?#]|$)/.test(to)?styles.partnerProgram+" ":"")+(isCurrent?styles.bannerActive:"")}>
                 <img src={image} alt="" loading="eager" decoding="async" fetchPriority={index===0?"high":"auto"}/>
                 <div className={styles.scrim}/>
                 <div className={styles.ambient}/>
@@ -164,7 +165,8 @@ export function PromoCarousel(){
                   role={isCurrent?"tab":undefined}
                   aria-selected={isCurrent?active:undefined}
                   aria-label={isCurrent?`Баннер ${slideIndex+1} из ${slides.length}`:undefined}
-                  tabIndex={isCurrent?0:-1}
+                  disabled={!navigationReady}
+                  tabIndex={isCurrent&&navigationReady?0:-1}
                   className={styles.dot+" "+(active?styles.dotCurrent:"")+" "+((edgeBefore||edgeAfter)&&!active?styles.dotEdge:"")}
                   onClick={()=>{
                     if(!isCurrent)return;

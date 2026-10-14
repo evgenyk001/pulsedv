@@ -2,7 +2,7 @@ import {lossError} from './loss';
 import {guardLocalPartnerFinance} from '../partners/finance';
 import { runtime, stageState, updateRemote, enqueueEvent } from "./runtime";
 import { DEFAULT_LEAD_ENGINE_CONFIG, scoreLeadEvents, type LeadPriority } from "../lead-engine";
-import { DEFAULT_STATE, DEFAULT_PROPERTIES, DEFAULT_BANNERS, DEFAULT_MORTGAGE_PROGRAMS, type PropertyStatus, type PulseProperty, type PulseBanner, type MortgageProgramRule, type PulseSelectConfig, type PulseContentConfig, type PulseState, type PulseLead, type PulseVisitorProfile, type PulseTask, type PulseEvent } from "./model";
+import { DEFAULT_STATE, DEFAULT_PROPERTIES, DEFAULT_BANNERS, DEFAULT_PARTNER_BANNER, DEFAULT_MORTGAGE_PROGRAMS, type PropertyStatus, type PulseProperty, type PulseBanner, type MortgageProgramRule, type PulseSelectConfig, type PulseContentConfig, type PulseState, type PulseLead, type PulseVisitorProfile, type PulseTask, type PulseEvent } from "./model";
 export * from "./model";
 const STATE_KEY="pulse.dv.control.state.v1";
 const LEADS_KEY="pulse.dv.control.leads.v1";
@@ -47,7 +47,20 @@ function mergeState(input:Partial<PulseState>|null|undefined):PulseState{
 export function getPulseState():PulseState{
   if(runtime.enabled)return runtime.snapshot.state;
   if(!canStore())return DEFAULT_STATE;
-  try{return mergeState(JSON.parse(localStorage.getItem(STATE_KEY)||"null"))}
+  try{
+    const state=mergeState(JSON.parse(localStorage.getItem(STATE_KEY)||"null"));
+    // One-time demo upgrade. Later edits, disabling or removing the campaign remain authoritative.
+    const upgradeKey="pulse.dv.partner-banner.v1";
+    if(!localStorage.getItem(upgradeKey)){
+      if(!state.banners.some(b=>b.id===DEFAULT_PARTNER_BANNER.id)){
+        state.banners=[{...DEFAULT_PARTNER_BANNER},...state.banners];
+        state.updatedAt=now();
+        try{localStorage.setItem(STATE_KEY,JSON.stringify(state))}catch{/* Keep the readable state if storage is full. */}
+      }
+      try{localStorage.setItem(upgradeKey,"1")}catch{/* Storage may be restricted. */}
+    }
+    return state;
+  }
   catch{return DEFAULT_STATE}
 }
 
