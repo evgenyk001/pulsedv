@@ -15,6 +15,10 @@ for(const width of [320,390,430])test(`Home collapse ${width}px: continuous nati
   await expect(page.getByRole('tab',{name:'Баннер 2 из 4',exact:true})).toBeEnabled();
   await page.getByRole('tab',{name:'Баннер 2 из 4',exact:true}).click();
   await expect(page.getByRole('tab',{name:'Баннер 2 из 4',exact:true})).toHaveAttribute('aria-selected','true');
+  await expect.poll(()=>page.getByRole('heading',{name:'Квартира, которую хочется показывать друзьям'}).evaluate(el=>{
+    const article=el.closest('article')!,wrap=article.closest('[role=group]')!.parentElement!.parentElement!;
+    return Math.abs(article.getBoundingClientRect().left-wrap.getBoundingClientRect().left);
+  })).toBeLessThan(1.1);
   const initial=await page.evaluate(()=>({height:document.documentElement.scrollHeight,y:scrollY}));
   expect(initial.y).toBe(0);
   const headerTop=(await header.boundingBox())!.y;

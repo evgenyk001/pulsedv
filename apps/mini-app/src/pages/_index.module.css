@@ -2,6 +2,8 @@
 @keyframes homeRise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.header,.searchBar,.quickActions,.section,.concierge{animation:none!important}.searchBar,.searchBar button,.quickActions a,.quickActions a>svg,.sectionHead>a svg,.concierge,.concierge>svg{transition:none!important}}
 /* The fixed home bar sits outside the collapsing paint area; the document keeps its height. */
 .headerSlot{height:52px;flex:none}
+/* Even a short feed can reach the fully collapsed position, without changing height on scroll. */
+.feed{display:flex;flex-direction:column;gap:var(--app-page-gap);min-height:calc(100svh - 186px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
 .pinnedHeader{
  --header-progress:0;
  position:fixed;z-index:30;left:50%;top:calc(env(safe-area-inset-top,0px) + 10px);

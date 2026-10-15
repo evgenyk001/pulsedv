@@ -55,6 +55,7 @@ export default function HomePage(){
     </div>
     </div>
 
+    <div className={styles.feed}>
     <ContinueChoice/>
 
     <section className={styles.section}>
@@ -68,5 +69,6 @@ export default function HomePage(){
       <ChevronRight size={18}/>
     </Link>
     <PartnerEntryCard/>
+    </div>
   </div>
 }
