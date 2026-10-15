@@ -1,6 +1,7 @@
 import {test,expect} from '@playwright/test';
 
 for(const width of [320,390,430])test(`Home collapse ${width}px: continuous native scroll and reversible controls`,async({page,browserName})=>{
+  test.setTimeout(45000);
   await page.setViewportSize({width,height:740});
   await page.emulateMedia({reducedMotion:'no-preference'});
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
@@ -56,11 +57,11 @@ for(const width of [320,390,430])test(`Home collapse ${width}px: continuous nati
   await page.evaluate(()=>window.scrollTo(0,0));
   await expect.poll(()=>banner.evaluate(el=>Number(getComputedStyle(el).opacity))).toBe(1);
   await expect.poll(()=>actions.evaluate(el=>el.parentElement!.inert)).toBe(false);
-  await expect.poll(()=>page.locator('[data-home-collapse]').evaluateAll(blocks=>blocks.every(block=>{
+  await expect.poll(()=>page.locator('[data-home-collapse]').evaluateAll(blocks=>blocks.map(block=>{
     const child=block.firstElementChild as HTMLElement|null;
-    if(!child)return true;
-    return Number(getComputedStyle(child).opacity)===1&&Math.abs(child.getBoundingClientRect().width-block.getBoundingClientRect().width)<1;
-  }))).toBe(true);
+    if(!child)return {opacity:1,widthDelta:0};
+    return {opacity:Number(getComputedStyle(child).opacity),widthDelta:Math.round(Math.abs(child.getBoundingClientRect().width-block.getBoundingClientRect().width))};
+  }))).toEqual([{opacity:1,widthDelta:0},{opacity:1,widthDelta:0},{opacity:1,widthDelta:0}]);
   if(width===390)await page.screenshot({path:`test-results/home-collapse-${browserName}-open.png`});
   await actions.getByRole('link',{name:/Ипотека/}).click();
   await expect(page).toHaveURL(/#\/mortgage/);

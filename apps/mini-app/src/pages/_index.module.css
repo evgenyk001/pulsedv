@@ -22,6 +22,8 @@
 .intro{display:flex;flex-direction:column;gap:var(--app-page-gap);clip-path:inset(var(--intro-clip,-12px) -24px -24px);overflow-anchor:none}
 .collapseBlock{min-width:0}
 .collapseBlock:empty{display:none}
+/* WebKit can retain an intrinsic form width after resizing a transformed layer. */
+.collapseBlock>.searchBar{width:100%;min-width:0;margin:0}
 .collapseBlock> *{
  transform-origin:center bottom;
  animation:none;will-change:transform,opacity;
