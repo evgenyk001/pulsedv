@@ -20,12 +20,10 @@
 .pinnedHeader .brandName{transform-origin:left center;transform:translateY(calc(var(--header-progress) * 5px)) scale(calc(1 - var(--header-progress) * .04))}
 .pinnedHeader .brandSub{opacity:calc(1 - var(--header-progress));transform:translateY(calc(var(--header-progress) * -3px))}
 .intro{display:flex;flex-direction:column;gap:var(--app-page-gap);clip-path:inset(var(--intro-clip,-12px) -24px -24px);overflow-anchor:none}
-.collapseBlock{--collapse-progress:0;min-width:0}
+.collapseBlock{min-width:0}
 .collapseBlock:empty{display:none}
 .collapseBlock> *{
  transform-origin:center bottom;
- transform:scale(calc(1 - var(--collapse-progress) * .18));
- opacity:calc(1 - var(--collapse-progress));
  animation:none;will-change:transform,opacity;
 }
 @media(max-width:360px){.pinnedHeader{width:calc(100% - 28px)}.pinnedHeader:before{left:-14px;right:-14px}}

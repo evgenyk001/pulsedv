@@ -11,42 +11,46 @@ export function useHomeCollapse(){
     const content=intro.current,bar=header.current;
     if(!content||!bar)return;
     const motion=window.matchMedia('(prefers-reduced-motion: reduce)');
-    let frame=0,top=0,barBottom=0;
-    let blocks:{element:HTMLElement;top:number;height:number}[]=[];
+    let frame=0;
     const paint=()=>{
       frame=0;
       const scroll=Math.max(0,window.scrollY);
+      // Read untransformed wrappers together, before writing their children's paint styles.
+      // Fresh rectangles also cover Safari layout changes when a sheet or keyboard closes.
+      const barBottom=bar.getBoundingClientRect().bottom;
+      const clip=Math.max(-12,barBottom+12-content.getBoundingClientRect().top);
+      const blocks=Array.from(content.querySelectorAll<HTMLElement>('[data-home-collapse]')).map(element=>{
+        const rect=element.getBoundingClientRect();
+        return {element,progress:clamp((barBottom+12-rect.top)/Math.max(1,rect.height))};
+      });
       bar.style.setProperty('--header-progress',String(clamp(scroll/80)));
-      content.style.setProperty('--intro-clip',`${Math.max(-12,scroll+barBottom+12-top)}px`);
-      for(const block of blocks){
-        const progress=clamp((scroll+barBottom+12-block.top)/block.height);
-        // Reduced motion keeps ordinary scrolling and the pinned header, without scaling/fading.
-        block.element.style.setProperty('--collapse-progress',String(motion.matches?0:progress));
-        block.element.inert=progress===1&&!block.element.contains(document.activeElement);
+      content.style.setProperty('--intro-clip',`${clip}px`);
+      for(const {element,progress} of blocks){
+        const visual=element.firstElementChild as HTMLElement|null;
+        if(visual){
+          // Write directly to the composited child so WebKit restores its layer on reverse scroll.
+          visual.style.transform=motion.matches?'none':`scale(${1-progress*.18})`;
+          visual.style.opacity=String(motion.matches?1:1-progress);
+        }
+        element.inert=progress===1&&!element.contains(document.activeElement);
       }
     };
     const schedule=()=>{if(!frame)frame=requestAnimationFrame(paint)};
-    const measure=()=>{
-      top=content.getBoundingClientRect().top+window.scrollY;
-      barBottom=bar.getBoundingClientRect().bottom;
-      blocks=Array.from(content.querySelectorAll<HTMLElement>('[data-home-collapse]')).map(element=>({
-        element,top:element.getBoundingClientRect().top+window.scrollY,height:Math.max(1,element.offsetHeight),
-      }));
-      schedule();
-    };
-    measure();
-    const observer=new ResizeObserver(measure);
+    schedule();
+    const observer=new ResizeObserver(schedule);
     observer.observe(content);
     window.addEventListener('scroll',schedule,{passive:true});
-    window.addEventListener('resize',measure);
-    window.visualViewport?.addEventListener('resize',measure);
+    window.addEventListener('resize',schedule);
+    window.addEventListener('focusin',schedule);
+    window.visualViewport?.addEventListener('resize',schedule);
     motion.addEventListener('change',schedule);
     return()=>{
       cancelAnimationFrame(frame);
       observer.disconnect();
       window.removeEventListener('scroll',schedule);
-      window.removeEventListener('resize',measure);
-      window.visualViewport?.removeEventListener('resize',measure);
+      window.removeEventListener('resize',schedule);
+      window.removeEventListener('focusin',schedule);
+      window.visualViewport?.removeEventListener('resize',schedule);
       motion.removeEventListener('change',schedule);
     };
   },[]);

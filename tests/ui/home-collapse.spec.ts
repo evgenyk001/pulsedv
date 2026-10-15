@@ -56,6 +56,11 @@ for(const width of [320,390,430])test(`Home collapse ${width}px: continuous nati
   await page.evaluate(()=>window.scrollTo(0,0));
   await expect.poll(()=>banner.evaluate(el=>Number(getComputedStyle(el).opacity))).toBe(1);
   await expect.poll(()=>actions.evaluate(el=>el.parentElement!.inert)).toBe(false);
+  await expect.poll(()=>page.locator('[data-home-collapse]').evaluateAll(blocks=>blocks.every(block=>{
+    const child=block.firstElementChild as HTMLElement|null;
+    if(!child)return true;
+    return Number(getComputedStyle(child).opacity)===1&&Math.abs(child.getBoundingClientRect().width-block.getBoundingClientRect().width)<1;
+  }))).toBe(true);
   if(width===390)await page.screenshot({path:`test-results/home-collapse-${browserName}-open.png`});
   await actions.getByRole('link',{name:/Ипотека/}).click();
   await expect(page).toHaveURL(/#\/mortgage/);
