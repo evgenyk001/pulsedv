@@ -9,16 +9,19 @@ import { PropertyCard } from "../components/PropertyCard";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
 import { useFeaturedProperties } from "../helpers/useCatalog";
 import { Input } from "../components/Input";
+import { useHomeCollapse } from "../helpers/useHomeCollapse";
 import styles from "./_index.module.css";
 
 export default function HomePage(){
   const navigate=useNavigate();
+  const {intro,header}=useHomeCollapse();
   const [query,setQuery]=React.useState("");
   const {data:properties=[],isLoading}=useFeaturedProperties(3);
   const submit=(e:React.FormEvent)=>{e.preventDefault();navigate(`/catalog${query?`?q=${encodeURIComponent(query)}`:""}`)};
 
   return <div className={styles.page}>
-    <header className={styles.header}>
+    <div className={styles.headerSlot}>
+    <header ref={header} className={`${styles.header} ${styles.pinnedHeader}`} role="banner" aria-label="PULSE.DV">
       <div className={styles.brand}>
         <div><div className={styles.brandName}>PULSE.DV</div><div className={styles.brandSub}>Новостройки Приморья</div></div>
       </div>
@@ -27,21 +30,30 @@ export default function HomePage(){
         <Link to="/profile" className={styles.profileButton} aria-label="Профиль"><UserRound size={18}/></Link>
       </div>
     </header>
+    </div>
 
+    <div ref={intro} className={styles.intro} aria-label="Быстрый старт">
+    <div data-home-collapse className={styles.collapseBlock}>
     <form className={styles.searchBar} onSubmit={submit}>
       <Search size={18}/>
       <Input value={query} onChange={(e)=>setQuery(e.target.value)} placeholder="ЖК, район или застройщик" aria-label="Поиск"/>
       <button type="submit" aria-label="Найти"><ChevronRight size={17}/></button>
     </form>
+    </div>
 
+    <div data-home-collapse className={styles.collapseBlock}>
     <PromoCarousel/>
+    </div>
 
-    <section className={styles.quickActions}>
+    <div data-home-collapse className={styles.collapseBlock}>
+    <section className={styles.quickActions} aria-label="Быстрые действия">
       <Link to="/catalog"><span><Building2 size={18}/></span><div><b>Каталог</b><small>Все новостройки</small></div><ChevronRight size={16}/></Link>
       <Link to="/map"><span><MapPin size={18}/></span><div><b>На карте</b><small>По районам</small></div><ChevronRight size={16}/></Link>
       <Link to="/mortgage"><span><Percent size={18}/></span><div><b>Ипотека</b><small>Расчёт платежа</small></div><ChevronRight size={16}/></Link>
       <Link to="/selection"><span><Sparkles size={18}/></span><div><b>PULSE Select</b><small>Подбор под вас</small></div><ChevronRight size={16}/></Link>
     </section>
+    </div>
+    </div>
 
     <ContinueChoice/>
 
