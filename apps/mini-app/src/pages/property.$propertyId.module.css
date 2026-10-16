@@ -148,12 +148,8 @@
 .materials small{margin-top:3px;font-size:7.8px;color:var(--muted-foreground)}
 
 
-/* Project information shares inset list surfaces and dividers. */
-.section,.decisionCard{background:var(--list-surface);border:0;box-shadow:none;border-radius:var(--list-radius);padding:20px var(--list-inset)}
-.decisionHead{border:0;padding-bottom:10px}.decisionHead h2,.sectionHead h2{font-size:18px;line-height:1.3}.sectionHead span,.decisionHead>div>span{font-size:9px;color:var(--muted-foreground);font-weight:600}
-.decisionRows{display:flex;flex-direction:column;gap:0}.decisionRows>div{position:relative;min-height:64px;padding:12px 0;border:0;grid-template-columns:32px minmax(0,1fr);gap:12px}.decisionRows>div:not(:last-child):after{content:'';position:absolute;bottom:0;left:44px;right:0;height:var(--list-hairline);background:var(--list-divider)}
-.decisionRows>div>span{width:32px;height:32px;border:0;border-radius:9px;background:#438bfa;color:white}.decisionRows>div:nth-child(2)>span{background:#55be72}.decisionRows>div:nth-child(3)>span{background:#f2b148}.decisionRows>div:nth-child(4)>span{background:#a477e8}.decisionRows small{font-size:11px}.decisionRows strong{font-size:14px;line-height:1.4;font-weight:500}
-.features{display:flex;flex-direction:column;gap:0}.features>div{position:relative;display:flex;flex-direction:row;align-items:center;gap:12px;min-height:56px;padding:12px 0;background:none;border:0;border-radius:0}.features>div:not(:last-child):after{content:'';position:absolute;bottom:0;left:44px;right:0;height:var(--list-hairline);background:var(--list-divider)}.features>div>span{width:32px;height:32px;flex:none;background:var(--muted);border-radius:9px;color:var(--info)}.features strong{font-size:13px;line-height:1.45;font-weight:500;text-align:left}
-.specs>div{min-height:54px;border-color:var(--list-divider);gap:16px}.specs span{font-size:12px}.specs strong{font-size:13px;line-height:1.45;font-weight:500;overflow-wrap:anywhere}.desc{font-size:13px;line-height:1.7}
-.materials{gap:0}.materials a{position:relative;min-height:64px;padding:12px 0;background:none;border:0;border-radius:0;gap:12px}.materials a:not(:last-child):after{content:'';position:absolute;bottom:0;left:44px;right:0;height:var(--list-hairline);background:var(--list-divider)}.materials a>span{width:32px;height:32px;border:0;border-radius:9px;background:#438bfa;color:white}.materials strong{font-size:13px;font-weight:500;white-space:normal;overflow-wrap:anywhere}.materials small{font-size:11px}
-.developer{background:var(--list-surface);border:0;box-shadow:none;border-radius:var(--list-radius);padding:16px}.developer span{font-size:11px}.developer strong{font-size:14px}.developer small{font-size:10.5px}
+/* Preserve the project's feature cards, gallery and facts layout. */
+.decisionRows>div>span,.features>div>span,.addressCard>span,.materials a>span,.helpCard>span,.devIcon{background:var(--icon-surface);color:var(--icon-ink);border-color:var(--icon-border);border-radius:12px}
+.sectionHead span,.decisionHead>div>span{color:var(--muted-foreground)}
+.decisionRows small{font-size:9px}.decisionRows strong{font-size:11px;line-height:1.35}
+.features strong{font-size:11px;line-height:1.4}.specs span{font-size:10.5px}.specs strong{font-size:11.5px;line-height:1.45}.materials strong{font-size:11.5px;white-space:normal;overflow-wrap:anywhere}.materials small{font-size:9.5px}

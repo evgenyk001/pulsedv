@@ -5,7 +5,6 @@ import styles from './GroupedMenu.module.css';
 
 type RowContent = {
   icon: React.ReactNode;
-  tone?: 'red'|'blue'|'green'|'orange'|'purple'|'gray';
   title: string;
   description?: string;
   value?: string;
@@ -20,17 +19,17 @@ export function GroupedMenu({children,title,label,caption,className=''}:{childre
   </section>;
 }
 
-function Content({icon,tone='blue',title,description,value}:RowContent){
-  return <><span className={styles.icon} data-tone={tone} aria-hidden="true">{icon}</span><span className={styles.copy}><span className={styles.title}>{title}</span>{description&&<span className={styles.description}>{description}</span>}</span>{value&&<span className={styles.value}>{value}</span>}<ChevronRight className={styles.chevron} size={17} aria-hidden="true"/></>;
+function Content({icon,title,description,value}:RowContent){
+  return <><span className={styles.icon} aria-hidden="true">{icon}</span><span className={styles.copy}><span className={styles.title}>{title}</span>{description&&<span className={styles.description}>{description}</span>}</span>{value&&<span className={styles.value}>{value}</span>}<ChevronRight className={styles.chevron} size={17} aria-hidden="true"/></>;
 }
 
 export const MenuLink=React.forwardRef<HTMLAnchorElement,RowContent&Omit<LinkProps,'title'|'children'>>(
-  function MenuLink({icon,tone,title,description,value,className='',...props},ref){
-    return <Link {...props} ref={ref} data-menu-row className={`${styles.row} ${className}`}><Content {...{icon,tone,title,description,value}}/></Link>;
+  function MenuLink({icon,title,description,value,className='',...props},ref){
+    return <Link {...props} ref={ref} data-menu-row className={`${styles.row} ${className}`}><Content {...{icon,title,description,value}}/></Link>;
   }
 );
 export const MenuButton=React.forwardRef<HTMLButtonElement,RowContent&Omit<React.ButtonHTMLAttributes<HTMLButtonElement>,'title'|'children'>>(
-  function MenuButton({icon,tone,title,description,value,className='',type='button',...props},ref){
-    return <button {...props} ref={ref} type={type} data-menu-row className={`${styles.row} ${className}`}><Content {...{icon,tone,title,description,value}}/></button>;
+  function MenuButton({icon,title,description,value,className='',type='button',...props},ref){
+    return <button {...props} ref={ref} type={type} data-menu-row className={`${styles.row} ${className}`}><Content {...{icon,title,description,value}}/></button>;
   }
 );

@@ -1,7 +1,6 @@
-.page{display:flex;flex-direction:column;gap:var(--app-page-gap)}
-.avatar{width:44px;height:44px;border-radius:50%;background:var(--muted);display:grid;place-items:center;color:var(--muted-foreground)}
-.contact{min-height:52px;padding:12px 16px;border:0;border-radius:var(--app-radius-pill);background:var(--primary);color:white;font:inherit;font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity 140ms ease}
-.contact:active{opacity:.8}
+.page{display:flex;flex-direction:column;gap:22px;padding-bottom:16px}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--icon-surface);display:grid;place-items:center;color:var(--icon-ink)}
+
 .infoSheet{background:var(--background)!important}
 .historyList{display:flex;flex-direction:column;margin-top:20px;background:var(--list-surface);border-radius:var(--list-radius);padding:0 var(--list-inset)}
 .historyItem{padding:16px 0;display:flex;flex-direction:column;gap:5px;border-bottom:var(--list-hairline) solid var(--list-divider)}
@@ -11,7 +10,12 @@
 .historyItem a{align-self:flex-start;min-height:44px;color:var(--primary);text-decoration:none;display:flex;align-items:center;font-size:13px}
 .historyEmpty{padding:18px 0;font-size:13px;line-height:1.5;color:var(--muted-foreground)}
 .about{margin-top:20px;padding:16px;border-radius:var(--list-radius);background:var(--list-surface);display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
-.about svg{color:var(--success)}
+.about svg{color:var(--icon-ink)}
 .about p{margin:0;font-size:13px;line-height:1.6;color:var(--muted-foreground)}
-.contact:focus-visible,.historyItem a:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
-@media(prefers-reduced-motion:reduce){.contact{transition:none}}
+
+
+.page>header{align-items:flex-start;gap:14px}
+.page>header h1{font-size:clamp(25px,7vw,29px);line-height:1.12;letter-spacing:-.035em}
+.page>header p{font-size:12px;line-height:1.5}
+
+.historyItem a:focus-visible{outline:2px solid var(--primary);outline-offset:3px}

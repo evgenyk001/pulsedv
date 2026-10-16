@@ -1,12 +1,12 @@
-import {GroupedMenu,MenuLink} from "../components/GroupedMenu";
 import {PartnerEntryCard} from "../components/PartnerEntryCard";
 import {ClientUpdates} from "../components/ClientUpdates";
 import {ContinueChoice} from "../components/ContinueChoice";
 import React from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Building2, MapPin, Percent, Sparkles, ChevronRight, MessageCircle, UserRound } from "lucide-react";
+import { Search, Bell, Building2, MapPin, Percent, Sparkles, ChevronRight, MessageCircle, UserRound, BadgePercent, KeyRound } from "lucide-react";
 import { PromoCarousel } from "../components/PromoCarousel";
 import { PropertyCard } from "../components/PropertyCard";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
 import { useFeaturedProperties } from "../helpers/useCatalog";
 import { Input } from "../components/Input";
 import styles from "./_index.module.css";
@@ -36,12 +36,12 @@ export default function HomePage(){
 
     <PromoCarousel/>
 
-    <GroupedMenu label="Быстрые действия" className={styles.quickActions}>
-      <MenuLink to="/catalog" icon={<Building2/>} tone="blue" title="Каталог" description="Все новостройки"/>
-      <MenuLink to="/map" icon={<MapPin/>} tone="green" title="На карте" description="По районам"/>
-      <MenuLink to="/mortgage" icon={<Percent/>} tone="orange" title="Ипотека" description="Расчёт платежа"/>
-      <MenuLink to="/selection" icon={<Sparkles/>} tone="purple" title="PULSE Select" description="Подбор под вас"/>
-    </GroupedMenu>
+    <section className={styles.quickActions}>
+      <Link to="/catalog"><span><Building2 size={18}/></span><div><b>Каталог</b><small>Все новостройки</small></div><ChevronRight size={16}/></Link>
+      <Link to="/map"><span><MapPin size={18}/></span><div><b>На карте</b><small>По районам</small></div><ChevronRight size={16}/></Link>
+      <Link to="/mortgage"><span><Percent size={18}/></span><div><b>Ипотека</b><small>Расчёт платежа</small></div><ChevronRight size={16}/></Link>
+      <Link to="/selection"><span><Sparkles size={18}/></span><div><b>PULSE Select</b><small>Подбор под вас</small></div><ChevronRight size={16}/></Link>
+    </section>
 
     <ContinueChoice/>
 
@@ -50,7 +50,11 @@ export default function HomePage(){
       <div className={styles.propertyRail}>{isLoading&&<p role="status">Загружаем проекты…</p>}{error&&<p role="alert">Не удалось загрузить проекты. <button onClick={()=>void refetch()}>Повторить</button></p>}{!isLoading&&properties.map(p=><PropertyCard key={p.id} property={p}/>)}</div>
     </section>
 
-    <GroupedMenu label="Помощь с подбором"><MenuLink to="/selection" icon={<MessageCircle/>} tone="red" title="Соберём подборку под ваш бюджет" description="Менеджер поможет сравнить варианты"/></GroupedMenu>
+    <Link to="/selection" className={styles.concierge}>
+      <div className={styles.conciergeIcon}><MessageCircle size={20}/></div>
+      <div><span>Не хочется искать самому?</span><strong>Соберём подборку под ваш бюджет</strong><small>Менеджер поможет сравнить варианты</small></div>
+      <ChevronRight size={18}/>
+    </Link>
     <PartnerEntryCard/>
   </div>
 }
