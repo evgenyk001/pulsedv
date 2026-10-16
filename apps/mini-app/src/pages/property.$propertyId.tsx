@@ -1,3 +1,4 @@
+import {IconTile} from '../components/IconTile';
 import { PropertyFreshness } from '../components/PropertyFreshness';
 import React from "react";
 import {NativeSelect} from "../components/NativeSelect";
@@ -97,7 +98,7 @@ export default function PropertyPage(){
       <div className={styles.fade}/>
       <Link to={returnTo} className={styles.back} aria-label="Назад"><ArrowLeft size={19}/></Link>
       <div className={styles.actions}>
-        <button onClick={()=>toggle(p.id)} className={favorite?styles.favorited:""} aria-label={favorite?"Убрать из избранного":"В избранное"}><Heart size={18} fill={favorite?"currentColor":"none"}/></button>
+        <button onClick={()=>toggle(p.id)} className={favorite?styles.favorited:""} aria-pressed={favorite} aria-label={favorite?"Убрать из избранного":"В избранное"}><Heart size={18} fill="none"/></button>
         <button onClick={share} aria-label="Поделиться"><Share2 size={18}/></button>
       </div>
     </section>
@@ -141,10 +142,10 @@ export default function PropertyPage(){
           {fromPulse&&<small><Sparkles size={12}/>Из вашей подборки</small>}
         </div>
         <div className={styles.decisionRows}>
-          <div><span><CalendarDays size={17}/></span><div><small>Срок сдачи</small><strong>{p.delivery||"Уточняется"}</strong></div></div>
-          <div><span><MapPin size={17}/></span><div><small>Локация</small><strong>{p.district||"Уточняется"}</strong></div></div>
-          <div><span><HighlightIcon size={17}/></span><div><small>Сильная сторона</small><strong>{highlightFeature?.label||p.className||"Параметры проекта"}</strong></div></div>
-          <div><span><LayoutGrid size={17}/></span><div><small>Планировки</small><strong>{p.floorplans.length?p.floorplans.length+" в каталоге":"Уточняются"}</strong></div></div>
+          <div><IconTile><CalendarDays size={17}/></IconTile><div><small>Срок сдачи</small><strong>{p.delivery||"Уточняется"}</strong></div></div>
+          <div><IconTile><MapPin size={17}/></IconTile><div><small>Локация</small><strong>{p.district||"Уточняется"}</strong></div></div>
+          <div><IconTile><HighlightIcon size={17}/></IconTile><div><small>Сильная сторона</small><strong>{highlightFeature?.label||p.className||"Параметры проекта"}</strong></div></div>
+          <div><IconTile><LayoutGrid size={17}/></IconTile><div><small>Планировки</small><strong>{p.floorplans.length?p.floorplans.length+" в каталоге":"Уточняются"}</strong></div></div>
         </div>
       </section>
 
@@ -158,7 +159,7 @@ export default function PropertyPage(){
         <div className={styles.features}>
           {[...p.features].sort((a,b)=>a.sortOrder-b.sortOrder).map(feature=>{
             const Icon=featureIcon(feature.icon);
-            return <div key={feature.id||feature.label}><span><Icon size={18}/></span><strong>{feature.label}</strong></div>;
+            return <div key={feature.id||feature.label}><IconTile><Icon size={18}/></IconTile><strong>{feature.label}</strong></div>;
           })}
         </div>
       </section>}
@@ -191,7 +192,7 @@ export default function PropertyPage(){
 
       <section id="property-location" className={styles.section} aria-label="Расположение ЖК">
         <div className={styles.sectionHead}><div><span>РАСПОЛОЖЕНИЕ</span><h2>Где находится дом</h2></div><MapPinned size={22}/></div>
-        <div className={styles.addressCard}><span><MapPin size={21}/></span><div><strong>{p.address||p.city}</strong><small>{[p.city,p.district].filter(Boolean).join(' · ')}</small></div></div>
+        <div className={styles.addressCard}><IconTile><MapPin size={21}/></IconTile><div><strong>{p.address||p.city}</strong><small>{[p.city,p.district].filter(Boolean).join(' · ')}</small></div></div>
         <Link className={styles.mapLink} to={'/catalog?'+new URLSearchParams({view:'map',city:p.city,q:p.name})}>Посмотреть ЖК на карте <ChevronRight size={16}/></Link>
       </section>
 
@@ -211,19 +212,19 @@ export default function PropertyPage(){
         <div className={styles.sectionHead}><div><span>МАТЕРИАЛЫ</span><h2>Документы проекта</h2></div><small>{(p.documents??[]).length} файлов</small></div>
         <div className={styles.materials}>
           {(p.documents??[]).map(doc=><a key={doc.id||doc.url} href={doc.url} target="_blank" rel="noreferrer">
-            <span><FileText size={18}/></span>
+            <IconTile><FileText size={18}/></IconTile>
             <div><strong>{doc.name}</strong><small>{doc.kind==="presentation"?"Презентация":"Документ"}{doc.sizeBytes?" · "+Math.round(doc.sizeBytes/1024/1024*10)/10+" МБ":""}</small></div>
             <ChevronRight size={16}/>
           </a>)}
         </div>
       </section>}
 
-      <section className={styles.helpCard}><span><MessageCircle size={22}/></span><h2>Разберёмся в деталях вместе</h2><p>Уточним наличие, сравним планировки и подберём условия покупки именно для вас.</p><LeadSheet title="Задать вопрос по ЖК" project={p.name} propertyId={p.id} source="property"><button>Задать вопрос <ChevronRight size={16}/></button></LeadSheet></section>
+      <section className={styles.helpCard}><IconTile><MessageCircle size={22}/></IconTile><h2>Разберёмся в деталях вместе</h2><p>Уточним наличие, сравним планировки и подберём условия покупки именно для вас.</p><LeadSheet title="Задать вопрос по ЖК" project={p.name} propertyId={p.id} source="property"><button>Задать вопрос <ChevronRight size={16}/></button></LeadSheet></section>
 
       <Sheet>
         <SheetTrigger asChild>
           <button className={styles.developer}>
-            <div className={styles.devIcon}><Building2 size={20}/></div>
+            <IconTile as="div" className={styles.devIcon}><Building2 size={20}/></IconTile>
             <div><span>Застройщик</span><strong>{developer||"Информация уточняется"}</strong><small><ShieldCheck size={12}/> Данные проекта в базе PULSE.DV</small></div>
             <ChevronRight size={18}/>
           </button>

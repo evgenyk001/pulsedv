@@ -1,3 +1,4 @@
+import {IconTile} from '../components/IconTile';
 import {LegalOperator} from '../components/LegalOperator';
 import { Link } from "react-router-dom";
 import { ArrowLeft, ShieldCheck } from "lucide-react";
@@ -11,7 +12,7 @@ export default function PrivacyPage(){
     </header>
 
     <section className={styles.hero}>
-      <span className={styles.icon}><ShieldCheck size={24}/></span>
+      <IconTile className={styles.icon}><ShieldCheck size={24}/></IconTile>
       <div><small>PULSE.DV</small><h1>Политика обработки персональных данных</h1><p>Версия от 29 сентября 2026 года</p></div>
     </section>
 

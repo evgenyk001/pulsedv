@@ -51,18 +51,16 @@
 .section{scroll-margin-top:16px}
 .shareNotice{font-size:10px;color:var(--success);margin-top:8px}
 .addressCard{display:flex;gap:12px;align-items:center;padding:18px 0}
-.addressCard>span{flex-shrink:0;width:44px;height:44px;border-radius:15px;background:var(--blue-soft);color:var(--info);display:grid;place-items:center}
 .addressCard>div{display:flex;flex-direction:column;gap:5px;min-width:0}
 .addressCard strong{font-size:12px;line-height:1.45;overflow-wrap:anywhere}.addressCard small{color:var(--muted-foreground);font-size:10px}
 .mapLink{min-height:44px;padding:0 14px;border-radius:999px;background:var(--muted);color:var(--foreground);text-decoration:none;font-size:10px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:10px}
 .helpCard{padding:22px 18px;border-radius:26px;border:1px solid var(--app-card-border);background:linear-gradient(145deg,var(--app-card),var(--brand-soft));box-shadow:var(--app-card-shadow)}
-.helpCard>span{width:44px;height:44px;border-radius:15px;background:#fff;color:var(--primary);display:grid;place-items:center}
 .helpCard h2{font-size:18px;line-height:1.2;letter-spacing:-.03em;margin:14px 0 8px}.helpCard p{font-size:11px;line-height:1.6;color:var(--muted-foreground);margin:0 0 16px}
 .helpCard button{width:100%;min-height:46px;padding:0 16px;border:0;border-radius:999px;background:var(--primary);color:#fff;font:inherit;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px}
 
 .decisionCard{padding:17px 16px;border-radius:var(--app-radius-card);background:linear-gradient(145deg,rgba(255,255,255,.92),rgba(243,247,250,.84));border:1px solid var(--app-card-border);box-shadow:var(--app-card-shadow)}
 .decisionHead{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:13px;border-bottom:1px solid var(--border)}.decisionHead>div{display:flex;flex-direction:column}.decisionHead>div>span{font-size:7.5px;letter-spacing:.12em;font-weight:800;color:var(--primary)}.decisionHead h2{margin:4px 0 0;font-size:17px;line-height:1.2;letter-spacing:-.03em}.decisionHead>small{display:flex;align-items:center;gap:4px;flex:none;padding:6px 8px;border-radius:var(--app-radius-pill);background:var(--brand-soft);color:var(--primary);font-size:7.5px;font-weight:760}
-.decisionRows{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.decisionRows>div{min-height:63px;display:grid;grid-template-columns:34px 1fr;gap:8px;align-items:center;border-bottom:1px solid var(--border)}.decisionRows>div:nth-last-child(-n+2){border-bottom:0}.decisionRows>div>span{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:#fff;color:var(--info);border:1px solid var(--app-card-border)}.decisionRows>div>div{display:flex;min-width:0;flex-direction:column}.decisionRows small{font-size:7.5px;color:var(--muted-foreground)}.decisionRows strong{margin-top:3px;font-size:9.5px;line-height:1.25;overflow-wrap:anywhere}
+.decisionRows{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}.decisionRows>div{min-height:63px;display:grid;grid-template-columns:var(--icon-tile-size) minmax(0,1fr);gap:8px;align-items:center;border-bottom:1px solid var(--border)}.decisionRows>div:nth-last-child(-n+2){border-bottom:0}.decisionRows>div>div{display:flex;min-width:0;flex-direction:column}.decisionRows small{font-size:7.5px;color:var(--muted-foreground)}.decisionRows strong{margin-top:3px;font-size:9.5px;line-height:1.25;overflow-wrap:anywhere}
 
 .section{padding:18px 16px;border-radius:26px;background:var(--app-card);border:1px solid var(--app-card-border);box-shadow:var(--app-card-shadow)}
 .sectionHead{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
@@ -74,7 +72,6 @@
 
 .features{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .features>div{min-height:82px;padding:12px;border-radius:18px;background:#f7f9fb;border:1px solid #eef1f4;display:flex;flex-direction:column;gap:10px}
-.features>div>span{width:34px;height:34px;border-radius:12px;display:grid;place-items:center;background:#fff;color:var(--info);border:1px solid #edf0f3}
 .features strong{font-size:9px;line-height:1.25}
 
 .roomTabs{margin-top:14px;display:flex;gap:7px;overflow-x:auto;scrollbar-width:none}
@@ -105,7 +102,6 @@
 
 .developer{width:100%;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:11px;padding:13px;border-radius:24px;background:var(--app-card);border:1px solid var(--app-card-border);box-shadow:var(--app-card-shadow);color:var(--foreground);text-align:left;font:inherit;transition:transform .18s var(--motion-press),box-shadow .22s ease}
 .developer:active{transform:scale(.988);box-shadow:var(--shadow)}
-.devIcon{width:42px;height:42px;border-radius:var(--app-icon-radius);background:var(--muted);display:grid;place-items:center}
 .developer>div:nth-child(2){display:flex;flex-direction:column}
 .developer span{font-size:8.5px;color:var(--muted-foreground)}
 .developer strong{font-size:11.5px;margin-top:2px}
@@ -142,14 +138,13 @@
 
 .materials{margin-top:12px;display:flex;flex-direction:column;gap:8px}
 .materials a{min-height:58px;padding:10px 11px;border-radius:17px;background:#f7f9fb;border:1px solid #edf0f3;color:var(--foreground);text-decoration:none;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px}
-.materials a>span{width:36px;height:36px;border-radius:12px;background:#fff;display:grid;place-items:center;color:var(--primary);border:1px solid #edf0f3}
 .materials a>div{display:flex;flex-direction:column;min-width:0}
 .materials strong{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .materials small{margin-top:3px;font-size:7.8px;color:var(--muted-foreground)}
 
 
 /* Preserve the project's feature cards, gallery and facts layout. */
-.decisionRows>div>span,.features>div>span,.addressCard>span,.materials a>span,.helpCard>span,.devIcon{background:var(--icon-surface);color:var(--icon-ink);border-color:var(--icon-border);border-radius:12px}
+
 .sectionHead span,.decisionHead>div>span{color:var(--muted-foreground)}
 .decisionRows small{font-size:9px}.decisionRows strong{font-size:11px;line-height:1.35}
 .features strong{font-size:11px;line-height:1.4}.specs span{font-size:10.5px}.specs strong{font-size:11.5px;line-height:1.45}.materials strong{font-size:11.5px;white-space:normal;overflow-wrap:anywhere}.materials small{font-size:9.5px}

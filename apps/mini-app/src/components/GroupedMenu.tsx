@@ -1,3 +1,4 @@
+import {IconTile} from './IconTile';
 import React from 'react';
 import {Link, type LinkProps} from 'react-router-dom';
 import {ChevronRight} from 'lucide-react';
@@ -20,7 +21,7 @@ export function GroupedMenu({children,title,label,caption,className=''}:{childre
 }
 
 function Content({icon,title,description,value}:RowContent){
-  return <><span className={styles.icon} aria-hidden="true">{icon}</span><span className={styles.copy}><span className={styles.title}>{title}</span>{description&&<span className={styles.description}>{description}</span>}</span>{value&&<span className={styles.value}>{value}</span>}<ChevronRight className={styles.chevron} size={17} aria-hidden="true"/></>;
+  return <><IconTile>{icon}</IconTile><span className={styles.copy}><span className={styles.title}>{title}</span>{description&&<span className={styles.description}>{description}</span>}</span>{value&&<span className={styles.value}>{value}</span>}<ChevronRight className={styles.chevron} size={17} aria-hidden="true"/></>;
 }
 
 export const MenuLink=React.forwardRef<HTMLAnchorElement,RowContent&Omit<LinkProps,'title'|'children'>>(

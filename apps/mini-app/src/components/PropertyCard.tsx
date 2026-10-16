@@ -48,8 +48,8 @@ export function PropertyCard({property,compact=false,returnTo}:PropertyCardProps
         <div><b>от {property.priceFrom.toFixed(1).replace(".",",")} млн ₽</b><small>{property.delivery}</small></div>
       </div>
     </Link>
-    <button className={`${styles.heart} ${saved?styles.saved:""}`} onClick={()=>toggle(property.id)} aria-label={saved?"Убрать из избранного":"Добавить в избранное"}>
-      <Heart size={16} fill={saved?"currentColor":"none"}/>
+    <button className={`${styles.heart} ${saved?styles.saved:""}`} onClick={()=>toggle(property.id)} aria-pressed={saved} aria-label={saved?"Убрать из избранного":"Добавить в избранное"}>
+      <Heart size={16} fill="none"/>
     </button>
   </article>
 }

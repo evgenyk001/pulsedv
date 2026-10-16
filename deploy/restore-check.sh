@@ -7,7 +7,7 @@ stage=$(cd "$1" && pwd)
 (cd "$stage" && sha256sum -c SHA256SUMS)
 tar -tzf "$stage/media.tgz" >/dev/null
 container="pulse-restore-check-$(date +%s)-$$"
-cleanup(){ docker rm -f "$container" >/dev/null 2>&1 || true; }
+cleanup(){ docker rm -fv "$container" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 docker run -d --name "$container" --network none -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16-alpine >/dev/null
 for attempt in $(seq 1 30); do

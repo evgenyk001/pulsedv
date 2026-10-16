@@ -71,3 +71,5 @@ jobs:
           docker build -f deploy/Dockerfile.web -t pulse-web-test .
           docker run --rm --entrypoint sh pulse-web-test -c 'test -f /srv/index.html && test -f /srv/style.css && test -f /srv/mini-app/index.html && test -f /srv/control-center/index.html && test -f /srv/partner-offer/index.html && test -f /srv/partner-offer/partners-v1/index.html'
           docker run --rm -e SITE_DOMAIN=example.com --entrypoint caddy pulse-web-test validate --config /etc/caddy/Caddyfile
+      - name: Boot VPS stack and verify restart and restore
+        run: bash deploy/smoke.sh

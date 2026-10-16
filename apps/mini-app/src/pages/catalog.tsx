@@ -1,3 +1,4 @@
+import {IconTile} from '../components/IconTile';
 import { hasSea, matchScore, matchesBudgetAndRooms } from "../../../../packages/domain/propertyMatch";
 import { usePulseControlState } from "../helpers/usePulseControlState";
 import {Switch} from "../components/Switch";
@@ -301,7 +302,7 @@ export default function CatalogPage(){
 
   return <div className={styles.page}>
     <PageHeader eyebrow="Каталог PULSE.DV" title="Новостройки" subtitle="Подбирайте спокойно — по району, бюджету и сроку сдачи."/>
-    <Link className={styles.saveSearch} to={"/my-search?"+new URLSearchParams({draft:"1",q:deferredQuery,city:appliedCity,rooms:appliedRooms,min:String(appliedMin),max:String(appliedMax),delivery:appliedDelivery,sea:appliedSea?"1":"0"})}><Bell size={15}/><span><b>Сохранить этот поиск</b><small>Следить за новыми подходящими ЖК</small></span><ChevronRight size={16}/></Link>
+    <Link className={styles.saveSearch} to={"/my-search?"+new URLSearchParams({draft:"1",q:deferredQuery,city:appliedCity,rooms:appliedRooms,min:String(appliedMin),max:String(appliedMax),delivery:appliedDelivery,sea:appliedSea?"1":"0"})}><IconTile><Bell/></IconTile><span><b>Сохранить этот поиск</b><small>Следить за новыми подходящими ЖК</small></span><ChevronRight size={16}/></Link>
 
     <SegmentedControl value={view} onChange={setView} ariaLabel="Режим каталога" options={[
       {value:"list",label:<><List size={16}/>Список</>},

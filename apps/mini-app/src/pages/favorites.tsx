@@ -1,3 +1,4 @@
+import {IconTile} from '../components/IconTile';
 import {ComparisonTable} from '../components/ComparisonTable';
 import React from "react";
 import { Link } from "react-router-dom";
@@ -52,7 +53,7 @@ export default function Favorites(){
           </button>
         </div>;
       })}
-      {!isLoading&&!catalogError&&saved.length===0&&<div className={styles.helper}><div><Heart size={19}/></div><span><strong>Пока ничего не сохранено</strong><small>Нажмите сердечко на карточке ЖК — объект появится здесь.</small></span></div>}
+      {!isLoading&&!catalogError&&saved.length===0&&<div className={styles.helper}><IconTile as="div"><Heart size={19}/></IconTile><span><strong>Пока ничего не сохранено</strong><small>Нажмите сердечко на карточке ЖК — объект появится здесь.</small></span></div>}
     </div>
 
     {saved.length>0&&<div className={styles.compareBar}>
@@ -68,7 +69,7 @@ export default function Favorites(){
     </div>}
 
     <Link to="/selection" className={styles.helper}>
-      <div><Sparkles size={19}/></div>
+      <IconTile as="div"><Sparkles size={19}/></IconTile>
       <span><strong>Слишком много вариантов?</strong><small>Соберём короткую подборку под ваши параметры.</small></span>
       <ChevronRight size={17}/>
     </Link>

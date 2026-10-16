@@ -1,3 +1,4 @@
+import {IconTile} from '../components/IconTile';
 import React from "react";
 import {NativeSelect} from "../components/NativeSelect";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -351,7 +352,7 @@ function MortgageCalculator(){
           recordPulseEvent({eventType:"mortgage_intro_replay",entityType:"onboarding",entityId:MORTGAGE_STORY_VERSION});
           setShowMortgageStory(true);
         }}
-      ><Calculator size={20}/></button>}
+      ><IconTile><Calculator/></IconTile></button>}
     />
 
     <div className={styles.freshness}><CircleCheck size={14}/><span>Правила проверены {RULES_UPDATED}</span></div>
@@ -461,7 +462,7 @@ function MortgageCalculator(){
 
     <section className={styles.result}>
       <div className={styles.resultTop}>
-        <div className={styles.resultIcon}><WalletCards size={20}/></div>
+        <IconTile as="div" className={styles.resultIcon}><WalletCards size={20}/></IconTile>
         <div><span>{totalKnown?'Ориентировочный платёж':'Первые 15 лет · платёж'}</span><strong>{invalid?"—":formatRub(payment)+" ₽ / мес"}</strong></div>
         <BadgePercent size={20}/>
       </div>

@@ -1,8 +1,15 @@
 name: pulsedv
+x-logging: &bounded_logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *bounded_logging
+    stop_grace_period: 60s
     environment:
       POSTGRES_DB: pulse
       POSTGRES_USER: pulse
@@ -25,6 +32,8 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.api
     restart: unless-stopped
+    logging: *bounded_logging
+    stop_grace_period: 30s
     environment: &api_environment
       NODE_ENV: production
       DATABASE_URL: postgres://pulse:${POSTGRES_PASSWORD}@db:5432/pulse
@@ -72,6 +81,8 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.api
     restart: unless-stopped
+    logging: *bounded_logging
+    stop_grace_period: 30s
     command: ["node", "--import", "tsx", "backend/src/worker.ts"]
     healthcheck:
       test: ["CMD", "node", "--import", "tsx", "backend/src/workerHealth.ts"]
@@ -101,6 +112,7 @@ services:
       context: .
       dockerfile: deploy/Dockerfile.web
     restart: unless-stopped
+    logging: *bounded_logging
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN}
     ports:

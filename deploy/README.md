@@ -14,6 +14,7 @@ cp .env.example .env
 
 ```sh
 docker compose build
+docker compose run --rm --no-deps api node --import tsx backend/src/preflight.ts
 docker compose up -d db
 docker compose run --rm api node --import tsx backend/src/migrate.ts
 read -r -p 'Owner email: ' OWNER_EMAIL
@@ -70,7 +71,7 @@ GitHub Pages остаётся отдельной демонстрацией бе
 
 ## Автоматизация после переноса на VPS
 
-2FA в этом обновлении не меняется. Настраивать её после переноса, проверки Telegram и резервного способа восстановления доступа.
+Настройте 2FA после проверки Telegram и сохранения способа восстановления доступа, до приёма реальных клиентов.
 
 Заполните в `.env` `LEGAL_OPERATOR_NAME`, `LEGAL_OPERATOR_INN`, `LEGAL_OPERATOR_ADDRESS`, `LEGAL_CONTACT_EMAIL` фактическими реквизитами оператора. Они публикуются на экранах политики и согласия. Утвердите тексты и версию согласия до приёма реальных заявок; код не заменяет юридическую проверку.
 

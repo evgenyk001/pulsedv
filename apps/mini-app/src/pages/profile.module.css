@@ -1,5 +1,4 @@
 .page{display:flex;flex-direction:column;gap:22px;padding-bottom:16px}
-.avatar{width:38px;height:38px;border-radius:50%;background:var(--icon-surface);display:grid;place-items:center;color:var(--icon-ink)}
 
 .infoSheet{background:var(--background)!important}
 .historyList{display:flex;flex-direction:column;margin-top:20px;background:var(--list-surface);border-radius:var(--list-radius);padding:0 var(--list-inset)}

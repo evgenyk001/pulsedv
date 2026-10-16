@@ -4,6 +4,12 @@ import type { Database } from './database';
 import { postgresDatabase } from './database';
 import { readConfig } from './config';
 import { DEFAULT_STATE } from '../../packages/pulse-data/model';
+const migrationNames=readdir(new URL('../migrations/',import.meta.url)).then(names=>names.filter(x=>x.endsWith('.sql')).sort());
+export async function migrationsApplied(db:Database){
+ const names=await migrationNames;
+ const applied=new Set((await db.query('select name from schema_migrations')).rows.map(row=>row.name));
+ return names.every(name=>applied.has(name));
+}
 export async function migrate(db:Database){
  await db.transaction(async sql=>{
   await sql.query("select pg_advisory_xact_lock(739125)");
