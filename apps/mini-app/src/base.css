@@ -101,7 +101,7 @@
   --list-surface: var(--app-card);
   --list-radius: 24px;
   --list-inset: 16px;
-  --list-icon: 32px;
+  --list-icon: 30px;
   --list-divider: rgba(60, 60, 67, .12);
   --list-chevron: #B1B4BC;
   --list-pressed: rgba(120, 128, 145, .08);

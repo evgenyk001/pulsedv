@@ -3,7 +3,7 @@ import {PartnerEntryCard} from "../components/PartnerEntryCard";
 import {useClientJourneys} from "../helpers/useClientJourneys";
 import React from "react";
 import { Link } from "react-router-dom";
-import { Search, UserRound, MessageCircle, Phone, ChevronRight, ShieldCheck, Heart, Clock3, Info, PlayCircle } from "lucide-react";
+import { Search, UserRound, MessageCircle, Phone, ShieldCheck, Heart, Clock3, Info, PlayCircle } from "lucide-react";
 import { LeadSheet } from "../components/LeadSheet";
 import { PageHeader } from "../components/PageHeader";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
@@ -41,11 +41,11 @@ export default function ProfilePage(){
 
     <PartnerEntryCard/>
     <GroupedMenu title="Покупка квартиры">
-      <MenuLink to="/journey" icon={<Clock3/>} tone="orange" title="Мои подборки и показы" description="Варианты от менеджера и встречи"/>
-      <MenuLink to="/my-search" icon={<Search/>} tone="purple" title="Мой поиск" description="Ваш запрос и обновления ЖК"/>
-      <MenuLink to="/favorites" icon={<Heart/>} tone="red" title="Избранное" description="Сохранённые объекты"/>
+      <MenuLink to="/journey" icon={<Clock3/>} tone="orange" title="Мои подборки и показы"/>
+      <MenuLink to="/my-search" icon={<Search/>} tone="purple" title="Мой поиск"/>
+      <MenuLink to="/favorites" icon={<Heart/>} tone="red" title="Избранное"/>
       <Sheet>
-        <SheetTrigger asChild><MenuButton icon={<Clock3/>} tone="gray" title="История подборов" description="Последние параметры поиска"/></SheetTrigger>
+        <SheetTrigger asChild><MenuButton icon={<Clock3/>} tone="gray" title="История подборов"/></SheetTrigger>
         <SheetContent side="bottom" className={styles.infoSheet}><SheetHeader><SheetTitle>История подборов</SheetTitle><SheetDescription>Последние сценарии, к которым можно вернуться.</SheetDescription></SheetHeader>
           <div className={styles.historyList}>
             {history.length?history.map(item=><div className={styles.historyItem} key={item.createdAt}>
@@ -58,12 +58,12 @@ export default function ProfilePage(){
       </Sheet>
     </GroupedMenu>
     <GroupedMenu title="О приложении">
-      <MenuLink to="/privacy" icon={<ShieldCheck/>} tone="blue" title="Персональные данные" description="Политика и согласие на обработку"/>
+      <MenuLink to="/privacy" icon={<ShieldCheck/>} tone="blue" title="Персональные данные"/>
       <Sheet>
-        <SheetTrigger asChild><MenuButton icon={<Info/>} tone="gray" title="О сервисе PULSE.DV" description="Подбор и сопровождение покупки"/></SheetTrigger>
+        <SheetTrigger asChild><MenuButton icon={<Info/>} tone="gray" title="О сервисе PULSE.DV"/></SheetTrigger>
         <SheetContent side="bottom" className={styles.infoSheet}><SheetHeader><SheetTitle>О PULSE.DV</SheetTitle><SheetDescription>Мы помогаем сравнить новостройки, условия покупки и ипотечные сценарии в одном процессе.</SheetDescription></SheetHeader><div className={styles.about}><ShieldCheck size={20}/><p>Информация в приложении — отправная точка для подбора. Перед сделкой менеджер уточняет актуальные условия по выбранному проекту.</p></div></SheetContent>
       </Sheet>
-      <MenuButton onClick={()=>window.dispatchEvent(new Event("pulse:show-onboarding"))} icon={<PlayCircle/>} tone="purple" title="Показать знакомство" description="Как пользоваться приложением"/>
+      <MenuButton onClick={()=>window.dispatchEvent(new Event("pulse:show-onboarding"))} icon={<PlayCircle/>} tone="purple" title="Показать знакомство"/>
     </GroupedMenu>
 
     <LeadSheet title="Связаться с агентством" source="profile-contact"><button className={styles.contact}><Phone size={17}/>Связаться с PULSE.DV</button></LeadSheet>
