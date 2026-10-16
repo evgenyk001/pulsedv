@@ -24,8 +24,9 @@ compose run --rm --no-deps -e OWNER_EMAIL -e OWNER_PASSWORD api node --import ts
 compose up -d --no-build --wait --wait-timeout 180
 export PULSE_SMOKE_URL="https://$(compose port web 443)"
 export PULSE_SMOKE_STATE_FILE="$stage/state.json"
+smoke_port=${PULSE_SMOKE_URL##*:}
 for attempt in $(seq 1 30); do
- if curl --insecure --fail --silent "$PULSE_SMOKE_URL/ready" >/dev/null; then break; fi
+ if curl --insecure --fail --silent --resolve "localhost:$smoke_port:127.0.0.1" "https://localhost:$smoke_port/ready" >/dev/null; then break; fi
  sleep 1
 done
 node --import tsx backend/src/deploymentProbe.ts seed

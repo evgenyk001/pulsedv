@@ -178,9 +178,6 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="range"]){
 :where([class*="viewSwitch"],[class*="segmented"],[role="tablist"]) button{
   border-radius:var(--app-radius-pill)!important;
 }
-:where(div,span)[class*="Icon"],:where(div,span)[class*="icon"]{
-  border-radius:var(--app-icon-radius);
-}
 svg.lucide{
   stroke-width:var(--icon-stroke,1.8);
   stroke-linecap:round;

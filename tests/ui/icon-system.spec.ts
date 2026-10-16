@@ -11,7 +11,7 @@ for(const width of [320,390,430])test(`Outlined card icons remain consistent acr
   localStorage.setItem('pulse_selection_current_v2',JSON.stringify({version:4,started:true,city:'Владивосток'}));
  },DEFAULT_STATE);
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- for(const route of ['','profile','selection','catalog','favorites','my-search','journey','privacy','personal-data-consent','partner-offer','property/'+DEFAULT_STATE.properties[0].id]){
+ for(const route of ['','profile','selection','mortgage','catalog','favorites','my-search','journey','privacy','personal-data-consent','partner-offer','property/'+DEFAULT_STATE.properties[0].id]){
   await page.goto('/pulsedv/mini-app/#/'+route);await expect(page.locator('[data-icon-tile]').first()).toBeVisible();
   const sizes=await page.locator('[data-icon-tile]').evaluateAll(tiles=>tiles.filter(el=>el.getBoundingClientRect().width>0).map(el=>{
    const css=getComputedStyle(el),svg=el.querySelector('svg'),glyph=svg?getComputedStyle(svg):null;

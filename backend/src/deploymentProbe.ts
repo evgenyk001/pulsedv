@@ -13,7 +13,7 @@ const headers={host:'localhost',origin:'https://localhost'};
 async function call(path:string,{method='GET',body,cookie,token,type='application/json'}:{method?:string;body?:unknown;cookie?:string;token?:string;type?:string}={}){
  const data=body===undefined?undefined:Buffer.isBuffer(body)?body:Buffer.from(JSON.stringify(body));
  return new Promise<{status:number;headers:import('node:http').IncomingHttpHeaders;bytes:Buffer;json:()=>any}>((resolve,reject)=>{
-  const req=request(new URL(path,base),{method,rejectUnauthorized:false,headers:{...headers,...(data?{'content-type':type,'content-length':data.length}:{}),...(cookie?{cookie}:{}),...(token?{authorization:'Bearer '+token}:{})},timeout:15000},res=>{
+  const req=request(new URL(path,base),{method,servername:'localhost',rejectUnauthorized:false,headers:{...headers,...(data?{'content-type':type,'content-length':data.length}:{}),...(cookie?{cookie}:{}),...(token?{authorization:'Bearer '+token}:{})},timeout:15000},res=>{
    const chunks:Buffer[]=[];res.on('data',chunk=>chunks.push(chunk));res.on('end',()=>{const bytes=Buffer.concat(chunks);resolve({status:res.statusCode!,headers:res.headers,bytes,json:()=>JSON.parse(bytes.toString())})});
   });req.on('timeout',()=>req.destroy(new Error('Smoke request timed out')));req.on('error',reject);req.end(data);
  });
