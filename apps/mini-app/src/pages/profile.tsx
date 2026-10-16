@@ -1,8 +1,9 @@
+import {GroupedMenu,MenuLink,MenuButton} from "../components/GroupedMenu";
 import {PartnerEntryCard} from "../components/PartnerEntryCard";
 import {useClientJourneys} from "../helpers/useClientJourneys";
 import React from "react";
 import { Link } from "react-router-dom";
-import { Search, UserRound, MessageCircle, Phone, ChevronRight, ShieldCheck, Heart, Clock3, Info, PlayCircle } from "lucide-react";
+import { Search, UserRound, MessageCircle, Phone, ShieldCheck, Heart, Clock3, Info, PlayCircle } from "lucide-react";
 import { LeadSheet } from "../components/LeadSheet";
 import { PageHeader } from "../components/PageHeader";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
@@ -34,20 +35,17 @@ export default function ProfilePage(){
   return <div className={styles.page}>
     <PageHeader eyebrow="Ваш PULSE.DV" title="Помощь с покупкой" subtitle="Избранное, подборы и связь с менеджером — в одном месте." action={<div className={styles.avatar}><UserRound size={23}/></div>}/>
 
-    <section className={styles.manager}>
-      <div className={styles.managerIcon}><MessageCircle size={19}/></div>
-      <div><span>Персональный менеджер</span><strong>{active?.managerName||"Команда PULSE.DV"}</strong><small>Ответим по ЖК, ипотеке и сделке</small></div>
-      {active?<Link to={"/journey?lead="+active.leadId} aria-label="Открыть переписку с менеджером"><ChevronRight size={18}/></Link>:<LeadSheet source="profile-manager"><button aria-label="Оставить заявку менеджеру"><ChevronRight size={18}/></button></LeadSheet>}
-    </section>
+    <GroupedMenu label="Ваш менеджер">
+      {active?<MenuLink to={"/journey?lead="+active.leadId} icon={<MessageCircle/>} tone="blue" title="Персональный менеджер" description={active.managerName||"Команда PULSE.DV"} aria-label="Открыть переписку с менеджером"/>:<LeadSheet source="profile-manager"><MenuButton icon={<MessageCircle/>} tone="blue" title="Персональный менеджер" description="Команда PULSE.DV · поможем с покупкой" aria-label="Оставить заявку менеджеру"/></LeadSheet>}
+    </GroupedMenu>
 
     <PartnerEntryCard/>
-    <section className={styles.menu}>
-      <Link to="/journey"><Clock3 size={18}/><span><b>Мои подборки и показы</b><small>Варианты от менеджера и встречи</small></span><ChevronRight size={17}/></Link>
-      <Link to="/my-search"><Search size={18}/><span><b>Мой поиск</b><small>Ваш запрос и полезные обновления ЖК</small></span><ChevronRight size={17}/></Link>
-      <Link to="/favorites"><Heart size={18}/><span><b>Избранное</b><small>Ваш шорт-лист объектов</small></span><ChevronRight size={17}/></Link>
-      <Link to="/privacy"><ShieldCheck size={18}/><span><b>Персональные данные</b><small>Политика и согласие на обработку</small></span><ChevronRight size={17}/></Link>
+    <GroupedMenu title="Покупка квартиры">
+      <MenuLink to="/journey" icon={<Clock3/>} tone="orange" title="Мои подборки и показы"/>
+      <MenuLink to="/my-search" icon={<Search/>} tone="purple" title="Мой поиск"/>
+      <MenuLink to="/favorites" icon={<Heart/>} tone="red" title="Избранное"/>
       <Sheet>
-        <SheetTrigger asChild><button><Clock3 size={18}/><span><b>История подборов</b><small>Последние параметры поиска</small></span><ChevronRight size={17}/></button></SheetTrigger>
+        <SheetTrigger asChild><MenuButton icon={<Clock3/>} tone="gray" title="История подборов"/></SheetTrigger>
         <SheetContent side="bottom" className={styles.infoSheet}><SheetHeader><SheetTitle>История подборов</SheetTitle><SheetDescription>Последние сценарии, к которым можно вернуться.</SheetDescription></SheetHeader>
           <div className={styles.historyList}>
             {history.length?history.map(item=><div className={styles.historyItem} key={item.createdAt}>
@@ -58,12 +56,15 @@ export default function ProfilePage(){
           </div>
         </SheetContent>
       </Sheet>
+    </GroupedMenu>
+    <GroupedMenu title="О приложении">
+      <MenuLink to="/privacy" icon={<ShieldCheck/>} tone="blue" title="Персональные данные"/>
       <Sheet>
-        <SheetTrigger asChild><button><Info size={18}/><span><b>О сервисе PULSE.DV</b><small>Как устроен подбор и сопровождение</small></span><ChevronRight size={17}/></button></SheetTrigger>
+        <SheetTrigger asChild><MenuButton icon={<Info/>} tone="gray" title="О сервисе PULSE.DV"/></SheetTrigger>
         <SheetContent side="bottom" className={styles.infoSheet}><SheetHeader><SheetTitle>О PULSE.DV</SheetTitle><SheetDescription>Мы помогаем сравнить новостройки, условия покупки и ипотечные сценарии в одном процессе.</SheetDescription></SheetHeader><div className={styles.about}><ShieldCheck size={20}/><p>Информация в приложении — отправная точка для подбора. Перед сделкой менеджер уточняет актуальные условия по выбранному проекту.</p></div></SheetContent>
       </Sheet>
-      <button onClick={()=>window.dispatchEvent(new Event("pulse:show-onboarding"))}><PlayCircle size={18}/><span><b>Показать знакомство</b><small>Повторно открыть онбординг приложения</small></span><ChevronRight size={17}/></button>
-    </section>
+      <MenuButton onClick={()=>window.dispatchEvent(new Event("pulse:show-onboarding"))} icon={<PlayCircle/>} tone="purple" title="Показать знакомство"/>
+    </GroupedMenu>
 
     <LeadSheet title="Связаться с агентством" source="profile-contact"><button className={styles.contact}><Phone size={17}/>Связаться с PULSE.DV</button></LeadSheet>
   </div>

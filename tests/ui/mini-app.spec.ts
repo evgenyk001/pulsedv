@@ -87,6 +87,7 @@ test('Mini App home polish: property rail shadow fades before crop',async({page}
  await page.goto('/pulsedv/mini-app/');
  const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
  await expect(page.getByRole('heading',{name:'Стоит посмотреть',exact:true})).toBeVisible();
+ await page.screenshot({path:'test-results/menu-home-chromium-390.png',fullPage:true,animations:'disabled'});
  const rail=page.locator('[class*="propertyRail"]').first();
  const card=rail.locator('article').first();
  await expect(card).toBeVisible();
