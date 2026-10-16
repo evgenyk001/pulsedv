@@ -87,6 +87,15 @@ test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirm
   await db.query("update partner_client_reservations set created_at=now()-interval '8 days',expires_at=now()-interval '1 day' where id=$1",[hold.id]);
   assert.equal((await reserve(data)).json().outcome,'expired');const newHold=await reserve(input('+79996666666'),b);assert.equal(newHold.json().outcome,'reserved');assert.notEqual(newHold.json().reservation.id,hold.id);
  });
+ await t.test('Control reservation queue is independently paginated and includes its full count',async()=>{
+  for(let i=0;i<35;i++){
+   const invitation=(await db.query('insert into partner_invitations(partner_id,code,label) values($1,$2,$3) returning id',[pa.id,'queue'+randomUUID().replaceAll('-',''),'Очередь '+i])).rows[0];
+   await db.query('insert into partner_client_reservations(id,partner_id,invitation_id,normalized_phone) values($1,$2,$3,$4)',[randomUUID(),pa.id,invitation.id,'+7999'+String(1000000+i)]);
+  }
+  const first=await app.inject({url:'/api/v1/control/partners?reservationPage=1',cookies:owner}),second=await app.inject({url:'/api/v1/control/partners?reservationPage=2',cookies:owner});assert.equal(first.statusCode,200,first.body);assert.equal(second.statusCode,200,second.body);
+  assert.equal(first.json().reservations.length,30);assert.equal(first.json().reservationHasMore,true);assert.ok(first.json().reservationTotal>=35);assert.ok(second.json().reservations.length>0);
+  assert.ok(second.json().reservations.every((x:any)=>!first.json().reservations.some((y:any)=>x.id===y.id)));
+ });
  await t.test('payments and Control filters operate before pagination',async()=>{
   const old=(await db.query("insert into partner_referrals(partner_id,terms_version,attribution_code,created_at,status) values($1,$2,$3,now()-interval '10 days','accepted') returning id",[pa.id,PARTNER_TERMS_VERSION,pa.code])).rows[0];
   await db.query("insert into partner_rewards(referral_id,commission_rub,received_on,reserve_minor,base_minor,gross_minor,status) values($1,100000,current_date,600000,9400000,2820000,'requested')",[old.id]);

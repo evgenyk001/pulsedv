@@ -5,7 +5,7 @@ import {businessDay} from '../pulse-data/business';
 import {PARTNER_TERMS_VERSION,partnerReward,partnerRejectReasons,partnerStageLabels,publicClientName,normalizePartnerPhone,type Partner,type PartnerInvite,type PartnerReferral,type PartnerReward,type PartnerCabinet,type PartnerRejectReason} from './model';
 type LocalReferral=PartnerReferral&{phone:string;lastStage:string;lastReceivedOn:string|null;attributionCode:string};
 type Store={myPartnerId:string|null;partners:Partner[];invitations:PartnerInvite[];referrals:LocalReferral[];rewards:PartnerReward[]};
-export type ControlPartners={counts?:{total:number;pending:number;requested:number;conflicts:number};reservations?:Array<import('./model').PartnerReservation&{partnerName:string;phone:string}>;partners:Partner[];referrals:PartnerReferral[];page:number;total:number;hasMore:boolean};
+export type ControlPartners={reservationPage?:number;reservationTotal?:number;reservationHasMore?:boolean;counts?:{total:number;pending:number;requested:number;conflicts:number};reservations?:Array<import('./model').PartnerReservation&{partnerName:string;phone:string}>;partners:Partner[];referrals:PartnerReferral[];page:number;total:number;hasMore:boolean};
 const KEY='pulse.partners.v1',EVENT='pulse:partners',ATTRIBUTION='pulse.partner-invitation.v1';
 const uid=()=>crypto.randomUUID(),now=()=>new Date().toISOString();
 function read():Store{try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.partners)&&Array.isArray(s.invitations)&&Array.isArray(s.referrals)&&Array.isArray(s.rewards))return s}catch{}return {myPartnerId:null,partners:[],invitations:[],referrals:[],rewards:[]}}
@@ -56,8 +56,8 @@ export function recordLocalPartnerReferral(leadId:string,phone:string,code:strin
  const l=listPulseLeads().find(l=>l.id===leadId);if(!l)throw new Error('Обращение не найдено');
  const r:LocalReferral={id:uid(),partnerId:p.id,partnerName:p.name,leadId,invitationId:i?.id??null,clientName:l.name,termsVersion:p.termsVersion,status:'pending',stage:l.status,stageLabel:partnerStageLabels[l.status],conflict:false,rejectionReason:null,revision:1,createdAt:now(),acceptedAt:null,events:[],reward:null,phone:normalizePartnerPhone(phone),lastStage:l.status,lastReceivedOn:null,attributionCode:code};event(r,'submitted','Покупатель подтвердил рекомендацию. Проверяем уникальность');s.referrals.push(r);write(s);
 }
-export async function getControlPartners(page=1,filter='all'):Promise<ControlPartners>{
- if(runtime.enabled)return api('/control/partners?page='+page+'&filter='+filter);
+export async function getControlPartners(page=1,filter='all',reservationPage=1):Promise<ControlPartners>{
+ if(runtime.enabled)return api('/control/partners?page='+page+'&filter='+filter+'&reservationPage='+reservationPage);
  const s=sync(read()),whole=[...s.referrals],all=whole.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).filter(r=>filter==='all'||filter==='pending'&&r.status==='pending'||filter==='payouts'&&s.rewards.some(w=>w.referralId===r.id&&['accrued','requested'].includes(w.status))||filter==='conflicts'&&clash(s,r).length>0);return {counts:{total:whole.length,pending:whole.filter(r=>r.status==='pending').length,requested:whole.filter(r=>s.rewards.some(w=>w.referralId===r.id&&w.status==='requested')).length,conflicts:whole.filter(r=>clash(s,r).length).length},partners:s.partners,referrals:all.slice((page-1)*30,page*30).map(r=>dto(s,r,true)),page,total:all.length,hasMore:all.length>page*30};
 }
 export async function getControlPartnerReferral(id:string){if(runtime.enabled)return api<{referral:PartnerReferral}>('/control/partner-referrals/'+encodeURIComponent(id));const s=sync(read()),r=s.referrals.find(r=>r.id===id);if(!r)throw new Error('Рекомендация не найдена');return {referral:dto(s,r,true)};}
