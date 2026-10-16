@@ -36,7 +36,7 @@ export async function preparePartnerReferral(sql:Sql,code:string|undefined,buyer
   if(target&&target.normalized_phone!==phone)throw new HttpError(409,'Это приглашение предназначено для другого номера. Уточните ссылку у партнёра');
   if(reserved&&reserved.partner_id!==partner.id)throw new HttpError(409,'Рекомендация для этого клиента уже зарегистрирована. Можно отправить обычную заявку без новой рекомендации');
   if(target){
-   if(await identityUnavailable(sql,phone,buyerUserId))throw new HttpError(409,'Клиент уже известен агентству. Для проверки свяжитесь с PULSE');
+   if(await identityUnavailable(sql,phone,buyerUserId,target.id))throw new HttpError(409,'Клиент уже известен агентству. Для проверки свяжитесь с PULSE');
    partner.reservation=target;
   }
  }
@@ -56,22 +56,25 @@ export async function attachPartnerReferral(sql:Sql,leadId:string,buyerUserId:st
  }
  return row.id as string;
 }
+// Compare timestamps inside PostgreSQL: JavaScript Date would discard microseconds.
+function priorityTime(alias:string){return `coalesce((select b.created_at from partner_client_reservations b where b.invitation_id=${alias}.invitation_id and b.normalized_phone=${alias}.normalized_phone and b.released_at is null and b.expires_at>=${alias}.created_at),${alias}.created_at)`;}
 export async function conflicts(sql:Sql,r:any){
  const matches=(await sql.query(`select l.id,l.name,l.phone,r2.id as referral_id,r2.partner_id,r2.status,r2.rejection_reason,p.name as partner_name
  from leads l left join partner_referrals r2 on r2.lead_id=l.id left join partner_profiles p on p.id=r2.partner_id
  where l.id<>$1 and (l.normalized_phone=$2 or ($3::uuid is not null and l.user_id=$3))
- and (r2.status='accepted' or (l.created_at<$4 and not (coalesce(r2.status,'')='rejected' and coalesce(r2.rejection_reason,'')='unconfirmed')))
- order by l.created_at,l.id limit 20`,[r.lead_id,r.normalized_phone,r.buyer_user_id,r.created_at])).rows;
+ and (r2.status='accepted' or (l.created_at<(select ${priorityTime('original')} from partner_referrals original where original.id=$4) and not (coalesce(r2.status,'')='rejected' and coalesce(r2.rejection_reason,'')='unconfirmed')))
+ order by l.created_at,l.id limit 20`,[r.lead_id,r.normalized_phone,r.buyer_user_id,r.id])).rows;
  const claimed=(await sql.query('select referral_id from partner_client_claims where referral_id<>$1 and (normalized_phone=$2 or ($3::uuid is not null and buyer_user_id=$3))',[r.id,r.normalized_phone,r.buyer_user_id])).rows;
  return {matches,claimed};
 }
 const reservationSelect=`select b.*,i.code,i.label from partner_client_reservations b join partner_invitations i on i.id=b.invitation_id`;
 function reservationDto(row:any){return {id:row.id,code:row.code,label:row.label,phoneHint:'••• '+row.normalized_phone.slice(-4),expiresAt:row.expires_at instanceof Date?row.expires_at.toISOString():row.expires_at,createdAt:row.created_at instanceof Date?row.created_at.toISOString():row.created_at};}
 async function activeReservation(sql:Sql,phone:string){return (await sql.query(reservationSelect+" where b.normalized_phone=$1 and b.released_at is null and b.converted_referral_id is null and b.expires_at>now()",[phone])).rows[0];}
-async function identityUnavailable(sql:Sql,phone:string,userId:string|null=null){
+async function identityUnavailable(sql:Sql,phone:string,userId:string|null=null,reservationId:string|null=null){
  const known=(await sql.query(`select l.id from leads l left join partner_referrals r on r.lead_id=l.id
  where (l.normalized_phone=$1 or ($2::uuid is not null and l.user_id=$2))
- and not (coalesce(r.status,'')='rejected' and coalesce(r.rejection_reason,'')='unconfirmed') limit 1`,[phone,userId])).rows.length;
+ and ($3::uuid is null or l.created_at<(select created_at from partner_client_reservations where id=$3))
+ and not (coalesce(r.status,'')='rejected' and coalesce(r.rejection_reason,'')='unconfirmed') limit 1`,[phone,userId,reservationId])).rows.length;
  const claimed=(await sql.query('select referral_id from partner_client_claims where normalized_phone=$1 or ($2::uuid is not null and buyer_user_id=$2)',[phone,userId])).rows.length;
  return !!(known||claimed);
 }
@@ -93,7 +96,7 @@ function referralFilter(filter:string){
  if(filter==='payments')return " and exists(select 1 from partner_rewards w where w.referral_id=r.id)";
  if(filter==='pending')return " and r.status='pending'";
  if(filter==='payouts')return " and exists(select 1 from partner_rewards w where w.referral_id=r.id and w.status in ('accrued','requested'))";
- if(filter==='conflicts')return ` and (exists(select 1 from partner_client_claims c where c.referral_id<>r.id and (c.normalized_phone=r.normalized_phone or c.buyer_user_id=r.buyer_user_id)) or exists(select 1 from leads x left join partner_referrals t on t.lead_id=x.id where x.id<>r.lead_id and (x.normalized_phone=r.normalized_phone or x.user_id=r.buyer_user_id) and (t.status='accepted' or (x.created_at<r.created_at and not (coalesce(t.status,'')='rejected' and coalesce(t.rejection_reason,'')='unconfirmed')))))`;
+ if(filter==='conflicts')return ` and (exists(select 1 from partner_client_claims c where c.referral_id<>r.id and (c.normalized_phone=r.normalized_phone or c.buyer_user_id=r.buyer_user_id)) or exists(select 1 from leads x left join partner_referrals t on t.lead_id=x.id where x.id<>r.lead_id and (x.normalized_phone=r.normalized_phone or x.user_id=r.buyer_user_id) and (t.status='accepted' or (x.created_at<${priorityTime('r')} and not (coalesce(t.status,'')='rejected' and coalesce(t.rejection_reason,'')='unconfirmed')))))`;
  return '';
 }
 const referralSelect=`select r.*,p.name as partner_name,l.name as client_name,l.phone as client_phone,l.status as stage from partner_referrals r join partner_profiles p on p.id=r.partner_id left join leads l on l.id=r.lead_id`;

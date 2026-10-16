@@ -72,10 +72,18 @@ test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirm
  });
  await t.test('anonymous buyer waits for contact verification; owner acceptance converts the same hold',async()=>{
   const hold=(await reserve(input('+79997777777'))).json().reservation;
+  const direct=await post('/api/v1/leads',leadInput('+79997777777'),guest);assert.equal(direct.statusCode,200,direct.body);
   const lead=await post('/api/v1/leads',leadInput('+79997777777',hold.code),guest);assert.equal(lead.statusCode,200,lead.body);
   const r=(await db.query('select * from partner_referrals where lead_id=$1',[lead.json().id])).rows[0];assert.equal(r.status,'pending');
   const review=await post('/api/v1/control/partner-referrals/'+r.id+'/review',{revision:r.revision,decision:'accept',contactConfirmed:true,note:'Контакт покупателя подтверждён владельцем'},headers,owner);assert.equal(review.statusCode,200,review.body);
   assert.equal((await db.query('select converted_referral_id from partner_client_reservations where id=$1',[hold.id])).rows[0].converted_referral_id,r.id);
+ });
+ await t.test('a normal enquiry after the hold cannot steal its priority when the buyer later confirms',async()=>{
+  const hold=(await reserve(input('+79990123456'))).json().reservation,v=await visitor(810004);
+  const direct=await post('/api/v1/leads',leadInput('+79990123456'),v);assert.equal(direct.statusCode,200,direct.body);
+  const confirmed=await post('/api/v1/leads',leadInput('+79990123456',hold.code),v);assert.equal(confirmed.statusCode,200,confirmed.body);
+  const r=(await db.query('select status,partner_id from partner_referrals where lead_id=$1',[confirmed.json().id])).rows[0];assert.equal(r.status,'accepted');assert.equal(r.partner_id,pa.id);
+  assert.equal(Number((await db.query("select count(*) as n from partner_client_claims where normalized_phone='+79990123456'")).rows[0].n),1);
  });
  await t.test('verified identity cannot claim another phone after its first accepted referral',async()=>{
   const hold=(await reserve(input('+79998888888'),b)).json().reservation;
@@ -87,10 +95,17 @@ test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirm
   await db.query("update partner_client_reservations set created_at=now()-interval '8 days',expires_at=now()-interval '1 day' where id=$1",[hold.id]);
   assert.equal((await reserve(data)).json().outcome,'expired');const newHold=await reserve(input('+79996666666'),b);assert.equal(newHold.json().outcome,'reserved');assert.notEqual(newHold.json().reservation.id,hold.id);
  });
+ await t.test('uniqueness priority preserves PostgreSQL timestamp microseconds',async()=>{
+  const v=await visitor(810005),direct=await post('/api/v1/leads',leadInput('+79990200002'),v);assert.equal(direct.statusCode,200,direct.body);
+  const hold=(await reserve(input('+79990200001'))).json().reservation;
+  await db.query("update leads set created_at='2000-01-01T00:00:00.123123Z' where id=$1",[direct.json().id]);
+  await db.query("update partner_client_reservations set created_at='2000-01-01T00:00:00.123456Z' where id=$1",[hold.id]);
+  const r=await post('/api/v1/leads',leadInput('+79990200001',hold.code),v);assert.equal(r.statusCode,409,r.body);
+ });
  await t.test('Control reservation queue is independently paginated and includes its full count',async()=>{
   for(let i=0;i<35;i++){
    const invitation=(await db.query('insert into partner_invitations(partner_id,code,label) values($1,$2,$3) returning id',[pa.id,'queue'+randomUUID().replaceAll('-',''),'Очередь '+i])).rows[0];
-   await db.query('insert into partner_client_reservations(id,partner_id,invitation_id,normalized_phone) values($1,$2,$3,$4)',[randomUUID(),pa.id,invitation.id,'+7999'+String(1000000+i)]);
+   await db.query('insert into partner_client_reservations(id,partner_id,invitation_id,normalized_phone) values($1,$2,$3,$4)',[randomUUID(),pa.id,invitation.id,'+7988'+String(1000000+i)]);
   }
   const first=await app.inject({url:'/api/v1/control/partners?reservationPage=1',cookies:owner}),second=await app.inject({url:'/api/v1/control/partners?reservationPage=2',cookies:owner});assert.equal(first.statusCode,200,first.body);assert.equal(second.statusCode,200,second.body);
   assert.equal(first.json().reservations.length,30);assert.equal(first.json().reservationHasMore,true);assert.ok(first.json().reservationTotal>=35);assert.ok(second.json().reservations.length>0);
