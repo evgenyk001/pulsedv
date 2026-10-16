@@ -15,9 +15,9 @@ for(const width of [320,390,430])test(`Outlined card icons remain consistent acr
   await page.goto('/pulsedv/mini-app/#/'+route);await expect(page.locator('[data-icon-tile]').first()).toBeVisible();
   const sizes=await page.locator('[data-icon-tile]').evaluateAll(tiles=>tiles.filter(el=>el.getBoundingClientRect().width>0).map(el=>{
    const css=getComputedStyle(el),svg=el.querySelector('svg'),glyph=svg?getComputedStyle(svg):null;
-   return {width:css.width,height:css.height,radius:css.borderRadius,border:css.borderTopWidth,stroke:glyph?.strokeWidth,glyphWidth:glyph?.width,glyphHeight:glyph?.height};
+   return {width:css.width,height:css.height,radius:css.borderRadius,border:css.borderTopWidth,color:css.color,stroke:glyph?.strokeWidth,glyphWidth:glyph?.width,glyphHeight:glyph?.height};
   }));
-  for(const actual of sizes)expect(actual,route).toEqual({width:'36px',height:'36px',radius:'12px',border:'1px',stroke:'1.8px',glyphWidth:'20px',glyphHeight:'20px'});
+  for(const actual of sizes)expect(actual,route).toEqual({width:'36px',height:'36px',radius:'12px',border:'1px',color:'rgb(89, 101, 118)',stroke:'1.8px',glyphWidth:'20px',glyphHeight:'20px'});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),route).toBe(true);
   if(['','profile','selection'].includes(route))await page.screenshot({path:`test-results/icon-system-${route||'home'}-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
  }

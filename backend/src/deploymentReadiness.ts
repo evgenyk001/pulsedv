@@ -10,7 +10,7 @@ export function deploymentIssues(config:RuntimeConfig):DeploymentIssue[]{
  const host=new URL(config.PUBLIC_ORIGIN).hostname;
  if(host==='localhost'||host.endsWith('.localhost')||host.endsWith('.example.com')||host.endsWith('.test')||host==='example.com')error('Укажите настоящий публичный домен вместо шаблона');
  const password=decodeURIComponent(new URL(config.DATABASE_URL).password);
- if(password.length<32||/replace|password|example/i.test(password))error('Задайте случайный пароль PostgreSQL длиной от 32 символов');
+ if(!/^[A-Za-z0-9_-]{32,}$/.test(password)||/replace|password|example/i.test(password))error('Задайте случайный URL-safe пароль PostgreSQL длиной от 32 символов');
  if(!/^\d{5,}:[A-Za-z0-9_-]{20,}$/.test(config.BOT_TOKEN))error('Настройте BOT_TOKEN для входа Telegram, закрепов и уведомлений');
  if(!config.MAP_2GIS_KEY.trim())error('Настройте MAP_2GIS_KEY для рабочей карты');
  if(!config.LEGAL_OPERATOR_NAME||!config.LEGAL_OPERATOR_INN||!config.LEGAL_OPERATOR_ADDRESS||!config.LEGAL_CONTACT_EMAIL)error('Заполните реквизиты оператора и контакт на страницах согласия и политики');
