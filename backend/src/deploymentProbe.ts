@@ -31,7 +31,9 @@ if(process.argv[2]==='seed'){
   const response=await call(path);assert.equal(response.status,200,path);assert.match(response.bytes.toString(),/<html/i);
   if(path.includes('control-center'))assert.match(String(response.headers['content-security-policy']),/frame-ancestors 'none'/);
   for(const match of response.bytes.toString().matchAll(/(?:src|href)="([^"#]+\.(?:js|css))"/g)){
-   assert.equal((await call(new URL(match[1],new URL(path,base)).pathname)).status,200,'Built asset '+match[1]);
+   const asset=new URL(match[1],new URL(path,base));
+   if(asset.origin!==base.origin)continue; // Telegram SDK belongs to Telegram, not this web image.
+   assert.equal((await call(asset.pathname)).status,200,'Built asset '+match[1]);
   }
  }
  assert.equal((await call('/media/private/probe.txt')).status,404);
