@@ -76,12 +76,12 @@
   --brand-soft: rgba(242, 13, 29, 0.10);
   --blue-soft: rgba(78, 127, 184, 0.11);
   --content-max: 480px;
-  --app-card: rgba(255,255,255,0.70);
-  --app-card-strong: rgba(255,255,255,0.84);
-  --app-card-border: rgba(255,255,255,0.90);
-  --app-card-shadow: 0 1px 2px rgba(35,47,63,.028), 0 10px 30px rgba(47,59,78,.062), inset 0 1px 0 rgba(255,255,255,.86);
-  --app-card-shadow-strong: 0 2px 5px rgba(35,47,63,.035), 0 17px 42px rgba(47,59,78,.092), inset 0 1px 0 rgba(255,255,255,.92);
-  --app-radius-card: 30px;
+  --app-card: #FFFFFF;
+  --app-card-strong: #FFFFFF;
+  --app-card-border: transparent;
+  --app-card-shadow: none;
+  --app-card-shadow-strong: none;
+  --app-radius-card: 24px;
   --app-radius-control: 22px;
   --app-radius-pill: 999px;
   --app-radius-sheet: 32px;
@@ -92,11 +92,20 @@
   --app-icon-avatar: 48px;
   --app-icon-empty: 62px;
   --app-control-height: 48px;
-  --app-page-gap: 20px;
+  --app-page-gap: 24px;
   --app-section-gap: 12px;
   --app-sheet-inline: 18px;
   --app-sheet-top: 30px;
   --app-sheet-bottom: 18px;
+  /* Inset grouped lists, shared across menus, facts and settings. */
+  --list-surface: var(--app-card);
+  --list-radius: 24px;
+  --list-inset: 16px;
+  --list-icon: 32px;
+  --list-divider: rgba(60, 60, 67, .12);
+  --list-chevron: #B1B4BC;
+  --list-pressed: rgba(120, 128, 145, .08);
+  --list-hairline: 1px;
   --motion-spring: cubic-bezier(.18,.88,.22,1);
   --motion-soft: cubic-bezier(.2,.8,.2,1);
   --motion-press: cubic-bezier(.3,.7,.4,1);
@@ -191,3 +200,6 @@ button,a,input{
 }
 
 .screenLoadState{min-height:35vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;text-align:center;color:var(--muted-foreground,#75808e);gap:12px}.screenLoadState strong{color:var(--foreground,#18202d)}.screenLoadState p{margin:0}.screenLoadState button{border:0;border-radius:24px;padding:12px 20px;background:#ed2146;color:white;font:inherit}
+
+@media(min-resolution:2dppx){:root{--list-hairline:.5px}}
+.dark{--list-divider:rgba(255,255,255,.1);--list-chevron:#666b74;--list-pressed:rgba(255,255,255,.06)}
