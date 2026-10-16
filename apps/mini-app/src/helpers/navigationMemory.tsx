@@ -2,7 +2,7 @@ import React from 'react';
 import {useLocation,useNavigationType} from 'react-router-dom';
 const positions=new Map<string,number>();
 let previous='/';
-export function propertyReturn(){try{const v=sessionStorage.getItem('pulse.property.return');return v&&/^\/(catalog|favorites|selection|journey)([?]|$)/.test(v)?v:'/catalog'}catch{return '/catalog'}}
+export function propertyReturn(){try{const v=sessionStorage.getItem('pulse.property.return');return v&&/^\/(catalog|favorites|selection|journey|my-search)([?]|$)/.test(v)?v:'/catalog'}catch{return '/catalog'}}
 export function NavigationMemory(){
  const location=useLocation(),kind=useNavigationType();const path=location.pathname+location.search;
  React.useLayoutEffect(()=>{

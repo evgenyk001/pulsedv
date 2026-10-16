@@ -1,7 +1,7 @@
 import React from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import {ChevronLeft,ChevronRight,ImageOff,Maximize2,X} from 'lucide-react';
-import type {PropertyPhoto} from '../../../../packages/domain/propertyPresentation';
+import {catalogImageVariant,type PropertyPhoto} from '../../../../packages/domain/propertyPresentation';
 import styles from './PropertyGallery.module.css';
 
 function Photo({photo,eager=false,retry=true}:{photo:PropertyPhoto;eager?:boolean;retry?:boolean}){
@@ -55,7 +55,7 @@ export function PropertyGallery({name,photos,index,onIndexChange}:{name:string;p
     </div>
     {photos.length>1&&<><button type="button" className={styles.previous} aria-label="Предыдущее фото" disabled={active===0} onClick={()=>move(active-1)}><ChevronLeft size={24}/></button><button type="button" className={styles.next} aria-label="Следующее фото" disabled={active===photos.length-1} onClick={()=>move(active+1)}><ChevronRight size={24}/></button></>}
    </div>
-   <footer className={styles.footer}><p>{photos[active]?.alt}</p>{photos.length>1&&<div className={styles.thumbnails} aria-label="Выбор фотографии">{photos.map((photo,i)=><button type="button" key={photo.url} aria-label={'Фото '+(i+1)} aria-pressed={i===active} onClick={()=>move(i)}><img src={photo.url} alt="" loading="lazy"/></button>)}</div>}</footer>
+   <footer className={styles.footer}><p>{photos[active]?.alt}</p>{photos.length>1&&<div className={styles.thumbnails} aria-label="Выбор фотографии">{photos.map((photo,i)=><button type="button" key={photo.url} aria-label={'Фото '+(i+1)} aria-pressed={i===active} onClick={()=>move(i)}><img src={catalogImageVariant(photo.url,'thumb')} alt="" loading="lazy" onError={e=>{if(e.currentTarget.getAttribute('src')!==photo.url)e.currentTarget.src=photo.url}}/></button>)}</div>}</footer>
   </Dialog.Content></Dialog.Portal>
  </Dialog.Root>;
 }

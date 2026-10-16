@@ -18,6 +18,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
  const media:{leadId:string;legacy:string[]}[]=[];
 
  const result=await db.transaction(async sql=>{
+  await sql.query("delete from partner_client_reservations where converted_referral_id is null and expires_at<now()-interval '30 days'");
   await sql.query('delete from auth_tokens where expires_at<=now()');
   await sql.query('delete from control_login_challenges where expires_at<now()-interval \'1 day\' or consumed_at is not null and consumed_at<now()-interval \'1 day\'');
   await sql.query("delete from outbox_events where topic='manager.security_code' and created_at<now()-interval '10 minutes'");
@@ -35,6 +36,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
   }
   if(leadIds.length){
    await sql.query("update partner_invitations set label='Архивная рекомендация' where id in(select invitation_id from partner_referrals where lead_id=any($1::uuid[]))",[leadIds]);
+   await sql.query('update partner_client_reservations set normalized_phone=null where converted_referral_id in(select id from partner_referrals where lead_id=any($1::uuid[]))',[leadIds]);
    await sql.query('update partner_client_claims set normalized_phone=null,buyer_user_id=null where referral_id in(select id from partner_referrals where lead_id=any($1::uuid[]))',[leadIds]);
    await sql.query('update partner_referrals set normalized_phone=null,buyer_user_id=null,review_note=null where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query("delete from outbox_events where aggregate_type='lead' and aggregate_id=any($1::uuid[])",[leadIds]);

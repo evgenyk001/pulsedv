@@ -18,12 +18,16 @@ type Slide={
   kind:"promo"|"giveaway"|"partner";
 };
 
+const optimizedImage=(url:string)=>{
+ const id=/(938f9be1-5061-411a-ac1d-f1362819f38b|2f66fed6-2933-4ec7-8a98-583896cd9e5f|7493f319-d413-4d3d-90e4-66b4a2ee6ecd)\.png$/.exec(url)?.[1];
+ return id?asset('_cdn/static/'+id+'.webp'):url;
+};
 const asset=(path:string)=>`${import.meta.env.BASE_URL}${path.startsWith("/")?path.slice(1):path}`;
 
 const fallbackSlides:Slide[] = [
-  { id:"projects",image:asset("/_cdn/static/938f9be1-5061-411a-ac1d-f1362819f38b.png"),eyebrow:"Приморье",title:"Квартира, которую хочется показывать друзьям",text:"Проекты Владивостока, Артёма и Уссурийска в одном каталоге.",cta:"Смотреть проекты",to:"/catalog",kind:"promo" },
-  { id:"mortgage",image:asset("/_cdn/static/2f66fed6-2933-4ec7-8a98-583896cd9e5f.png"),eyebrow:"Ипотека",title:"Сначала платёж. Потом — подходящие квартиры",text:"Подберём проекты под комфортный ежемесячный платёж.",cta:"Рассчитать",to:"/mortgage",kind:"promo" },
-  { id:"select",image:asset("/_cdn/static/7493f319-d413-4d3d-90e4-66b4a2ee6ecd.png"),eyebrow:"PULSE Select",title:"Не листайте сотни квартир вручную",text:"Ответьте на несколько вопросов — покажем подходящие ЖК.",cta:"Начать подбор",to:"/selection",kind:"promo" }
+  { id:"projects",image:asset("/_cdn/static/938f9be1-5061-411a-ac1d-f1362819f38b.webp"),eyebrow:"Приморье",title:"Квартира, которую хочется показывать друзьям",text:"Проекты Владивостока, Артёма и Уссурийска в одном каталоге.",cta:"Смотреть проекты",to:"/catalog",kind:"promo" },
+  { id:"mortgage",image:asset("/_cdn/static/2f66fed6-2933-4ec7-8a98-583896cd9e5f.webp"),eyebrow:"Ипотека",title:"Сначала платёж. Потом — подходящие квартиры",text:"Подберём проекты под комфортный ежемесячный платёж.",cta:"Рассчитать",to:"/mortgage",kind:"promo" },
+  { id:"select",image:asset("/_cdn/static/7493f319-d413-4d3d-90e4-66b4a2ee6ecd.webp"),eyebrow:"PULSE Select",title:"Не листайте сотни квартир вручную",text:"Ответьте на несколько вопросов — покажем подходящие ЖК.",cta:"Начать подбор",to:"/selection",kind:"promo" }
 ];
 
 function visibleIndicatorIndexes(total:number,selected:number,maxVisible=5){
@@ -44,7 +48,7 @@ export function PromoCarousel(){
   const {data:managed=[]}=usePromoBanners();
   const slides=React.useMemo<Slide[]>(()=>managed.length?managed.map((banner,index)=>({
     id:banner.id,
-    image:banner.imageUrl===DEFAULT_PARTNER_BANNER.imageUrl?asset("_cdn/static/partner-referral.webp"):banner.imageUrl||(fallbackSlides.find(slide=>slide.to===banner.actionUrl)||fallbackSlides[index%fallbackSlides.length]).image,
+    image:banner.imageUrl===DEFAULT_PARTNER_BANNER.imageUrl?asset("_cdn/static/partner-referral.webp"):optimizedImage(banner.imageUrl||'')||(fallbackSlides.find(slide=>slide.to===banner.actionUrl)||fallbackSlides[index%fallbackSlides.length]).image,
     eyebrow:banner.eyebrow||banner.city||banner.audience||(banner.kind==="partner"?"Партнёр PULSE.DV":banner.kind==="giveaway"?"Специальное предложение":"PULSE.DV"),
     title:banner.title,
     text:banner.body,
@@ -53,6 +57,10 @@ export function PromoCarousel(){
     kind:banner.kind||"promo",
   })):[],[managed]);
 
+  const wrap=React.useRef<HTMLDivElement>(null);
+  const [inView,setInView]=React.useState(false);
+  const [foreground,setForeground]=React.useState(!document.hidden);
+  React.useEffect(()=>{const el=wrap.current;if(!el)return;const observer=new IntersectionObserver(([entry])=>setInView(entry.isIntersecting&&entry.intersectionRatio>=.5),{threshold:[0,.5]});observer.observe(el);const visibility=()=>setForeground(!document.hidden);document.addEventListener("visibilitychange",visibility);return()=>{observer.disconnect();document.removeEventListener("visibilitychange",visibility)}},[managed.length]);
   const [api,setApi]=React.useState<CarouselApi>();
   const [selected,setSelected]=React.useState(0);
   const [navigationReady,setNavigationReady]=React.useState(false);
@@ -64,7 +72,7 @@ export function PromoCarousel(){
     let active=true;
     if(!slides.length){setMediaReady(false);return()=>{active=false};}
     setMediaReady(false);
-    Promise.all(slides.map(slide=>new Promise<void>(resolve=>{
+    Promise.all(slides.slice(0,1).map(slide=>new Promise<void>(resolve=>{
       const image=new Image();
       image.src=slide.image;
       const done=()=>resolve();
@@ -80,12 +88,12 @@ export function PromoCarousel(){
   },[slides]);
 
   React.useEffect(()=>{
-    if(!api||!mediaReady||slides.length<2)return;
+    if(!api||!mediaReady||slides.length<2||!inView||!foreground)return;
     const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
     if(reduced)return;
     autoplay.current.play();
     return()=>autoplay.current.stop();
-  },[api,mediaReady,slides.length]);
+  },[api,mediaReady,slides.length,inView,foreground]);
 
   React.useEffect(()=>{
     if(!api){setNavigationReady(false);return;}
@@ -93,7 +101,7 @@ export function PromoCarousel(){
     const onPointerDown=()=>autoplay.current.stop();
     const onSettle=()=>{
       const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-      if(mediaReady&&slides.length>1&&!reduced){
+      if(mediaReady&&slides.length>1&&!reduced&&inView&&!document.hidden){
         autoplay.current.play();
         autoplay.current.reset();
       }
@@ -109,21 +117,21 @@ export function PromoCarousel(){
       api.off("pointerDown",onPointerDown);
       api.off("settle",onSettle);
     };
-  },[api,mediaReady,slides.length]);
+  },[api,mediaReady,slides.length,inView,foreground]);
 
   React.useEffect(()=>{
     if(selected>=slides.length)setSelected(0);
   },[slides.length,selected]);
 
   React.useEffect(()=>{
-    const slide=slides[selected];if(!slide||impressed.current.has(slide.id))return;
-    impressed.current.add(slide.id);
-    recordPulseEvent({eventType:"banner_impression",entityType:"banner",entityId:slide.id,metadata:{kind:slide.kind,position:selected+1}});
-  },[selected,slides]);
+    const slide=slides[selected];if(!slide||!inView||!foreground||impressed.current.has(slide.id))return;
+    const timer=setTimeout(()=>{impressed.current.add(slide.id);recordPulseEvent({eventType:'banner_impression',entityType:'banner',entityId:slide.id,metadata:{kind:slide.kind,position:selected+1}})},800);
+    return()=>clearTimeout(timer);
+  },[selected,slides,inView,foreground]);
 
   if(!slides.length)return null;
 
-  return <div className={styles.wrap}>
+  return <div className={styles.wrap} ref={wrap}>
     <Carousel opts={{loop:slides.length>1,align:"start",duration:42,slidesToScroll:1,skipSnaps:false}} plugins={[autoplay.current]} setApi={setApi} className={styles.carousel}>
       <CarouselContent>
         {slides.map(({id,image,eyebrow,title,text,cta,to,kind},index)=>{
@@ -135,7 +143,7 @@ export function PromoCarousel(){
           return <CarouselItem key={id} className={styles.slide}>
             <BannerLink to={to} className={styles.bannerLink} label={title} onActivate={()=>recordPulseEvent({eventType:"banner_click",entityType:"banner",entityId:id,metadata:{kind,position:index+1,target:to}})}>
               <article className={styles.banner+" "+styles[kind]+" "+(to&&/^\/partners(?:[/?#]|$)/.test(to)?styles.partnerProgram+" ":"")+(isCurrent?styles.bannerActive:"")}>
-                <img src={image} alt="" loading="eager" decoding="async" fetchPriority={index===0?"high":"auto"}/>
+                <img src={image} alt="" loading={index===0?"eager":"lazy"} decoding="async" fetchPriority={index===0?"high":"auto"}/>
                 <div className={styles.scrim}/>
                 <div className={styles.ambient}/>
                 <div className={styles.edge}/>

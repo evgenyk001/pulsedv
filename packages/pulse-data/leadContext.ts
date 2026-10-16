@@ -45,7 +45,12 @@ export function describeLeadRequestContext(context:Record<string,unknown>,source
     const down=rub(context.down);if(down)lines.push("Первоначальный взнос "+down);
     const years=number(context.years);if(years!==null)lines.push("Срок "+years+" "+(years%10===1&&years%100!==11?"год":years%10>=2&&years%10<=4&&(years%100<10||years%100>=20)?"года":"лет"));
     const rate=number(context.rate);if(rate!==null)lines.push("Ставка "+rate.toLocaleString("ru-RU")+"%");
-    const payment=rub(context.payment);if(payment)lines.push("Платёж ≈ "+payment+"/мес");
+    if(context.status==="blocked")lines.push("Расчёт недоступен: "+(text(context.blockReason)||"нужна проверка условий"));
+    else {const payment=rub(context.payment);if(payment)lines.push("Платёж ≈ "+payment+"/мес");}
+    if(number(context.childrenCount)!==null)lines.push("Детей: "+context.childrenCount);
+    if(context.hasYoungChild===true)lines.push("Есть ребёнок младшего возраста");
+    if(context.disabledChild===true)lines.push("Есть ребёнок с инвалидностью");
+    if(context.largeArea===true)lines.push("Объект увеличенной площади");
     const rooms=text(context.rooms);if(rooms)lines.push(rooms==='Студия'?rooms:rooms+' комн.');
     const square=area(context.areaFrom,context.areaTo);if(square)lines.push('Площадь '+square);
     return {title:"Ипотечный расчёт",lines};

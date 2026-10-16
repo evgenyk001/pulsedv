@@ -1,11 +1,11 @@
 import {api,visitorApi,runtime} from '../pulse-data/runtime';
 import {listPulseLeads} from '../pulse-data';
-import {claimExpiresOn,claimDateError} from './policy';
+import {claimExpiresOn,claimDateError,hasSixMonthClaim} from './policy';
 import {businessDay} from '../pulse-data/business';
 import {PARTNER_TERMS_VERSION,partnerReward,partnerRejectReasons,partnerStageLabels,publicClientName,normalizePartnerPhone,type Partner,type PartnerInvite,type PartnerReferral,type PartnerReward,type PartnerCabinet,type PartnerRejectReason} from './model';
 type LocalReferral=PartnerReferral&{phone:string;lastStage:string;lastReceivedOn:string|null;attributionCode:string};
 type Store={myPartnerId:string|null;partners:Partner[];invitations:PartnerInvite[];referrals:LocalReferral[];rewards:PartnerReward[]};
-export type ControlPartners={partners:Partner[];referrals:PartnerReferral[];page:number;total:number;hasMore:boolean};
+export type ControlPartners={reservationPage?:number;reservationTotal?:number;reservationHasMore?:boolean;counts?:{total:number;pending:number;requested:number;conflicts:number};reservations?:Array<import('./model').PartnerReservation&{partnerName:string;phone:string}>;partners:Partner[];referrals:PartnerReferral[];page:number;total:number;hasMore:boolean};
 const KEY='pulse.partners.v1',EVENT='pulse:partners',ATTRIBUTION='pulse.partner-invitation.v1';
 const uid=()=>crypto.randomUUID(),now=()=>new Date().toISOString();
 function read():Store{try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.partners)&&Array.isArray(s.invitations)&&Array.isArray(s.referrals)&&Array.isArray(s.rewards))return s}catch{}return {myPartnerId:null,partners:[],invitations:[],referrals:[],rewards:[]}}
@@ -19,11 +19,12 @@ function dto(s:Store,r:LocalReferral,privateView:boolean):PartnerReferral{
  return {id:r.id,partnerId:r.partnerId,partnerName:r.partnerName,leadId:privateView?r.leadId:null,invitationId:r.invitationId,clientName:privateView?l?.name||r.clientName:publicClientName(l?.name||r.clientName),...(privateView?{clientPhone:l?.phone,reviewNote:r.reviewNote,conflictLeads:matches.map(l=>({id:l.id,label:l.name+' · '+l.phone})),conflictDetails:matches.map(l=>l.name+' · '+l.phone).join('\n')}:{ }),termsVersion:r.termsVersion,claimStartedOn:r.claimStartedOn,claimExpiresOn:r.claimExpiresOn,dealConfirmedOn:r.dealConfirmedOn,status:r.status,stage:l?.status||r.stage,stageLabel:partnerStageLabels[l?.status||r.stage]||'Обращение',conflict:matches.length>0,rejectionReason:r.rejectionReason,revision:r.revision,createdAt:r.createdAt,acceptedAt:r.acceptedAt,events:r.events,reward:reward?{...reward,...(!privateView?{payoutReference:undefined,documentReference:undefined}:{})}:null};
 }
 export function subscribePartners(fn:()=>void){const storage=(e:StorageEvent)=>{if(e.key===KEY||e.key==='pulse.dv.control.leads.v1')fn()};window.addEventListener(EVENT,fn);window.addEventListener('storage',storage);window.addEventListener('pulse:control-leads',fn);return()=>{window.removeEventListener(EVENT,fn);window.removeEventListener('storage',storage);window.removeEventListener('pulse:control-leads',fn)}}
-export async function getPartnerCabinet(page=1):Promise<PartnerCabinet>{
- if(runtime.enabled)return visitorApi('/me/partner?page='+page);
+export async function getPartnerCabinet(page=1,filter='all'):Promise<PartnerCabinet>{
+ if(runtime.enabled)return visitorApi('/me/partner?page='+page+'&filter='+filter);
  const s=sync(read()),partner=s.partners.find(p=>p.id===s.myPartnerId)??null,all=s.referrals.filter(r=>r.partnerId===partner?.id).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)),limit=30;
  const rewards=s.rewards.filter(w=>all.some(r=>r.id===w.referralId));
- return {authenticated:true,partner,referrals:all.slice((page-1)*limit,page*limit).map(r=>dto(s,r,false)),invitations:s.invitations.filter(i=>i.partnerId===partner?.id).slice(-30).reverse(),page,total:all.length,hasMore:all.length>page*limit,summary:{accruedMinor:rewards.filter(w=>['accrued','requested'].includes(w.status)).reduce((a,w)=>a+w.grossMinor,0),paidMinor:rewards.filter(w=>w.status==='paid').reduce((a,w)=>a+w.paidMinor,0),pendingCount:all.filter(r=>r.status==='pending').length,acceptedCount:all.filter(r=>r.status==='accepted').length}};
+ const filtered=filter==='payments'?all.filter(r=>s.rewards.some(w=>w.referralId===r.id)):all;
+ return {authenticated:true,partner,referrals:filtered.slice((page-1)*limit,page*limit).map(r=>dto(s,r,false)),invitations:s.invitations.filter(i=>i.partnerId===partner?.id).slice(-30).reverse().map(i=>({...i,submitted:s.referrals.some(r=>r.invitationId===i.id)})),page,total:filtered.length,hasMore:filtered.length>page*limit,summary:{accruedMinor:rewards.filter(w=>['accrued','requested'].includes(w.status)).reduce((a,w)=>a+w.grossMinor,0),paidMinor:rewards.filter(w=>w.status==='paid').reduce((a,w)=>a+w.paidMinor,0),pendingCount:all.filter(r=>r.status==='pending').length,acceptedCount:all.filter(r=>r.status==='accepted').length}};
 }
 export async function joinPartner(input:{name:string;phone:string;consent:boolean;termsVersion:string}){
  if(runtime.enabled)return visitorApi('/me/partner/join',{method:'POST',body:JSON.stringify(input)});
@@ -46,25 +47,25 @@ export async function createPartnerInvite(input:{label:string;idempotencyKey:str
  const old=s.invitations.find(i=>i.id===input.idempotencyKey);if(old){if(old.partnerId!==p.id||old.label!==input.label.trim())throw new Error('Ключ приглашения уже использован');return {invitation:old};}
  const invite:PartnerInvite={id:input.idempotencyKey,partnerId:p.id,code:'i'+uid().replaceAll('-',''),label:input.label.trim(),createdAt:now()};s.invitations.push(invite);write(s);return {invitation:invite};
 }
-export function rememberPartnerInvite(input:{code:string;partnerName:string}){sessionStorage.setItem(ATTRIBUTION,JSON.stringify(input));window.dispatchEvent(new Event(EVENT))}
-export function rememberedPartnerInvite():{code:string;partnerName:string}|null{try{const v=JSON.parse(sessionStorage.getItem(ATTRIBUTION)||'null');return v&&typeof v.code==='string'&&/^[a-zA-Z0-9_-]{12,64}$/.test(v.code)&&typeof v.partnerName==='string'?v:null}catch{return null}}
-export function clearPartnerInvite(){sessionStorage.removeItem(ATTRIBUTION);window.dispatchEvent(new Event(EVENT))}
-export function validateLocalPartnerInvite(code:string,phone:string){const s=read(),i=s.invitations.find(i=>i.code===code),p=s.partners.find(p=>p.code===code||p.id===i?.partnerId);if(!p||p.status!=='active'||p.termsVersion!==PARTNER_TERMS_VERSION)throw new Error('Приглашение недоступно');if(p.phone===normalizePartnerPhone(phone))throw new Error('Собственная покупка не участвует в программе');return {p,i};}
+export function rememberPartnerInvite(input:{code:string;partnerName:string}){localStorage.setItem(ATTRIBUTION,JSON.stringify({...input,expiresAt:Date.now()+7*86400000}));window.dispatchEvent(new Event(EVENT))}
+export function rememberedPartnerInvite():{code:string;partnerName:string}|null{try{const v=JSON.parse(localStorage.getItem(ATTRIBUTION)||sessionStorage.getItem(ATTRIBUTION)||'null');return v&&(!v.expiresAt||v.expiresAt>Date.now())&&typeof v.code==='string'&&/^[a-zA-Z0-9_-]{12,64}$/.test(v.code)&&typeof v.partnerName==='string'?v:null}catch{return null}}
+export function clearPartnerInvite(){sessionStorage.removeItem(ATTRIBUTION);localStorage.removeItem(ATTRIBUTION);window.dispatchEvent(new Event(EVENT))}
+export function validateLocalPartnerInvite(code:string,phone:string,excludeLeadId?:string){const s=read(),i=s.invitations.find(i=>i.code===code),p=s.partners.find(p=>p.code===code||p.id===i?.partnerId);if(!p||p.status!=='active'||p.termsVersion!==PARTNER_TERMS_VERSION)throw new Error('Приглашение недоступно');if(p.phone===normalizePartnerPhone(phone))throw new Error('Собственная покупка не участвует в программе');const normalized=normalizePartnerPhone(phone),unconfirmed=(id:string)=>s.referrals.some(r=>r.leadId===id&&r.status==='rejected'&&r.rejectionReason==='unconfirmed');if(listPulseLeads().some(l=>l.id!==excludeLeadId&&normalizePartnerPhone(l.phone)===normalized&&!unconfirmed(l.id))||s.referrals.some(r=>r.leadId!==excludeLeadId&&r.phone===normalized&&!(r.status==='rejected'&&r.rejectionReason==='unconfirmed')))throw new Error('Клиент не уникальный или уже закреплён. Можно отправить обычную заявку без новой рекомендации');return {p,i};}
 export function recordLocalPartnerReferral(leadId:string,phone:string,code:string){
- const s=read(),{p,i}=validateLocalPartnerInvite(code,phone);if(s.referrals.some(r=>r.leadId===leadId))return;
+ const s=read(),{p,i}=validateLocalPartnerInvite(code,phone,leadId);if(s.referrals.some(r=>r.leadId===leadId))return;
  const l=listPulseLeads().find(l=>l.id===leadId);if(!l)throw new Error('Обращение не найдено');
  const r:LocalReferral={id:uid(),partnerId:p.id,partnerName:p.name,leadId,invitationId:i?.id??null,clientName:l.name,termsVersion:p.termsVersion,status:'pending',stage:l.status,stageLabel:partnerStageLabels[l.status],conflict:false,rejectionReason:null,revision:1,createdAt:now(),acceptedAt:null,events:[],reward:null,phone:normalizePartnerPhone(phone),lastStage:l.status,lastReceivedOn:null,attributionCode:code};event(r,'submitted','Покупатель подтвердил рекомендацию. Проверяем уникальность');s.referrals.push(r);write(s);
 }
-export async function getControlPartners(page=1):Promise<ControlPartners>{
- if(runtime.enabled)return api('/control/partners?page='+page);
- const s=sync(read()),all=[...s.referrals].sort((a,b)=>b.createdAt.localeCompare(a.createdAt));return {partners:s.partners,referrals:all.slice((page-1)*30,page*30).map(r=>dto(s,r,true)),page,total:all.length,hasMore:all.length>page*30};
+export async function getControlPartners(page=1,filter='all',reservationPage=1):Promise<ControlPartners>{
+ if(runtime.enabled)return api('/control/partners?page='+page+'&filter='+filter+'&reservationPage='+reservationPage);
+ const s=sync(read()),whole=[...s.referrals],all=whole.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).filter(r=>filter==='all'||filter==='pending'&&r.status==='pending'||filter==='payouts'&&s.rewards.some(w=>w.referralId===r.id&&['accrued','requested'].includes(w.status))||filter==='conflicts'&&clash(s,r).length>0);return {counts:{total:whole.length,pending:whole.filter(r=>r.status==='pending').length,requested:whole.filter(r=>s.rewards.some(w=>w.referralId===r.id&&w.status==='requested')).length,conflicts:whole.filter(r=>clash(s,r).length).length},partners:s.partners,referrals:all.slice((page-1)*30,page*30).map(r=>dto(s,r,true)),page,total:all.length,hasMore:all.length>page*30};
 }
 export async function getControlPartnerReferral(id:string){if(runtime.enabled)return api<{referral:PartnerReferral}>('/control/partner-referrals/'+encodeURIComponent(id));const s=sync(read()),r=s.referrals.find(r=>r.id===id);if(!r)throw new Error('Рекомендация не найдена');return {referral:dto(s,r,true)};}
 export async function getLeadPartner(leadId:string){if(runtime.enabled)return api<{referral:PartnerReferral|null}>('/control/leads/'+encodeURIComponent(leadId)+'/partner');const s=sync(read()),r=s.referrals.find(r=>r.leadId===leadId);return {referral:r?dto(s,r,true):null};}
 export async function reviewPartnerReferral(id:string,input:{revision:number;decision:'accept'|'reject';contactConfirmed:boolean;note:string;reason?:PartnerRejectReason}){
  if(runtime.enabled)return api('/control/partner-referrals/'+id+'/review',{method:'POST',body:JSON.stringify(input)});
  const s=read(),r=s.referrals.find(r=>r.id===id);if(!r||r.status!=='pending'||r.revision!==input.revision)throw new Error('Рекомендация уже рассмотрена');if(input.note.trim().length<2)throw new Error('Укажите результат проверки');
- if(input.decision==='accept'){if(!input.contactConfirmed)throw new Error('Подтвердите контакт с покупателем');if(clash(s,r).length)throw new Error('Есть совпадение в CRM или более ранняя рекомендация');r.status='accepted';r.acceptedAt=now();if(r.termsVersion===PARTNER_TERMS_VERSION){r.claimStartedOn=businessDay();r.claimExpiresOn=claimExpiresOn(r.claimStartedOn);}event(r,'accepted','Клиент проверен и закреплён за партнёром');event(r,'stage',partnerStageLabels[r.stage]);}
+ if(input.decision==='accept'){if(!input.contactConfirmed)throw new Error('Подтвердите контакт с покупателем');if(clash(s,r).length)throw new Error('Есть совпадение в CRM или более ранняя рекомендация');r.status='accepted';r.acceptedAt=now();if(r.termsVersion&&hasSixMonthClaim(r.termsVersion)){r.claimStartedOn=businessDay();r.claimExpiresOn=claimExpiresOn(r.claimStartedOn);}event(r,'accepted','Клиент проверен и закреплён за партнёром');event(r,'stage',partnerStageLabels[r.stage]);}
  else{if(!input.reason)throw new Error('Укажите причину отказа');r.status='rejected';r.rejectionReason=input.reason;event(r,'rejected',partnerRejectReasons[input.reason]);}r.reviewNote=input.note;r.revision++;write(s);return {ok:true};
 }
 export async function accruePartnerReward(id:string,revision:number,dealOn?:string){
@@ -85,3 +86,10 @@ export async function payPartnerReward(id:string,input:{revision:number;withheld
 export async function voidPartnerReward(id:string,revision:number,reason:string){if(runtime.enabled)return api('/control/partner-rewards/'+id+'/void',{method:'POST',body:JSON.stringify({revision,reason})});const s=read(),w=s.rewards.find(w=>w.id===id);if(!w||w.revision!==revision||!['accrued','requested'].includes(w.status))throw new Error('Оплаченное начисление нельзя отменить');if(reason.trim().length<5)throw new Error('Укажите причину отмены');w.status='void';w.revision++;event(s.referrals.find(r=>r.id===w.referralId)!,'void','Неоплаченное начисление отменено агентством');write(s);return {ok:true};}
 export async function changePartnerStatus(id:string,status:Partner['status']){if(runtime.enabled)return api('/control/partners/'+id,{method:'PATCH',body:JSON.stringify({status})});const s=read(),p=s.partners.find(p=>p.id===id);if(!p)throw new Error('Партнёр не найден');p.status=status;write(s);return {ok:true};}
 export function demoPartnerPaid(from:string,to:string){return read().rewards.filter(w=>w.status==='paid'&&w.paidOn&&w.paidOn>=from&&w.paidOn<=to).reduce((a,w)=>a+w.grossMinor/100,0)}
+
+export async function reservePartnerClient(input:{phone:string;label:string;contactConsent:boolean;idempotencyKey:string}):Promise<import('./model').ReservationResult>{
+ if(!runtime.enabled)throw new Error('Автоматическая проверка всей CRM станет доступна после подключения общей базы. Демо не проверяет других пользователей');
+ return visitorApi('/me/partner/reservations',{method:'POST',body:JSON.stringify(input)});
+}
+
+export async function releasePartnerReservation(id:string,reason:string){return api('/control/partner-reservations/'+encodeURIComponent(id)+'/release',{method:'POST',body:JSON.stringify({reason})});}

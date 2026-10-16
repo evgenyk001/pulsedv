@@ -17,3 +17,5 @@ export function claimLabel(end:string|null|undefined,today=businessDay()){
  const date=new Date(end+'T00:00:00Z').toLocaleDateString('ru-RU',{timeZone:'UTC'});
  return end<today?'Закреп истёк '+date:'Закреп до '+date;
 }
+
+export function hasSixMonthClaim(version:string){return version==='partners-v2-2026-10-14'||version==='partners-v3-2026-10-16';}

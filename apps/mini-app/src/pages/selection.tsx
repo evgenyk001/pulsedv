@@ -277,12 +277,12 @@ export default function SelectionPage(){
     const draft=kind==="down"?downDraft:paymentDraft;
     const current=kind==="down"?downPayment:monthlyPayment;
     const raw=Number(draft.replace(/[^0-9]/g,""));
-    const value=Number.isFinite(raw)&&raw>0?raw:current;
+    const value=draft.trim()!==""&&Number.isFinite(raw)&&(kind==="down"?raw>=0:raw>0)?raw:current;
     if(kind==="down"){
-      const next=clamp(snap(value,100_000),0,Math.max(500_000,maxPrice));
+      const next=clamp(Math.round(value),0,Math.max(500_000,maxPrice));
       setDownPayment(next);setDownDraft(formatRub(next));
     }else{
-      const next=clamp(snap(value,5_000),15_000,300_000);
+      const next=clamp(Math.round(value),15_000,300_000);
       setMonthlyPayment(next);setPaymentDraft(formatRub(next));
     }
   };
@@ -341,7 +341,7 @@ export default function SelectionPage(){
     const raw=smartQuery.trim();
     if(!raw){setSmartStatus("Напишите запрос одним предложением.");return;}
     setStarted(true);
-    const text=raw.toLowerCase().replace(/ё/g,"е");
+    const text=raw.toLowerCase().replace(/ё/g,"е").replace(/(\d)[\s\u00a0\u202f]+(?=\d{3}\b)/g,"$1");
     let found=0;
     let nextCity=city;
     let nextRooms=rooms;
@@ -365,10 +365,10 @@ export default function SelectionPage(){
     if(mortgageIntent&&control.select.mortgageEnabled){nextMode="mortgage";found++;}
     else if(cashIntent){nextMode="cash";found++;}
 
-    const paymentMatch=text.match(/(?:плат[её]ж[^\d]{0,18})?(\d{2,3})\s*(тыс|тысяч|к)\.?(?:\s*(?:руб|₽))?\s*(?:\/\s*мес|в месяц)/i);
+    const paymentMatch=text.match(/(\d+(?:[.,]\d+)?)\s*(тыс|тысяч|к)?\.?\s*(?:руб(?:лей|ля|ль)?\.?|₽)?\s*(?:\/\s*мес|в месяц)/i);
     if(paymentMatch){
-      const parsed=parseScaledMoney(paymentMatch[1],paymentMatch[2]);
-      if(parsed&&control.select.mortgageEnabled){nextPayment=clamp(snap(parsed,5_000),15_000,300_000);nextMode="mortgage";found++;}
+      const parsed=paymentMatch[2]?parseScaledMoney(paymentMatch[1],paymentMatch[2]):Number(paymentMatch[1].replace(",","."));
+      if(parsed&&control.select.mortgageEnabled){nextPayment=clamp(Math.round(parsed),15_000,300_000);nextMode="mortgage";found++;}
     }
 
     const downMatch=text.match(/(?:первоначальн\w*\s+)?взнос[^\d]{0,18}(\d+(?:[.,]\d+)?)\s*(млн|миллион\w*|тыс|тысяч)/i);
@@ -564,7 +564,7 @@ export default function SelectionPage(){
           :"Точного совпадения пока нет"}</h1>
         <p>{eligible.length
           ?<>Из них <strong>{strongCount}</strong> {plural(strongCount,["сильное совпадение","сильных совпадения","сильных совпадений"])}. PULSE объясняет, почему каждый проект попал сюда.</>
-          :<>Показываем ближайшие варианты и сразу считаем, какое небольшое изменение расширит выбор.</>
+          :<>Показываем ближайшие варианты и сразу считаем, какие условия с ними не совпадают. Специалист поможет проверить альтернативы.</>
         }</p>
         <div className={styles.summaryChips}>
           <span><Home size={13}/>{city}</span>
@@ -709,13 +709,13 @@ export default function SelectionPage(){
             <div className={styles.financeGrid}>
               <label className={styles.financeCard}>
                 <span><Banknote size={15}/>Первоначальный взнос</span>
-                <div><Input inputMode="numeric" value={downDraft} onChange={e=>editMoney("down",e.target.value)} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
+                <div><Input aria-label="Первоначальный взнос" inputMode="numeric" value={downDraft} onChange={e=>editMoney("down",e.target.value)} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
                 <div className={styles.quickRow}>{[1_000_000,1_500_000,2_000_000,3_000_000].map(value=><button type="button" key={value} onClick={()=>{setStarted(true);setDownPayment(value);setDownDraft(formatRub(value));safeHaptic();}}>{shortRub(value)}</button>)}</div>
               </label>
 
               <label className={styles.financeCard}>
                 <span><WalletCards size={15}/>Комфортный платёж</span>
-                <div><Input inputMode="numeric" value={paymentDraft} onChange={e=>editMoney("payment",e.target.value)} onBlur={()=>commitMoney("payment")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
+                <div><Input aria-label="Комфортный платёж" inputMode="numeric" value={paymentDraft} onChange={e=>editMoney("payment",e.target.value)} onBlur={()=>commitMoney("payment")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div>
                 <div className={styles.quickRow}>{[40_000,60_000,80_000,100_000].map(value=><button type="button" key={value} onClick={()=>{setStarted(true);setMonthlyPayment(value);setPaymentDraft(formatRub(value));safeHaptic();}}>{Math.round(value/1_000)} тыс.</button>)}</div>
               </label>
             </div>

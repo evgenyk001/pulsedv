@@ -15,6 +15,13 @@ export default function PersonalDataConsentPage(){
       <div><small>PULSE.DV</small><h1>Согласие на обработку персональных данных</h1><p>Версия от 29 сентября 2026 года</p></div>
     </section>
 
+    <PersonalDataConsentDocument/>
+
+    <div className={styles.links}><Link to="/privacy">Политика обработки персональных данных</Link></div>
+  </div>;
+}
+
+export function PersonalDataConsentDocument(){return (
     <article className={styles.document}>
       <section><p>Я свободно, своей волей и в своём интересе даю указанному ниже оператору PULSE.DV согласие на обработку моих персональных данных для обработки моего обращения, связи со мной и подбора недвижимости.</p></section>
 
@@ -29,7 +36,4 @@ export default function PersonalDataConsentPage(){
 
       <section><h2>Как отозвать согласие</h2><p>Отзыв можно направить через форму связи с PULSE.DV. После получения обращения обработка прекращается в той части, в которой отсутствуют иные законные основания для её продолжения.</p></section>
     </article>
-
-    <div className={styles.links}><Link to="/privacy">Политика обработки персональных данных</Link></div>
-  </div>;
-}
+);}

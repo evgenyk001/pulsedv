@@ -28,3 +28,8 @@ export function propertyMortgageLink(property:PulseProperty,plan?:PulseProperty[
  if(plan)query.set('floorplan',propertyPlanKey(property,plan));
  return '/mortgage?'+query;
 }
+
+/** New catalog uploads have static derivatives. Older/external images use originals. */
+export function catalogImageVariant(url:string,kind:'card'|'thumb'){
+ return /^\/media\/images\/[a-f0-9-]{36}\.(?:jpg|png|webp)$/.test(url)?url+'.'+kind+'.webp':url;
+}

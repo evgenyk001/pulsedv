@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Heart, Building2 } from "lucide-react";
 import { PropertyRecord } from "../helpers/propertyTypes";
 import { useFavoriteIds } from "../helpers/useFavoriteIds";
+import {catalogImageVariant} from "../../../../packages/domain/propertyPresentation";
 import styles from "./PropertyCard.module.css";
 
 type PropertyCardProps={property:PropertyRecord;compact?:boolean;returnTo?:string};
@@ -23,7 +24,7 @@ export function PropertyCard({property,compact=false,returnTo}:PropertyCardProps
       value="/catalog"+(search?"?"+search:"");
     }else if(!returnTo){
       const hash=window.location.hash.replace(/^#/,'');
-      if(/^\/(catalog|favorites|selection|journey)([?]|$)/.test(hash))value=hash;
+      if(/^\/(catalog|favorites|selection|journey|my-search)([?]|$)/.test(hash))value=hash;
     }
     return value;
   };
@@ -38,7 +39,7 @@ export function PropertyCard({property,compact=false,returnTo}:PropertyCardProps
   return <article className={`${styles.card} ${compact?styles.compact:""}`}>
     <Link to={`/property/${property.id}`} state={{returnTo:currentReturn()}} onClick={open} className={styles.link} aria-label={`Открыть ${property.name}`}>
       <div className={styles.image}>
-        {image?<img src={image} alt={property.name}/>:<div className={styles.imageFallback}><Building2 size={26}/></div>}
+        {image?<img loading="lazy" decoding="async" src={catalogImageVariant(image,"card")} onError={e=>{if(e.currentTarget.getAttribute("src")!==image)e.currentTarget.src=image}} alt={property.name}/>:<div className={styles.imageFallback}><Building2 size={26}/></div>}
         {property.tags[0]&&<span className={styles.badge}>{property.tags[0]}</span>}
       </div>
       <div className={styles.body}>

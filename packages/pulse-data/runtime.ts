@@ -23,7 +23,7 @@ export function runtimeError(error:unknown){runtime.error=error instanceof Error
 export class ApiError extends Error{constructor(public status:number,message:string){super(message);}}
 export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
  let response:Response;
- try{response=await fetch(runtime.base+path,{...options,credentials:'same-origin',headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers},signal:options.signal??AbortSignal.timeout(12000)});}catch{throw new ApiError(0,'Нет связи с сервером. Проверьте соединение и повторите попытку');}
+ try{response=await fetch(runtime.base+path,{...options,credentials:'same-origin',headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers},signal:options.signal??AbortSignal.timeout(12000)});}catch(error){throw new ApiError(0,error instanceof Error&&error.name==='TimeoutError'?'Сервер не успел ответить. Проверьте данные и повторите попытку':error instanceof Error&&error.name==='AbortError'?'Запрос отменён':'Нет связи с сервером. Проверьте соединение и повторите попытку');}
  const body=await response.json().catch(()=>({}));
  if(!response.ok)throw new ApiError(response.status,body.error||'Не удалось выполнить запрос');return body;
 }
@@ -32,6 +32,7 @@ let sessionPromise:Promise<Session>|null=null;
 let telegramBound=false;
 let visitorCookieBound=false;
 const SESSION='pulse.dv.api.session.v1';
+export async function visitorSessionId(){return (await session()).sessionId;}
 async function session():Promise<Session>{
  if(sessionPromise)return sessionPromise;
  sessionPromise=(async()=>{

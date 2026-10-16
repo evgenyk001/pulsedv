@@ -185,6 +185,9 @@ export function selectionMatch(
   for(const id of matchedPreferences)reasons.push(preferenceLabel(id));
 
   const tradeoffs:string[]=[];
+  if(!cityOk)tradeoffs.push('Другой город: '+property.city);
+  if(!roomsOk)tradeoffs.push('Не подходит комнатность');
+  if(!financeOk)tradeoffs.push(criteria.purchaseMode==='mortgage'?'Не укладывается в ваш взнос или платёж':'Цена выше выбранного бюджета');
   if(!deliveryOk&&criteria.delivery!=='Любой'&&criteria.delivery!=='Не важно')tradeoffs.push('Другой срок сдачи');
   for(const id of selected.filter(id=>!matchedPreferences.includes(id)))tradeoffs.push('Нет приоритета «'+preferenceLabel(id)+'»');
 
@@ -193,7 +196,7 @@ export function selectionMatch(
     eligible:cityOk&&roomsOk&&financeOk,
     price,
     reasons:reasons.slice(0,4),
-    tradeoffs:tradeoffs.slice(0,2),
+    tradeoffs:tradeoffs.slice(0,4),
     mortgagePayment,
     mortgageProgram,
   };

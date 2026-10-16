@@ -73,6 +73,7 @@ export async function processNotificationOutbox(
 
   for(const event of batch){
     try{
+      if(event.topic==='manager.security_code'&&!await repo.canDeliver(event)){await repo.markSkipped(event.id,'Authentication code expired or superseded');continue;}
       if(event.topic.startsWith("manager.")){
         const managerId=asString(event.payload.managerId);
         // Work alerts go only to the owner. Authentication codes remain private to their member.

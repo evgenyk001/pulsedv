@@ -35,7 +35,7 @@ export async function uploadJourneyAttachment(leadId:string,file:File,client=fal
   return {kind:image?'image':'file',name:file.name.slice(0,180)||'Файл',url:await dataUrl(file),mimeType:type,size:file.size};
  }
  const path=(client?'/me':'/control')+'/journeys/'+encodeURIComponent(leadId)+'/attachments?filename='+encodeURIComponent(file.name.slice(0,180));
- const response=await (client?visitorApi:api)<{attachment:JourneyAttachment}>(path,{method:'POST',headers:{'Content-Type':type},body:file});
+ const response=await (client?visitorApi:api)<{attachment:JourneyAttachment}>(path,{method:'POST',headers:{'Content-Type':type},body:file,signal:AbortSignal.timeout(120000)});
  return response.attachment;
 }
 export async function markJourneyRead(journey:Journey,messageIds:string[],client=false){

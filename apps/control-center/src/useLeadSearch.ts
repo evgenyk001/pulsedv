@@ -15,8 +15,7 @@ export function useLeadSearch(query:string,mode:string,status:string|null,unassi
  React.useEffect(()=>{
   if(!runtime.enabled)return;generation.current++;const controller=new AbortController();setLoading(true);
   const timer=setTimeout(()=>void fetchPage(1,controller.signal),250);
-  const poll=setInterval(()=>{if(!document.hidden)void fetchPage(1,controller.signal)},30000);
-  return()=>{generation.current++;clearTimeout(timer);clearInterval(poll);controller.abort()};
+  return()=>{generation.current++;clearTimeout(timer);controller.abort()};
  },[fetchPage]);
  return {...result,loading,error,loadMore:()=>fetchPage(result.page+1),refresh:()=>fetchPage(1)};
 }

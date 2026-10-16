@@ -52,17 +52,17 @@ export function AnalyticsPage(){
     {label:"Оставили контакт",value:leadSessions,base:sessions},
   ];
 
-  return <PageFrame eyebrow="АНАЛИТИКА ПОВЕДЕНИЯ" title="Аналитика" description="Воронка показывает путь клиента до контакта и реальные действия внутри приложения.">
+  return <PageFrame eyebrow="АНАЛИТИКА ПОВЕДЕНИЯ" title="Аналитика" description="Охват действий и обращения. Этапы считаются независимо и не означают последовательный путь одного клиента.">
     <FinancePanel/><LossReasonsPanel/><AcquisitionPanel/><section className="metrics">
-      <article><span>Сессии</span><strong>{sessions}</strong><small>визиты в приложение</small></article>
+      <article><span>Сессии</span><strong>{sessions}</strong><small>технические сессии, не визиты</small></article>
       <article><span>Тёплые и выше</span><strong>{priorities.warm+priorities.hot+priorities.urgent}</strong><small>заметный интерес</small></article>
       <article><span>Лиды</span><strong>{leadsTotal}</strong><small>оставили контакты</small></article>
       <article><span>Конверсия</span><strong>{conversion}%</strong><small>контакты / сессии</small></article>
     </section>
 
     <section className="panel">
-      <div className="kicker">ВОРОНКА</div>
-      <h2>От визита до контакта</h2>
+      <div className="kicker">ОХВАТ ДЕЙСТВИЙ</div>
+      <h2>Что делают в приложении</h2>
       <div className="funnelRows">
         {funnel.map((step,index)=>{
           const percent=step.base?Math.round(step.value/step.base*100):0;

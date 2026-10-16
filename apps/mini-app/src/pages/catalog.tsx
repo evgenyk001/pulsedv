@@ -389,7 +389,7 @@ export default function CatalogPage(){
     </div>:<div className={styles.mapMode}>
       {isLoading?<div className={styles.empty}><strong>Загружаем карту</strong><span>Получаем объекты для отображения.</span></div>:
        error?<div className={styles.empty}><strong>Не удалось загрузить объекты</strong><span>Проверьте соединение.</span></div>:
-       <PropertyMap properties={mapProperties} selectedId={selectedId} onSelect={setSelectedId} onOpen={id=>navigate("/property/"+id)} city={appliedCity==="Все"?undefined:appliedCity}/>}
+       !mapProperties.length?<div className={styles.empty}><strong>На карте нет подходящих объектов</strong><span>Измените фильтры или откройте список: у части ЖК координаты ещё не указаны.</span><button onClick={resetFilters}>Сбросить фильтры</button></div>:<PropertyMap properties={mapProperties} selectedId={selectedId} onSelect={setSelectedId} onOpen={id=>navigate("/property/"+id)} city={appliedCity==="Все"?undefined:appliedCity}/>}
     </div>}
   </div>;
 }

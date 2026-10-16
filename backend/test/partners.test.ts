@@ -27,7 +27,7 @@ test('Six calendar months clamp month end; deal date must be real, inclusive and
  assert.equal(claimDateError(null,null,'2025-07-02','2026-10-14'),'');
 });
 test('Partners API: identity, attribution, uniqueness, own cabinet, immutable accrual and manual payout',async t=>{
- const db=await testDatabase();await migrate(db);const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',BOT_TOKEN:'partner-test-token',PARTNER_OFFER_PUBLISHED:'true',LEGAL_OPERATOR_NAME:'Тестовый организатор',LEGAL_OPERATOR_INN:'2540123456',LEGAL_OPERATOR_ADDRESS:'Тестовый адрес',LEGAL_OPERATOR_REGISTRATION:'1234567890123',LEGAL_CONTACT_EMAIL:'offer@test.local'});const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close()});
+ const db=await testDatabase();await migrate(db);const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',BOT_TOKEN:'partner-test-token',PARTNER_OFFER_PUBLISHED:'true',PARTNER_OFFER_APPROVED_VERSION:PARTNER_TERMS_VERSION,LEGAL_OPERATOR_NAME:'Тестовый организатор',LEGAL_OPERATOR_INN:'2540123456',LEGAL_OPERATOR_ADDRESS:'Тестовый адрес',LEGAL_OPERATOR_REGISTRATION:'1234567890123',LEGAL_CONTACT_EMAIL:'offer@test.local'});const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close()});
  const headers={origin:config.PUBLIC_ORIGIN,'content-type':'application/json'},password='partner-long-password',hash=await hashPassword(password);
  const members=(await db.query("insert into team_members(name,email,password_hash,role) values('Owner','partner-owner@test.local',$1,'owner'),('Manager','partner-manager@test.local',$1,'manager'),('Admin','partner-admin@test.local',$1,'admin') returning *",[hash])).rows;
  const cookies=[];for(const m of members){const login=await app.inject({method:'POST',url:'/api/v1/control/login',headers,payload:{email:m.email,password}});assert.equal(login.statusCode,200,login.body);cookies.push({pulse_control:login.cookies.find(c=>c.name==='pulse_control')!.value})}
@@ -78,21 +78,23 @@ test('Partners API: identity, attribution, uniqueness, own cabinet, immutable ac
  await t.test('confirmed new buyer can be claimed only once by phone and verified identity',async()=>{
   assert.equal((await control('/api/v1/control/partner-referrals/'+ref.id+'/review',{revision:1,decision:'accept',contactConfirmed:false,note:'Incomplete'})).statusCode,400);
   assert.equal((await review(ref)).statusCode,200);assert.equal((await review(ref)).statusCode,409);ref=(await referral(leadId)).json().referral;
-  const otherBuyer=await visitor(40002),dup=await post('/api/v1/leads',leadInput('+7 (999) 000-00-00',partnerB.code),otherBuyer);assert.equal(dup.statusCode,200,dup.body);
-  const duplicate=(await referral(dup.json().id)).json().referral;assert.equal(duplicate.conflict,true);assert.equal((await review(duplicate)).statusCode,409);assert.equal((await review(duplicate,'reject','duplicate')).statusCode,200);
-  const sameUser=await post('/api/v1/leads',leadInput('+79990000002',partnerB.code),buyer),sameRef=(await referral(sameUser.json().id)).json().referral;assert.equal(sameRef.conflict,true);assert.equal((await review(sameRef)).statusCode,409);
+  const before=Number((await db.query('select count(*) as n from partner_referrals')).rows[0].n);
+  const otherBuyer=await visitor(40002),dup=await post('/api/v1/leads',leadInput('+7 (999) 000-00-00',partnerB.code),otherBuyer);assert.equal(dup.statusCode,409,dup.body);
+  const sameUser=await post('/api/v1/leads',leadInput('+79990000002',partnerB.code),buyer);assert.equal(sameUser.statusCode,409,sameUser.body);
+  assert.equal(Number((await db.query('select count(*) as n from partner_referrals')).rows[0].n),before);
   assert.equal(Number((await db.query('select count(*) as n from partner_client_claims')).rows[0].n),1);
  });
  await t.test('pre-existing direct client is not unique and earlier unconfirmed referral can be rejected',async()=>{
   const v=await visitor();const direct=await post('/api/v1/leads',leadInput('+79990000003'),v);assert.equal(direct.statusCode,200,direct.body);
-  const referred=await post('/api/v1/leads',leadInput('8 999 000 00 03',partnerB.code),v),r=(await referral(referred.json().id)).json().referral;assert.equal(r.conflict,true);assert.match(r.conflictDetails,/прямое обращение/);assert.equal((await review(r)).statusCode,409);
-  const first=await post('/api/v1/leads',leadInput('+79990000004',partnerA.code),v),second=await post('/api/v1/leads',leadInput('+79990000004',partnerB.code),v);
-  const r1=(await referral(first.json().id)).json().referral,r2=(await referral(second.json().id)).json().referral;
-  assert.equal((await review(r2)).statusCode,409);assert.equal((await review(r1,'reject','unconfirmed')).statusCode,200);assert.equal((await review(r2)).statusCode,200);
+  const referred=await post('/api/v1/leads',leadInput('8 999 000 00 03',partnerB.code),v);assert.equal(referred.statusCode,409,referred.body);
+  const first=await post('/api/v1/leads',leadInput('+79990000004',partnerA.code),v),secondInput=leadInput('+79990000004',partnerB.code),second=await post('/api/v1/leads',secondInput,v);assert.equal(first.statusCode,200,first.body);assert.equal(second.statusCode,409,second.body);
+  const r1=(await referral(first.json().id)).json().referral;
+  assert.equal((await review(r1,'reject','unconfirmed')).statusCode,200);
+  const retried=await post('/api/v1/leads',secondInput,v);assert.equal(retried.statusCode,200,retried.body);assert.equal((await review((await referral(retried.json().id)).json().referral)).statusCode,200);
  });
- await t.test('simultaneous submissions cannot create two claims for one normalized phone',async()=>{
-  const v1=await visitor(),v2=await visitor();const submitted=await Promise.all([post('/api/v1/leads',leadInput('+79990000009',partnerA.code),v1),post('/api/v1/leads',leadInput('8 (999) 000-00-09',partnerB.code),v2)]);for(const r of submitted)assert.equal(r.statusCode,200,r.body);
-  const rows=await Promise.all(submitted.map(async s=>(await referral(s.json().id)).json().referral));const reviewed=await Promise.all(rows.map(r=>review(r)));assert.deepEqual(reviewed.map(r=>r.statusCode).sort(),[200,409]);
+ await t.test('simultaneous submissions cannot create two recommendations for one normalized phone',async()=>{
+  const v1=await visitor(),v2=await visitor();const submitted=await Promise.all([post('/api/v1/leads',leadInput('+79990000009',partnerA.code),v1),post('/api/v1/leads',leadInput('8 (999) 000-00-09',partnerB.code),v2)]);assert.deepEqual(submitted.map(r=>r.statusCode).sort(),[200,409]);
+  const acceptedSubmission=submitted.find(r=>r.statusCode===200)!;assert.equal((await review((await referral(acceptedSubmission.json().id)).json().referral)).statusCode,200);
   assert.equal(Number((await db.query('select count(*) as n from partner_client_claims where normalized_phone=$1',['+79990000009'])).rows[0].n),1);
  });
  await t.test('partner sees own history and masked name, no CRM notes, phone or documents',async()=>{
@@ -167,7 +169,7 @@ test('Partners API: identity, attribution, uniqueness, own cabinet, immutable ac
   assert.equal((await control(url,{revision:r.revision,dealOn:'2024-12-31'})).statusCode,400);
   assert.equal((await control(url,{revision:r.revision,dealOn:'2025-02-30'})).statusCode,400);
   const inside=await control(url,{revision:r.revision,dealOn:'2025-07-01'});assert.equal(inside.statusCode,200,inside.body);assert.equal(inside.json().reward.dealOn,'2025-07-01');assert.equal(inside.json().reward.grossMinor,2820000);
-  const duplicate=await post('/api/v1/leads',leadInput('+79990000020',partnerB.code),await visitor());const duplicateRef=(await referral(duplicate.json().id)).json().referral;assert.equal(duplicateRef.conflict,true);assert.equal((await review(duplicateRef)).statusCode,409);
+  const duplicate=await post('/api/v1/leads',leadInput('+79990000020',partnerB.code),await visitor());assert.equal(duplicate.statusCode,409,duplicate.body);
  });
  await t.test('new acceptance is explicit, preserves legacy referrals and enables invitations again',async()=>{
   const v=await visitor(),submitted=await post('/api/v1/leads',leadInput('+79990000021',partnerB.code),v);assert.equal(submitted.statusCode,200,submitted.body);const id=submitted.json().id;
