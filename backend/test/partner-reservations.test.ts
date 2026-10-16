@@ -7,7 +7,7 @@ import {createApp} from '../src/app';
 import {readConfig} from '../src/config';
 import {hashPassword} from '../src/security';
 import {PARTNER_TERMS_VERSION} from '../../packages/partners/model';
-import {businessDay} from '../../packages/pulse-data/business';
+import {businessDay,emptyFinance} from '../../packages/pulse-data/business';
 import {claimExpiresOn} from '../../packages/partners/policy';
 function signed(id:number,token:string){const p=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id,first_name:'Synthetic'})});const secret=createHmac('sha256','WebAppData').update(token).digest();p.set('hash',createHmac('sha256',secret).update([...p.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n')).digest('hex'));return p.toString()}
 test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirmation and private status',async t=>{
@@ -95,12 +95,50 @@ test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirm
   await db.query("update partner_client_reservations set created_at=now()-interval '8 days',expires_at=now()-interval '1 day' where id=$1",[hold.id]);
   assert.equal((await reserve(data)).json().outcome,'expired');const newHold=await reserve(input('+79996666666'),b);assert.equal(newHold.json().outcome,'reserved');assert.notEqual(newHold.json().reservation.id,hold.id);
  });
+ await t.test('an ordinary invitation also honors the existing reservation of the same partner',async()=>{
+  const hold=(await reserve(input('+79990300001'))).json().reservation,v=await visitor(810006);
+  const lead=await post('/api/v1/leads',leadInput('+79990300001',pa.code),v);assert.equal(lead.statusCode,200,lead.body);
+  const r=(await db.query('select * from partner_referrals where lead_id=$1',[lead.json().id])).rows[0];assert.equal(r.status,'accepted');assert.equal(r.partner_id,pa.id);
+  assert.equal((await db.query('select converted_referral_id from partner_client_reservations where id=$1',[hold.id])).rows[0].converted_referral_id,r.id);
+  const stolen=await post('/api/v1/leads',leadInput('+79990300001',pb.code),await visitor());assert.equal(stolen.statusCode,409,stolen.body);
+ });
  await t.test('uniqueness priority preserves PostgreSQL timestamp microseconds',async()=>{
   const v=await visitor(810005),direct=await post('/api/v1/leads',leadInput('+79990200002'),v);assert.equal(direct.statusCode,200,direct.body);
   const hold=(await reserve(input('+79990200001'))).json().reservation;
   await db.query("update leads set created_at='2000-01-01T00:00:00.123123Z' where id=$1",[direct.json().id]);
   await db.query("update partner_client_reservations set created_at='2000-01-01T00:00:00.123456Z' where id=$1",[hold.id]);
   const r=await post('/api/v1/leads',leadInput('+79990200001',hold.code),v);assert.equal(r.statusCode,409,r.body);
+ });
+ await t.test('linking Telegram after an anonymous enquiry cannot bypass uniqueness at review',async()=>{
+  const hold=(await reserve(input('+79990400003'),b)).json().reservation,g=await visitor();
+  const lead=await post('/api/v1/leads',leadInput('+79990400003',hold.code),g);assert.equal(lead.statusCode,200,lead.body);
+  const bind=await post('/api/v1/auth/telegram',{initData:signed(810003,config.BOT_TOKEN)},g);assert.equal(bind.statusCode,200,bind.body);
+  const r=(await db.query('select * from partner_referrals where lead_id=$1',[lead.json().id])).rows[0];
+  const review=await post('/api/v1/control/partner-referrals/'+r.id+'/review',{revision:r.revision,decision:'accept',contactConfirmed:true,note:'Проверка поздно подтверждённого аккаунта'},headers,owner);assert.equal(review.statusCode,409,review.body);
+  const detail=await app.inject({url:'/api/v1/control/partner-referrals/'+r.id,cookies:owner});assert.equal(detail.json().referral.conflict,true);
+ });
+ await t.test('late identity overlap blocks both new accrual and recording payment of an earlier accrual',async()=>{
+  const clients=[] as Array<{h:any;ref:any;leadId:string}>;
+  for(const [phone,h] of [['+79990400001',a],['+79990400002',b]] as const){
+   const hold=(await reserve(input(phone),h)).json().reservation,g=await visitor(),lead=await post('/api/v1/leads',leadInput(phone,hold.code),g);assert.equal(lead.statusCode,200,lead.body);
+   let r=(await db.query('select * from partner_referrals where lead_id=$1',[lead.json().id])).rows[0];
+   const review=await post('/api/v1/control/partner-referrals/'+r.id+'/review',{revision:r.revision,decision:'accept',contactConfirmed:true,note:'Контакт проверен до привязки Telegram'},headers,owner);assert.equal(review.statusCode,200,review.body);
+   r=(await db.query('select * from partner_referrals where id=$1',[r.id])).rows[0];await db.query("update leads set status='deal',finance=$2::jsonb where id=$1",[lead.json().id,JSON.stringify({...emptyFinance(),commissionRub:100000,receivedOn:businessDay()})]);clients.push({h:g,ref:r,leadId:lead.json().id});
+  }
+  const accrued=await post('/api/v1/control/partner-referrals/'+clients[0].ref.id+'/accrue',{revision:clients[0].ref.revision},headers,owner);assert.equal(accrued.statusCode,200,accrued.body);const reward=accrued.json().reward;
+  for(const c of clients){const bind=await post('/api/v1/auth/telegram',{initData:signed(810008,config.BOT_TOKEN)},c.h);assert.equal(bind.statusCode,200,bind.body)}
+  const blockedAccrual=await post('/api/v1/control/partner-referrals/'+clients[1].ref.id+'/accrue',{revision:clients[1].ref.revision},headers,owner);assert.equal(blockedAccrual.statusCode,409,blockedAccrual.body);
+  const blockedPay=await post('/api/v1/control/partner-rewards/'+reward.id+'/pay',{revision:reward.revision,withheldMinor:0,paidOn:businessDay(),payoutReference:'Тестовая операция',documentReference:'Тестовые документы',documentsChecked:true},headers,owner);assert.equal(blockedPay.statusCode,409,blockedPay.body);
+  assert.equal((await db.query('select status from partner_rewards where id=$1',[reward.id])).rows[0].status,'accrued');
+ });
+ await t.test('a late Telegram binding cannot turn the partners own purchase into a reward',async()=>{
+  const hold=(await reserve(input('+79990400004'))).json().reservation,g=await visitor();
+  const lead=await post('/api/v1/leads',leadInput('+79990400004',hold.code),g);assert.equal(lead.statusCode,200,lead.body);let r=(await db.query('select * from partner_referrals where lead_id=$1',[lead.json().id])).rows[0];
+  assert.equal((await post('/api/v1/control/partner-referrals/'+r.id+'/review',{revision:r.revision,decision:'accept',contactConfirmed:true,note:'Контакт проверен до привязки аккаунта'},headers,owner)).statusCode,200);
+  r=(await db.query('select * from partner_referrals where id=$1',[r.id])).rows[0];await db.query("update leads set status='deal',finance=$2::jsonb where id=$1",[lead.json().id,JSON.stringify({...emptyFinance(),commissionRub:100000,receivedOn:businessDay()})]);
+  assert.equal((await post('/api/v1/auth/telegram',{initData:signed(810001,config.BOT_TOKEN)},g)).statusCode,200);
+  const accrue=await post('/api/v1/control/partner-referrals/'+r.id+'/accrue',{revision:r.revision},headers,owner);assert.equal(accrue.statusCode,409,accrue.body);assert.match(accrue.body,/Собственная покупка/);
+  const detail=await app.inject({url:'/api/v1/control/partner-referrals/'+r.id,cookies:owner});assert.equal(detail.json().referral.conflict,true);
  });
  await t.test('Control reservation queue is independently paginated and includes its full count',async()=>{
   for(let i=0;i<35;i++){
@@ -115,7 +153,7 @@ test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirm
   const old=(await db.query("insert into partner_referrals(partner_id,terms_version,attribution_code,created_at,status) values($1,$2,$3,now()-interval '10 days','accepted') returning id",[pa.id,PARTNER_TERMS_VERSION,pa.code])).rows[0];
   await db.query("insert into partner_rewards(referral_id,commission_rub,received_on,reserve_minor,base_minor,gross_minor,status) values($1,100000,current_date,600000,9400000,2820000,'requested')",[old.id]);
   for(let i=0;i<35;i++)await db.query('insert into partner_referrals(partner_id,terms_version,attribution_code) values($1,$2,$3)',[pa.id,PARTNER_TERMS_VERSION,pa.code]);
-  const cabinet=await app.inject({url:'/api/v1/me/partner?filter=payments',headers:a});assert.equal(cabinet.statusCode,200,cabinet.body);assert.equal(cabinet.json().total,1);assert.equal(cabinet.json().referrals[0].id,old.id);
-  const control=await app.inject({url:'/api/v1/control/partners?filter=payouts',cookies:owner});assert.equal(control.statusCode,200,control.body);assert.equal(control.json().total,1);assert.equal(control.json().referrals[0].id,old.id);
+  const cabinet=await app.inject({url:'/api/v1/me/partner?filter=payments',headers:a});assert.equal(cabinet.statusCode,200,cabinet.body);assert.equal(cabinet.json().total,2);assert.ok(cabinet.json().referrals.some((r:any)=>r.id===old.id));
+  const control=await app.inject({url:'/api/v1/control/partners?filter=payouts',cookies:owner});assert.equal(control.statusCode,200,control.body);assert.equal(control.json().total,2);assert.ok(control.json().referrals.some((r:any)=>r.id===old.id));
  });
 });
