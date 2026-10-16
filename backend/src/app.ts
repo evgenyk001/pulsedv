@@ -33,7 +33,7 @@ const uuid=(value:unknown)=>z.uuid().parse(value);
 const memberView=(row:any)=>({id:row.id,name:row.name,email:row.email,role:row.role,active:row.active,cities:row.cities,telegramUserId:row.telegram_user_id?.toString()??null,mfaEnabled:!!row.mfa_enabled});
 
 export async function createApp(db:Database,config:RuntimeConfig){
- const app=Fastify({requestTimeout:60000,bodyLimit:1_500_000,trustProxy:config.TRUST_PROXY_HOPS?(_address:string,hop:number)=>hop<config.TRUST_PROXY_HOPS:false,logger:config.NODE_ENV!=='test'?{redact:['req.headers.authorization','req.headers.cookie','res.headers["set-cookie"]']}:false});
+ const app=Fastify({requestTimeout:120000,bodyLimit:1_500_000,trustProxy:config.TRUST_PROXY_HOPS?(_address:string,hop:number)=>hop<config.TRUST_PROXY_HOPS:false,logger:config.NODE_ENV!=='test'?{redact:['req.headers.authorization','req.headers.cookie','res.headers["set-cookie"]']}:false});
  await app.register(cookie);
  await app.register(rateLimit,{max:180,timeWindow:'1 minute'});
  const dummyPassword=await hashPassword('dummy-non-account-password');

@@ -7,7 +7,7 @@ create table partner_client_reservations (
  normalized_phone text check(normalized_phone ~ '^\+[1-9][0-9]{9,14}$'),
  consent_declared_at timestamptz not null default now(),
  created_at timestamptz not null default clock_timestamp(),
- expires_at timestamptz not null default now()+interval '7 days',
+ expires_at timestamptz not null default clock_timestamp()+interval '7 days',
  released_at timestamptz,
  converted_referral_id uuid unique references partner_referrals(id),
  check(expires_at>created_at)

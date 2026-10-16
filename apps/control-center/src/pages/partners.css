@@ -97,3 +97,5 @@
  .partnersWorkspace .segmented button { width:100%; white-space:normal; }
 }
 @media(prefers-reduced-motion:reduce) { .partnersWorkspace .partnerReferralRow { transition:none; } }
+
+.partnersWorkspace details summary{padding:12px 0;overflow-wrap:anywhere;cursor:pointer;line-height:1.5}.partnersWorkspace details form{display:grid;gap:12px;padding:8px 0 18px}
