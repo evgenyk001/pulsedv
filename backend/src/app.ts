@@ -1,3 +1,4 @@
+import {migrationsApplied} from './migrate';
 import {registerLossRoutes} from './lossRoutes';
 import {registerPartnerRoutes,lockBuyerIdentity,preparePartnerReferral,attachPartnerReferral,guardPartnerFinance,partnerLeadChanged} from './partnerRoutes';
 import {registerSearchRoutes,mergeSearch} from './searchRoutes';
@@ -74,7 +75,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  const cookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1/control',maxAge:8*3600};
  const visitorCookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1',maxAge:30*86400};
  app.get('/health',async()=>({status:'ok'}));
- app.get('/ready',async()=>{await db.query('select 1');await readState(db);return {status:'ready'};});
+ app.get('/ready',async()=>{if(!await migrationsApplied(db))throw new HttpError(503,'Примените миграции перед запуском');await readState(db);return {status:'ready'};});
  app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);const now=Date.now();const banners=state.banners.filter(b=>b.enabled&&(!b.startsAt||Date.parse(b.startsAt)<=now)&&(!b.endsAt||Date.parse(b.endsAt)>now));const {leadEngine:_privateLeadEngine,...publicState}=state;return {version,consentVersion:config.CONSENT_VERSION,state:{...publicState,properties:[],banners}};});
  app.get('/api/v1/public/legal',async()=>({name:config.LEGAL_OPERATOR_NAME,inn:config.LEGAL_OPERATOR_INN,email:config.LEGAL_CONTACT_EMAIL,address:config.LEGAL_OPERATOR_ADDRESS,version:config.CONSENT_VERSION}));
  app.get('/api/v1/public/map',async()=>{if(!config.MAP_2GIS_KEY)throw new HttpError(503,'Карта временно недоступна');return {provider:'2gis',key:config.MAP_2GIS_KEY};});

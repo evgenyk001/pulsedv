@@ -178,11 +178,8 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="range"]){
 :where([class*="viewSwitch"],[class*="segmented"],[role="tablist"]) button{
   border-radius:var(--app-radius-pill)!important;
 }
-:where(div,span)[class*="Icon"],:where(div,span)[class*="icon"]{
-  border-radius:var(--app-icon-radius);
-}
 svg.lucide{
-  stroke-width:1.8;
+  stroke-width:var(--icon-stroke,1.8);
   stroke-linecap:round;
   stroke-linejoin:round;
 }
@@ -196,17 +193,21 @@ button,a,input{
 :root{
   --icon-surface: #EEF1F5;
   --icon-ink: #596576;
-  --icon-border: rgba(92,107,128,.08);
+  --icon-border: rgba(92,107,128,.14);
+  --icon-tile-size: 36px;
+  --icon-tile-radius: 12px;
+  --icon-glyph-size: 20px;
+  --icon-stroke: 1.8;
   --list-surface: #FFFFFF;
   --list-radius: var(--app-radius-card);
   --list-inset: 16px;
-  --list-icon: 32px;
+  --list-icon: var(--icon-tile-size);
   --list-divider: rgba(60,60,67,.1);
   --list-chevron: #A5ADB9;
   --list-pressed: rgba(120,128,145,.065);
   --list-hairline: 1px;
 }
-.dark{--icon-surface:#2A303A;--icon-ink:#B7C0CD;--icon-border:rgba(255,255,255,.06);--list-surface:#232831;--list-divider:rgba(255,255,255,.09);--list-chevron:#7C8796;--list-pressed:rgba(255,255,255,.045)}
+.dark{--icon-surface:#2A303A;--icon-ink:#B7C0CD;--icon-border:rgba(255,255,255,.12);--list-surface:#232831;--list-divider:rgba(255,255,255,.09);--list-chevron:#7C8796;--list-pressed:rgba(255,255,255,.045)}
 @media(min-resolution:2dppx){:root{--list-hairline:.5px}}
 
 html{scroll-padding-bottom:calc(108px + env(safe-area-inset-bottom,0px))}

@@ -11,7 +11,6 @@
 .card{position:relative;overflow:hidden;padding:22px 18px 20px;border-radius:var(--app-radius-card);background:linear-gradient(155deg,rgba(255,255,255,.98),rgba(248,250,252,.88));border:1px solid rgba(220,226,233,.74);box-shadow:0 18px 48px rgba(41,52,69,.075),inset 0 1px 0 rgba(255,255,255,.98);animation:panelSettle .34s var(--motion-soft) both}
 .card:before{content:"";position:absolute;width:150px;height:150px;right:-62px;top:-80px;border-radius:50%;background:radial-gradient(circle,rgba(242,13,29,.07),transparent 68%);pointer-events:none}
 .sectionHead{position:relative;display:grid;grid-template-columns:44px 1fr;gap:13px;align-items:start;margin-bottom:24px}
-.cardIcon{width:var(--app-icon-feature);height:var(--app-icon-feature);border-radius:var(--app-icon-radius);background:linear-gradient(145deg,rgba(242,13,29,.12),rgba(255,255,255,.92));color:var(--primary);border:1px solid rgba(242,13,29,.08);display:grid;place-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.95)}
 .stepLabel{display:block;margin-top:2px;font-size:8px;line-height:1;text-transform:uppercase;letter-spacing:.12em;color:var(--primary);font-weight:800}
 .sectionHead h2{margin:6px 0 5px;font-size:24px;line-height:1.04;letter-spacing:-.045em}
 .sectionHead p{margin:0;max-width:330px;font-size:10px;line-height:1.48;color:var(--muted-foreground)}
@@ -117,7 +116,6 @@
   .hero h1{font-size:31px}
   .card{padding:20px 15px 18px}
   .sectionHead{grid-template-columns:40px 1fr;gap:11px}
-  .cardIcon{width:40px;height:40px;border-radius:14px}
   .sectionHead h2{font-size:22px}
   .choiceGrid{grid-template-columns:1fr 1fr}
   .moneyInputs{grid-template-columns:1fr}
@@ -137,8 +135,7 @@
 .smartPrompt{position:relative;padding:14px;border-radius:var(--app-radius-card);background:var(--app-card);border:1px solid var(--app-card-border);box-shadow:var(--app-card-shadow);backdrop-filter:blur(22px);overflow:hidden}
 .smartPrompt:before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;box-shadow:inset 0 1px 0 rgba(255,255,255,.9)}
 .smartPromptHead{position:relative;display:flex;align-items:center;gap:8px;margin:0 2px 11px;color:var(--foreground)}
-.smartPromptHead svg{width:30px;height:30px;padding:7px;border-radius:var(--app-icon-radius);color:var(--primary);background:var(--brand-soft);border:1px solid rgba(242,13,29,.08)}
-.smartPromptHead span{font-size:10.4px;font-weight:760;letter-spacing:-.01em}
+.smartPromptHead>span:not([data-icon-tile]){font-size:10.4px;font-weight:760;letter-spacing:-.01em}
 .smartPromptHead small{margin-left:auto;min-height:22px;padding:0 8px;border-radius:var(--app-radius-pill);background:rgba(242,13,29,.065);color:var(--primary);font-size:6.8px;font-weight:820;text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center}
 .smartInput{position:relative;display:grid;grid-template-columns:18px minmax(0,1fr) 40px;gap:10px;align-items:center;height:54px;padding:0 7px 0 15px;border-radius:var(--app-radius-pill);background:rgba(237,241,245,.76);border:1px solid rgba(222,227,233,.88);box-shadow:inset 0 1px 0 rgba(255,255,255,.78);color:var(--muted-foreground);transition:transform .22s var(--motion-spring),border-color .24s ease,box-shadow .28s ease,background .24s ease}
 .smartInput:focus-within{transform:translateY(-1px);background:rgba(255,255,255,.94);border-color:rgba(255,255,255,.98);box-shadow:0 2px 5px rgba(35,47,63,.03),0 14px 32px rgba(47,59,78,.075),0 0 0 3px rgba(242,13,29,.035),inset 0 1px 0 rgba(255,255,255,.96)}
@@ -252,7 +249,6 @@
 .hero p{margin-top:8px;line-height:1.46;max-width:345px}
 .smartPrompt{padding:12px}
 .smartPromptHead{margin-bottom:8px}
-.smartPromptHead svg{width:28px;height:28px;padding:6px}
 .smartInput{height:54px}
 .smartInput input{height:50px!important}
 .pulseCore{grid-template-columns:76px 1fr;min-height:104px;padding:11px 13px;gap:11px}
@@ -289,8 +285,6 @@
 .selectPanelOpen{background:rgba(255,255,255,.95);border-color:rgba(216,223,232,.92);box-shadow:0 13px 30px rgba(39,52,69,.075),inset 0 1px 0 rgba(255,255,255,.98)}
 .selectPanelHead{width:100%;min-height:66px;padding:11px 13px;border:0;background:transparent;color:var(--foreground);display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:center;gap:11px;text-align:left;font:inherit;-webkit-tap-highlight-color:transparent}
 .selectPanelHead:active{background:rgba(238,242,246,.45)}
-.selectPanelIcon{width:38px;height:38px;border-radius:14px;background:rgba(237,241,245,.86);color:#4c6178;display:grid;place-items:center;border:1px solid rgba(223,228,235,.75)}
-.selectPanelOpen .selectPanelIcon{background:var(--brand-soft);color:var(--primary);border-color:rgba(242,13,29,.08)}
 .selectPanelCopy{display:flex;flex-direction:column;min-width:0}
 .selectPanelCopy strong{font-size:10.8px;line-height:1.2}
 .selectPanelCopy small{margin-top:4px;color:var(--muted-foreground);font-size:8.1px;line-height:1.28;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -340,7 +334,6 @@
 @media(max-width:360px){
   .selectHero h1{font-size:28px}
   .selectPanelHead{grid-template-columns:36px minmax(0,1fr) auto;padding-left:11px;padding-right:11px}
-  .selectPanelIcon{width:36px;height:36px}
   .mortgageLink,.mortgageLinked{align-items:flex-start;flex-direction:column}
   .mortgageLink>button,.mortgageLinked>button{align-self:stretch}
 }
@@ -348,10 +341,7 @@
 /* Retained request group, now in the app's neutral palette. */
 .selectPanels{gap:0;background:var(--list-surface);border-radius:var(--list-radius);overflow:hidden}
 .selectPanel,.selectPanelOpen{position:relative;border:0;border-radius:0;background:transparent;box-shadow:none;transition:none}
-.selectPanel:not(:last-child):after,.selectPanelOpen:not(:last-child):after{content:'';position:absolute;bottom:0;left:60px;right:0;height:var(--list-hairline);background:var(--list-divider)}
-.selectPanelHead{min-height:72px;padding:14px var(--list-inset);grid-template-columns:32px minmax(0,1fr) auto;gap:12px}
-.selectPanelIcon,.selectPanelOpen .selectPanelIcon{width:32px;height:32px;border-radius:10px;background:var(--icon-surface);color:var(--icon-ink);border:1px solid var(--icon-border)}
+.selectPanel:not(:last-child):after,.selectPanelOpen:not(:last-child):after{content:'';position:absolute;bottom:0;left:calc(var(--list-inset) + var(--icon-tile-size) + 12px);right:0;height:var(--list-hairline);background:var(--list-divider)}
+.selectPanelHead{min-height:72px;padding:14px var(--list-inset);grid-template-columns:var(--icon-tile-size) minmax(0,1fr) auto;gap:12px}
 .selectPanelCopy strong{font-size:14px;font-weight:500;line-height:1.35}.selectPanelCopy small{font-size:11px;line-height:1.4}.selectPanelHead>svg{color:var(--list-chevron)}
 .selectPanelHead:active{background:var(--list-pressed)}.selectPanelBody{padding:4px var(--list-inset) 18px;border-color:var(--list-divider);animation:none}
-.smartPromptHead svg{background:var(--icon-surface);color:var(--icon-ink);border-color:var(--icon-border)}
-.cardIcon{background:var(--icon-surface);color:var(--icon-ink);border-color:var(--icon-border);box-shadow:none}

@@ -1,3 +1,4 @@
+import {IconTile} from '../components/IconTile';
 import React from 'react';
 import {Link} from 'react-router-dom';
 import {useQueryClient,useQuery} from '@tanstack/react-query';
@@ -62,7 +63,7 @@ export default function PartnersPage(){
  const titles:Record<PartnerSheet,string>={invite:'Пригласить покупателя',personal:'Персональное приглашение',terms:'Условия программы',upgrade:'Обновлённые условия',demo:'Демонстрационный режим',reserve:'Проверить и закрепить клиента',calculation:'Как считается вознаграждение'};
  const descriptions:Record<PartnerSheet,string>={invite:'Покупатель подтвердит вашу рекомендацию в заявке.',personal:'Отдельная ссылка для конкретного знакомства.',terms:'Закрепление клиента, расчёт и оформление выплаты.',upgrade:'Новые правила применяются к новым рекомендациям после вашего согласия.',demo:'Здесь можно пройти путь от приглашения до выплаты.',reserve:'Автоматическая проверка CRM и предварительная бронь номера на 7 дней.',calculation:'30% от комиссии агентства после вычета 6%.'};
  const referralRow=(r:PartnerReferral)=><button className={styles.client} key={r.id} onClick={()=>openReferral(r)}>
-  <span className={styles.avatar}>{tab==='payments'?<Wallet size={17}/>:r.clientName[0]}</span>
+  {tab==='payments'?<IconTile><Wallet/></IconTile>:<span className={styles.avatar}>{r.clientName[0]}</span>}
   <span className={styles.clientCopy}><b>{r.clientName}</b><small>{r.status==='accepted'?r.stageLabel:referralLabels[r.status]}</small>
    {r.status==='accepted'&&tab==='clients'&&<small>{claimLabel(r.claimExpiresOn)}</small>}
    <em data-status={r.reward?.status||r.status}>{r.reward?rewardLabels[r.reward.status]:referralLabels[r.status]}</em>
@@ -98,7 +99,7 @@ export default function PartnersPage(){
     <div className={styles.balanceCounts} aria-label="Результат рекомендаций"><span><UsersRound size={14}/><b>{summary.acceptedCount}</b> закреплено</span><span><Clock3 size={14}/><b>{summary.pendingCount}</b> на проверке</span></div>
     <div className={styles.balanceBottom}><span>Выплачено <b>{partnerMoney(summary.paidMinor)}</b></span><button onClick={()=>openSheet('calculation')}>Как считается<Info size={13}/></button></div>
    </section>
-   {needsTerms&&<section className={styles.rulesNotice}><span className={styles.ruleIcon}><ShieldCheck size={20}/></span><div><b>Обновились условия программы</b><p>Чтобы приглашать новых покупателей, ознакомьтесь с новой редакцией.</p><button onClick={()=>openSheet('upgrade')}>Ознакомиться<ChevronRight size={14}/></button></div></section>}
+   {needsTerms&&<section className={styles.rulesNotice}><IconTile className={styles.ruleIcon}><ShieldCheck size={20}/></IconTile><div><b>Обновились условия программы</b><p>Чтобы приглашать новых покупателей, ознакомьтесь с новой редакцией.</p><button onClick={()=>openSheet('upgrade')}>Ознакомиться<ChevronRight size={14}/></button></div></section>}
    {p.status==='paused'&&<div className={styles.warning}>Новые приглашения временно недоступны. Команда поможет уточнить причину.</div>}
    <SegmentedControl ariaLabel="Разделы партнёрского кабинета" value={tab} options={tabs} onChange={value=>{setPage(1);setTab(value)}}/>
    <div className={styles.tabPanel} role="tabpanel" aria-label={tab==='clients'?'Мои клиенты':'Выплаты'} key={tab}>
@@ -107,11 +108,11 @@ export default function PartnersPage(){
       <button className={styles.personalAction} disabled={!canInvite} onClick={()=>{setInviteCode(null);setLabel('');inviteKey.current=crypto.randomUUID();openSheet('personal')}}><UserPlus size={16}/>Персональное приглашение<ChevronRight size={14}/></button></div>
      {!!q.data.reservations?.length&&<section className={styles.card}><h2>Ожидают подтверждения</h2>{q.data.reservations.map(r=><button className={styles.invitation} key={r.id} onClick={()=>{setInviteCode(r.code);openSheet('invite')}}><span><b>{r.label} · {r.phoneHint}</b><small>Бронь до {reservationDeadline(r.expiresAt)} · отправить ссылку</small></span><Send size={16}/></button>)}</section>}
      <div className={styles.sectionHead}><h2>Рекомендации</h2><span>{q.data.total}</span></div>
-     <section className={styles.list} aria-label="Ваши рекомендации">{q.data.referrals.length?q.data.referrals.map(referralRow):<div className={styles.empty}><span><UsersRound size={24}/></span><b>Рекомендаций пока нет</b><p>Отправьте знакомому приглашение. Его заявка появится здесь после подтверждения.</p></div>}</section>
+     <section className={styles.list} aria-label="Ваши рекомендации">{q.data.referrals.length?q.data.referrals.map(referralRow):<div className={styles.empty}><IconTile><UsersRound size={24}/></IconTile><b>Рекомендаций пока нет</b><p>Отправьте знакомому приглашение. Его заявка появится здесь после подтверждения.</p></div>}</section>
      {q.data.invitations.length>0&&<section className={styles.card}><h2>Персональные приглашения</h2>{q.data.invitations.map(i=><button className={styles.invitation} disabled={!canInvite} key={i.id} onClick={()=>{setInviteCode(i.code);openSheet('invite')}}><span><b>{i.label}</b><small>{i.submitted?'Покупатель оставил заявку':'Ожидаем заявку покупателя'}</small></span><Copy size={16}/></button>)}</section>}
     </>:<>
      <div className={styles.sectionHead}><h2>История начислений</h2></div>
-     <section className={styles.list} aria-label="Ваши начисления">{q.data.referrals.some(r=>r.reward)?q.data.referrals.filter(r=>r.reward).map(referralRow):<div className={styles.empty}><span><Wallet size={24}/></span><b>Начислений пока нет</b><p>После покупки и поступления комиссии здесь появится ваше вознаграждение.</p><button className={styles.inlineLink} onClick={()=>openSheet('calculation')}>Посмотреть пример<ChevronRight size={14}/></button></div>}</section>
+     <section className={styles.list} aria-label="Ваши начисления">{q.data.referrals.some(r=>r.reward)?q.data.referrals.filter(r=>r.reward).map(referralRow):<div className={styles.empty}><IconTile><Wallet size={24}/></IconTile><b>Начислений пока нет</b><p>После покупки и поступления комиссии здесь появится ваше вознаграждение.</p><button className={styles.inlineLink} onClick={()=>openSheet('calculation')}>Посмотреть пример<ChevronRight size={14}/></button></div>}</section>
      <p className={styles.hint}>Начисление — до удержаний. В выплаченных записях показана фактическая сумма перевода.{q.data.hasMore?' Остальные записи доступны на следующих страницах.':''}</p>
     </>}
     {(page>1||q.data.hasMore)&&<div className={styles.paging}><button disabled={page===1} onClick={()=>setPage(n=>n-1)}>Назад</button><span>Страница {page}</span><button disabled={!q.data.hasMore} onClick={()=>setPage(n=>n+1)}>Далее</button></div>}
@@ -129,7 +130,7 @@ export default function PartnersPage(){
     {!offerReady&&<p className={styles.hint}>Принятие станет доступно после публикации окончательных условий.</p>}
     <button className={styles.primary} disabled={busy||!upgradeConsent||!offerReady} onClick={()=>void(async()=>{if(await run(()=>acceptPartnerTerms({consent:upgradeConsent,termsVersion:PARTNER_TERMS_VERSION}))){setSheet(null);setNotice('Условия приняты')}})()}>{busy?'Сохраняем…':'Принять новую редакцию'}</button>
    </div>}
-   {sheet==='demo'&&<div className={styles.sheetInfo}><span className={styles.largeIcon}><Info size={23}/></span><h3>Познакомьтесь с программой</h3><p>Рекомендации и выплаты в демоверсии сохраняются в этом браузере. Можно создать приглашение, оставить заявку и проверить её в PULSE Control.</p><p>Переводы не выполняются. Для работы с реальными клиентами будет подключена общая база сервиса.</p><button className={styles.secondary} onClick={()=>setSheet(null)}>Понятно</button></div>}
+   {sheet==='demo'&&<div className={styles.sheetInfo}><IconTile className={styles.largeIcon}><Info size={23}/></IconTile><h3>Познакомьтесь с программой</h3><p>Рекомендации и выплаты в демоверсии сохраняются в этом браузере. Можно создать приглашение, оставить заявку и проверить её в PULSE Control.</p><p>Переводы не выполняются. Для работы с реальными клиентами будет подключена общая база сервиса.</p><button className={styles.secondary} onClick={()=>setSheet(null)}>Понятно</button></div>}
    {sheet==='calculation'&&<div className={styles.sheetInfo}><div className={styles.calculation}><span>Комиссия агентства<b>100 000 ₽</b></span><span>Вычет 6%<b>6 000 ₽</b></span><span>База для расчёта<b>94 000 ₽</b></span><span>Вознаграждение 30%<b>28 200 ₽</b></span></div><p>Это пример расчёта до налогов получателя. Начисление появляется после покупки, получения комиссии и проверки агентством.</p><Link className={styles.inlineLink} to="/partner-offer">Подробнее в оферте<ChevronRight size={14}/></Link></div>}
    {sheet==='reserve'&&<form className={styles.form} onSubmit={e=>{e.preventDefault();void run(async()=>setReservationResult(await reservePartnerClient({phone:clientPhone,label:clientLabel,contactConsent,idempotencyKey:reserveKey.current})))}}>
     {!runtime.enabled&&<p className={styles.warning}>Проверка всей CRM требует подключения общей базы. В демо реальные номера не проверяются.</p>}

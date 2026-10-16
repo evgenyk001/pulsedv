@@ -10,7 +10,7 @@
 .primary:active,.secondary:active,.iconButton:active{transform:scale(.975)}.page button:disabled,.conversation button:disabled{opacity:.45;cursor:default}
 .empty{border-radius:var(--app-radius-card);background:var(--app-card);border:1px solid var(--app-card-border);box-shadow:var(--app-card-shadow);padding:26px 22px;text-align:center;backdrop-filter:blur(22px)}
 .empty h2{font-size:21px;letter-spacing:-.035em;margin:18px 0 10px;line-height:1.25}.empty>p{font-size:13px;line-height:1.65;color:var(--muted-foreground);margin:0 auto;max-width:300px}.empty>.primary{margin-top:26px}.empty>.secondary{margin-top:10px}
-.emptyIcon{width:var(--app-icon-empty);height:var(--app-icon-empty);display:flex;align-items:center;justify-content:center;background:var(--brand-soft);color:var(--primary);border-radius:var(--app-icon-radius);margin:0 auto;box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}
+.emptyIcon{margin:0 auto}
 .benefits{display:grid;gap:19px;margin:26px 0;text-align:left}.benefits>span{display:grid;grid-template-columns:28px 1fr;gap:3px 8px}.benefits svg{grid-row:span 2;color:var(--primary);align-self:center}.benefits b{font-size:12px}.benefits small{font-size:11px;color:var(--muted-foreground);line-height:1.4}
 .inbox{border-radius:var(--app-radius-card);background:var(--app-card);border:1px solid var(--app-card-border);box-shadow:var(--app-card-shadow);padding:4px 16px}.dialogRow{display:flex;gap:12px;align-items:flex-start;padding:19px 0;text-decoration:none;color:var(--foreground);border-bottom:1px solid var(--border)}.dialogRow:last-child{border:0}.dialogRow>svg{align-self:center;flex-shrink:0;color:var(--muted-foreground)}
 .avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--primary);background:var(--brand-soft);border:1px solid rgba(242,13,29,.08);font-size:14px;font-weight:750}
@@ -56,5 +56,5 @@
 .unreadDivider{display:flex;align-items:center;gap:8px;margin:8px 0 4px;color:var(--primary);font-size:8px;font-weight:760;text-transform:uppercase;letter-spacing:.08em}.unreadDivider:before,.unreadDivider:after{content:"";height:1px;flex:1;background:rgba(242,13,29,.14)}.unreadDivider span{flex:none}
 
 
-.emptyIcon,.avatar{background:var(--icon-surface);color:var(--icon-ink);border-color:var(--icon-border)}
+.avatar{background:var(--icon-surface);color:var(--icon-ink);border-color:var(--icon-border)}
 .benefits svg{color:var(--icon-ink)}

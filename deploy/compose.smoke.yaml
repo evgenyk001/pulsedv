@@ -1,0 +1,10 @@
+# Only for disposable CI validation. Never pass this file on the production VPS.
+services:
+  api:
+    image: pulse-api-test
+  worker:
+    image: pulse-api-test
+  web:
+    image: pulse-web-test
+    ports: !override
+      - "127.0.0.1::443"

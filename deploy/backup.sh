@@ -8,7 +8,8 @@ command -v restic >/dev/null
 exec 9>/var/lock/pulsedv-backup.lock
 flock -n 9 || exit 0
 stage=$(mktemp -d)
-mapfile -t running < <(docker compose ps --status running --services | grep -E '^(api|worker)$' || true)
+running_services=$(docker compose ps --status running --services)
+mapfile -t running < <(printf '%s\n' "$running_services" | grep -E '^(api|worker)$' || true)
 resume(){ if ((${#running[@]})); then docker compose start "${running[@]}"; fi; }
 cleanup(){ resume; rm -rf "$stage"; }
 trap cleanup EXIT

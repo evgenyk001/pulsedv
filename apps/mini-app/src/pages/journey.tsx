@@ -1,3 +1,4 @@
+import {IconTile} from '../components/IconTile';
 import React from 'react';
 import {Link, useSearchParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
@@ -22,7 +23,7 @@ export default function JourneyPage(){
   <nav className={styles.navigation} aria-label="Навигация по обращениям"><Link className={styles.iconButton} to="/" aria-label="На главную"><ArrowLeft size={21}/></Link><Link className={styles.iconButton} to="/profile" aria-label="Профиль"><UserRound size={20}/></Link></nav>
   <header className={styles.pageHeader}><span>НА СВЯЗИ С PULSE.DV</span><div><h1>Мои подборки<br/>и показы</h1><button className={styles.iconButton} aria-label="Обновить обращения" disabled={query.isFetching} onClick={()=>void query.refetch()}><RefreshCw size={19}/></button></div><p>Ваши диалоги, варианты квартир и встречи — в одном месте.</p></header>
   {query.isLoading?<div className={styles.loading} role="status">Загружаем обращения…</div>:query.error?<div className={styles.empty}><MessageCircle size={32}/><h2>Не удалось загрузить диалоги</h2><p>Проверьте подключение. Ваши сообщения сохраняются в обращении.</p><button className={styles.secondary} onClick={()=>void query.refetch()}>Попробовать ещё раз</button></div>:leadId?<div className={styles.empty}><MessageCircle size={32}/><h2>Обращение недоступно</h2><p>Возможно, оно создано в другом браузере или аккаунте.</p><Link className={styles.primary} to="/journey">Все мои обращения</Link></div>:!items.length?<section className={styles.empty}>
-   <span className={styles.emptyIcon}><MessageCircle size={30}/></span><h2>Найдём квартиру вместе</h2><p>Начните диалог с командой. Поможем сравнить варианты и организовать просмотр.</p>
+   <IconTile className={styles.emptyIcon}><MessageCircle size={30}/></IconTile><h2>Найдём квартиру вместе</h2><p>Начните диалог с командой. Поможем сравнить варианты и организовать просмотр.</p>
    <div className={styles.benefits}><span><Sparkles size={18}/><b>Подборки под вас</b><small>Сохраняйте подходящие варианты</small></span><span><MessageCircle size={18}/><b>Личная переписка</b><small>Вопросы и ответы всегда рядом</small></span><span><CalendarDays size={18}/><b>Удобные показы</b><small>Выбирайте время вместе с менеджером</small></span></div>
 
   </section>:<><div className={styles.inbox} aria-label="Мои диалоги">{[...items].sort((a,b)=>Date.parse(b.journey.messages?.at(-1)?.at||b.createdAt)-Date.parse(a.journey.messages?.at(-1)?.at||a.createdAt)).map(e=>{

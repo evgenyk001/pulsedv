@@ -1,3 +1,4 @@
+import {IconTile} from '../components/IconTile';
 import {PartnerEntryCard} from "../components/PartnerEntryCard";
 import {ClientUpdates} from "../components/ClientUpdates";
 import {ContinueChoice} from "../components/ContinueChoice";
@@ -37,10 +38,10 @@ export default function HomePage(){
     <PromoCarousel/>
 
     <section className={styles.quickActions}>
-      <Link to="/catalog"><span><Building2 size={18}/></span><div><b>Каталог</b><small>Все новостройки</small></div><ChevronRight size={16}/></Link>
-      <Link to="/map"><span><MapPin size={18}/></span><div><b>На карте</b><small>По районам</small></div><ChevronRight size={16}/></Link>
-      <Link to="/mortgage"><span><Percent size={18}/></span><div><b>Ипотека</b><small>Расчёт платежа</small></div><ChevronRight size={16}/></Link>
-      <Link to="/selection"><span><Sparkles size={18}/></span><div><b>PULSE Select</b><small>Подбор под вас</small></div><ChevronRight size={16}/></Link>
+      <Link to="/catalog"><IconTile><Building2 size={18}/></IconTile><div><b>Каталог</b><small>Все новостройки</small></div><ChevronRight size={16}/></Link>
+      <Link to="/map"><IconTile><MapPin size={18}/></IconTile><div><b>На карте</b><small>По районам</small></div><ChevronRight size={16}/></Link>
+      <Link to="/mortgage"><IconTile><Percent size={18}/></IconTile><div><b>Ипотека</b><small>Расчёт платежа</small></div><ChevronRight size={16}/></Link>
+      <Link to="/selection"><IconTile><Sparkles size={18}/></IconTile><div><b>PULSE Select</b><small>Подбор под вас</small></div><ChevronRight size={16}/></Link>
     </section>
 
     <ContinueChoice/>
@@ -51,7 +52,7 @@ export default function HomePage(){
     </section>
 
     <Link to="/selection" className={styles.concierge}>
-      <div className={styles.conciergeIcon}><MessageCircle size={20}/></div>
+      <IconTile as="div" className={styles.conciergeIcon}><MessageCircle size={20}/></IconTile>
       <div><span>Не хочется искать самому?</span><strong>Соберём подборку под ваш бюджет</strong><small>Менеджер поможет сравнить варианты</small></div>
       <ChevronRight size={18}/>
     </Link>

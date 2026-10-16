@@ -1,3 +1,4 @@
+import {IconTile} from '../components/IconTile';
 import {GroupedMenu,MenuLink,MenuButton} from "../components/GroupedMenu";
 import {useClientJourneys} from "../helpers/useClientJourneys";
 import React from "react";
@@ -32,7 +33,7 @@ export default function ProfilePage(){
   };
   const money=(value:number)=>(value/1_000_000).toFixed(value%1_000_000===0?0:1).replace(".",",")+" млн";
   return <div className={styles.page}>
-    <PageHeader eyebrow="Ваш PULSE.DV" title="Помощь с покупкой" subtitle="Избранное, подборы и связь с менеджером — в одном месте." action={<div className={styles.avatar}><UserRound size={23}/></div>}/>
+    <PageHeader eyebrow="Ваш PULSE.DV" title="Помощь с покупкой" subtitle="Избранное, подборы и связь с менеджером — в одном месте." action={<IconTile as="div" className={styles.avatar}><UserRound size={23}/></IconTile>}/>
 
     <GroupedMenu label="Ваш менеджер">
       {active?<MenuLink to={"/journey?lead="+active.leadId} icon={<MessageCircle/>} title="Персональный менеджер" description={active.managerName||"Команда PULSE.DV"} aria-label="Открыть переписку с менеджером"/>:<LeadSheet source="profile-manager"><MenuButton icon={<MessageCircle/>} title="Персональный менеджер" description="Команда PULSE.DV · поможем с покупкой" aria-label="Оставить заявку менеджеру"/></LeadSheet>}

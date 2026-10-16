@@ -1,3 +1,4 @@
+import {IconTile} from '../components/IconTile';
 import {LegalOperator} from '../components/LegalOperator';
 import { Link } from "react-router-dom";
 import { ArrowLeft, FileCheck2 } from "lucide-react";
@@ -11,7 +12,7 @@ export default function PersonalDataConsentPage(){
     </header>
 
     <section className={styles.hero}>
-      <span className={styles.icon}><FileCheck2 size={24}/></span>
+      <IconTile className={styles.icon}><FileCheck2 size={24}/></IconTile>
       <div><small>PULSE.DV</small><h1>Согласие на обработку персональных данных</h1><p>Версия от 29 сентября 2026 года</p></div>
     </section>
 

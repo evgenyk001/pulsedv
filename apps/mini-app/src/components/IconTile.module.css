@@ -1,0 +1,2 @@
+.tile{box-sizing:border-box;display:grid;place-items:center;flex:none;width:var(--icon-tile-size);height:var(--icon-tile-size);padding:0;border:1px solid var(--icon-border);border-radius:var(--icon-tile-radius);background:var(--icon-surface);color:var(--icon-ink);box-shadow:none}
+.tile>svg{display:block;flex:none;width:var(--icon-glyph-size);height:var(--icon-glyph-size);padding:0;stroke-width:var(--icon-stroke);stroke-linecap:round;stroke-linejoin:round}

@@ -1,3 +1,4 @@
+import {IconTile} from '../components/IconTile';
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -545,7 +546,7 @@ export default function SelectionPage(){
     onClick={()=>{setStarted(true);setOpenPanel(current=>current===id?null:id);safeHaptic()}}
     aria-expanded={openPanel===id}
   >
-    <span className={styles.selectPanelIcon}>{icon}</span>
+    <IconTile className={styles.selectPanelIcon}>{icon}</IconTile>
     <span className={styles.selectPanelCopy}><strong>{title}</strong><small>{openPanel===id?subtitle:panelSummary(id)}</small></span>
     <ChevronDown size={17}/>
   </button>;
@@ -650,7 +651,7 @@ export default function SelectionPage(){
     </header>
 
     {control.select.smartQueryEnabled&&<section className={styles.smartPrompt}>
-      <div className={styles.smartPromptHead}><Sparkles size={16}/><span>Можно своими словами</span><small>SMART INPUT</small></div>
+      <div className={styles.smartPromptHead}><IconTile><Sparkles/></IconTile><span>Можно своими словами</span><small>SMART INPUT</small></div>
       <div className={styles.smartInput}>
         <Search size={17}/>
         <Input

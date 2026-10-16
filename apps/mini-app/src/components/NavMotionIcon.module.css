@@ -4,7 +4,7 @@
   display:block;
   overflow:visible;
   stroke:currentColor;
-  stroke-width:2;
+  stroke-width:var(--icon-stroke);
   stroke-linecap:round;
   stroke-linejoin:round;
   vector-effect:non-scaling-stroke;
