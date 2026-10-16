@@ -1,9 +1,8 @@
 import {GroupedMenu,MenuLink,MenuButton} from "../components/GroupedMenu";
-import {PartnerEntryCard} from "../components/PartnerEntryCard";
 import {useClientJourneys} from "../helpers/useClientJourneys";
 import React from "react";
 import { Link } from "react-router-dom";
-import { Search, UserRound, MessageCircle, Phone, ShieldCheck, Heart, Clock3, Info, PlayCircle } from "lucide-react";
+import { Search, UsersRound, UserRound, MessageCircle, Phone, ShieldCheck, Heart, Clock3, Info, PlayCircle } from "lucide-react";
 import { LeadSheet } from "../components/LeadSheet";
 import { PageHeader } from "../components/PageHeader";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
@@ -36,16 +35,16 @@ export default function ProfilePage(){
     <PageHeader eyebrow="Ваш PULSE.DV" title="Помощь с покупкой" subtitle="Избранное, подборы и связь с менеджером — в одном месте." action={<div className={styles.avatar}><UserRound size={23}/></div>}/>
 
     <GroupedMenu label="Ваш менеджер">
-      {active?<MenuLink to={"/journey?lead="+active.leadId} icon={<MessageCircle/>} tone="blue" title="Персональный менеджер" description={active.managerName||"Команда PULSE.DV"} aria-label="Открыть переписку с менеджером"/>:<LeadSheet source="profile-manager"><MenuButton icon={<MessageCircle/>} tone="blue" title="Персональный менеджер" description="Команда PULSE.DV · поможем с покупкой" aria-label="Оставить заявку менеджеру"/></LeadSheet>}
+      {active?<MenuLink to={"/journey?lead="+active.leadId} icon={<MessageCircle/>} title="Персональный менеджер" description={active.managerName||"Команда PULSE.DV"} aria-label="Открыть переписку с менеджером"/>:<LeadSheet source="profile-manager"><MenuButton icon={<MessageCircle/>} title="Персональный менеджер" description="Команда PULSE.DV · поможем с покупкой" aria-label="Оставить заявку менеджеру"/></LeadSheet>}
     </GroupedMenu>
 
-    <PartnerEntryCard/>
+    <GroupedMenu label="Партнёрская программа"><MenuLink to="/partners" icon={<UsersRound/>} title="Партнёрская программа" description="Рекомендуйте покупателя и получите вознаграждение"/></GroupedMenu>
     <GroupedMenu title="Покупка квартиры">
-      <MenuLink to="/journey" icon={<Clock3/>} tone="orange" title="Мои подборки и показы"/>
-      <MenuLink to="/my-search" icon={<Search/>} tone="purple" title="Мой поиск"/>
-      <MenuLink to="/favorites" icon={<Heart/>} tone="red" title="Избранное"/>
+      <MenuLink to="/journey" icon={<Clock3/>} title="Мои подборки и показы"/>
+      <MenuLink to="/my-search" icon={<Search/>} title="Мой поиск"/>
+      <MenuLink to="/favorites" icon={<Heart/>} title="Избранное"/>
       <Sheet>
-        <SheetTrigger asChild><MenuButton icon={<Clock3/>} tone="gray" title="История подборов"/></SheetTrigger>
+        <SheetTrigger asChild><MenuButton icon={<Clock3/>} title="История подборов"/></SheetTrigger>
         <SheetContent side="bottom" className={styles.infoSheet}><SheetHeader><SheetTitle>История подборов</SheetTitle><SheetDescription>Последние сценарии, к которым можно вернуться.</SheetDescription></SheetHeader>
           <div className={styles.historyList}>
             {history.length?history.map(item=><div className={styles.historyItem} key={item.createdAt}>
@@ -58,14 +57,14 @@ export default function ProfilePage(){
       </Sheet>
     </GroupedMenu>
     <GroupedMenu title="О приложении">
-      <MenuLink to="/privacy" icon={<ShieldCheck/>} tone="blue" title="Персональные данные"/>
+      <MenuLink to="/privacy" icon={<ShieldCheck/>} title="Персональные данные"/>
       <Sheet>
-        <SheetTrigger asChild><MenuButton icon={<Info/>} tone="gray" title="О сервисе PULSE.DV"/></SheetTrigger>
+        <SheetTrigger asChild><MenuButton icon={<Info/>} title="О сервисе PULSE.DV"/></SheetTrigger>
         <SheetContent side="bottom" className={styles.infoSheet}><SheetHeader><SheetTitle>О PULSE.DV</SheetTitle><SheetDescription>Мы помогаем сравнить новостройки, условия покупки и ипотечные сценарии в одном процессе.</SheetDescription></SheetHeader><div className={styles.about}><ShieldCheck size={20}/><p>Информация в приложении — отправная точка для подбора. Перед сделкой менеджер уточняет актуальные условия по выбранному проекту.</p></div></SheetContent>
       </Sheet>
-      <MenuButton onClick={()=>window.dispatchEvent(new Event("pulse:show-onboarding"))} icon={<PlayCircle/>} tone="purple" title="Показать знакомство"/>
+      <MenuButton onClick={()=>window.dispatchEvent(new Event("pulse:show-onboarding"))} icon={<PlayCircle/>} title="Показать знакомство"/>
     </GroupedMenu>
 
-    <LeadSheet title="Связаться с агентством" source="profile-contact"><button className={styles.contact}><Phone size={17}/>Связаться с PULSE.DV</button></LeadSheet>
+    <GroupedMenu label="Связь с командой"><LeadSheet title="Связаться с агентством" source="profile-contact"><MenuButton icon={<Phone/>} title="Связаться с PULSE.DV"/></LeadSheet></GroupedMenu>
   </div>
 }

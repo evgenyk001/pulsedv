@@ -1,15 +1,14 @@
 .section{display:flex;flex-direction:column;gap:8px;min-width:0}
 .heading{margin:0;padding:0 var(--list-inset);font-size:12px;line-height:1.4;font-weight:500;color:var(--muted-foreground)}
 .group{background:var(--list-surface);border-radius:var(--list-radius);min-width:0;overflow:hidden;isolation:isolate}
-.row{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-width:0;min-height:52px;padding:10px var(--list-inset);border:0;border-radius:0;background:transparent;color:var(--foreground);text-align:left;font:inherit;text-decoration:none;cursor:pointer;box-sizing:border-box;transition:background-color 140ms ease}
+.row{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-width:0;min-height:56px;padding:12px var(--list-inset);border:0;border-radius:0;background:transparent;color:var(--foreground);text-align:left;font:inherit;text-decoration:none;cursor:pointer;box-sizing:border-box;transition:background-color 140ms ease}
 .row:after{content:'';position:absolute;bottom:0;left:calc(var(--list-inset) + var(--list-icon) + 12px);right:0;height:var(--list-hairline);background:var(--list-divider);pointer-events:none}
 .row:last-child:after{display:none}
 .row:active{background:var(--list-pressed)}
 .row:focus-visible{outline:2px solid var(--primary);outline-offset:-3px;z-index:1}
 .row:disabled{opacity:.5;cursor:default}
-.icon{width:var(--list-icon);height:var(--list-icon);flex:none;border-radius:9px!important;display:grid;place-items:center;color:#fff;box-shadow:inset 0 .5px 0 #ffffff45}
+.icon{width:var(--list-icon);height:var(--list-icon);flex:none;border-radius:10px;display:grid;place-items:center;color:var(--icon-ink);background:var(--icon-surface);border:1px solid var(--icon-border)}
 .icon svg{width:19px;height:19px;stroke-width:1.9}
-.icon[data-tone=red]{background:#f1665b}.icon[data-tone=blue]{background:#438bfa}.icon[data-tone=green]{background:#55be72}.icon[data-tone=orange]{background:#f2b148}.icon[data-tone=purple]{background:#a477e8}.icon[data-tone=gray]{background:#9098a5}
 .copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
 .title{font-size:15px;line-height:1.35;font-weight:450;overflow-wrap:anywhere;letter-spacing:-.015em}
 .description{font-size:11.5px;line-height:1.4;color:var(--muted-foreground);overflow-wrap:anywhere}

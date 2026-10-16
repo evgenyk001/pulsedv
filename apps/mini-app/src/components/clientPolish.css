@@ -25,8 +25,6 @@
 @media(prefers-reduced-motion:reduce){.pulseResume:before,.pulseResumeAction svg{animation:none!important}.pulseResumeAction svg{transition:none!important}}
 
 
-/* Notification entries share one list, with inset separators. */
-.pulseUpdatesList{gap:0;padding:0;background:var(--list-surface);border-radius:var(--list-radius);overflow:hidden;margin-bottom:16px}
-.pulseUpdateRow{position:relative;padding:14px var(--list-inset);border:0;border-radius:0;gap:12px;background:transparent;box-shadow:none}
-.pulseUpdateRow:not(:last-child):after{content:'';position:absolute;bottom:0;left:calc(var(--list-inset) + 44px);right:0;height:var(--list-hairline);background:var(--list-divider)}
-.pulseUpdateIcon{width:32px;height:32px;border-radius:9px;background:#438bfa;color:white}.pulseUpdateRow strong{font-size:14px;font-weight:500}.pulseUpdateRow small{font-size:11.5px}.pulseUpdateRow:active{background:var(--list-pressed)}
+/* Notifications and continuation cards use the shared neutral icon material. */
+.pulseResumeIcon,.pulseEmptyIcon,.pulseUpdateIcon{background:var(--icon-surface);color:var(--icon-ink);border:1px solid var(--icon-border);border-radius:12px}
+.pulseJourneyBenefits svg{color:var(--icon-ink)}

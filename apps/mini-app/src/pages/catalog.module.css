@@ -53,3 +53,6 @@
 .sortSelect{width:min(190px,58%);flex:0 1 190px;min-width:0;height:40px;min-height:40px;font-size:10px}
 
 .filterChoiceGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.filterChoiceGrid>.filterGroup{min-width:0}.seaChoice{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;color:var(--foreground)}
+
+
+.saveSearch>svg:first-child{color:var(--icon-ink)}.saveSearch b{font-size:12px}.saveSearch small{font-size:10px;line-height:1.4}

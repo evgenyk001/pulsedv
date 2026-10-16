@@ -6,7 +6,9 @@ for(const width of [320,390,430])test(`Partners ${width}px: invitation, buyer co
  // This scenario crosses both applications and several dialogs; mobile WebKit needs the whole journey budget.
  test.setTimeout(90000);
  await page.setViewportSize({width,height:844});await seed(page);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/pulsedv/mini-app/#/profile');await expect(page.getByRole('link',{name:/Партнёрская программа/})).toBeVisible();await page.screenshot({path:`test-results/menu-profile-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});await page.getByRole('link',{name:/Партнёрская программа/}).click();
+ await page.goto('/pulsedv/mini-app/');await expect(page.getByRole('heading',{name:'Стоит посмотреть',exact:true})).toBeVisible();await page.screenshot({path:`test-results/neutral-home-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
+ await page.goto('/pulsedv/mini-app/#/profile');await expect(page.getByRole('link',{name:/Партнёрская программа/})).toBeVisible();await page.screenshot({path:`test-results/menu-profile-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
+ await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));await page.screenshot({path:`test-results/neutral-profile-footer-${browserName}-${width}.png`,animations:'disabled'});await page.getByRole('link',{name:/Партнёрская программа/}).click();
  await expect(page.getByRole('heading',{name:'Рекомендуйте PULSE',exact:true})).toBeVisible();await page.screenshot({path:`test-results/partner-start-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
  await page.getByRole('textbox',{name:'Ваше имя для приглашения'}).fill('Анна Партнёр');await page.getByRole('textbox',{name:'Ваш контактный телефон'}).fill('+79995550101');await page.getByRole('checkbox',{name:/Принимаю условия программы/}).check();await page.getByRole('button',{name:'Стать партнёром PULSE'}).click();
  await expect(page.getByRole('heading',{name:'Мои рекомендации',exact:true})).toBeVisible();await expect(page.getByText('Рекомендаций пока нет',{exact:true})).toBeVisible();

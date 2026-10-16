@@ -345,13 +345,13 @@
   .mortgageLink>button,.mortgageLinked>button{align-self:stretch}
 }
 
-
-/* One grouped request editor, with an inset separator for each row. */
+/* Retained request group, now in the app's neutral palette. */
 .selectPanels{gap:0;background:var(--list-surface);border-radius:var(--list-radius);overflow:hidden}
 .selectPanel,.selectPanelOpen{position:relative;border:0;border-radius:0;background:transparent;box-shadow:none;transition:none}
 .selectPanel:not(:last-child):after,.selectPanelOpen:not(:last-child):after{content:'';position:absolute;bottom:0;left:60px;right:0;height:var(--list-hairline);background:var(--list-divider)}
 .selectPanelHead{min-height:72px;padding:14px var(--list-inset);grid-template-columns:32px minmax(0,1fr) auto;gap:12px}
-.selectPanelIcon{width:32px;height:32px;border:0;border-radius:9px!important;background:#438bfa;color:#fff}.selectPanel:nth-child(2) .selectPanelIcon{background:#55be72}.selectPanel:nth-child(3) .selectPanelIcon{background:#f2b148}.selectPanel:nth-child(4) .selectPanelIcon{background:#a477e8}.selectPanelOpen .selectPanelIcon{background:var(--primary);color:white;border:0}
+.selectPanelIcon,.selectPanelOpen .selectPanelIcon{width:32px;height:32px;border-radius:10px;background:var(--icon-surface);color:var(--icon-ink);border:1px solid var(--icon-border)}
 .selectPanelCopy strong{font-size:14px;font-weight:500;line-height:1.35}.selectPanelCopy small{font-size:11px;line-height:1.4}.selectPanelHead>svg{color:var(--list-chevron)}
-.selectPanelBody{padding:4px var(--list-inset) 18px;border-color:var(--list-divider);animation:none}
-.card{background:var(--list-surface);box-shadow:none;border:0}.card:before{display:none}
+.selectPanelHead:active{background:var(--list-pressed)}.selectPanelBody{padding:4px var(--list-inset) 18px;border-color:var(--list-divider);animation:none}
+.smartPromptHead svg{background:var(--icon-surface);color:var(--icon-ink);border-color:var(--icon-border)}
+.cardIcon{background:var(--icon-surface);color:var(--icon-ink);border-color:var(--icon-border);box-shadow:none}
