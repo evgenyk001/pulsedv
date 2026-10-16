@@ -29,7 +29,7 @@ export function LeadsPage(){
  const baseline=React.useRef<ReturnType<typeof draftValues>|null>(null);
  const [remoteLead,setRemoteLead]=React.useState<PulseLead|null>(null);
  const lead=runtime.enabled?(remoteLead?.id===selected?remoteLead:leads.find(x=>x.id===selected)):leads.find(x=>x.id===selected);
- React.useEffect(()=>{if(!runtime.enabled||!selected)return;let cancelled=false;void api<{lead:PulseLead}>('/control/leads/'+encodeURIComponent(selected)).then(data=>{if(!cancelled)setRemoteLead(data.lead)}).catch(e=>{if(!cancelled)setError(e.message)});return()=>{cancelled=true}},[selected]);
+ React.useEffect(()=>{if(!runtime.enabled||!selected)return;let cancelled=false;void api<{lead:PulseLead}>('/control/leads/'+encodeURIComponent(selected)).then(data=>{if(!cancelled){setRemoteLead(data.lead);setDraft(current=>{if(current&&baseline.current&&JSON.stringify(draftValues(current))!==JSON.stringify(baseline.current))return current;const next=makeDraft(data.lead);baseline.current=draftValues(next);return next;})}}).catch(e=>{if(!cancelled)setError(e.message)});return()=>{cancelled=true}},[selected]);
  const open=(item:PulseLead)=>{setRemoteLead(item);const next=makeDraft(item);baseline.current=draftValues(next);setSelected(item.id);setDraft(next);setError('');};
  React.useEffect(()=>{if(!selected){setDraft(null);baseline.current=null;return}if(!draft&&lead)open(lead)},[selected,lead?.id]);
  React.useEffect(()=>{const id=params.get('lead');if(!id)return;const item=leads.find(l=>l.id===id);if(selected!==id){if(item)open(item);else setSelected(id)}},[params.get('lead'),leads.length]);

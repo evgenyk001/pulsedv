@@ -8,21 +8,21 @@ import "./floot-runtime.css";
 import "./base.css";
 import { AppShell } from "./components/AppShell";
 import HomePage from "./pages/_index";
-import JourneyPage from "./pages/journey";
-import CatalogPage from "./pages/catalog";
-import MapPage from "./pages/map";
-import MortgagePage from "./pages/mortgage";
-import SelectionPage from "./pages/selection";
-import FavoritesPage from "./pages/favorites";
-import PartnersPage from "./pages/partners";
-import PartnerOfferPage from './pages/partner-offer';
-import PartnerInvitePage from "./pages/partner-invite";
+const JourneyPage=React.lazy(()=>import('./pages/journey'));
+const CatalogPage=React.lazy(()=>import('./pages/catalog'));
+const MapPage=React.lazy(()=>import('./pages/map'));
+const MortgagePage=React.lazy(()=>import('./pages/mortgage'));
+const SelectionPage=React.lazy(()=>import('./pages/selection'));
+const FavoritesPage=React.lazy(()=>import('./pages/favorites'));
+const PartnersPage=React.lazy(()=>import('./pages/partners'));
+const PartnerOfferPage=React.lazy(()=>import('./pages/partner-offer'));
+const PartnerInvitePage=React.lazy(()=>import('./pages/partner-invite'));
 import {referralCodeFromStart} from "../../../packages/partners/model";
-import ProfilePage from "./pages/profile";
-import MySearchPage from "./pages/my-search";
-import PropertyPage from "./pages/property.$propertyId";
-import PrivacyPage from "./pages/privacy";
-import PersonalDataConsentPage from "./pages/personal-data-consent";
+const ProfilePage=React.lazy(()=>import('./pages/profile'));
+const MySearchPage=React.lazy(()=>import('./pages/my-search'));
+const PropertyPage=React.lazy(()=>import('./pages/property.$propertyId'));
+const PrivacyPage=React.lazy(()=>import('./pages/privacy'));
+const PersonalDataConsentPage=React.lazy(()=>import('./pages/personal-data-consent'));
 
 configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.meta.env.VITE_API_BASE_URL,role:"public"});
 
@@ -48,7 +48,7 @@ function App(){
   return <QueryClientProvider client={queryClient}>
     <HashRouter>
       <AppShell>
-        <ScreenContent><Routes>
+        <ScreenContent><React.Suspense fallback={<div className="screenLoadState" role="status">Открываем раздел…</div>}><Routes>
           <Route path="/" element={<HomePage/>}/>
           <Route path="/catalog" element={<CatalogPage/>}/>
           <Route path="/map" element={<MapPage/>}/>
@@ -65,7 +65,7 @@ function App(){
           <Route path="/personal-data-consent" element={<PersonalDataConsentPage/>}/>
           <Route path="/property/:propertyId" element={<PropertyPage/>}/>
           <Route path="*" element={<HomePage/>}/>
-        </Routes></ScreenContent>
+        </Routes></React.Suspense></ScreenContent>
       </AppShell>
     </HashRouter>
   </QueryClientProvider>

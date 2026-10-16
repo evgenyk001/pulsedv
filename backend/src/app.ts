@@ -16,7 +16,7 @@ import { camelRow } from './database';
 import type { RuntimeConfig } from './config';
 import { HttpError, tokenHash, checkPassword, hashPassword, issueToken, generateMfaCode, mfaCodeHash, checkMfaCode } from './security';
 import { verifyTelegramInitData } from './telegramInitData';
-import { stateSchema, leadSchema, eventsSchema, safeMetadata, financeSchema } from './validation';
+import { stateSchema, leadSchema, eventsSchema, safeMetadata,safeLeadContext, financeSchema } from './validation';
 import { audit, leadRepository, readState } from './repository';
 import { ingestEventBatch, processSessionIntent } from './leadEngineService';
 import { enqueueInterestChange } from './interestNotifications';
@@ -120,7 +120,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   return db.transaction(async sql=>{
    const session=request.visitor!;await sessionLock(sql,session.sessionId);await lockBuyerIdentity(sql,input.phone,session.userId);
    const source=input.referralCode?'partner':input.source;
-   const requestContext=safeMetadata(input.context??{});
+   const requestContext=safeLeadContext(input.context??{});
    const fingerprint=createHash('sha256').update(JSON.stringify({name:input.name,phone:input.phone,source,propertyId:input.propertyId??null,comment:input.comment??null,context:Object.entries(requestContext).sort(([a],[b])=>a.localeCompare(b)),referralCode:input.referralCode??null})).digest('hex');
    const existing=(await sql.query('select id,name,phone,source,property_id,comment,request_context,submission_fingerprint from leads where session_id=$1 and idempotency_key=$2',[session.sessionId,input.idempotencyKey])).rows[0];
    if(existing){
@@ -131,7 +131,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
     return {ok:true,id:existing.id,duplicate:true};
    }
    if(input.propertyId&&!await getCatalogProperty(sql,input.propertyId,'published'))throw new HttpError(400,'Объект больше не опубликован');
-   const referringPartner=await preparePartnerReferral(sql,input.referralCode,session.userId);
+   const referringPartner=await preparePartnerReferral(sql,input.referralCode,session.userId,input.phone);
    const row=(await sql.query('insert into leads(session_id,user_id,idempotency_key,source,property_id,name,phone,comment,request_context,consent_at,consent_version,submission_fingerprint) values($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,now(),$10,$11) returning id',[session.sessionId,session.userId,input.idempotencyKey,source,input.propertyId??null,input.name,input.phone,input.comment??null,JSON.stringify(requestContext),config.CONSENT_VERSION,fingerprint])).rows[0];
    if(referringPartner)await attachPartnerReferral(sql,row.id,session.userId,input.phone,input.referralCode!,referringPartner);
    const repo=leadRepository(sql);
@@ -154,7 +154,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
     await sql.query('update control_login_challenges set consumed_at=now() where member_id=$1 and consumed_at is null',[row.id]);
     await sql.query("delete from outbox_events where topic='manager.security_code' and aggregate_id=$1 and processed_at is null",[row.id]);
     await sql.query('insert into control_login_challenges(id,member_id,code_hash,expires_at) values($1,$2,$3,$4)',[challengeId,row.id,mfaCodeHash(config.BOT_TOKEN,challengeId,code),expiresAt]);
-    await sql.query("insert into outbox_events(topic,aggregate_type,aggregate_id,payload) values('manager.security_code','member',$1,$2::jsonb)",[row.id,JSON.stringify({managerId:row.id,code})]);
+    await sql.query("insert into outbox_events(topic,aggregate_type,aggregate_id,payload) values('manager.security_code','member',$1,$2::jsonb)",[row.id,JSON.stringify({managerId:row.id,code,challengeId,expiresAt})]);
    });
    return {mfaRequired:true,challengeId,expiresAt};
   }
@@ -212,7 +212,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const scoped=m.role==='manager';
   return (await db.query(scoped?'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members where id=$1':'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members order by name',scoped?[m.id]:[])).rows.map(memberView);
  };
- const controlNotifications=async(m:Member)=>m.role==='manager'?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at,available_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
+ const controlNotifications=async(m:Member)=>m.role==='manager'?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at,available_at from outbox_events order by (dead_at is not null) desc,(processed_at is null and last_error is not null) desc,created_at desc limit 30')).rows.map(camelRow);
  const controlCounts=async(m:Member)=>{
   const scoped=m.role==='manager';
   const leadValues=scoped?[m.id]:[];
@@ -385,7 +385,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const events=(await db.query(`select id,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at as created_at from user_events ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by occurred_at desc limit 2000`,scoped?[m.id]:[])).rows.map(camelRow);
   const profiles=(await db.query(`select * from visitor_profiles ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by score desc limit 1000`,scoped?[m.id]:[])).rows.map(camelRow);
   const members=(await db.query(scoped?'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members where id=$1':'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members order by name',scoped?[m.id]:[])).rows.map(memberView);
-  const notifications=scoped?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at,available_at from outbox_events order by created_at desc limit 30')).rows.map(camelRow);
+  const notifications=scoped?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at,available_at from outbox_events order by (dead_at is not null) desc,(processed_at is null and last_error is not null) desc,created_at desc limit 30')).rows.map(camelRow);
   return {state,version,leads,tasks,events,profiles,members,notifications,limited:leads.length===1000||events.length===2000||profiles.length===1000||tasks.length===1000};
  });
  app.put('/api/v1/control/state',{preHandler:editor},async request=>{

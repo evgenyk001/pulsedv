@@ -3,7 +3,7 @@ import {Link} from 'react-router-dom';
 import {useQueryClient,useQuery} from '@tanstack/react-query';
 import {ArrowLeft,UsersRound,Send,Copy,UserPlus,ChevronRight,Check,Wallet,RefreshCw,ShieldCheck,Info,Clock3,CheckCircle2,XCircle,ArrowUpRight} from 'lucide-react';
 import {runtime,api} from '../../../../packages/pulse-data/runtime';
-import {joinPartner,acceptPartnerTerms,createPartnerInvite,requestPartnerPayout} from '../../../../packages/partners/client';
+import {joinPartner,acceptPartnerTerms,createPartnerInvite,requestPartnerPayout,reservePartnerClient} from '../../../../packages/partners/client';
 import {PARTNER_TERMS_VERSION,partnerMoney,partnerLink,referralLabels,rewardLabels,partnerRejectReasons,type PartnerRejectReason,type PartnerReferral} from '../../../../packages/partners/model';
 import {usePartners} from '../helpers/usePartners';
 import {PageHeader} from '../components/PageHeader';
@@ -16,7 +16,7 @@ import {claimLabel} from '../../../../packages/partners/policy';
 import {businessDay} from '../../../../packages/pulse-data/business';
 import styles from './partners.module.css';
 
-type PartnerSheet='invite'|'personal'|'terms'|'upgrade'|'demo'|'calculation';
+type PartnerSheet='invite'|'personal'|'terms'|'upgrade'|'demo'|'calculation'|'reserve';
 const tabs=[{value:'clients' as const,label:'Мои клиенты'},{value:'payments' as const,label:'Выплаты'}];
 const dateLabel=(date:string)=>new Date(date).toLocaleDateString('ru-RU',{timeZone:'Asia/Vladivostok',day:'numeric',month:'long'});
 function nextStep(r:PartnerReferral){
@@ -32,10 +32,14 @@ function nextStep(r:PartnerReferral){
  return 'Клиент закреплён за вами. Команда сопровождает покупку, а её этапы появляются в этом кабинете.';
 }
 export default function PartnersPage(){
- const [page,setPage]=React.useState(1),q=usePartners(page),cache=useQueryClient();
+ const [page,setPage]=React.useState(1);
+ const [tab,setTab]=React.useState<'clients'|'payments'>('clients');
+ const q=usePartners(page,tab),cache=useQueryClient();
+ const [clientPhone,setClientPhone]=React.useState(''),[clientLabel,setClientLabel]=React.useState(''),[contactConsent,setContactConsent]=React.useState(false),[reservationResult,setReservationResult]=React.useState<import('../../../../packages/partners/model').ReservationResult|null>(null);
+ const reserveKey=React.useRef(crypto.randomUUID());
  const [name,setName]=React.useState(''),[phone,setPhone]=React.useState(''),[consent,setConsent]=React.useState(false),[upgradeConsent,setUpgradeConsent]=React.useState(false);
  const [busy,setBusy]=React.useState(false),[error,setError]=React.useState(''),[notice,setNotice]=React.useState('');
- const [tab,setTab]=React.useState<'clients'|'payments'>('clients'),[sheet,setSheet]=React.useState<PartnerSheet|null>(null),[selectedId,setSelectedId]=React.useState<string|null>(null);
+ const [sheet,setSheet]=React.useState<PartnerSheet|null>(null),[selectedId,setSelectedId]=React.useState<string|null>(null);
  const [label,setLabel]=React.useState(''),[inviteCode,setInviteCode]=React.useState<string|null>(null),[recipient,setRecipient]=React.useState('person');
  const inviteKey=React.useRef(crypto.randomUUID());
  const program=useQuery({queryKey:['partner-program'],queryFn:()=>runtime.enabled?api<{botUsername:string;offerPublished:boolean}>('/public/partner-program'):Promise.resolve({botUsername:'pulsedvbot',offerPublished:false}),staleTime:600000});
@@ -54,8 +58,8 @@ export default function PartnersPage(){
  const copy=async()=>{if(!canInvite)return;try{await navigator.clipboard.writeText(shareUrl);setNotice('Ссылка скопирована')}catch{setNotice('Скопируйте ссылку из поля ниже')}};
  const share=async()=>{if(!canInvite)return;try{if(navigator.share)await navigator.share({title:'PULSE.DV',text:'Поможем выбрать квартиру и разобраться с ипотекой. Оставьте заявку по моему приглашению.',url:shareUrl});else await copy()}catch(e){if(!(e instanceof DOMException&&e.name==='AbortError'))setNotice('Скопируйте ссылку из поля приглашения')}};
  React.useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),3500);return()=>clearTimeout(timer)},[notice]);
- const titles:Record<PartnerSheet,string>={invite:'Пригласить покупателя',personal:'Персональное приглашение',terms:'Условия программы',upgrade:'Обновлённые условия',demo:'Демонстрационный режим',calculation:'Как считается вознаграждение'};
- const descriptions:Record<PartnerSheet,string>={invite:'Покупатель подтвердит вашу рекомендацию в заявке.',personal:'Отдельная ссылка для конкретного знакомства.',terms:'Закрепление клиента, расчёт и оформление выплаты.',upgrade:'Новые правила применяются к новым рекомендациям после вашего согласия.',demo:'Здесь можно пройти путь от приглашения до выплаты.',calculation:'30% от комиссии агентства после вычета 6%.'};
+ const titles:Record<PartnerSheet,string>={invite:'Пригласить покупателя',personal:'Персональное приглашение',terms:'Условия программы',upgrade:'Обновлённые условия',demo:'Демонстрационный режим',reserve:'Проверить и закрепить клиента',calculation:'Как считается вознаграждение'};
+ const descriptions:Record<PartnerSheet,string>={invite:'Покупатель подтвердит вашу рекомендацию в заявке.',personal:'Отдельная ссылка для конкретного знакомства.',terms:'Закрепление клиента, расчёт и оформление выплаты.',upgrade:'Новые правила применяются к новым рекомендациям после вашего согласия.',demo:'Здесь можно пройти путь от приглашения до выплаты.',reserve:'Автоматическая проверка CRM и предварительная бронь номера на 7 дней.',calculation:'30% от комиссии агентства после вычета 6%.'};
  const referralRow=(r:PartnerReferral)=><button className={styles.client} key={r.id} onClick={()=>openReferral(r)}>
   <span className={styles.avatar}>{tab==='payments'?<Wallet size={17}/>:r.clientName[0]}</span>
   <span className={styles.clientCopy}><b>{r.clientName}</b><small>{r.status==='accepted'?r.stageLabel:referralLabels[r.status]}</small>
@@ -95,14 +99,15 @@ export default function PartnersPage(){
    </section>
    {needsTerms&&<section className={styles.rulesNotice}><span className={styles.ruleIcon}><ShieldCheck size={20}/></span><div><b>Обновились условия программы</b><p>Чтобы приглашать новых покупателей, ознакомьтесь с новой редакцией.</p><button onClick={()=>openSheet('upgrade')}>Ознакомиться<ChevronRight size={14}/></button></div></section>}
    {p.status==='paused'&&<div className={styles.warning}>Новые приглашения временно недоступны. Команда поможет уточнить причину.</div>}
-   <SegmentedControl ariaLabel="Разделы партнёрского кабинета" value={tab} options={tabs} onChange={setTab}/>
+   <SegmentedControl ariaLabel="Разделы партнёрского кабинета" value={tab} options={tabs} onChange={value=>{setPage(1);setTab(value)}}/>
    <div className={styles.tabPanel} role="tabpanel" aria-label={tab==='clients'?'Мои клиенты':'Выплаты'} key={tab}>
     {tab==='clients'?<>
-     <div className={styles.actions}><button className={styles.primary} disabled={!canInvite} onClick={()=>{setInviteCode(null);openSheet('invite')}}><Send size={17}/>Пригласить покупателя</button>
+     <div className={styles.actions}><button className={styles.primary} disabled={!canInvite} onClick={()=>{setClientPhone('');setClientLabel('');setContactConsent(false);setReservationResult(null);reserveKey.current=crypto.randomUUID();openSheet('reserve')}}><ShieldCheck size={17}/>Проверить и закрепить клиента</button><button className={styles.primary} disabled={!canInvite} onClick={()=>{setInviteCode(null);openSheet('invite')}}><Send size={17}/>Пригласить покупателя</button>
       <button className={styles.personalAction} disabled={!canInvite} onClick={()=>{setInviteCode(null);setLabel('');inviteKey.current=crypto.randomUUID();openSheet('personal')}}><UserPlus size={16}/>Персональное приглашение<ChevronRight size={14}/></button></div>
+     {!!q.data.reservations?.length&&<section className={styles.card}><h2>Ожидают подтверждения</h2>{q.data.reservations.map(r=><button className={styles.invitation} key={r.id} onClick={()=>{setInviteCode(r.code);openSheet('invite')}}><span><b>{r.label} · {r.phoneHint}</b><small>Бронь до {dateLabel(r.expiresAt)} · отправить ссылку</small></span><Send size={16}/></button>)}</section>}
      <div className={styles.sectionHead}><h2>Рекомендации</h2><span>{q.data.total}</span></div>
      <section className={styles.list} aria-label="Ваши рекомендации">{q.data.referrals.length?q.data.referrals.map(referralRow):<div className={styles.empty}><span><UsersRound size={24}/></span><b>Рекомендаций пока нет</b><p>Отправьте знакомому приглашение. Его заявка появится здесь после подтверждения.</p></div>}</section>
-     {q.data.invitations.length>0&&<section className={styles.card}><h2>Персональные приглашения</h2>{q.data.invitations.map(i=><button className={styles.invitation} disabled={!canInvite} key={i.id} onClick={()=>{setInviteCode(i.code);openSheet('invite')}}><span><b>{i.label}</b><small>{q.data!.referrals.some(r=>r.invitationId===i.id)?'Покупатель оставил заявку':'Ожидаем заявку покупателя'}</small></span><Copy size={16}/></button>)}</section>}
+     {q.data.invitations.length>0&&<section className={styles.card}><h2>Персональные приглашения</h2>{q.data.invitations.map(i=><button className={styles.invitation} disabled={!canInvite} key={i.id} onClick={()=>{setInviteCode(i.code);openSheet('invite')}}><span><b>{i.label}</b><small>{i.submitted?'Покупатель оставил заявку':'Ожидаем заявку покупателя'}</small></span><Copy size={16}/></button>)}</section>}
     </>:<>
      <div className={styles.sectionHead}><h2>История начислений</h2></div>
      <section className={styles.list} aria-label="Ваши начисления">{q.data.referrals.some(r=>r.reward)?q.data.referrals.filter(r=>r.reward).map(referralRow):<div className={styles.empty}><span><Wallet size={24}/></span><b>Начислений пока нет</b><p>После покупки и поступления комиссии здесь появится ваше вознаграждение.</p><button className={styles.inlineLink} onClick={()=>openSheet('calculation')}>Посмотреть пример<ChevronRight size={14}/></button></div>}</section>
@@ -117,7 +122,7 @@ export default function PartnersPage(){
    <SheetHeader><SheetTitle>{sheet?titles[sheet]:''}</SheetTitle><SheetDescription>{sheet?descriptions[sheet]:''}</SheetDescription></SheetHeader>
    {error&&<p className={styles.error} role="alert">{error}</p>}
    {sheet==='terms'&&<PartnerTerms version={p?.termsVersion||PARTNER_TERMS_VERSION}/>}
-   {sheet==='upgrade'&&<div className={styles.form}><div className={styles.ruleSummary}><div><ShieldCheck size={18}/><span><b>Закреп на 6 месяцев</b><small>После подтверждения клиента агентством</small></span></div><div><UsersRound size={18}/><span><b>Первая действительная рекомендация</b><small>После проверки уникальности покупателя</small></span></div><div><Wallet size={18}/><span><b>30% после вычета 6%</b><small>Старые рекомендации сохраняют свою редакцию</small></span></div></div>
+   {sheet==='upgrade'&&<div className={styles.form}><div className={styles.ruleSummary}><div><Clock3 size={18}/><span><b>Предварительная бронь на 7 дней</b><small>После проверки номера, до подтверждения покупателем</small></span></div><div><ShieldCheck size={18}/><span><b>Закреп на 6 месяцев</b><small>После заявки, согласий и проверки CRM</small></span></div><div><UsersRound size={18}/><span><b>Первая действительная рекомендация</b><small>После проверки уникальности покупателя</small></span></div><div><Wallet size={18}/><span><b>30% после вычета 6%</b><small>Старые рекомендации сохраняют свою редакцию</small></span></div></div>
     <Link className={styles.inlineLink} to="/partner-offer">Прочитать оферту<ChevronRight size={14}/></Link>
     <label className={styles.consent}><input type="checkbox" checked={upgradeConsent} disabled={busy} onChange={e=>setUpgradeConsent(e.target.checked)}/><span>Принимаю новую редакцию условий программы</span></label>
     {!offerReady&&<p className={styles.hint}>Принятие станет доступно после публикации окончательных условий.</p>}
@@ -125,8 +130,17 @@ export default function PartnersPage(){
    </div>}
    {sheet==='demo'&&<div className={styles.sheetInfo}><span className={styles.largeIcon}><Info size={23}/></span><h3>Познакомьтесь с программой</h3><p>Рекомендации и выплаты в демоверсии сохраняются в этом браузере. Можно создать приглашение, оставить заявку и проверить её в PULSE Control.</p><p>Переводы не выполняются. Для работы с реальными клиентами будет подключена общая база сервиса.</p><button className={styles.secondary} onClick={()=>setSheet(null)}>Понятно</button></div>}
    {sheet==='calculation'&&<div className={styles.sheetInfo}><div className={styles.calculation}><span>Комиссия агентства<b>100 000 ₽</b></span><span>Вычет 6%<b>6 000 ₽</b></span><span>База для расчёта<b>94 000 ₽</b></span><span>Вознаграждение 30%<b>28 200 ₽</b></span></div><p>Это пример расчёта до налогов получателя. Начисление появляется после покупки, получения комиссии и проверки агентством.</p><Link className={styles.inlineLink} to="/partner-offer">Подробнее в оферте<ChevronRight size={14}/></Link></div>}
+   {sheet==='reserve'&&<form className={styles.form} onSubmit={e=>{e.preventDefault();void run(async()=>setReservationResult(await reservePartnerClient({phone:clientPhone,label:clientLabel,contactConsent,idempotencyKey:reserveKey.current})))}}>
+    {!runtime.enabled&&<p className={styles.warning}>Проверка всей CRM требует подключения общей базы. В демо реальные номера не проверяются.</p>}
+    <label>Как назвать рекомендацию<Input value={clientLabel} minLength={2} maxLength={100} required onChange={e=>{setClientLabel(e.target.value);setReservationResult(null);reserveKey.current=crypto.randomUUID()}} placeholder="Например, знакомый из Артёма"/></label>
+    <label>Телефон покупателя<Input type="tel" inputMode="tel" value={clientPhone} maxLength={24} required onChange={e=>{setClientPhone(e.target.value);setReservationResult(null);reserveKey.current=crypto.randomUUID()}} placeholder="+7 999 000-00-00"/></label>
+    <label className={styles.consent}><input type="checkbox" checked={contactConsent} required onChange={e=>setContactConsent(e.target.checked)}/><span>Покупатель разрешил передать его телефон PULSE для проверки рекомендации.</span></label>
+    <p className={styles.hint}>Если номер свободен, он будет забронирован за вами на 7 дней. Отправьте персональную ссылку покупателю: после его заявки в Telegram и согласия закреп на 6 месяцев оформится автоматически. Другой партнёр не сможет занять забронированный номер.</p>
+    <button className={styles.primary} disabled={busy||!contactConsent||!runtime.enabled}>{busy?'Проверяем…':'Проверить и забронировать'}</button>
+    {reservationResult&&<div className={styles.card} role="status"><b>{reservationResult.message}</b>{reservationResult.reservation&&<><p>Подтверждение покупателя до {dateLabel(reservationResult.reservation.expiresAt)}.</p><button type="button" className={styles.secondary} onClick={()=>{setInviteCode(reservationResult.reservation!.code);setSheet('invite')}}>Отправить ссылку покупателю<Send size={16}/></button></>}</div>}
+   </form>}
    {sheet==='personal'&&<form className={styles.form} onSubmit={e=>{e.preventDefault();void run(async()=>{const data=await createPartnerInvite({label,idempotencyKey:inviteKey.current});setInviteCode(data.invitation.code);setSheet('invite')})}}><label>Название приглашения<Input value={label} onChange={e=>setLabel(e.target.value)} maxLength={100} minLength={2} required placeholder="Например, знакомый из Уссурийска"/></label><p className={styles.hint}>Покупатель укажет свой телефон сам. Ссылка помогает узнать, по какому знакомству он пришёл.</p><button className={styles.primary} disabled={busy}>{busy?'Создаём…':'Создать приглашение'}</button></form>}
-   {sheet==='invite'&&<div className={styles.form}>{!canInvite&&<p className={styles.warning}>Приглашение сейчас недоступно. Уточните статус программы в кабинете.</p>}<label>Ваша ссылка<Input readOnly value={shareUrl} onFocus={e=>e.currentTarget.select()}/></label><button className={styles.primary} disabled={!canInvite} onClick={()=>void share()}><Send size={17}/>Поделиться приглашением</button><button className={styles.secondary} disabled={!canInvite} onClick={()=>void copy()}><Copy size={17}/>Скопировать ссылку</button><Link className={styles.inlineLink} to={'/partner-invite?code='+encodeURIComponent(inviteCode||p?.code||'')}>Посмотреть приглашение<ChevronRight size={14}/></Link><p className={styles.hint}>Закрепление подтверждает агентство после обращения покупателя и проверки совпадений.</p></div>}
+   {sheet==='invite'&&<div className={styles.form}>{!canInvite&&<p className={styles.warning}>Приглашение сейчас недоступно. Уточните статус программы в кабинете.</p>}<label>Ваша ссылка<Input readOnly value={shareUrl} onFocus={e=>e.currentTarget.select()}/></label><button className={styles.primary} disabled={!canInvite} onClick={()=>void share()}><Send size={17}/>Поделиться приглашением</button><button className={styles.secondary} disabled={!canInvite} onClick={()=>void copy()}><Copy size={17}/>Скопировать ссылку</button><Link className={styles.inlineLink} to={'/partner-invite?code='+encodeURIComponent(inviteCode||p?.code||'')}>Посмотреть приглашение<ChevronRight size={14}/></Link><p className={styles.hint}>Покупатель должен указать свой номер и подтвердить рекомендацию. Предварительная бронь превращается в закреп на 6 месяцев после проверки CRM. Для заявки вне Telegram потребуется подтверждение команды.</p></div>}
   </SheetContent></Sheet>
   <Sheet open={!!selected} onOpenChange={open=>{if(!open&&!busy){setSelectedId(null);setError('')}}}><SheetContent side="bottom" className={styles.sheet}><SheetHeader><SheetTitle>{selected?.clientName||'Рекомендация'}</SheetTitle><SheetDescription>{selected?referralLabels[selected.status]:''}</SheetDescription></SheetHeader>{selected&&<>
    {error&&<p className={styles.error} role="alert">{error}</p>}

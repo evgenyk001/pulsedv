@@ -76,7 +76,8 @@ function MortgageCalculator(){
   const requested=Number(params.get("price"));
   const control=usePulseControlState();
   const programs=control.mortgagePrograms;
-  const storedScenario=React.useMemo(()=>readMortgageScenario(typeof localStorage==="undefined"?null:localStorage),[]);
+  const scenarioKey=fromProperty?MORTGAGE_SCENARIO_KEY+":property:"+sourcePropertyId+":"+(params.get("floorplan")||""):MORTGAGE_SCENARIO_KEY;
+  const storedScenario=React.useMemo(()=>readMortgageScenario(typeof localStorage==="undefined"?null:localStorage,scenarioKey),[scenarioKey]);
   const requestedProgram=params.get("program");
   const storedProgram=storedScenario&&programs.some(item=>item.id===storedScenario.programId)?storedScenario.programId:null;
   const initialProgram:ProgramId=programs.some(item=>item.id===requestedProgram)
@@ -89,7 +90,7 @@ function MortgageCalculator(){
       ?clamp(Math.round(savedPrice),PRICE_MIN,PRICE_MAX):9_000_000;
   const initialMin=minimumMortgageDown(initialPrice,programs.find(item=>item.id===initialProgram)?.minDownPct??20.1);
   const savedDown=storedScenario?.down;
-  const initialDown=!fromProperty&&params.get('down')!=='min'&&typeof savedDown==="number"&&Number.isFinite(savedDown)
+  const initialDown=(fromProperty||params.get('down')!=='min')&&typeof savedDown==="number"&&Number.isFinite(savedDown)
     ?clamp(Math.round(savedDown),initialMin,initialPrice-1):initialMin;
   const initialKind:PropertyKind=fromProperty||params.get("from")==="select"?"newbuild":storedScenario?.propertyKind??"newbuild";
   const initialMarketRate=storedScenario?.propertyKind===initialKind&&storedScenario.marketRate
@@ -210,7 +211,8 @@ function MortgageCalculator(){
     if(priceTouched.current)return;
     const nextMin=minimumMortgageDown(sourcePrice,rule.minDownPct);
     setPrice(sourcePrice);setPriceDraft(formatRub(sourcePrice));
-    setDown(nextMin);setDownDraft(formatRub(nextMin));
+    const nextDown=typeof savedDown==="number"?clamp(savedDown,nextMin,sourcePrice-1):nextMin;
+    setDown(nextDown);setDownDraft(formatRub(nextDown));
   },[fromProperty,sourcePrice,rule.minDownPct]);
 
   React.useEffect(()=>{
@@ -236,7 +238,7 @@ function MortgageCalculator(){
       down,
       updatedAt:new Date().toISOString(),
     };
-    try{localStorage.setItem(MORTGAGE_SCENARIO_KEY,JSON.stringify(shared));}catch{}
+    try{localStorage.setItem(MORTGAGE_SCENARIO_KEY,JSON.stringify(shared));if(fromProperty)localStorage.setItem(scenarioKey,JSON.stringify(shared));}catch{}
   },[program,propertyKind,childrenCount,hasYoungChild,disabledChild,largeArea,marketRate,futureRate,years,price,down]);
 
   React.useEffect(()=>{
@@ -307,8 +309,8 @@ function MortgageCalculator(){
 
   const commitMarketRate=()=>{
     setInteracted(true);
-    const raw=parseNumber(marketRateDraft);
-    const next=Number.isFinite(raw)?clamp(Math.round(raw*10)/10,.1,40):marketRate;
+    const raw=marketRateDraft.trim()===""?NaN:parseNumber(marketRateDraft);
+    const next=Number.isFinite(raw)&&raw>=.1&&raw<=40?Math.round(raw*10)/10:marketRate;
     setMarketRate(next);
     setMarketRateDraft(String(next).replace(".",","));
   };
@@ -535,7 +537,7 @@ function MortgageCalculator(){
       source="mortgage"
       propertyId={sourceProperty?.id}
       project={sourceProperty?.name}
-      context={{program,propertyKind,price,down,years,rate:preferredRate,preferredRate,marketRate,payment,subsidizedLimit,marketPrincipal,policyVersion:MORTGAGE_POLICY_VERSION,...(sourcePlan?{floorplanId:sourcePlan.id,rooms:sourcePlan.roomLabel,areaFrom:sourcePlan.areaFrom,areaTo:sourcePlan.areaTo}:{})}}
+      context={{program,propertyKind,price,down,years,rate:preferredRate,preferredRate,marketRate,payment:invalid?null:payment,status:calculation.status,blockReason:calculation.blockReason,childrenCount,hasYoungChild,largeArea,futureRate:futureRate??null,projection:calculation.projection,scenarioVersion:1,subsidizedLimit,marketPrincipal,policyVersion:MORTGAGE_POLICY_VERSION,...(sourcePlan?{floorplanId:sourcePlan.id,rooms:sourcePlan.roomLabel,areaFrom:sourcePlan.areaFrom,areaTo:sourcePlan.areaTo}:{})}}
     >
       <button className={styles.cta}>Получить точный расчёт <ChevronRight size={18}/></button>
     </LeadSheet>

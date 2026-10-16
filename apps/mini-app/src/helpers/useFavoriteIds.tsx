@@ -1,6 +1,6 @@
 import React from 'react';
 import {recordPulseEvent} from '../../../../packages/pulse-data';
-import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
+import {runtime,visitorApi,visitorSessionId} from '../../../../packages/pulse-data/runtime';
 const KEY='pulse.dv.favorites.v1',PENDING='pulse.favorite-changes.v2',MIGRATED='pulse.favorites-imported.v2';
 type Change={id:string;saved:boolean;nonce:string};
 function read<T>(key:string,fallback:T):T{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
@@ -11,9 +11,10 @@ let task:Promise<void>|null=null;let error='';let authenticated=false;
 export function syncFavorites():Promise<void>{
  if(!runtime.enabled)return Promise.resolve();if(task)return task;
  task=(async()=>{try{
-  const batch=pending().slice(0,500),importIds=localStorage.getItem(MIGRATED)?undefined:readIds();
+  const sessionId=await visitorSessionId();
+  const batch=pending().slice(0,500),importIds=localStorage.getItem(MIGRATED)===sessionId?undefined:readIds();
   const result=await visitorApi<{ids:string[];authenticated:boolean;rejectedIds?:string[]}>('/me/favorites',batch.length||importIds?{method:'POST',body:JSON.stringify({changes:batch.map(({id,saved})=>({id,saved})),importIds})}:{});
-  if(importIds)localStorage.setItem(MIGRATED,'1');
+  if(importIds)localStorage.setItem(MIGRATED,sessionId);
   const remaining=pending().filter(c=>!batch.some(b=>b.nonce===c.nonce));localStorage.setItem(PENDING,JSON.stringify(remaining));
   const ids=new Set(result.ids);for(const c of remaining)c.saved?ids.add(c.id):ids.delete(c.id);
   authenticated=result.authenticated;error=result.rejectedIds?.length?'Некоторые объекты больше не опубликованы и не добавлены в избранное.':'';save([...ids]);

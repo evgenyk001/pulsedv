@@ -12,7 +12,7 @@ function validatePdf(body:Buffer){
 import { HttpError } from './security';
 
 // Decode the complete file. A matching magic prefix alone proves nothing.
-export async function validateMedia(type:string,body:Buffer):Promise<Buffer>{
+export async function validateMedia(type:string,body:Buffer,maxDimension?:number):Promise<Buffer>{
  if(active>=2)throw new HttpError(429,'Проверяем другие файлы. Попробуйте через несколько секунд');
  active++;
  try{
@@ -26,6 +26,8 @@ export async function validateMedia(type:string,body:Buffer):Promise<Buffer>{
   const meta=await image.metadata();
   if(!expected[type]||meta.format!==expected[type]||(meta.pages||1)>1)throw new Error('format');
   // Re-encoding drops EXIF/GPS and any trailing payload while validating all pixels.
-  return await image.rotate().toBuffer();
+  const clean=image.rotate();
+  if(maxDimension)clean.resize({width:maxDimension,height:maxDimension,fit:'inside',withoutEnlargement:true});
+  return await clean.toBuffer();
  }catch{throw new HttpError(400,'Файл повреждён, имеет неподдерживаемый формат или слишком большое разрешение');}finally{active--;}
 }

@@ -222,10 +222,10 @@ export function calculateMortgageScenario(input:{
   };
 }
 
-export function readMortgageScenario(storage:Pick<Storage,"getItem">|null|undefined):MortgageScenarioSettings|null{
+export function readMortgageScenario(storage:Pick<Storage,"getItem">|null|undefined,key=MORTGAGE_SCENARIO_KEY):MortgageScenarioSettings|null{
   if(!storage)return null;
   try{
-    const raw=JSON.parse(storage.getItem(MORTGAGE_SCENARIO_KEY)||"null");
+    const raw=JSON.parse(storage.getItem(key)||"null");
     if(!raw||typeof raw!=="object")return null;
     if(!["family","farEast","it","standard"].includes(raw.programId))return null;
     if(!["newbuild","secondary","house"].includes(raw.propertyKind))return null;
@@ -241,8 +241,8 @@ export function readMortgageScenario(storage:Pick<Storage,"getItem">|null|undefi
       marketRate:finite(raw.marketRate,.1,40),
       futureRate:finite(raw.futureRate,0,40),
       years:finite(raw.years,1,30),
-      price:finite(raw.price,3_000_000,45_000_000),
-      down:finite(raw.down,0,45_000_000),
+      price:finite(raw.price,key===MORTGAGE_SCENARIO_KEY?3_000_000:2,key===MORTGAGE_SCENARIO_KEY?45_000_000:10_000_000_000),
+      down:finite(raw.down,0,10_000_000_000),
       updatedAt:typeof raw.updatedAt==="string"?raw.updatedAt:undefined,
     };
   }catch{return null;}

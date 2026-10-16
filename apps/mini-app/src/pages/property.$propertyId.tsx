@@ -39,7 +39,7 @@ export default function PropertyPage(){
   const stateReturn=typeof location.state?.returnTo==="string"&&/^\/(catalog|favorites|selection|journey)?([?]|$)/.test(location.state.returnTo)?location.state.returnTo:null;
   const rememberedReturn=propertyReturn();
   const returnTo=stateReturn??rememberedReturn;
-  const {data:p,isLoading,error}=usePropertyDetail(propertyId);
+  const {data:p,isLoading,error,refetch}=usePropertyDetail(propertyId);
   const control=usePulseControlState();
   const savedScenario=React.useMemo(()=>readMortgageScenario(localStorage),[]);
   const {toggle,isFavorite}=useFavoriteIds();
@@ -56,7 +56,8 @@ export default function PropertyPage(){
   },[p?.id]);
 
   if(isLoading)return <div className={styles.loading}>Загружаем объект…</div>;
-  if(error||!p)return <div className={styles.notFound}><strong>Объект не найден</strong><Link to="/catalog">Вернуться в каталог</Link></div>;
+  if(error)return <div className={styles.notFound} role="alert"><strong>Не удалось загрузить объект</strong><p>Проверьте соединение и повторите попытку.</p><button onClick={()=>void refetch()}>Повторить</button><Link to="/catalog">Вернуться в каталог</Link></div>;
+  if(!p)return <div className={styles.notFound}><strong>Объект не найден</strong><Link to="/catalog">Вернуться в каталог</Link></div>;
 
   const favorite=isFavorite(p.id);
   const developer=p.developerName&&p.developerName!=="Партнёр PULSE.DV"?p.developerName:"";

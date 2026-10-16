@@ -1,3 +1,4 @@
+import sharp from 'sharp';
 import {validateMedia} from './mediaValidation';
 import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
@@ -52,11 +53,15 @@ function internalMediaPath(url:string){
   return relative;
 }
 
-async function bestEffortDelete(config:RuntimeConfig,url:string|null|undefined){
+async function bestEffortDelete(db:Database,config:RuntimeConfig,url:string|null|undefined){
   if(!url)return;
   const relative=internalMediaPath(url);
   if(!relative)return;
-  await unlink(join(config.MEDIA_ROOT,relative)).catch(()=>{});
+  const used=(await db.query(`select 1 from catalog_properties where cover_image_url=$1
+   union all select 1 from catalog_property_images where url=$1
+   union all select 1 from catalog_property_floorplans where image_url=$1
+   union all select 1 from catalog_property_documents where url=$1 limit 1`,[url])).rows.length;
+  if(!used){for(const suffix of ["",".card.webp",".thumb.webp"])await unlink(join(config.MEDIA_ROOT,relative+suffix)).catch(()=>{});}
 }
 
 export async function registerCatalogRoutes(
@@ -161,10 +166,10 @@ export async function registerCatalogRoutes(
       return ok;
     });
     if(!removed)return reply.code(404).send({error:"Объект не найден"});
-    for(const image of property.images)await bestEffortDelete(config,image.url);
-    for(const plan of property.floorplans)await bestEffortDelete(config,plan.imageUrl);
-    for(const doc of property.documents??[])await bestEffortDelete(config,doc.url);
-    await bestEffortDelete(config,property.coverImageUrl);
+    for(const image of property.images)await bestEffortDelete(db,config,image.url);
+    for(const plan of property.floorplans)await bestEffortDelete(db,config,plan.imageUrl);
+    for(const doc of property.documents??[])await bestEffortDelete(db,config,doc.url);
+    await bestEffortDelete(db,config,property.coverImageUrl);
     return {ok:true};
   });
 
@@ -186,16 +191,18 @@ export async function registerCatalogRoutes(
     if(!expectsPdf&&spec.group!=="image")return reply.code(400).send({error:"Для изображения нужен JPG, PNG или WebP"});
     const max=spec.group==="image"?15*1024*1024:50*1024*1024;
     let body:Buffer;try{body=await readBinaryBody(request.body,max)}catch(error){if(error instanceof BinaryBodyError)return reply.code(error.statusCode).send({error:error.statusCode===413?(spec.group==="image"?"Изображение больше 15 МБ":"PDF больше 50 МБ"):"Файл пустой"});throw error}
-    body=await validateMedia(type,body);
+    body=await validateMedia(type,body,spec.group==="image"?2400:undefined);
 
     const folder=spec.group==="image"?"images":"documents";
     const fileName=randomUUID()+"."+spec.ext;
     await mkdir(join(config.MEDIA_ROOT,folder),{recursive:true});
-    await writeFile(join(config.MEDIA_ROOT,folder,fileName),body);
+    const derivatives: Array<{suffix:string;body:Buffer}>=spec.group==="image"?await Promise.all([{suffix:".card.webp",size:800},{suffix:".thumb.webp",size:160}].map(async item=>({suffix:item.suffix,body:await sharp(body).resize({width:item.size,height:item.size,fit:"inside",withoutEnlargement:true}).webp({quality:80}).toBuffer()}))):[];
     const url="/media/"+folder+"/"+fileName;
 
     const oldFiles:string[]=[];
     try{
+      await writeFile(join(config.MEDIA_ROOT,folder,fileName),body);
+      for(const derivative of derivatives)await writeFile(join(config.MEDIA_ROOT,folder,fileName+derivative.suffix),derivative.body);
       await db.transaction(async sql=>{
         const locked=await sql.query("update catalog_properties set updated_at=now() where id=$1 returning id",[id]);
         if(!locked.rows.length)throw Object.assign(new Error("Объект не найден"),{statusCode:404});
@@ -224,10 +231,10 @@ export async function registerCatalogRoutes(
         await audit(sql,request.member!.id,"catalog.media.upload",id,{kind:query.kind,size:body.length});
       });
     }catch(error){
-      await bestEffortDelete(config,url);
+      await bestEffortDelete(db,config,url);
       throw error;
     }
-    for(const old of oldFiles)await bestEffortDelete(config,old);
+    for(const old of oldFiles)await bestEffortDelete(db,config,old);
     if(query.compact)return {ok:true,url};
     return {property:await getCatalogProperty(db,id,"any")};
   });
@@ -254,7 +261,7 @@ export async function registerCatalogRoutes(
       return true;
     });
     if(!deleted)return reply.code(404).send({error:"Файл не найден"});
-    await bestEffortDelete(config,url);
+    await bestEffortDelete(db,config,url);
     return {ok:true,property:await getCatalogProperty(db,id,"any")};
   });
 }

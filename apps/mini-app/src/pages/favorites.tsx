@@ -12,7 +12,7 @@ import styles from "./favorites.module.css";
 
 export default function Favorites(){
   const {ids,error:syncError,authenticated,pending,retry}=useFavoriteIds();
-  const {data:saved=[],isLoading}=useFavoriteProperties(ids);
+  const {data:saved=[],isLoading,error:catalogError,refetch}=useFavoriteProperties(ids);
   const [compareIds,setCompareIds]=React.useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem("pulse.compare.v1")||"[]").filter((x:unknown)=>typeof x==="string").slice(0,3)}catch{return []}});
 
   React.useEffect(()=>{
@@ -39,6 +39,7 @@ export default function Favorites(){
 
     {syncError&&<p role="alert">{syncError} <button onClick={()=>void retry()}>Повторить синхронизацию</button></p>}
     {authenticated&&<p role="status">{pending?"Синхронизируем избранное…":"Избранное связано с вашим аккаунтом Telegram"}</p>}
+    {catalogError&&<p role="alert">Не удалось загрузить сохранённые ЖК. <button onClick={()=>void refetch()}>Повторить</button></p>}
     <div className={styles.list}>
       {!isLoading&&saved.map(property=>{
         const selected=compareIds.includes(property.id);
@@ -51,7 +52,7 @@ export default function Favorites(){
           </button>
         </div>;
       })}
-      {!isLoading&&saved.length===0&&<div className={styles.helper}><div><Heart size={19}/></div><span><strong>Пока ничего не сохранено</strong><small>Нажмите сердечко на карточке ЖК — объект появится здесь.</small></span></div>}
+      {!isLoading&&!catalogError&&saved.length===0&&<div className={styles.helper}><div><Heart size={19}/></div><span><strong>Пока ничего не сохранено</strong><small>Нажмите сердечко на карточке ЖК — объект появится здесь.</small></span></div>}
     </div>
 
     {saved.length>0&&<div className={styles.compareBar}>

@@ -62,7 +62,7 @@ export const leadSchema=z.object({idempotencyKey:z.uuid(),source:text(100).min(1
 
 export const eventsSchema=z.object({events:z.array(z.object({idempotencyKey:z.uuid(),eventType:z.enum(publicEventTypes),entityType:nullableText(80).optional(),entityId:nullableText(200).optional(),metadata:z.record(z.string(),z.unknown()).default({}),occurredAt:z.iso.datetime()})).min(1).max(100)});
 export function safeMetadata(input:Record<string,unknown>){
- const allowed=['medium','campaign','propertyIds','city','district','priceFrom','min','max','rooms','delivery','sea','mortgage','topScore','strongCount','program','price','down','years','rate','payment','results','source','policyVersion','purchaseMode','preferences','method','outcome','propertyName','floorplanId','areaFrom','areaTo','kind','position','target'];
+ const allowed=['medium','campaign','propertyIds','city','district','priceFrom','min','max','rooms','delivery','sea','mortgage','topScore','strongCount','program','price','down','years','rate','payment','results','source','policyVersion','purchaseMode','preferences','method','outcome','propertyName','floorplanId','areaFrom','areaTo','kind','position','target','propertyKind','preferredRate','marketRate','subsidizedLimit','marketPrincipal','status','blockReason','largeArea','futureRate','scenarioVersion'];
  const entries:[string,unknown][]=[];
  for(const [key,value] of Object.entries(input)){
   if(!allowed.includes(key))continue;
@@ -74,6 +74,20 @@ export function safeMetadata(input:Record<string,unknown>){
   if(typeof value==='boolean'||typeof value==='number'&&Number.isFinite(value)||typeof value==='string'&&value.length<=150)entries.push([key,value]);
  }
  return Object.fromEntries(entries);
+}
+
+// Application context is consented CRM data, distinct from public analytics metadata.
+// Health/disability details are deliberately not persisted here.
+export function safeLeadContext(input:Record<string,unknown>){
+ const context=safeMetadata(input);
+ if(typeof input.childrenCount==='number'&&Number.isInteger(input.childrenCount)&&input.childrenCount>=1&&input.childrenCount<=5)context.childrenCount=input.childrenCount;
+ if(typeof input.hasYoungChild==='boolean')context.hasYoungChild=input.hasYoungChild;
+ const projection=input.projection;
+ if(projection&&typeof projection==='object'&&!Array.isArray(projection)){
+  const fields=['firstMonths','remainingMonths','remainingPreferred','remainingMarket','futureRate','futurePayment','total','overpayment'];
+  context.projection=Object.fromEntries(Object.entries(projection).filter(([k,v])=>fields.includes(k)&&typeof v==='number'&&Number.isFinite(v)));
+ }
+ return context;
 }
 
 

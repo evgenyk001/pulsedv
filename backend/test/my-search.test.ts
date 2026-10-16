@@ -71,7 +71,9 @@ test('Owner receives new leads without a manager, duplicate submissions do not r
  const manager=(await db.query("update team_members set active=true where role='manager' returning id")).rows[0].id;
  await db.query("insert into outbox_events(topic,aggregate_type,payload) values('manager.journey','lead',$1::jsonb)",[JSON.stringify({managerId:manager,title:'Клиент написал',body:'Вопрос по покупке'})]);
  await processNotificationOutbox(outboxRepository(db),{async sendMessage(v){sent.push(v)}},10);assert.equal(sent.at(-1).chatId,'9000');
- await db.query("insert into outbox_events(topic,aggregate_type,payload) values('manager.security_code','member',$1::jsonb)",[JSON.stringify({managerId:manager,code:'012345'})]);
+ const challengeId=randomUUID(),expiresAt=new Date(Date.now()+300000).toISOString();
+ await db.query("insert into control_login_challenges(id,member_id,code_hash,expires_at) values($1,$2,$3,$4)",[challengeId,manager,'test-hash',expiresAt]);
+ await db.query("insert into outbox_events(topic,aggregate_type,payload) values('manager.security_code','member',$1::jsonb)",[JSON.stringify({managerId:manager,code:'012345',challengeId,expiresAt})]);
  await processNotificationOutbox(outboxRepository(db),{async sendMessage(v){sent.push(v)}},10);assert.equal(sent.at(-1).chatId,'9001');assert.match(sent.at(-1).text,/012345/);
  await db.query("update team_members set telegram_user_id=null where role='owner'");await db.query("insert into outbox_events(topic,aggregate_type,payload) values('manager.new_lead','lead','{}')");
  await processNotificationOutbox(outboxRepository(db),{async sendMessage(){assert.fail('must not fall back to manager')}},10);assert.equal((await db.query("select last_error from outbox_events where processed_at is null")).rows[0].last_error,'owner Telegram id missing');
