@@ -3,6 +3,7 @@ name: Floot 1:1 migration guard
 on:
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
 
 jobs:
@@ -15,6 +16,8 @@ jobs:
           fetch-depth: 0
 
       - name: Protect frozen landing
+        # Intentional landing work is explicitly labelled; migration PRs remain guarded.
+        if: ${{ !contains(github.event.pull_request.labels.*.name, 'landing-update') }}
         shell: bash
         run: |
           set -euo pipefail
