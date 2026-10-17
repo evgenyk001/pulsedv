@@ -1,7 +1,6 @@
 import { PageFrame } from "../components/PageFrame";
 import { usePulseEvents, usePulseState } from "../data";
 import { updatePulseState, type PulseEvent } from "../../../../packages/pulse-data";
-import { MORTGAGE_POLICY_VERSION } from "../../../../packages/domain/mortgagePolicy";
 
 const preferenceLabels={
   sea:"Вид на море",
@@ -64,7 +63,7 @@ export function SelectPage(){
     <section className="panel">
       <span className="kicker">Логика Mini App · SELECT 4.0</span>
       <h2>Один источник настроек</h2>
-      <p>Города, комнатность, сроки, доступность ипотеки, умная строка, сценарии «А что если?» и веса ранжирования приходят в Mini App через публичный state API. Ипотечный подбор использует общий policy engine <b>{MORTGAGE_POLICY_VERSION}</b> вместе с разделом «Ипотека».</p>
+      <p>Настройте города, параметры поиска и приоритеты подбора. Изменения появятся в Mini App после сохранения.</p>
       <div className="formGrid" style={{marginTop:16}}>
         <label className="controlField wide"><span>Города через запятую</span><input value={state.select.cities.join(", ")} onChange={e=>patch({cities:e.target.value.split(",").map(x=>x.trim()).filter(Boolean)})}/></label>
         <label className="controlField wide"><span>Комнаты</span><input value={state.select.roomOptions.join(", ")} onChange={e=>patch({roomOptions:e.target.value.split(",").map(x=>x.trim()).filter(Boolean)})}/></label>
@@ -75,7 +74,7 @@ export function SelectPage(){
           <input type="checkbox" aria-label="Умная строка запроса" checked={state.select.smartQueryEnabled} onChange={e=>patch({smartQueryEnabled:e.target.checked})}/>
         </label>
         <label className="switchControl">
-          <span><b>Ипотечный сценарий</b><small>Разрешить подбор по взносу и платежу через общий ипотечный policy engine.</small></span>
+          <span><b>Ипотечный сценарий</b><small>Подбирать объекты по взносу и ежемесячному платежу.</small></span>
           <input type="checkbox" aria-label="Ипотечный сценарий" checked={state.select.mortgageEnabled} onChange={e=>patch({mortgageEnabled:e.target.checked})}/>
         </label>
         <label className="switchControl">
@@ -106,7 +105,7 @@ export function SelectPage(){
     <section className="panel">
       <span className="kicker">Вес ранжирования</span>
       <h2>Как PULSE расставляет варианты</h2>
-      <p>Select 4.0 использует эти веса в том же domain matching-слое, который получает актуальный каталог из API. Изменение веса не требует правок Mini App.</p>
+      <p>Эти приоритеты определяют порядок подходящих объектов в подборке.</p>
       <div className="weightGrid">
         {(Object.keys(state.select.weights) as (keyof typeof state.select.weights)[]).map(key=>
           <label className="controlField" key={key}>

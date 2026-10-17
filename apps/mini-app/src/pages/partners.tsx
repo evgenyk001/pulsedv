@@ -17,7 +17,7 @@ import {claimLabel} from '../../../../packages/partners/policy';
 import {businessDay} from '../../../../packages/pulse-data/business';
 import styles from './partners.module.css';
 
-type PartnerSheet='invite'|'personal'|'terms'|'upgrade'|'demo'|'calculation'|'reserve';
+type PartnerSheet='invite'|'personal'|'terms'|'upgrade'|'calculation'|'reserve';
 const tabs=[{value:'clients' as const,label:'Мои клиенты'},{value:'payments' as const,label:'Выплаты'}];
 const reservationDeadline=(date:string)=>new Date(date).toLocaleString('ru-RU',{timeZone:'Asia/Vladivostok',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+' (Владивосток)';
 const dateLabel=(date:string)=>new Date(date).toLocaleDateString('ru-RU',{timeZone:'Asia/Vladivostok',day:'numeric',month:'long'});
@@ -60,8 +60,8 @@ export default function PartnersPage(){
  const copy=async()=>{if(!canInvite)return;try{await navigator.clipboard.writeText(shareUrl);setNotice('Ссылка скопирована')}catch{setNotice('Скопируйте ссылку из поля ниже')}};
  const share=async()=>{if(!canInvite)return;try{if(navigator.share)await navigator.share({title:'PULSE.DV',text:'Поможем выбрать квартиру и разобраться с ипотекой. Оставьте заявку по моему приглашению.',url:shareUrl});else await copy()}catch(e){if(!(e instanceof DOMException&&e.name==='AbortError'))setNotice('Скопируйте ссылку из поля приглашения')}};
  React.useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),3500);return()=>clearTimeout(timer)},[notice]);
- const titles:Record<PartnerSheet,string>={invite:'Пригласить покупателя',personal:'Персональное приглашение',terms:'Условия программы',upgrade:'Обновлённые условия',demo:'Демонстрационный режим',reserve:'Проверить и закрепить клиента',calculation:'Как считается вознаграждение'};
- const descriptions:Record<PartnerSheet,string>={invite:'Покупатель подтвердит вашу рекомендацию в заявке.',personal:'Отдельная ссылка для конкретного знакомства.',terms:'Закрепление клиента, расчёт и оформление выплаты.',upgrade:'Новые правила применяются к новым рекомендациям после вашего согласия.',demo:'Здесь можно пройти путь от приглашения до выплаты.',reserve:'Автоматическая проверка CRM и предварительная бронь номера на 7 дней.',calculation:'30% от комиссии агентства после вычета 6%.'};
+ const titles:Record<PartnerSheet,string>={invite:'Пригласить покупателя',personal:'Персональное приглашение',terms:'Условия программы',upgrade:'Обновлённые условия',reserve:'Проверить и закрепить клиента',calculation:'Как считается вознаграждение'};
+ const descriptions:Record<PartnerSheet,string>={invite:'Покупатель подтвердит вашу рекомендацию в заявке.',personal:'Отдельная ссылка для конкретного знакомства.',terms:'Закрепление клиента, расчёт и оформление выплаты.',upgrade:'Новые правила применяются к новым рекомендациям после вашего согласия.',reserve:'Автоматическая проверка CRM и предварительная бронь номера на 7 дней.',calculation:'30% от комиссии агентства после вычета 6%.'};
  const referralRow=(r:PartnerReferral)=><button className={styles.client} key={r.id} onClick={()=>openReferral(r)}>
   {tab==='payments'?<IconTile><Wallet/></IconTile>:<span className={styles.avatar}>{r.clientName[0]}</span>}
   <span className={styles.clientCopy}><b>{r.clientName}</b><small>{r.status==='accepted'?r.stageLabel:referralLabels[r.status]}</small>
@@ -75,7 +75,7 @@ export default function PartnersPage(){
    {p&&<button className={styles.refresh} aria-label="Обновить рекомендации" disabled={q.isFetching} onClick={()=>void q.refetch()}><RefreshCw size={17}/></button>}
   </nav>
   <PageHeader eyebrow="PULSE.DV · ПАРТНЁРАМ" title={p?'Мои рекомендации':'Рекомендуйте PULSE'} subtitle={p?'Ваши покупатели, этапы сделки и вознаграждение.':'Помогите знакомому найти квартиру и зарабатывайте вместе с нами.'}/>
-  {!runtime.enabled&&<button className={styles.demoLabel} onClick={()=>openSheet('demo')}><Info size={13}/>Демонстрационный режим<ChevronRight size={12}/></button>}
+  {!runtime.enabled&&<p className={styles.hint}>Тестовая версия · без реальных выплат</p>}
   {q.isLoading&&<div className={styles.card} role="status">Загружаем партнёрский кабинет…</div>}
   {q.error&&<div className={styles.error} role="alert">{q.error.message}<button onClick={()=>void q.refetch()}>Повторить</button></div>}
   {error&&p&&!sheet&&!selected&&<div className={styles.error} role="alert">{error}</div>}
@@ -130,10 +130,9 @@ export default function PartnersPage(){
     {!offerReady&&<p className={styles.hint}>Принятие станет доступно после публикации окончательных условий.</p>}
     <button className={styles.primary} disabled={busy||!upgradeConsent||!offerReady} onClick={()=>void(async()=>{if(await run(()=>acceptPartnerTerms({consent:upgradeConsent,termsVersion:PARTNER_TERMS_VERSION}))){setSheet(null);setNotice('Условия приняты')}})()}>{busy?'Сохраняем…':'Принять новую редакцию'}</button>
    </div>}
-   {sheet==='demo'&&<div className={styles.sheetInfo}><IconTile className={styles.largeIcon}><Info size={23}/></IconTile><h3>Познакомьтесь с программой</h3><p>Рекомендации и выплаты в демоверсии сохраняются в этом браузере. Можно создать приглашение, оставить заявку и проверить её в PULSE Control.</p><p>Переводы не выполняются. Для работы с реальными клиентами будет подключена общая база сервиса.</p><button className={styles.secondary} onClick={()=>setSheet(null)}>Понятно</button></div>}
    {sheet==='calculation'&&<div className={styles.sheetInfo}><div className={styles.calculation}><span>Комиссия агентства<b>100 000 ₽</b></span><span>Вычет 6%<b>6 000 ₽</b></span><span>База для расчёта<b>94 000 ₽</b></span><span>Вознаграждение 30%<b>28 200 ₽</b></span></div><p>Это пример расчёта до налогов получателя. Начисление появляется после покупки, получения комиссии и проверки агентством.</p><Link className={styles.inlineLink} to="/partner-offer">Подробнее в оферте<ChevronRight size={14}/></Link></div>}
    {sheet==='reserve'&&<form className={styles.form} onSubmit={e=>{e.preventDefault();void run(async()=>setReservationResult(await reservePartnerClient({phone:clientPhone,label:clientLabel,contactConsent,idempotencyKey:reserveKey.current})))}}>
-    {!runtime.enabled&&<p className={styles.warning}>Проверка всей CRM требует подключения общей базы. В демо реальные номера не проверяются.</p>}
+    {!runtime.enabled&&<p className={styles.warning}>Проверка номеров недоступна в тестовой версии.</p>}
     <label>Как назвать рекомендацию<Input value={clientLabel} minLength={2} maxLength={100} required onChange={e=>{setClientLabel(e.target.value);setReservationResult(null);reserveKey.current=crypto.randomUUID()}} placeholder="Например, знакомый из Артёма"/></label>
     <label>Телефон покупателя<Input type="tel" inputMode="tel" value={clientPhone} maxLength={24} required onChange={e=>{setClientPhone(e.target.value);setReservationResult(null);reserveKey.current=crypto.randomUUID()}} placeholder="+7 999 000-00-00"/></label>
     <label className={styles.consent}><input type="checkbox" checked={contactConsent} required onChange={e=>setContactConsent(e.target.checked)}/><span>Покупатель разрешил передать его телефон PULSE для проверки рекомендации.</span></label>
