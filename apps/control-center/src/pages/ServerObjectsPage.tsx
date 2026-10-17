@@ -308,9 +308,9 @@ export function ServerObjectsPage(){
   const ready=p?readiness(p):0;
 
   return <PageFrame
-    eyebrow="CATALOG ENGINE"
+    eyebrow="КАТАЛОГ"
     title="Объекты"
-    description="Единый центр каталога: добавляйте ЖК по одному, импортируйте сотнями и управляйте медиа без GitHub."
+    description="Добавляйте ЖК, импортируйте список объектов, загружайте фотографии, планировки и документы."
     action={<button className="primaryAction catalogPrimaryCreate" disabled={busy} onClick={()=>void add()}><Plus size={16}/>Добавить ЖК</button>}
   >
     {(error||notice)&&<div className={error?"errorNotice":"successNotice"}>{error||notice}</div>}
