@@ -79,7 +79,7 @@ export function App(){
       </div>
       <div className="sidebarFoot">
         <span className="workspaceAvatar">P</span>
-        <div><b>PULSE.DV</b><small>{current.enabled?(current.member?.role==="owner"?"Владелец":current.member?.role==="admin"?"Администратор":"Менеджер"):"Демонстрация"}</small></div>
+        <div><b>PULSE.DV</b><small>{current.enabled?(current.member?.role==="owner"?"Владелец":current.member?.role==="admin"?"Администратор":"Менеджер"):"Тестовая версия"}</small></div>
       </div>
     </aside>
     <main>

@@ -308,9 +308,9 @@ export function ServerObjectsPage(){
   const ready=p?readiness(p):0;
 
   return <PageFrame
-    eyebrow="CATALOG ENGINE"
+    eyebrow="КАТАЛОГ"
     title="Объекты"
-    description="Единый центр каталога: добавляйте ЖК по одному, импортируйте сотнями и управляйте медиа без GitHub."
+    description="Добавляйте ЖК, импортируйте список объектов, загружайте фотографии, планировки и документы."
     action={<button className="primaryAction catalogPrimaryCreate" disabled={busy} onClick={()=>void add()}><Plus size={16}/>Добавить ЖК</button>}
   >
     {(error||notice)&&<div className={error?"errorNotice":"successNotice"}>{error||notice}</div>}
@@ -333,7 +333,7 @@ export function ServerObjectsPage(){
         <label><span><FileSpreadsheet size={19}/></span><div><b>Импортировать данные</b><small>ЖК, планировки, параметры</small></div><ChevronRight size={17}/><input type="file" accept=".csv,text/csv" multiple onChange={e=>void importCsv(e.target.files)}/></label>
         <label><span><Images size={19}/></span><div><b>Загрузить медиа</b><small>Фото и PDF пачкой</small></div><ChevronRight size={17}/><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple onChange={e=>void importMediaBatch(e.target.files)}/></label>
       </div>
-      <div className="catalogImportFoot"><HardDrive size={14}/><span>Файлы хранятся в media volume на VPS. GitHub остаётся только для кода.</span></div>
+      <div className="catalogImportFoot"><HardDrive size={14}/><span>Фото: JPG, PNG, WebP · документы: PDF.</span></div>
     </section>
 
     <section className="catalogWorkspace">
@@ -455,7 +455,7 @@ export function ServerObjectsPage(){
         {!p.documents?.length&&<div className="catalogEditorEmpty">Презентаций пока нет.</div>}
       </section>
 
-      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Данные и файлы сохранены на сервере</span></div><button className="primaryAction" disabled={!dirty||busy} onClick={()=>void save()}><Save size={16}/>Сохранить объект</button></div>
+      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Изменения появятся в каталоге после сохранения</span></div><button className="primaryAction" disabled={!dirty||busy} onClick={()=>void save()}><Save size={16}/>Сохранить объект</button></div>
     </fieldset></section></div>}
   </PageFrame>;
 }

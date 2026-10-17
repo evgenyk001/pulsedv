@@ -88,7 +88,7 @@ export function ContentPage(){
         const result=await api<{imageUrl:string}>("/control/content/banner-media?filename="+encodeURIComponent(file.name.slice(0,180)),{method:"POST",headers:{"Content-Type":file.type},body:file});
         imageUrl=result.imageUrl;
       }else{
-        if(file.size>1_500_000)throw new Error("В демо загрузите изображение до 1,5 МБ. На сервере лимит — 15 МБ.");
+        if(file.size>1_500_000)throw new Error("В тестовой версии загрузите изображение до 1,5 МБ.");
         imageUrl=await fileDataUrl(file);
       }
       patchBanner(banner.id,{imageUrl});

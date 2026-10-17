@@ -49,12 +49,12 @@ function PreviewObjectsPage(){
   };
 
   const previewServerFeature=(name:string)=>{
-    setNotice(name+' уже реализовано для VPS-режима. В GitHub preview реальные файлы и массовый импорт не отправляются на сервер.');
+    setNotice(name+': доступно в рабочем кабинете. В тестовой версии файлы не загружаются.');
     window.setTimeout(()=>setNotice(''),4200);
   };
 
   return <PageFrame
-    eyebrow="CATALOG ENGINE"
+    eyebrow="КАТАЛОГ"
     title="Объекты"
     description="Единый центр каталога: одиночное редактирование, массовая загрузка, фото, планировки и презентации."
     action={<button className="primaryAction catalogPrimaryCreate" onClick={add}><Plus size={16}/>Добавить ЖК</button>}
@@ -72,14 +72,14 @@ function PreviewObjectsPage(){
       <div className="catalogImportIntro">
         <span className="kicker">МАССОВАЯ ЗАГРУЗКА</span>
         <h2>Добавляйте десятки и сотни ЖК за один проход</h2>
-        <p>Этот блок уже подключён к серверному Catalog Engine. На VPS данные, фотографии и PDF будут загружаться сюда без GitHub.</p>
+        <p>Загружайте список объектов, фотографии, планировки и документы.</p>
       </div>
       <div className="catalogImportActions">
         <button onClick={()=>previewServerFeature('Шаблоны CSV')}><span><FileSpreadsheet size={19}/></span><div><b>Шаблоны каталога</b><small>ЖК, планировки, параметры</small></div><ChevronRight size={17}/></button>
         <button onClick={()=>previewServerFeature('Массовый CSV-импорт')}><span><PackageOpen size={19}/></span><div><b>Импортировать данные</b><small>До 1000 ЖК за запрос</small></div><ChevronRight size={17}/></button>
         <button onClick={()=>previewServerFeature('Пакетная загрузка медиа')}><span><Images size={19}/></span><div><b>Загрузить медиа</b><small>Фото, планировки и PDF</small></div><ChevronRight size={17}/></button>
       </div>
-      <div className="catalogImportFoot"><HardDrive size={14}/><span>Preview показывает интерфейс. В production файлы хранятся в отдельном media volume на VPS.</span></div>
+      <div className="catalogImportFoot"><HardDrive size={14}/><span>Тестовая версия · загрузка файлов недоступна.</span></div>
     </section>
 
     <section className="catalogWorkspace">
@@ -95,7 +95,7 @@ function PreviewObjectsPage(){
           )}
         </div>
         <button type="button" className="secondaryAction" aria-pressed={reviewOnly} onClick={()=>setReviewOnly(v=>!v)}>{reviewOnly?"Показать весь каталог":"Требуют проверки"}</button>
-        <div className="catalogPageMeta"><b>{list.length}</b><span>объектов в preview</span></div>
+        <div className="catalogPageMeta"><b>{list.length}</b><span>объектов в каталоге</span></div>
       </div>
 
       {list.length?<div className="catalogObjectGrid">{list.map(item=><button key={item.id} className="catalogObjectCard" onClick={()=>setSelected(item.id)}>
