@@ -1,6 +1,8 @@
 import {test,expect,type Page} from '@playwright/test';
 import {DEFAULT_STATE} from '../../packages/pulse-data/model';
 import {businessDay} from '../../packages/pulse-data/business';
+import {OFFER_VERSION} from '../../packages/partners/offer';
+import {claimExpiresOn} from '../../packages/partners/policy';
 async function seed(page:Page,showGuide=false){await page.addInitScript(({state,showGuide})=>{if(!showGuide)localStorage.setItem('pulse.partner.guide.v1','seen');if(!localStorage.getItem('pulse.dv.control.state.v1'))localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state));localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion)},{state:DEFAULT_STATE,showGuide})}
 for(const width of [320,390,430])test(`Partners ${width}px: invitation, buyer consent, Control review, progress, exact accrual and payout`,async({page,browserName})=>{
  // This scenario crosses both applications and several dialogs; mobile WebKit needs the whole journey budget.
@@ -11,7 +13,7 @@ for(const width of [320,390,430])test(`Partners ${width}px: invitation, buyer co
  await page.evaluate(()=>window.scrollTo(0,document.documentElement.scrollHeight));await page.screenshot({path:`test-results/neutral-profile-footer-${browserName}-${width}.png`,animations:'disabled'});await page.getByRole('link',{name:/Партнёрская программа/}).click();
  await expect(page.getByRole('heading',{name:'Рекомендуйте PULSE',exact:true})).toBeVisible();await page.screenshot({path:`test-results/partner-start-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
  await page.getByRole('textbox',{name:'Ваше имя для приглашения'}).fill('Анна Партнёр');await page.getByRole('textbox',{name:'Ваш контактный телефон'}).fill('+79995550101');await page.getByRole('checkbox',{name:/Принимаю условия программы/}).check();await page.getByRole('button',{name:'Стать партнёром PULSE'}).click();
- await expect(page.getByRole('heading',{name:'Мои рекомендации',exact:true})).toBeVisible();await expect(page.getByText('Рекомендаций пока нет',{exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Партнёрам',exact:true})).toBeVisible();await expect(page.getByText('Рекомендаций пока нет',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Не знаете номер? Отправить ссылку',exact:true}).click();await page.getByRole('button',{name:'Персональное приглашение',exact:true}).click();await page.getByRole('textbox',{name:'Название приглашения'}).fill('Знакомый из Уссурийска');await page.getByRole('button',{name:'Создать приглашение'}).click();
  const invitation=page.getByRole('dialog',{name:'Отправить ссылку покупателю',exact:true});await expect(invitation.getByRole('textbox',{name:'Ваша ссылка'})).toHaveValue(/partner-invite\?code=i/);await invitation.getByRole('link',{name:'Посмотреть приглашение'}).click();
  await expect(page.getByRole('heading',{name:'Вас пригласил Анна Партнёр'})).toBeVisible();await page.getByRole('link',{name:'Посмотреть квартиры'}).click();
@@ -117,7 +119,7 @@ for(const width of [320,390,430])test(`Partner cabinet ${width}px: shared tabs, 
  await page.setViewportSize({width,height:844});await page.emulateMedia({reducedMotion:'reduce'});await seed(page);
  await page.addInitScript(()=>{if(localStorage.getItem('pulse.partners.v1'))return;localStorage.setItem('pulse.partners.v1',JSON.stringify({myPartnerId:'partner',partners:[{id:'partner',name:'Анна',phone:'+79995550101',code:'p01234567890123456789',status:'active',termsVersion:'partners-v1',createdAt:new Date().toISOString()}],invitations:[],referrals:[],rewards:[]}))});
  await page.goto('/pulsedv/mini-app/#/partners');const summary=page.getByRole('region',{name:'Сводка вознаграждения'});await expect(summary).toContainText('0 ₽');
- const box=await summary.boundingBox();expect(box!.height).toBeLessThan(210);
+ const box=await summary.boundingBox();expect(box!.height).toBeLessThan(290);
  await expect(page.getByRole('tablist',{name:'Разделы партнёрского кабинета'})).toBeVisible();await expect(page.getByRole('checkbox',{name:'Принимаю новую редакцию условий программы'})).toHaveCount(0);
  await expect(page.getByText(/потяните вниз для обновления|Обновлено/)).toHaveCount(0);await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.screenshot({path:`test-results/partner-cabinet-rules-${browserName}-${width}.png`,animations:'disabled'});
@@ -134,7 +136,7 @@ for(const width of [320,390,430])test(`Partner cabinet ${width}px: shared tabs, 
 
 test('Expired claim explains late commission eligibility without promising a new claim',async({page})=>{
  await seed(page);await page.addInitScript(()=>{const now=new Date().toISOString();localStorage.setItem('pulse.partners.v1',JSON.stringify({myPartnerId:'partner',partners:[{id:'partner',name:'Анна',phone:'+79995550101',code:'p01234567890123456789',status:'active',termsVersion:'partners-v3-2026-10-16',createdAt:now}],invitations:[],referrals:[{id:'expired',partnerId:'partner',partnerName:'Анна',leadId:null,invitationId:null,clientName:'Иван Покупатель',termsVersion:'partners-v3-2026-10-16',status:'accepted',stage:'booking',claimStartedOn:'2000-01-01',claimExpiresOn:'2000-07-01',conflict:false,rejectionReason:null,revision:2,createdAt:now,acceptedAt:now,events:[],phone:'+79995550202'}],rewards:[]}))});
- await page.goto('/pulsedv/mini-app/#/partners');await page.getByRole('button',{name:/Иван П/}).click();const dialog=page.getByRole('dialog',{name:'Иван П.'});await expect(dialog).toContainText('Срок закрепления завершён');await expect(dialog).toContainText('Если покупка состоялась в срок');await expect(dialog).not.toContainText('Клиент закреплён за вами');await expect(dialog).not.toContainText('+79995550202');
+ await page.goto('/pulsedv/mini-app/#/partners');const expiredRow=page.getByRole('button',{name:/Иван П/});await expect(expiredRow).toContainText('Срок закрепа истёк');await expect(expiredRow).not.toContainText('Клиент закреплён');await expiredRow.click();const dialog=page.getByRole('dialog',{name:'Иван П.'});await expect(dialog).toContainText('Срок закрепления завершён');await expect(dialog).toContainText('Если покупка состоялась в срок');await expect(dialog).not.toContainText('Клиент закреплён за вами');await expect(dialog).not.toContainText('+79995550202');
 });
 
 for(const width of [320,390,430])test(`Partner guide ${width}px: first visit, repeat help, one starting action and no implied consent`,async({page,browserName})=>{
@@ -143,6 +145,7 @@ for(const width of [320,390,430])test(`Partner guide ${width}px: first visit, re
  const guide=page.getByRole('dialog',{name:'Как привести клиента и получить выплату',exact:true});
  await expect(guide).toBeVisible();await expect(guide).toContainText('1 календарный месяц');await expect(guide).toContainText('7 дней');await expect(guide).toContainText('тот же номер');
  await expect(guide.getByRole('checkbox')).toHaveCount(0);
+ const guideAction=await guide.getByRole('button',{name:'Понятно, начнём',exact:true}).boundingBox();expect(guideAction!.y+guideAction!.height).toBeLessThan(844);
  await page.screenshot({path:`test-results/partner-guide-${browserName}-${width}.png`,animations:'disabled'});
  await guide.getByRole('button',{name:'Понятно, начнём',exact:true}).click();await expect(guide).toHaveCount(0);await expect(page.getByRole('checkbox',{name:/Принимаю условия программы/})).not.toBeChecked();
  await page.reload();await expect(guide).toHaveCount(0);await page.getByRole('button',{name:'Как закрепить клиента и получить выплату',exact:true}).click();await expect(guide).toBeVisible();await page.keyboard.press('Escape');
@@ -150,5 +153,25 @@ for(const width of [320,390,430])test(`Partner guide ${width}px: first visit, re
  await expect(page.getByRole('button',{name:'Добавить клиента',exact:true})).toBeEnabled();await expect(page.getByRole('button',{name:'Персональное приглашение',exact:true})).toHaveCount(0);
  await page.screenshot({path:`test-results/partner-clear-start-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
  await page.getByRole('button',{name:'Добавить клиента',exact:true}).click();const form=page.getByRole('dialog',{name:'Добавить клиента',exact:true});await expect(form).toContainText('Шаг 1 из 2');await expect(form.getByRole('checkbox')).not.toBeChecked();await expect(form.getByRole('button',{name:'Проверить номер',exact:true})).toBeDisabled();
+ await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+for(const width of [320,390,430])test(`Partner compact cabinet ${width}px: income, main action and real client states above the fold`,async({page,browserName})=>{
+ await page.setViewportSize({width,height:740});await page.emulateMedia({reducedMotion:'reduce'});await seed(page);
+ await page.addInitScript(({version,day,end})=>{
+  const now=new Date().toISOString();
+  const referral=(id:string,clientName:string,status:string)=>({id,partnerId:'partner',partnerName:'Анна',leadId:null,invitationId:null,clientName,termsVersion:version,status,stage:'showing',stageLabel:'Организуем показ',claimStartedOn:day,claimExpiresOn:end,conflict:false,rejectionReason:null,revision:2,createdAt:now,acceptedAt:status==='accepted'?now:null,events:[]});
+  localStorage.setItem('pulse.partners.v1',JSON.stringify({myPartnerId:'partner',partners:[{id:'partner',name:'Анна',phone:'+79995550101',code:'p01234567890123456789',status:'active',termsVersion:version,createdAt:now}],invitations:[],referrals:[referral('accepted','Иван Покупатель','accepted'),referral('pending','Ольга Покупатель','pending'),{...referral('expired','Пётр Покупатель','accepted'),claimStartedOn:'2000-01-01',claimExpiresOn:'2000-02-01'}],rewards:[{id:'reward',referralId:'accepted',commissionRub:100000,reserveMinor:600000,baseMinor:9400000,grossMinor:2820000,status:'accrued',recipientType:null,requestedAt:null,paidOn:null,withheldMinor:0,paidMinor:0,revision:1,createdAt:now}]}));
+ },{version:OFFER_VERSION,day:businessDay(),end:claimExpiresOn(businessDay())});
+ await page.goto('/pulsedv/mini-app/#/partners');const wallet=page.getByRole('region',{name:'Сводка вознаграждения'});await expect(wallet).toContainText('28 200 ₽');
+ const add=page.getByRole('button',{name:'Добавить клиента',exact:true});await expect(add).toBeEnabled();await expect(wallet.getByRole('button',{name:'Добавить клиента',exact:true})).toBeVisible();
+ const actionBox=await add.boundingBox(),walletBox=await wallet.boundingBox(),listBox=await page.getByRole('region',{name:'Ваши рекомендации'}).boundingBox();expect(actionBox!.y+actionBox!.height).toBeLessThan(320);expect(walletBox!.height).toBeLessThan(290);expect(listBox!.y).toBeLessThan(500);
+ await expect(page.getByRole('heading',{level:1})).toHaveCount(1);await expect(page.getByRole('heading',{level:1})).toHaveText('Партнёрам');await expect(page.getByText('Есть знакомый, который ищет квартиру?',{exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:/Ольга П\./})).toContainText('На проверке');const expired=page.getByRole('button',{name:/Пётр П\./});await expect(expired).toContainText('Срок закрепа истёк');await expect(expired).not.toContainText('Клиент закреплён');
+ const help=page.getByRole('button',{name:'Как закрепить клиента и получить выплату',exact:true}),helpBox=await help.boundingBox();expect(helpBox!.width).toBeGreaterThanOrEqual(40);expect(helpBox!.y).toBeLessThan(70);
+ await page.screenshot({path:`test-results/partner-compact-${browserName}-${width}.png`,animations:'disabled'});
+ await wallet.getByRole('button',{name:'Как считается',exact:true}).click();await expect(page.getByRole('dialog',{name:'Как считается вознаграждение',exact:true})).toContainText('28 200 ₽');await page.keyboard.press('Escape');
+ await help.click();await expect(page.getByRole('dialog',{name:'Как привести клиента и получить выплату',exact:true})).toBeVisible();await page.keyboard.press('Escape');await expect(add).toBeEnabled();
+ await page.getByRole('tab',{name:'Выплаты',exact:true}).click();await expect(page.getByRole('region',{name:'Ваши начисления'})).toContainText('28 200 ₽');
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
