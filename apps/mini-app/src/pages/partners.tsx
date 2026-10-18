@@ -6,11 +6,12 @@ import {useQueryClient,useQuery} from '@tanstack/react-query';
 import {ArrowLeft,UsersRound,Send,Copy,UserPlus,ChevronRight,Check,Wallet,RefreshCw,ShieldCheck,Info,Clock3,CheckCircle2,XCircle,ArrowUpRight} from 'lucide-react';
 import {runtime,api} from '../../../../packages/pulse-data/runtime';
 import {joinPartner,acceptPartnerTerms,createPartnerInvite,requestPartnerPayout,reservePartnerClient} from '../../../../packages/partners/client';
-import {PARTNER_TERMS_VERSION,partnerMoney,partnerLink,referralLabels,rewardLabels,partnerRejectReasons,type PartnerRejectReason,type PartnerReferral} from '../../../../packages/partners/model';
+import {PARTNER_TERMS_VERSION,partnerReward,partnerMoney,partnerLink,referralLabels,rewardLabels,partnerRejectReasons,type PartnerRejectReason,type PartnerReferral} from '../../../../packages/partners/model';
 import {usePartners} from '../helpers/usePartners';
 import {PageHeader} from '../components/PageHeader';
 import {SegmentedControl} from '../components/SegmentedControl';
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from '../components/Sheet';
+import {Slider} from '../components/Slider';
 import {Input} from '../components/Input';
 import {NativeSelect} from '../components/NativeSelect';
 import {PartnerTerms} from '../components/PartnerTerms';
@@ -35,7 +36,19 @@ function nextStep(r:PartnerReferral){
  if(['deal','closed'].includes(r.stage))return 'Сделка состоялась. Вознаграждение появится после поступления комиссии и проверки расчёта агентством.';
  return 'Клиент закреплён за вами. Команда сопровождает покупку, а её этапы появляются в этом кабинете.';
 }
+const journeyLabels=['Знакомство','Подбор','Сделка','Выплата'];
+function ClientJourney({referral,detail=false}:{referral:PartnerReferral;detail?:boolean}){
+ const r=referral,paid=r.reward?.status==='paid';
+ const stopped=r.status!=='accepted'||r.stage==='lost'||r.reward?.status==='void'||(!r.reward&&!!r.claimExpiresOn&&r.claimExpiresOn<businessDay());
+ const current=r.reward?3:['deal','closed'].includes(r.stage)?2:['qualified','showing','booking'].includes(r.stage)?1:0;
+ const state=paid?'Выплата получена':stopped?'Путь приостановлен':journeyLabels[current];
+ return <span className={detail?styles.journeyDetail:styles.journey} role="group" aria-label={'Путь клиента: '+state} data-stopped={stopped}>
+  {journeyLabels.map((label,index)=><span key={label} data-state={stopped?'paused':paid||index<current?'done':index===current?'current':'next'} aria-current={!stopped&&!paid&&index===current?'step':undefined}><i aria-hidden="true">{detail&&(paid||index<current)&&!stopped?<Check size={12}/>:detail?index+1:null}</i>{detail&&<small>{label}</small>}</span>)}
+ </span>;
+}
 export default function PartnersPage(){
+ const [exampleCommission,setExampleCommission]=React.useState(100000);
+ const example=partnerReward(exampleCommission);
  const [page,setPage]=React.useState(1);
  const [tab,setTab]=React.useState<'clients'|'payments'>('clients');
  const q=usePartners(page,tab),cache=useQueryClient();
@@ -74,7 +87,7 @@ export default function PartnersPage(){
   {tab==='payments'?<IconTile><Wallet/></IconTile>:<span className={styles.avatar}>{r.clientName[0]}</span>}
   <span className={styles.clientCopy}><b>{r.clientName}</b><small>{r.status==='accepted'?r.stageLabel:r.status==='pending'?'Проверяем рекомендацию':'Откройте результат проверки'}</small>
    {r.status==='accepted'&&tab==='clients'&&<small>{claimLabel(r.claimExpiresOn,today)}</small>}
-   <em key={r.reward?.status||(expired(r)?'expired':r.status)} data-status={r.reward?.status||(expired(r)?'expired':r.status)}>{r.reward?rewardLabels[r.reward.status]:expired(r)?'Срок закрепа истёк':referralLabels[r.status]}</em>
+   <ClientJourney referral={r}/><em key={r.reward?.status||(expired(r)?'expired':r.status)} data-status={r.reward?.status||(expired(r)?'expired':r.status)}>{r.reward?rewardLabels[r.reward.status]:expired(r)?'Срок закрепа истёк':referralLabels[r.status]}</em>
   </span>
   <span className={styles.clientEnd}>{r.reward&&<b>{partnerMoney(r.reward.status==='paid'?r.reward.paidMinor:r.reward.grossMinor)}</b>}<ChevronRight size={15}/></span>
  </button>;
@@ -106,8 +119,11 @@ export default function PartnersPage(){
    {needsTerms&&<section className={styles.rulesNotice}><IconTile className={styles.ruleIcon}><ShieldCheck size={20}/></IconTile><div><b>Обновились условия программы</b><p>Новые клиенты закрепляются на 1 месяц. Принятые ранее рекомендации сохраняют свою дату. Прочитайте условия, чтобы добавлять новых клиентов.</p><button onClick={()=>openSheet('upgrade')}>Ознакомиться<ChevronRight size={14}/></button></div></section>}
    {p.status==='paused'&&<div className={styles.warning}>Новые приглашения временно недоступны. Команда поможет уточнить причину.</div>}
    <section className={styles.balance} aria-label="Сводка вознаграждения">
-    <div className={styles.balanceTop}><span>Начислено · до удержаний</span><button onClick={()=>openSheet('calculation')}>Как считается<Info size={14}/></button></div>
-    <div className={styles.balanceAmount}><strong key={summary.accruedMinor}>{partnerMoney(summary.accruedMinor)}</strong><span>Выплачено<b>{partnerMoney(summary.paidMinor)}</b></span></div>
+    <div className={styles.programIntro}>
+     <div className={styles.programPitch}><span className={styles.eyebrow}>Рекомендуйте PULSE</span><strong>30<span>%</span></strong><p>от комиссии<br/>после вычета 6%</p><button className={styles.calculateLink} onClick={()=>openSheet('calculation')}>Посчитать доход<ArrowUpRight size={14}/></button></div>
+     <img className={styles.programArt} src={import.meta.env.BASE_URL+'_cdn/static/partner-house-key-v1.webp'} width="640" height="640" alt="" aria-hidden="true" decoding="async"/>
+    </div>
+    <div className={styles.earnings}><span>Начислено · до удержаний<b>{partnerMoney(summary.accruedMinor)}</b></span><span>Выплачено<b>{partnerMoney(summary.paidMinor)}</b></span><Wallet size={20} aria-hidden="true"/></div>
     <div className={styles.balanceActions}><button className={styles.primary} disabled={!canInvite} onClick={startReserve}><UserPlus size={18}/>Добавить клиента</button><button className={styles.personalAction} disabled={!canInvite} onClick={()=>{setInviteCode(null);openSheet('invite')}}>Не знаете номер? Отправить ссылку<ChevronRight size={14}/></button></div>
    </section>
    <SegmentedControl ariaLabel="Разделы партнёрского кабинета" value={tab} options={tabs} onChange={value=>{setPage(1);setTab(value)}}/>
@@ -116,14 +132,14 @@ export default function PartnersPage(){
 
      {!!waiting.length&&<section className={styles.card}><h2>Ждём подтверждения клиента</h2><p>Если ещё не отправили ссылку — нажмите на клиента. После его подтверждения здесь появится результат проверки.</p>{waiting.map(r=><button className={styles.invitation} key={r.id} onClick={()=>{setInviteCode(r.code);openSheet('invite')}}><span><b>{r.label} · {r.phoneHint}</b><small>Номер защищён до {reservationDeadline(r.expiresAt)} · отправить ссылку</small></span><Send size={16}/></button>)}</section>}
      <div className={styles.clientsHeading}><div className={styles.sectionHead}><h2>Клиенты</h2><span>{q.data.total}</span></div><div className={styles.balanceCounts} aria-label="Результат рекомендаций"><span><ShieldCheck size={13}/><b>{summary.acceptedCount}</b> принято</span><span><Clock3 size={13}/><b>{summary.pendingCount}</b> на проверке</span></div></div>
-     <section className={styles.list} aria-label="Ваши рекомендации">{q.data.referrals.length?q.data.referrals.map(referralRow):<div className={styles.empty}><IconTile><UsersRound size={24}/></IconTile><b>Рекомендаций пока нет</b><p>Добавьте первого клиента и отправьте ему ссылку. Здесь появятся подтверждение, срок закрепа и этапы покупки.</p></div>}</section>
+     <section className={styles.list} aria-label="Ваши рекомендации">{q.data.referrals.length?q.data.referrals.map(referralRow):<div className={styles.empty}><IconTile><UsersRound size={24}/></IconTile><b>Первое знакомство — первый шаг</b><span className={styles.emptyPath} aria-hidden="true">Знакомство<i/>Покупка<i/>Вознаграждение</span><p>Знакомый ищет квартиру? Добавьте его по кнопке выше. После подтверждения здесь появится весь путь до выплаты.</p></div>}</section>
      {unsubmittedInvites.length>0&&<section className={styles.card}><h2>Ссылки без проверки номера</h2>{unsubmittedInvites.map(i=><button className={styles.invitation} disabled={!canInvite} key={i.id} onClick={()=>{setInviteCode(i.code);openSheet('invite')}}><span><b>{i.label}</b><small>{i.submitted?'Покупатель оставил заявку':'Ожидаем заявку покупателя'}</small></span><Copy size={16}/></button>)}</section>}
     </>:<>
      <div className={styles.sectionHead}><h2>История начислений</h2></div>
      <section className={styles.list} aria-label="Ваши начисления">{q.data.referrals.some(r=>r.reward)?q.data.referrals.filter(r=>r.reward).map(referralRow):<div className={styles.empty}><IconTile><Wallet size={24}/></IconTile><b>Начислений пока нет</b><p>После покупки и поступления комиссии здесь появится ваше вознаграждение.</p><button className={styles.inlineLink} onClick={()=>openSheet('calculation')}>Посмотреть пример<ChevronRight size={14}/></button></div>}</section>
      <p className={styles.hint}>Начисление — до удержаний. В выплаченных записях показана фактическая сумма перевода.{q.data.hasMore?' Остальные записи доступны на следующих страницах.':''}</p>
     </>}
-    {(page>1||q.data.hasMore)&&<div className={styles.paging}><button disabled={page===1} onClick={()=>setPage(n=>n-1)}>Назад</button><span>Страница {page}</span><button disabled={!q.data.hasMore} onClick={()=>setPage(n=>n+1)}>Далее</button></div>}
+    {(page>1||q.data.hasMore)&&<div className={styles.paging}><button disabled={page===1||q.isPlaceholderData} onClick={()=>setPage(n=>n-1)}>Назад</button><span>Страница {page}</span><button disabled={!q.data.hasMore||q.isPlaceholderData} onClick={()=>setPage(n=>n+1)}>Далее</button></div>}
    </div>
   </>}
   <div className={styles.programFooter}><Link to={'/partner-offer?version='+encodeURIComponent(p?.termsVersion||PARTNER_TERMS_VERSION)}><ShieldCheck size={14}/>Оферта и принятая редакция<ChevronRight size={13}/></Link>{p?.termsAcceptedAt&&<small>Условия приняты {dateLabel(p.termsAcceptedAt)}</small>}{!runtime.enabled&&<small>Тестовая версия · без реальных выплат</small>}</div>
@@ -133,7 +149,7 @@ export default function PartnersPage(){
    {error&&<p className={styles.error} role="alert">{error}</p>}
    {sheet==='guide'&&<div className={styles.guideBody}>
     {!p&&<p className={styles.guideIntro}>Сначала подключитесь: укажите свои имя и телефон, прочитайте и примите условия. Это делается один раз.</p>}
-    <ol className={styles.steps}><li><b>Добавьте клиента</b><span>Нажмите «Добавить клиента». Введите его имя и телефон с его разрешения. Сразу покажем, подходит ли клиент. Повторно добавить клиента из нашей базы нельзя.</span></li><li><b>Отправьте клиенту ссылку</b><span>Номер подходит? Он защищён за вами на 7 дней. Отправьте ссылку клиенту: он должен указать тот же номер и подтвердить, что пришёл от вас.</span></li><li><b>Проверьте закреп и следите за покупкой</b><span>Увидели «Клиент закреплён» и дату? Всё готово: новый закреп — на 1 календарный месяц. «На проверке» — дождитесь подтверждения команды.</span></li></ol>
+    <ol className={styles.steps}><li><b>Добавьте клиента</b><span>Введите имя и телефон с разрешения клиента. Сразу проверим номер: повторно закрепить клиента из базы нельзя.</span></li><li><b>Отправьте клиенту ссылку</b><span>Номер защищён за вами на 7 дней. Отправьте ссылку: клиент укажет тот же номер и подтвердит, что пришёл от вас.</span></li><li><b>Проверьте закреп и следите за покупкой</b><span>«Клиент закреплён» и дата — всё готово на 1 календарный месяц. «На проверке» — ждём решения команды. Этапы покупки видны в карточке клиента.</span></li></ol>
     <div className={styles.guideReward}><Wallet size={20}/><div><b>Когда будут деньги?</b><p>После покупки в срок закрепа и получения комиссии. Ваше вознаграждение — 30% после вычета 6%. Пример: со 100 000 ₽ комиссии вам 28 200 ₽ до налогов. Оформление — во вкладке «Выплаты».</p></div></div>
     <p className={styles.hint}>Создать или просто переслать ссылку — ещё не закрепить клиента. Нужно его подтверждение.</p>
     <div className={styles.guideAction}><button className={styles.primary} onClick={dismissSheet}>Понятно, начнём</button></div>
@@ -145,7 +161,11 @@ export default function PartnersPage(){
     {!offerReady&&<p className={styles.hint}>Принятие станет доступно после публикации окончательных условий.</p>}
     <button className={styles.primary} disabled={busy||!upgradeConsent||!offerReady} onClick={()=>void(async()=>{if(await run(()=>acceptPartnerTerms({consent:upgradeConsent,termsVersion:PARTNER_TERMS_VERSION}))){setSheet(null);setNotice('Условия приняты')}})()}>{busy?'Сохраняем…':'Принять новую редакцию'}</button>
    </div>}
-   {sheet==='calculation'&&<div className={styles.sheetInfo}><div className={styles.calculation}><span>Комиссия агентства<b>100 000 ₽</b></span><span>Вычет 6%<b>6 000 ₽</b></span><span>База для расчёта<b>94 000 ₽</b></span><span>Вознаграждение 30%<b>28 200 ₽</b></span></div><p>Это пример расчёта до налогов получателя. Начисление появляется после покупки, получения комиссии и проверки агентством.</p><Link className={styles.inlineLink} to="/partner-offer">Подробнее в оферте<ChevronRight size={14}/></Link></div>}
+   {sheet==='calculation'&&<div className={styles.sheetInfo}>
+    <div className={styles.exampleResult}><span>Пример вашего вознаграждения</span><output aria-label="Вознаграждение в примере" key={example.grossMinor}>{partnerMoney(example.grossMinor)}</output><small>до налогов получателя</small></div>
+    <div className={styles.commissionControl}><div><label id="commission-label">Комиссия агентства</label><b>{partnerMoney(exampleCommission*100)}</b></div><Slider aria-label="Комиссия агентства" min={50000} max={500000} step={5000} value={[exampleCommission]} onValueChange={values=>setExampleCommission(values[0])}/><div className={styles.presets}>{[100000,200000,300000].map(value=><button key={value} aria-pressed={exampleCommission===value} onClick={()=>setExampleCommission(value)}>{partnerMoney(value*100)}</button>)}</div></div>
+    <div className={styles.calculation}><span>Комиссия агентства<b>{partnerMoney(exampleCommission*100)}</b></span><span>Вычет 6%<b>{partnerMoney(example.reserveMinor)}</b></span><span>База для расчёта<b>{partnerMoney(example.baseMinor)}</b></span><span>Вознаграждение 30%<b>{partnerMoney(example.grossMinor)}</b></span></div><p>Это пример, а не начисление на ваш счёт. Вознаграждение появляется после покупки в срок закрепа, получения комиссии и проверки агентством.</p><Link className={styles.inlineLink} to="/partner-offer">Подробнее в оферте<ChevronRight size={14}/></Link></div>}
+
    {sheet==='reserve'&&(reservationResult?.reservation?<div className={styles.form}>
     <section className={styles.reserveSuccess} role="status"><IconTile><ShieldCheck size={22}/></IconTile><h3>Номер защищён за вами</h3><p>{reservationResult.reservation.label} · {reservationResult.reservation.phoneHint}</p><p>Теперь отправьте клиенту ссылку. Ему нужно подтвердить приглашение до {reservationDeadline(reservationResult.reservation.expiresAt)}.</p></section>
     <div className={styles.nextAction}><span>Шаг 2 из 2</span><h3>Отправьте ссылку клиенту</h3><p>Он укажет тот же номер и подтвердит, что пришёл от вас. После проверки появится статус «Клиент закреплён» и дата окончания — через 1 месяц.</p></div>
@@ -165,6 +185,7 @@ export default function PartnersPage(){
   <Sheet open={!!selected} onOpenChange={open=>{if(!open&&!busy){setSelectedId(null);setError('')}}}><SheetContent side="bottom" className={styles.sheet}><SheetHeader><SheetTitle>{selected?.clientName||'Рекомендация'}</SheetTitle><SheetDescription>{selected?referralLabels[selected.status]:''}</SheetDescription></SheetHeader>{selected&&<>
    {error&&<p className={styles.error} role="alert">{error}</p>}
    <section className={styles.progress} data-status={selected.status}><span>{selected.status==='rejected'?<XCircle size={21}/>:selected.reward?.status==='paid'?<CheckCircle2 size={21}/>:selected.status==='accepted'&&!expired(selected)?<ShieldCheck size={21}/>:<Clock3 size={21}/>}</span><div><b>{selected.reward?rewardLabels[selected.reward.status]:selected.status==='accepted'?selected.stageLabel:referralLabels[selected.status]}</b><p>{nextStep(selected)}</p>{selected.status==='accepted'&&<small>{claimLabel(selected.claimExpiresOn)}</small>}</div></section>
+   <ClientJourney referral={selected} detail/>
    {selected.reward&&<section className={styles.card}><h2>{rewardLabels[selected.reward.status]}</h2><div className={styles.calculation}><span>Комиссия агентства<b>{partnerMoney(selected.reward.commissionRub*100)}</b></span><span>Вычет 6%<b>{partnerMoney(selected.reward.reserveMinor)}</b></span><span>База для расчёта<b>{partnerMoney(selected.reward.baseMinor)}</b></span><span>Вознаграждение 30%<b>{partnerMoney(selected.reward.grossMinor)}</b></span>{selected.reward.status==='paid'&&<><span>Удержания<b>{partnerMoney(selected.reward.withheldMinor)}</b></span><span>Переведено<b>{partnerMoney(selected.reward.paidMinor)}</b></span></>}</div><p className={styles.hint}>Начисление до налогов получателя. Сумма перевода зависит от документов и необходимых удержаний.</p>{selected.reward.status==='accrued'&&<div className={styles.form}><label>Статус получателя<NativeSelect aria-label="Статус получателя" value={recipient} onChange={e=>setRecipient(e.target.value)}><option value="person">Физическое лицо</option><option value="ip">Индивидуальный предприниматель</option><option value="company">Организация</option><option value="npd">Самозанятый — проверка договора</option></NativeSelect></label><button className={styles.primary} disabled={busy} onClick={()=>void run(()=>requestPartnerPayout(selected.reward!.id,recipient))}>Запросить оформление выплаты</button></div>}</section>}
    <h3 className={styles.historyTitle}>История рекомендации</h3><ol className={styles.timeline}>{selected.events.map(e=><li key={e.id} data-kind={e.kind}><span>{['rejected','void'].includes(e.kind)?<XCircle size={12}/>:<Check size={12}/>}</span><div><b>{e.label}</b><small>{new Date(e.createdAt).toLocaleString('ru-RU',{timeZone:'Asia/Vladivostok',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</small></div></li>)}</ol>
   </>}</SheetContent></Sheet>

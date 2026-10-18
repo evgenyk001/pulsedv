@@ -29,12 +29,13 @@ for(const width of [320,390])test(`Partner API flow ${width}px: rejected number,
  await page.addInitScript(version=>{localStorage.setItem('pulse_onboarding_version',version);localStorage.setItem('pulse.partner.guide.v1','seen')},DEFAULT_STATE.content.onboardingVersion);
  const stamp=new Date().toISOString(),hold={id:'reservation-1',code:'i01234567890123456789',label:'Иван',phoneHint:'••• 0202',createdAt:stamp,expiresAt:new Date(Date.now()+7*86400000).toISOString()};
  let phase:'empty'|'held'|'pending'|'confirmed'='empty',checks=0;
- const posted:any[]=[];
+ const posted:any[]=[];let releasePayments:()=>void=()=>{};let paymentRequested=false;const paymentGate=new Promise<void>(resolve=>{releasePayments=resolve});
  await page.route('**/api/v1/**',async route=>{
   const url=new URL(route.request().url()),path=url.pathname.replace('/api/v1','');let data:any={ok:true};
   if(path==='/public/state')data={state:DEFAULT_STATE,version:1,consentVersion:'2026-09-25'};
   if(path==='/auth/session')data={sessionId:'test-session',accessToken:'test-token',expiresAt:new Date(Date.now()+86400000).toISOString()};
   if(path==='/public/partner-program')data={botUsername:'pulsedvbot',offerPublished:true};
+  if(path==='/me/partner'&&url.searchParams.get('filter')==='payments'){paymentRequested=true;await paymentGate}
   if(path==='/me/partner')data={authenticated:true,partner:{id:'partner-1',userId:'user-1',name:'Анна',phone:'+79995550101',code:'p01234567890123456789',status:'active',termsVersion:OFFER_VERSION,createdAt:stamp},referrals:['pending','confirmed'].includes(phase)?[{id:'referral-1',partnerId:'partner-1',partnerName:'Анна',clientName:'Иван П.',status:phase==='confirmed'?'accepted':'pending',stage:'new',stageLabel:'Новое обращение',termsVersion:OFFER_VERSION,claimStartedOn:phase==='confirmed'?businessDay():null,claimExpiresOn:phase==='confirmed'?claimExpiresOn(businessDay()):null,conflict:false,revision:1,createdAt:stamp,acceptedAt:stamp,rejectionReason:null,events:[],reward:null}]:[],reservations:['held','pending'].includes(phase)?[{...hold,submitted:phase==='pending'}]:[],invitations:[],page:1,total:['pending','confirmed'].includes(phase)?1:0,hasMore:false,summary:{acceptedCount:phase==='confirmed'?1:0,pendingCount:phase==='pending'?1:0,accruedMinor:0,paidMinor:0}};
   if(path==='/me/partner/reservations'){
    posted.push(route.request().postDataJSON());checks++;
@@ -57,5 +58,8 @@ for(const width of [320,390])test(`Partner API flow ${width}px: rejected number,
  await page.waitForTimeout(350);phase='confirmed';await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
  await expect(page.getByRole('heading',{name:'Ждём подтверждения клиента'})).toHaveCount(0);const row=page.getByRole('button',{name:/Иван П\./});await expect(row).toContainText('Клиент закреплён');await expect(row).toContainText('Закреп до');await row.click();
  const details=page.getByRole('dialog',{name:'Иван П.',exact:true});await expect(details).toContainText(new Date(claimExpiresOn(businessDay())+'T00:00:00Z').toLocaleDateString('ru-RU',{timeZone:'UTC'}));
+ await page.keyboard.press('Escape');await page.getByRole('tab',{name:'Выплаты',exact:true}).click();await expect.poll(()=>paymentRequested).toBe(true);
+ await expect(page.getByRole('region',{name:'Сводка вознаграждения'})).toBeVisible();await expect(page.getByRole('button',{name:'Добавить клиента',exact:true})).toBeEnabled();await expect(page.getByText('Загружаем партнёрский кабинет…',{exact:true})).toHaveCount(0);
+ releasePayments();await expect(page.getByText('Начислений пока нет',{exact:true})).toBeVisible();
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
