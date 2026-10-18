@@ -60,3 +60,51 @@
 @media(prefers-reduced-motion:reduce){.page *,.sheet *,.notice{animation:none!important;transition:none!important}}
 
 .primary:disabled,.secondary:disabled,.personalAction:disabled{cursor:default}
+
+/* The programme promise and the real account balance have distinct visual roles. */
+.balance{position:relative;overflow:hidden;padding:18px 18px 10px;background:radial-gradient(ellipse at 85% 12%,#ff7964 0,transparent 58%),linear-gradient(135deg,#e60020,#fa182c 65%,#cb0027);border:1px solid rgba(255,255,255,.35);box-shadow:0 14px 36px rgba(220,12,43,.17)}
+.programIntro{position:relative;min-height:132px;isolation:isolate}
+.programPitch{position:relative;z-index:1;width:58%;display:flex;flex-direction:column;align-items:flex-start}
+.eyebrow{font-size:8px;line-height:1.3;letter-spacing:.09em;text-transform:uppercase;font-weight:750}
+.programPitch>strong{font-size:54px;line-height:1.02;letter-spacing:-.065em;margin-top:5px;font-weight:800}
+.programPitch>strong>span{font-size:36px;letter-spacing:-.045em;margin-left:1px}
+.programPitch p{font-size:10px;line-height:1.4;margin:3px 0 0;color:#fff}
+.calculateLink{display:inline-flex;align-items:center;gap:4px;min-height:29px;margin:3px 0 0;padding:0;background:none;border:0;color:#fff;font:inherit;font-size:10px;font-weight:700;cursor:pointer}
+.programArt{position:absolute;right:-16px;top:-12px;width:50%;height:auto;max-height:157px;object-fit:contain;pointer-events:none;animation:artArrive .55s var(--motion-soft) backwards}
+.earnings{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.7fr) auto;align-items:center;gap:10px;padding:10px 12px;margin-top:6px;border:1px solid rgba(255,255,255,.23);border-radius:var(--app-radius-control);background:rgba(102,0,18,.16)}
+.earnings>span{display:grid;gap:4px;font-size:8px;line-height:1.3;color:#fff;min-width:0}
+.earnings b{font-size:18px;line-height:1.15;letter-spacing:-.025em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.earnings>span:nth-child(2){padding-left:12px;border-left:1px solid rgba(255,255,255,.25)}
+.earnings>span:nth-child(2)>b{font-size:13px}.earnings>svg{opacity:.85}
+.balanceActions{border:0;padding:0;margin-top:10px;gap:1px}
+.balanceActions .primary:not(:disabled){background:#fff;color:#d70025;box-shadow:0 5px 14px rgba(111,0,23,.08)}
+.balanceActions .primary{min-height:46px}
+.balanceActions .personalAction{min-height:32px;color:#fff;font-size:9px}
+.list:has(.client){padding:0;background:none;border:0;box-shadow:none;display:grid;gap:10px}
+.client{padding:16px;border:1px solid var(--app-card-border);border-radius:var(--app-radius-control);background:var(--app-card);box-shadow:var(--app-card-shadow);align-items:start;column-gap:10px}
+.client:last-child{border-bottom:1px solid var(--app-card-border)}
+.client .avatar{width:32px;height:32px;border:1px solid var(--app-card-border);background:var(--muted);color:var(--foreground);font-weight:650}
+.clientEnd{align-self:center;flex-direction:column;align-items:flex-end;gap:8px}
+.clientCopy small{font-size:10px}.clientCopy em{font-size:9px;margin-top:8px}
+.journey{display:flex;gap:4px;margin-top:10px;max-width:180px}
+.journey>span{height:3px;flex:1;overflow:hidden;border-radius:3px;background:var(--muted);border:1px solid var(--app-card-border)}
+.journey>span[data-state=done]{background:var(--success);border-color:transparent}
+.journey>span[data-state=current]{background:var(--primary);border-color:transparent}
+.journeyDetail{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:20px 0 6px}
+.journeyDetail>span{display:grid;justify-items:center;gap:7px;position:relative;color:var(--muted-foreground)}
+.journeyDetail i{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;border:1px solid var(--app-card-border);background:var(--muted);font:inherit;font-size:10px;position:relative;z-index:1}
+.journeyDetail>span:not(:last-child):after{content:'';position:absolute;left:calc(50% + 17px);right:calc(-50% + 12px);top:13px;height:1px;background:var(--border)}
+.journeyDetail small{font-size:9px;line-height:1.4;text-align:center}
+.journeyDetail>span[data-state=done] i{background:var(--success);color:#fff;border-color:transparent}
+.journeyDetail>span[data-state=current] i{background:var(--primary);color:#fff;border-color:transparent;box-shadow:0 0 0 4px var(--red-soft,rgba(242,13,29,.08))}
+.journeyDetail>span[data-state=current] small{color:var(--foreground);font-weight:700}
+.emptyPath{display:flex;align-items:center;gap:6px;font-size:8px;color:var(--muted-foreground);margin:4px 0}.emptyPath i{width:12px;height:1px;background:var(--border)}
+.exampleResult{display:grid;justify-items:center;gap:5px;padding:20px 10px;background:var(--foreground);color:var(--background);border-radius:var(--app-radius-card)}
+.exampleResult>span{font-size:10px;opacity:.8}.exampleResult output{font-size:38px;line-height:1.2;letter-spacing:-.04em;font-weight:750;font-variant-numeric:tabular-nums;animation:amountIn .18s var(--motion-soft)}
+.exampleResult small{font-size:9px;opacity:.75}.commissionControl{display:grid;gap:16px;padding:4px 2px}
+.commissionControl>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px}.commissionControl b{font-variant-numeric:tabular-nums}
+.presets{display:flex;gap:7px}.presets button{flex:1;min-width:0;min-height:36px;border-radius:var(--app-radius-pill);border:1px solid var(--app-card-border);background:var(--muted);color:var(--muted-foreground);font:inherit;font-size:10px;cursor:pointer;transition:background-color .16s,color .16s,transform .16s}
+.presets button[aria-pressed=true]{background:var(--foreground);color:var(--background)}.presets button:active{transform:scale(.97)}
+@keyframes artArrive{from{opacity:0;transform:translate(10px,5px) rotate(3deg)}to{opacity:1;transform:translate(0,0) rotate(0)}}
+@media(max-width:350px){.balance{padding:16px 16px 8px}.programIntro{min-height:132px}.programPitch{width:59%}.programArt{right:-15px;top:0;width:48%}.eyebrow{font-size:7px}.balanceActions .personalAction{font-size:8.5px;gap:3px}.earnings{padding:9px 10px;gap:7px}.earnings>span{font-size:7.5px}.earnings b{font-size:17px}.earnings>svg{width:17px}.client{padding:14px;gap:8px}.presets button{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.page *,.sheet *{animation:none!important;transition:none!important}}
