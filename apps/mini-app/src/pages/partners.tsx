@@ -72,7 +72,7 @@ export default function PartnersPage(){
  const expired=(r:PartnerReferral)=>r.status==='accepted'&&!!r.claimExpiresOn&&r.claimExpiresOn<today;
  const referralRow=(r:PartnerReferral,index:number)=><button className={styles.client} key={r.id} style={{'--row-index':Math.min(index,4)} as React.CSSProperties} onClick={()=>openReferral(r)}>
   {tab==='payments'?<IconTile><Wallet/></IconTile>:<span className={styles.avatar}>{r.clientName[0]}</span>}
-  <span className={styles.clientCopy}><b>{r.clientName}</b><small>{r.status==='accepted'?r.stageLabel:referralLabels[r.status]}</small>
+  <span className={styles.clientCopy}><b>{r.clientName}</b><small>{r.status==='accepted'?r.stageLabel:r.status==='pending'?'Проверяем рекомендацию':'Откройте результат проверки'}</small>
    {r.status==='accepted'&&tab==='clients'&&<small>{claimLabel(r.claimExpiresOn,today)}</small>}
    <em key={r.reward?.status||(expired(r)?'expired':r.status)} data-status={r.reward?.status||(expired(r)?'expired':r.status)}>{r.reward?rewardLabels[r.reward.status]:expired(r)?'Срок закрепа истёк':referralLabels[r.status]}</em>
   </span>
@@ -115,7 +115,7 @@ export default function PartnersPage(){
     {tab==='clients'?<>
 
      {!!waiting.length&&<section className={styles.card}><h2>Ждём подтверждения клиента</h2><p>Если ещё не отправили ссылку — нажмите на клиента. После его подтверждения здесь появится результат проверки.</p>{waiting.map(r=><button className={styles.invitation} key={r.id} onClick={()=>{setInviteCode(r.code);openSheet('invite')}}><span><b>{r.label} · {r.phoneHint}</b><small>Номер защищён до {reservationDeadline(r.expiresAt)} · отправить ссылку</small></span><Send size={16}/></button>)}</section>}
-     <div className={styles.clientsHeading}><div className={styles.sectionHead}><h2>Клиенты</h2><span>{q.data.total}</span></div><div className={styles.balanceCounts} aria-label="Результат рекомендаций"><span><ShieldCheck size={13}/><b>{summary.acceptedCount}</b> закреплено</span><span><Clock3 size={13}/><b>{summary.pendingCount}</b> на проверке</span></div></div>
+     <div className={styles.clientsHeading}><div className={styles.sectionHead}><h2>Клиенты</h2><span>{q.data.total}</span></div><div className={styles.balanceCounts} aria-label="Результат рекомендаций"><span><ShieldCheck size={13}/><b>{summary.acceptedCount}</b> принято</span><span><Clock3 size={13}/><b>{summary.pendingCount}</b> на проверке</span></div></div>
      <section className={styles.list} aria-label="Ваши рекомендации">{q.data.referrals.length?q.data.referrals.map(referralRow):<div className={styles.empty}><IconTile><UsersRound size={24}/></IconTile><b>Рекомендаций пока нет</b><p>Добавьте первого клиента и отправьте ему ссылку. Здесь появятся подтверждение, срок закрепа и этапы покупки.</p></div>}</section>
      {unsubmittedInvites.length>0&&<section className={styles.card}><h2>Ссылки без проверки номера</h2>{unsubmittedInvites.map(i=><button className={styles.invitation} disabled={!canInvite} key={i.id} onClick={()=>{setInviteCode(i.code);openSheet('invite')}}><span><b>{i.label}</b><small>{i.submitted?'Покупатель оставил заявку':'Ожидаем заявку покупателя'}</small></span><Copy size={16}/></button>)}</section>}
     </>:<>
