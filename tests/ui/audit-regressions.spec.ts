@@ -1,7 +1,7 @@
 import {test,expect,type Page} from '@playwright/test';
 import {DEFAULT_STATE} from '../../packages/pulse-data/model';
 const rub=(n:number)=>n.toLocaleString('ru-RU');
-async function seed(page:Page){await page.addInitScript(state=>{if(!localStorage.getItem('pulse.dv.control.state.v1'))localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state));localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion);localStorage.setItem('pulse_mortgage_intro_version','mortgage_intro_v5')},DEFAULT_STATE)}
+async function seed(page:Page){await page.addInitScript(state=>{if(!localStorage.getItem('pulse.dv.control.state.v1'))localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state));localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion);localStorage.setItem('pulse_mortgage_intro_version','mortgage_intro_v5');localStorage.setItem('pulse.partner.guide.v1','seen')},DEFAULT_STATE)}
 
 test('Consent reading preserves the open property form and typed contact',async({page})=>{
  await seed(page);await page.goto('/pulsedv/mini-app/#/property/'+DEFAULT_STATE.properties[0].id);
@@ -29,6 +29,6 @@ test('Select reads a normal ruble budget and preserves zero deposit and precise 
 
 test('Demo reservation form never pretends to check a shared CRM',async({page})=>{
  await seed(page);await page.goto('/pulsedv/mini-app/#/partners');await page.getByRole('textbox',{name:'Ваше имя для приглашения'}).fill('Тестовый партнёр');await page.getByRole('textbox',{name:'Ваш контактный телефон'}).fill('+79995550101');await page.getByRole('checkbox',{name:/Принимаю условия программы/}).check();await page.getByRole('button',{name:'Стать партнёром PULSE'}).click();
- await page.getByRole('button',{name:'Проверить и закрепить клиента',exact:true}).click();await expect(page.getByText(/Проверка номеров недоступна в тестовой версии/)).toBeVisible();await expect(page.getByRole('button',{name:'Проверить и забронировать',exact:true})).toBeDisabled();
+ await page.getByRole('button',{name:'Добавить клиента',exact:true}).click();await expect(page.getByText(/Проверка номеров недоступна в тестовой версии/)).toBeVisible();await expect(page.getByRole('button',{name:'Проверить номер',exact:true})).toBeDisabled();
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

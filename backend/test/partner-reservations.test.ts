@@ -48,7 +48,7 @@ test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirm
   const r=await post('/api/v1/leads',leadInput('+79993333333'),guest);assert.equal(r.statusCode,200,r.body);
   const checked=await reserve(input('8 999 333 33 33'));assert.equal(checked.json().outcome,'not_unique');assert.ok(!checked.body.includes('Тестовый покупатель'));assert.ok(!checked.body.includes(r.json().id));
  });
- await t.test('buyer confirmation converts the hold to a six-month claim; retries cannot transfer ownership',async()=>{
+ await t.test('buyer confirmation converts the hold to a one-month claim; retries cannot transfer ownership',async()=>{
   const wrong=await post('/api/v1/leads',leadInput('+79994444444',held.code),buyer);assert.equal(wrong.statusCode,409,wrong.body);
   const stolen=await post('/api/v1/leads',leadInput('+79991111111',pb.code),buyer);assert.equal(stolen.statusCode,409,stolen.body);
   const data=leadInput('+7 (999) 111-11-11',held.code),r=await post('/api/v1/leads',data,buyer);assert.equal(r.statusCode,200,r.body);
@@ -75,6 +75,7 @@ test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirm
   const direct=await post('/api/v1/leads',leadInput('+79997777777'),guest);assert.equal(direct.statusCode,200,direct.body);
   const lead=await post('/api/v1/leads',leadInput('+79997777777',hold.code),guest);assert.equal(lead.statusCode,200,lead.body);
   const r=(await db.query('select * from partner_referrals where lead_id=$1',[lead.json().id])).rows[0];assert.equal(r.status,'pending');
+  const cabinet=(await app.inject({url:'/api/v1/me/partner',headers:a})).json();assert.equal(cabinet.reservations.find((x:any)=>x.id===hold.id).submitted,true);
   const review=await post('/api/v1/control/partner-referrals/'+r.id+'/review',{revision:r.revision,decision:'accept',contactConfirmed:true,note:'Контакт покупателя подтверждён владельцем'},headers,owner);assert.equal(review.statusCode,200,review.body);
   assert.equal((await db.query('select converted_referral_id from partner_client_reservations where id=$1',[hold.id])).rows[0].converted_referral_id,r.id);
  });

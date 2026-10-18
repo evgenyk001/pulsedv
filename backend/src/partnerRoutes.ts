@@ -1,6 +1,6 @@
 import {randomBytes,createHash,randomUUID} from 'node:crypto';
 import {offerText,offerSections,OFFER_VERSION,OFFER_VERSIONS} from '../../packages/partners/offer';
-import {claimExpiresOn,claimDateError,hasSixMonthClaim} from '../../packages/partners/policy';
+import {claimExpiresOn,claimDateError,claimMonths} from '../../packages/partners/policy';
 import {z} from 'zod';
 import type {FastifyInstance,FastifyRequest} from 'fastify';
 import type {Database,Sql} from './database';
@@ -50,9 +50,9 @@ export async function attachPartnerReferral(sql:Sql,leadId:string,buyerUserId:st
  if(partner.reservation&&buyerUserId){
   const start=businessDay();
   await sql.query('insert into partner_client_claims(referral_id,normalized_phone,buyer_user_id) values($1,$2,$3)',[row.id,phone,buyerUserId]);
-  await sql.query("update partner_referrals set status='accepted',accepted_at=now(),claim_started_on=$2,claim_expires_on=$3,review_note='Автоматическая проверка CRM и подтверждение покупателя',revision=revision+1 where id=$1",[row.id,start,claimExpiresOn(start)]);
+  await sql.query("update partner_referrals set status='accepted',accepted_at=now(),claim_started_on=$2,claim_expires_on=$3,review_note='Автоматическая проверка CRM и подтверждение покупателя',revision=revision+1 where id=$1",[row.id,start,claimExpiresOn(start,claimMonths(partner.terms_version))]);
   await sql.query('update partner_client_reservations set converted_referral_id=$2 where id=$1',[partner.reservation.id,row.id]);
-  await partnerEvent(sql,row.id,'accepted','Уникальность проверена автоматически. Клиент закреплён за партнёром на 6 месяцев');
+  await partnerEvent(sql,row.id,'accepted','Уникальность проверена автоматически. Клиент закреплён за партнёром на 1 месяц');
   await partnerEvent(sql,row.id,'stage',partnerStageLabels.new);
  }
  return row.id as string;
@@ -87,8 +87,8 @@ async function requireUniqueForFinance(sql:Sql,r:any){
  if(clash.self)throw new HttpError(409,'Собственная покупка не участвует в партнёрском вознаграждении');
  if(clash.matches.length||clash.claimed.length)throw new HttpError(409,'Выявлено совпадение покупателя. Разберите закрепление перед начислением или выплатой');
 }
-const reservationSelect=`select b.*,i.code,i.label from partner_client_reservations b join partner_invitations i on i.id=b.invitation_id`;
-function reservationDto(row:any){return {id:row.id,code:row.code,label:row.label,phoneHint:'••• '+row.normalized_phone.slice(-4),expiresAt:row.expires_at instanceof Date?row.expires_at.toISOString():row.expires_at,createdAt:row.created_at instanceof Date?row.created_at.toISOString():row.created_at};}
+const reservationSelect=`select b.*,i.code,i.label,exists(select 1 from partner_referrals r where r.partner_id=b.partner_id and r.invitation_id=b.invitation_id) as submitted from partner_client_reservations b join partner_invitations i on i.id=b.invitation_id`;
+function reservationDto(row:any){return {id:row.id,code:row.code,label:row.label,phoneHint:'••• '+row.normalized_phone.slice(-4),submitted:row.submitted===true,expiresAt:row.expires_at instanceof Date?row.expires_at.toISOString():row.expires_at,createdAt:row.created_at instanceof Date?row.created_at.toISOString():row.created_at};}
 async function activeReservation(sql:Sql,phone:string){return (await sql.query(reservationSelect+" where b.normalized_phone=$1 and b.released_at is null and b.converted_referral_id is null and b.expires_at>now()",[phone])).rows[0];}
 async function identityUnavailable(sql:Sql,phone:string,userId:string|null=null,reservationId:string|null=null){
  const known=(await sql.query(`select l.id from leads l left join partner_referrals r on r.lead_id=l.id
@@ -195,15 +195,15 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
    }
    const budget=(await sql.query('update partner_profiles set identity_check_day=$2,identity_check_count=case when identity_check_day=$2 then identity_check_count+1 else 1 end where id=$1 and (identity_check_day is distinct from $2 or identity_check_count<100) returning id',[p.id,businessDay()])).rows;
    if(!budget.length)throw new HttpError(429,'Дневной лимит проверок исчерпан. Свяжитесь с PULSE');
-   if(await identityUnavailable(sql,input.phone))return {outcome:'not_unique',message:'Клиент не уникальный или уже закреплён. Уточнить результат можно у команды PULSE'};
+   if(await identityUnavailable(sql,input.phone))return {outcome:'not_unique',message:'Клиента нельзя добавить: он уже обращался к нам или закреплён. Если нужна проверка результата, напишите команде PULSE'};
    const held=await activeReservation(sql,input.phone);
-   if(held)return held.partner_id===p.id?{outcome:'reserved',message:'Этот номер уже забронирован за вами',reservation:reservationDto(held)}:{outcome:'not_unique',message:'Клиент не уникальный или уже закреплён. Уточнить результат можно у команды PULSE'};
+   if(held)return held.partner_id===p.id?{outcome:'reserved',message:'Этот номер уже забронирован за вами',reservation:reservationDto(held)}:{outcome:'not_unique',message:'Клиента нельзя добавить: он уже обращался к нам или закреплён. Если нужна проверка результата, напишите команде PULSE'};
    const count=Number((await sql.query("select count(*) as n from partner_client_reservations where partner_id=$1 and created_at>now()-interval '1 day'",[p.id])).rows[0].n);
    if(count>=20)throw new HttpError(429,'На сегодня доступно 20 проверок с бронью. Для большего потока свяжитесь с PULSE');
    await sql.query('update partner_client_reservations set released_at=now() where normalized_phone=$1 and released_at is null and converted_referral_id is null and expires_at<=now()',[input.phone]);
    const invitation=(await sql.query('insert into partner_invitations(id,partner_id,code,label) values($1,$2,$3,$4) returning *',[randomUUID(),p.id,token('i'),input.label])).rows[0];
    const row=(await sql.query('insert into partner_client_reservations(id,partner_id,invitation_id,normalized_phone) values($1,$2,$3,$4) returning *',[input.idempotencyKey,p.id,invitation.id,input.phone])).rows[0];
-   return {outcome:'reserved',message:'Клиент уникальный. Номер забронирован за вами на 7 дней',reservation:reservationDto({...row,code:invitation.code,label:invitation.label})};
+   return {outcome:'reserved',message:'Номер подходит. Он защищён за вами на 7 дней — отправьте клиенту ссылку',reservation:reservationDto({...row,code:invitation.code,label:invitation.label})};
   });
  });
  app.post('/api/v1/me/partner/rewards/:id/request',{preHandler:authenticated},async request=>{
@@ -254,8 +254,8 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
     const clash=await conflicts(sql,r);if(clash.matches.length||clash.claimed.length)throw new HttpError(409,'Найдено совпадение в CRM или более ранняя рекомендация. Разберите совпадение перед закреплением');
     await sql.query('insert into partner_client_claims(referral_id,normalized_phone,buyer_user_id) values($1,$2,$3)',[id,r.normalized_phone,r.buyer_user_id]);
     await sql.query('update partner_client_reservations set converted_referral_id=$3 where normalized_phone=$1 and partner_id=$2 and released_at is null and converted_referral_id is null',[r.normalized_phone,r.partner_id,id]);
-    const start=hasSixMonthClaim(r.terms_version)?businessDay():null;
-    await sql.query("update partner_referrals set status='accepted',accepted_at=now(),reviewed_by=$2,review_note=$3,claim_started_on=$4,claim_expires_on=$5,deal_confirmed_on=$6,buyer_user_id=$7,revision=revision+1 where id=$1",[id,request.member!.id,input.note,start,start?claimExpiresOn(start):null,['deal','closed'].includes(lead.status)?businessDay():null,r.buyer_user_id]);
+    const start=claimMonths(r.terms_version)?businessDay():null;
+    await sql.query("update partner_referrals set status='accepted',accepted_at=now(),reviewed_by=$2,review_note=$3,claim_started_on=$4,claim_expires_on=$5,deal_confirmed_on=$6,buyer_user_id=$7,revision=revision+1 where id=$1",[id,request.member!.id,input.note,start,start?claimExpiresOn(start,claimMonths(r.terms_version)):null,['deal','closed'].includes(lead.status)?businessDay():null,r.buyer_user_id]);
     await partnerEvent(sql,id,'accepted','Клиент проверен и закреплён за партнёром');await partnerEvent(sql,id,'stage',partnerStageLabels[lead.status]||'Обращение принято');
    }else{
     if(!input.reason)throw new HttpError(400,'Укажите причину отказа');
