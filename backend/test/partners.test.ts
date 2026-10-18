@@ -1,5 +1,5 @@
 import {test} from 'node:test';
-import {claimExpiresOn,claimDateError} from '../../packages/partners/policy';
+import {claimExpiresOn,claimDateError,claimMonths} from '../../packages/partners/policy';
 import {offerText,OFFER_VERSION} from '../../packages/partners/offer';
 import assert from 'node:assert/strict';
 import {randomUUID,createHmac,createHash} from 'node:crypto';
@@ -17,8 +17,10 @@ test('Partner amounts use kopecks, exact commission and valid Telegram invitatio
  assert.equal(partnerReward(7543219).grossMinor,212718776);assert.throws(()=>partnerReward(100.2));assert.throws(()=>partnerReward(-1));
  assert.equal(referralCodeFromStart('ref_p01234567890123456789'),'p01234567890123456789');assert.equal(referralCodeFromStart('ref_../../leads'),null);
 });
-test('Six calendar months clamp month end; deal date must be real, inclusive and within the claim',()=>{
- assert.equal(claimExpiresOn('2025-08-31'),'2026-02-28');assert.equal(claimExpiresOn('2023-08-31'),'2024-02-29');assert.equal(claimExpiresOn('2026-10-14'),'2027-04-14');
+test('One calendar month clamps month end and legacy durations stay intact; deal date must be real, inclusive and within the claim',()=>{
+ assert.equal(claimExpiresOn('2026-01-31'),'2026-02-28');assert.equal(claimExpiresOn('2024-01-31'),'2024-02-29');assert.equal(claimExpiresOn('2026-08-31'),'2026-09-30');assert.equal(claimExpiresOn('2026-12-31'),'2027-01-31');assert.equal(claimExpiresOn('2026-10-18'),'2026-11-18');
+ assert.equal(claimMonths(OFFER_VERSION),1);for(const version of ['partners-v2-2026-10-14','partners-v3-2026-10-16'])assert.equal(claimExpiresOn('2026-10-18',claimMonths(version)),'2027-04-18');assert.equal(claimMonths('partners-v1'),0);
+ assert.equal(createHash('sha256').update(offerText('partners-v3-2026-10-16')).digest('hex'),'403da3da44e0e0395ed31f562bc4db6289b26dbbfca7813bad8761f746e893ab');
  assert.equal(claimDateError('2025-01-01','2025-07-01','2025-07-01','2026-10-14'),'');
  assert.match(claimDateError('2025-01-01','2025-07-01','2025-07-02','2026-10-14'),/окончания/);
  assert.match(claimDateError('2025-01-01','2025-07-01','2024-12-31','2026-10-14'),/раньше/);
@@ -32,7 +34,8 @@ test('Partners API: identity, attribution, uniqueness, own cabinet, immutable ac
  const members=(await db.query("insert into team_members(name,email,password_hash,role) values('Owner','partner-owner@test.local',$1,'owner'),('Manager','partner-manager@test.local',$1,'manager'),('Admin','partner-admin@test.local',$1,'admin') returning *",[hash])).rows;
  const cookies=[];for(const m of members){const login=await app.inject({method:'POST',url:'/api/v1/control/login',headers,payload:{email:m.email,password}});assert.equal(login.statusCode,200,login.body);cookies.push({pulse_control:login.cookies.find(c=>c.name==='pulse_control')!.value})}
  const owner=cookies[0],manager=cookies[1],admin=cookies[2];
- const visitor=async(id?:number)=>{const r=await app.inject({method:'POST',url:'/api/v1/auth/session',headers,payload:{}});assert.equal(r.statusCode,200,r.body);const h={...headers,authorization:'Bearer '+r.json().accessToken};if(id){const bind=await app.inject({method:'POST',url:'/api/v1/auth/telegram',headers:h,payload:{initData:signed(id,config.BOT_TOKEN)}});assert.equal(bind.statusCode,200,bind.body)}return h};
+ let visitorNumber=10;
+ const visitor=async(id?:number)=>{const r=await app.inject({remoteAddress:'127.0.2.'+(visitorNumber++),method:'POST',url:'/api/v1/auth/session',headers,payload:{}});assert.equal(r.statusCode,200,r.body);const h={...headers,authorization:'Bearer '+r.json().accessToken};if(id){const bind=await app.inject({method:'POST',url:'/api/v1/auth/telegram',headers:h,payload:{initData:signed(id,config.BOT_TOKEN)}});assert.equal(bind.statusCode,200,bind.body)}return h};
  const a=await visitor(30001),b=await visitor(30002),buyer=await visitor(40001),anonymous=await visitor();
  const get=(url:string,h=a)=>app.inject({url,headers:h});
  let requestNumber=10;
@@ -158,18 +161,27 @@ test('Partners API: identity, attribution, uniqueness, own cabinet, immutable ac
   const draft=await createApp(db,readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:config.PUBLIC_ORIGIN,BOT_TOKEN:config.BOT_TOKEN}));await draft.ready();
   try{assert.equal((await draft.inject('/api/v1/public/partner-offer')).json().published,false);assert.equal((await draft.inject({method:'POST',url:'/api/v1/me/partner/terms',headers:b,payload:{consent:true,termsVersion:OFFER_VERSION}})).statusCode,409)}finally{await draft.close()}
  });
- await t.test('new claims expire in six months; late commission is allowed only for a deal within the claim',async()=>{
+ await t.test('new claims expire in one month; late commission is allowed only for a deal within the claim',async()=>{
   const v=await visitor(),submitted=await post('/api/v1/leads',leadInput('+79990000020',partnerB.code),v);assert.equal(submitted.statusCode,200,submitted.body);const id=submitted.json().id;
   let r=(await referral(id)).json().referral;assert.equal(r.termsVersion,OFFER_VERSION);assert.equal((await review(r)).statusCode,200);r=(await referral(id)).json().referral;
   assert.equal(r.claimStartedOn,businessDay());assert.equal(r.claimExpiresOn,claimExpiresOn(businessDay()));
   assert.equal((await patch(id,{status:'deal',finance:{...emptyFinance(),commissionRub:100000,receivedOn:businessDay()}})).statusCode,200);
-  await db.query("update partner_referrals set claim_started_on='2025-01-01',claim_expires_on='2025-07-01' where id=$1",[r.id]);
+  await db.query("update partner_referrals set claim_started_on='2025-01-31',claim_expires_on='2025-02-28' where id=$1",[r.id]);
   const url='/api/v1/control/partner-referrals/'+r.id+'/accrue';
-  const outside=await control(url,{revision:r.revision,dealOn:'2025-07-02'});assert.equal(outside.statusCode,400,outside.body);
+  const outside=await control(url,{revision:r.revision,dealOn:'2025-03-01'});assert.equal(outside.statusCode,400,outside.body);
   assert.equal((await control(url,{revision:r.revision,dealOn:'2024-12-31'})).statusCode,400);
   assert.equal((await control(url,{revision:r.revision,dealOn:'2025-02-30'})).statusCode,400);
-  const inside=await control(url,{revision:r.revision,dealOn:'2025-07-01'});assert.equal(inside.statusCode,200,inside.body);assert.equal(inside.json().reward.dealOn,'2025-07-01');assert.equal(inside.json().reward.grossMinor,2820000);
+  const inside=await control(url,{revision:r.revision,dealOn:'2025-02-28'});assert.equal(inside.statusCode,200,inside.body);assert.equal(inside.json().reward.dealOn,'2025-02-28');assert.equal(inside.json().reward.grossMinor,2820000);
   const duplicate=await post('/api/v1/leads',leadInput('+79990000020',partnerB.code),await visitor());assert.equal(duplicate.statusCode,409,duplicate.body);
+ });
+ await t.test('pending v3 referrals keep six months when reviewed and after the partner accepts v4',async()=>{
+  const submitted=await post('/api/v1/leads',leadInput('+79990000023',partnerB.code),await visitor());assert.equal(submitted.statusCode,200,submitted.body);
+  await db.query("update partner_referrals set terms_version='partners-v3-2026-10-16' where lead_id=$1",[submitted.json().id]);
+  let old=(await referral(submitted.json().id)).json().referral;assert.equal((await review(old)).statusCode,200);
+  old=(await referral(submitted.json().id)).json().referral;assert.equal(old.claimExpiresOn,claimExpiresOn(businessDay(),6));
+  await db.query("update partner_profiles set terms_version='partners-v3-2026-10-16' where id=$1",[partnerB.id]);
+  assert.equal((await post('/api/v1/me/partner/terms',{consent:true,termsVersion:OFFER_VERSION},b)).statusCode,200);
+  const after=(await referral(submitted.json().id)).json().referral;assert.equal(after.termsVersion,'partners-v3-2026-10-16');assert.equal(after.claimStartedOn,old.claimStartedOn);assert.equal(after.claimExpiresOn,old.claimExpiresOn);
  });
  await t.test('new acceptance is explicit, preserves legacy referrals and enables invitations again',async()=>{
   const v=await visitor(),submitted=await post('/api/v1/leads',leadInput('+79990000021',partnerB.code),v);assert.equal(submitted.statusCode,200,submitted.body);const id=submitted.json().id;

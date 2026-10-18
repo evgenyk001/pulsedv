@@ -1,7 +1,7 @@
 import {test,expect,type Page} from '@playwright/test';
 import {DEFAULT_STATE} from '../../packages/pulse-data/model';
 import {businessDay} from '../../packages/pulse-data/business';
-async function seed(page:Page){await page.addInitScript(state=>{if(!localStorage.getItem('pulse.dv.control.state.v1'))localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state));localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion)},DEFAULT_STATE)}
+async function seed(page:Page,showGuide=false){await page.addInitScript(({state,showGuide})=>{if(!showGuide)localStorage.setItem('pulse.partner.guide.v1','seen');if(!localStorage.getItem('pulse.dv.control.state.v1'))localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state));localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion)},{state:DEFAULT_STATE,showGuide})}
 for(const width of [320,390,430])test(`Partners ${width}px: invitation, buyer consent, Control review, progress, exact accrual and payout`,async({page,browserName})=>{
  // This scenario crosses both applications and several dialogs; mobile WebKit needs the whole journey budget.
  test.setTimeout(90000);
@@ -12,8 +12,8 @@ for(const width of [320,390,430])test(`Partners ${width}px: invitation, buyer co
  await expect(page.getByRole('heading',{name:'Рекомендуйте PULSE',exact:true})).toBeVisible();await page.screenshot({path:`test-results/partner-start-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
  await page.getByRole('textbox',{name:'Ваше имя для приглашения'}).fill('Анна Партнёр');await page.getByRole('textbox',{name:'Ваш контактный телефон'}).fill('+79995550101');await page.getByRole('checkbox',{name:/Принимаю условия программы/}).check();await page.getByRole('button',{name:'Стать партнёром PULSE'}).click();
  await expect(page.getByRole('heading',{name:'Мои рекомендации',exact:true})).toBeVisible();await expect(page.getByText('Рекомендаций пока нет',{exact:true})).toBeVisible();
- await page.getByRole('button',{name:'Персональное приглашение',exact:true}).click();await page.getByRole('textbox',{name:'Название приглашения'}).fill('Знакомый из Уссурийска');await page.getByRole('button',{name:'Создать приглашение'}).click();
- const invitation=page.getByRole('dialog',{name:'Пригласить покупателя',exact:true});await expect(invitation.getByRole('textbox',{name:'Ваша ссылка'})).toHaveValue(/partner-invite\?code=i/);await invitation.getByRole('link',{name:'Посмотреть приглашение'}).click();
+ await page.getByRole('button',{name:'Не знаете номер? Отправить ссылку',exact:true}).click();await page.getByRole('button',{name:'Персональное приглашение',exact:true}).click();await page.getByRole('textbox',{name:'Название приглашения'}).fill('Знакомый из Уссурийска');await page.getByRole('button',{name:'Создать приглашение'}).click();
+ const invitation=page.getByRole('dialog',{name:'Отправить ссылку покупателю',exact:true});await expect(invitation.getByRole('textbox',{name:'Ваша ссылка'})).toHaveValue(/partner-invite\?code=i/);await invitation.getByRole('link',{name:'Посмотреть приглашение'}).click();
  await expect(page.getByRole('heading',{name:'Вас пригласил Анна Партнёр'})).toBeVisible();await page.getByRole('link',{name:'Посмотреть квартиры'}).click();
  await page.goto('/pulsedv/mini-app/#/profile');await page.getByRole('button',{name:'Связаться с PULSE.DV'}).click();
  const form=page.getByRole('dialog',{name:'Связаться с агентством',exact:true});await form.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Иван Покупатель');await form.getByRole('textbox',{name:'Телефон',exact:true}).fill('+79995550202');await form.getByRole('checkbox',{name:/Я даю согласие/}).check();await form.getByRole('checkbox',{name:/Подтверждаю, что меня пригласил/}).check();await form.getByRole('button',{name:'Отправить заявку',exact:true}).click();await expect(page.getByRole('heading',{name:'Обращение создано'})).toBeVisible();
@@ -35,7 +35,7 @@ for(const width of [320,390,430])test(`Partners ${width}px: invitation, buyer co
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect(errors).toEqual([]);
 });
 test('Buyer can decline referral sharing and normal consultation has no partner',async({page})=>{
- await seed(page);await page.goto('/pulsedv/mini-app/#/partners');await page.getByRole('textbox',{name:'Ваше имя для приглашения'}).fill('Анна');await page.getByRole('textbox',{name:'Ваш контактный телефон'}).fill('+79995550101');await page.getByRole('checkbox',{name:/Принимаю условия программы/}).check();await page.getByRole('button',{name:'Стать партнёром PULSE'}).click();await page.getByRole('button',{name:'Пригласить покупателя',exact:true}).click();await page.getByRole('link',{name:'Посмотреть приглашение'}).click();await page.getByRole('button',{name:'Получить консультацию',exact:false}).click();
+ await seed(page);await page.goto('/pulsedv/mini-app/#/partners');await page.getByRole('textbox',{name:'Ваше имя для приглашения'}).fill('Анна');await page.getByRole('textbox',{name:'Ваш контактный телефон'}).fill('+79995550101');await page.getByRole('checkbox',{name:/Принимаю условия программы/}).check();await page.getByRole('button',{name:'Стать партнёром PULSE'}).click();await page.getByRole('button',{name:'Не знаете номер? Отправить ссылку',exact:true}).click();await page.getByRole('link',{name:'Посмотреть приглашение'}).click();await page.getByRole('button',{name:'Получить консультацию',exact:false}).click();
  await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Без рекомендации');await page.getByRole('textbox',{name:'Телефон',exact:true}).fill('+79995550303');await page.getByRole('checkbox',{name:/Я даю согласие/}).check();await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();await expect(page.getByRole('heading',{name:'Обращение создано'})).toBeVisible();await page.goto('/pulsedv/control-center/#/partners');await expect(page.locator('.partnersGrid.leadRowButton')).toHaveCount(0);await page.goto('/pulsedv/control-center/#/leads');await expect(page.locator('.leadRowButton').filter({hasText:'Без рекомендации'})).toBeVisible();
 });
 
@@ -74,7 +74,7 @@ for(const width of [320,390])test(`Partner offer ${width}px: full document, publ
  await page.setViewportSize({width,height:844});await seed(page);await page.goto('/pulsedv/mini-app/#/partner-offer');
  await expect(page.getByRole('heading',{name:'Оферта партнёрской программы',exact:true})).toBeVisible();
  await expect(page.getByText('Шаблон публичной оферты',{exact:true})).toBeVisible();
- await expect(page.getByRole('heading',{name:'5. Закрепление на 6 календарных месяцев'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'5. Закрепление на 1 календарный месяц'})).toBeVisible();
  await expect(page.getByRole('heading',{name:'8. Недобросовестные действия и ответственность'})).toBeVisible();
  await expect(page.getByText(/В = К ×/)).toContainText('0,30');
  const back=page.getByRole('link',{name:'Вернуться к партнёрской программе'}),box=await back.boundingBox();expect(box!.x+box!.width).toBeLessThan(width/2);
@@ -82,13 +82,14 @@ for(const width of [320,390])test(`Partner offer ${width}px: full document, publ
  await page.screenshot({path:`test-results/partner-offer-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
  await back.click();await expect(page).toHaveURL(/#\/partners$/);
  await page.goto('/pulsedv/mini-app/#/partner-offer?version=partners-v1');await expect(page.getByText(/Срок закрепления в этой редакции не установлен/)).toBeVisible();
- await page.goto('/pulsedv/partner-offer/');await expect(page.getByRole('heading',{name:'Оферта партнёрской программы',exact:true})).toBeVisible();await expect(page.getByText('Шаблон для подготовки к запуску',{exact:true})).toBeVisible();await expect(page.locator('body')).toHaveAttribute('data-version','partners-v3-2026-10-16');
+ await page.goto('/pulsedv/mini-app/#/partner-offer?version=partners-v3-2026-10-16');await expect(page.getByRole('heading',{name:'5. Закрепление на 6 календарных месяцев'})).toBeVisible();
+ await page.goto('/pulsedv/partner-offer/');await expect(page.getByRole('heading',{name:'Оферта партнёрской программы',exact:true})).toBeVisible();await expect(page.getByText('Шаблон для подготовки к запуску',{exact:true})).toBeVisible();await expect(page.locator('body')).toHaveAttribute('data-version','partners-v4-2026-10-18');
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 
 test('Partner cabinet refreshes by standard action and return, without pull or polling',async({page})=>{
  await seed(page);await page.goto('/pulsedv/mini-app/#/partners');await page.getByRole('textbox',{name:'Ваше имя для приглашения'}).fill('Анна');await page.getByRole('textbox',{name:'Ваш контактный телефон'}).fill('+79995550101');await page.getByRole('checkbox',{name:/Принимаю условия программы/}).check();await page.getByRole('button',{name:'Стать партнёром PULSE'}).click();
- const invite=page.getByRole('button',{name:'Пригласить покупателя',exact:true});await expect(invite).toBeEnabled();await page.clock.install();
+ const invite=page.getByRole('button',{name:'Не знаете номер? Отправить ссылку',exact:true});await expect(invite).toBeEnabled();await page.clock.install();
  await page.evaluate(()=>{const s=JSON.parse(localStorage.getItem('pulse.partners.v1')!);s.partners[0].status='paused';localStorage.setItem('pulse.partners.v1',JSON.stringify(s))});
  await page.clock.runFor(35000);await expect(invite).toBeEnabled();await expect(page.getByText(/Новые приглашения временно недоступны/)).toHaveCount(0);
  await expect(page.locator('[data-refreshing]')).toHaveCount(0);await expect(page.getByText(/потяните вниз для обновления|Обновлено/)).toHaveCount(0);await page.getByRole('button',{name:'Обновить рекомендации'}).click();
@@ -99,11 +100,11 @@ test('Partner cabinet refreshes by standard action and return, without pull or p
 
 test('Existing partner reads the archive and explicitly accepts the new offer before inviting again',async({page})=>{
  await seed(page);await page.addInitScript(()=>{if(localStorage.getItem('pulse.partners.v1'))return;localStorage.setItem('pulse.partners.v1',JSON.stringify({myPartnerId:'old-partner',partners:[{id:'old-partner',userId:null,name:'Анна',phone:'+79995550101',code:'p01234567890123456789',status:'active',termsVersion:'partners-v1',createdAt:new Date().toISOString()}],invitations:[],referrals:[],rewards:[]}))});
- await page.goto('/pulsedv/mini-app/#/partners');const invite=page.getByRole('button',{name:'Пригласить покупателя',exact:true});await expect(invite).toBeDisabled();
+ await page.goto('/pulsedv/mini-app/#/partners');const invite=page.getByRole('button',{name:'Не знаете номер? Отправить ссылку',exact:true});await expect(invite).toBeDisabled();
  await expect(page.getByRole('button',{name:'Принять новую редакцию'})).toHaveCount(0);
  await page.getByRole('link',{name:'Оферта и принятая редакция'}).click();await expect(page.getByText(/Срок закрепления в этой редакции не установлен/)).toBeVisible();await page.getByRole('link',{name:'Вернуться к партнёрской программе'}).click();
  await page.getByRole('button',{name:'Ознакомиться',exact:true}).click();const accept=page.getByRole('button',{name:'Принять новую редакцию'});await expect(accept).toBeDisabled();await page.getByRole('checkbox',{name:'Принимаю новую редакцию условий программы'}).check();await accept.click();await expect(invite).toBeEnabled();await expect(accept).toHaveCount(0);
- expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pulse.partners.v1')!).partners[0].termsVersion)).toBe('partners-v3-2026-10-16');
+ expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pulse.partners.v1')!).partners[0].termsVersion)).toBe('partners-v4-2026-10-18');
 });
 
 test('Control keeps the first numeric edit when the payout drawer opens repeatedly',async({page})=>{
@@ -124,7 +125,7 @@ for(const width of [320,390,430])test(`Partner cabinet ${width}px: shared tabs, 
  await dialog.getByRole('checkbox',{name:'Принимаю новую редакцию условий программы'}).check();await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
  await page.getByRole('button',{name:'Ознакомиться',exact:true}).click();await expect(dialog.getByRole('checkbox',{name:'Принимаю новую редакцию условий программы'})).not.toBeChecked();
  await dialog.getByRole('checkbox',{name:'Принимаю новую редакцию условий программы'}).check();await page.screenshot({path:`test-results/partner-cabinet-accept-${browserName}-${width}.png`,animations:'disabled'});await dialog.getByRole('button',{name:'Принять новую редакцию'}).click();await expect(dialog).toHaveCount(0);
- await expect(page.getByRole('button',{name:'Пригласить покупателя',exact:true})).toBeEnabled();await expect(page.getByRole('button',{name:'Ознакомиться',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Не знаете номер? Отправить ссылку',exact:true})).toBeEnabled();await expect(page.getByRole('button',{name:'Ознакомиться',exact:true})).toHaveCount(0);
  await page.screenshot({path:`test-results/partner-cabinet-ready-${browserName}-${width}.png`,animations:'disabled'});
  await page.getByRole('tab',{name:'Мои клиенты',exact:true}).focus();await page.keyboard.press('End');await expect(page.getByRole('tab',{name:'Выплаты',exact:true})).toHaveAttribute('aria-selected','true');await expect(page.getByText('Начислений пока нет',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Посмотреть пример',exact:true}).click();await expect(page.getByRole('dialog',{name:'Как считается вознаграждение'})).toContainText('28 200 ₽');await page.keyboard.press('Escape');
@@ -134,4 +135,20 @@ for(const width of [320,390,430])test(`Partner cabinet ${width}px: shared tabs, 
 test('Expired claim explains late commission eligibility without promising a new claim',async({page})=>{
  await seed(page);await page.addInitScript(()=>{const now=new Date().toISOString();localStorage.setItem('pulse.partners.v1',JSON.stringify({myPartnerId:'partner',partners:[{id:'partner',name:'Анна',phone:'+79995550101',code:'p01234567890123456789',status:'active',termsVersion:'partners-v3-2026-10-16',createdAt:now}],invitations:[],referrals:[{id:'expired',partnerId:'partner',partnerName:'Анна',leadId:null,invitationId:null,clientName:'Иван Покупатель',termsVersion:'partners-v3-2026-10-16',status:'accepted',stage:'booking',claimStartedOn:'2000-01-01',claimExpiresOn:'2000-07-01',conflict:false,rejectionReason:null,revision:2,createdAt:now,acceptedAt:now,events:[],phone:'+79995550202'}],rewards:[]}))});
  await page.goto('/pulsedv/mini-app/#/partners');await page.getByRole('button',{name:/Иван П/}).click();const dialog=page.getByRole('dialog',{name:'Иван П.'});await expect(dialog).toContainText('Срок закрепления завершён');await expect(dialog).toContainText('Если покупка состоялась в срок');await expect(dialog).not.toContainText('Клиент закреплён за вами');await expect(dialog).not.toContainText('+79995550202');
+});
+
+for(const width of [320,390,430])test(`Partner guide ${width}px: first visit, repeat help, one starting action and no implied consent`,async({page,browserName})=>{
+ await page.setViewportSize({width,height:844});await page.emulateMedia({reducedMotion:'reduce'});await seed(page,true);
+ await page.goto('/pulsedv/mini-app/#/partners');
+ const guide=page.getByRole('dialog',{name:'Как привести клиента и получить выплату',exact:true});
+ await expect(guide).toBeVisible();await expect(guide).toContainText('1 календарный месяц');await expect(guide).toContainText('7 дней');await expect(guide).toContainText('тот же номер');
+ await expect(guide.getByRole('checkbox')).toHaveCount(0);
+ await page.screenshot({path:`test-results/partner-guide-${browserName}-${width}.png`,animations:'disabled'});
+ await guide.getByRole('button',{name:'Понятно, начнём',exact:true}).click();await expect(guide).toHaveCount(0);await expect(page.getByRole('checkbox',{name:/Принимаю условия программы/})).not.toBeChecked();
+ await page.reload();await expect(guide).toHaveCount(0);await page.getByRole('button',{name:'Как закрепить клиента и получить выплату',exact:true}).click();await expect(guide).toBeVisible();await page.keyboard.press('Escape');
+ await page.getByRole('textbox',{name:'Ваше имя для приглашения'}).fill('Анна');await page.getByRole('textbox',{name:'Ваш контактный телефон'}).fill('+79995550101');await page.getByRole('checkbox',{name:/Принимаю условия программы/}).check();await page.getByRole('button',{name:'Стать партнёром PULSE'}).click();
+ await expect(page.getByRole('button',{name:'Добавить клиента',exact:true})).toBeEnabled();await expect(page.getByRole('button',{name:'Персональное приглашение',exact:true})).toHaveCount(0);
+ await page.screenshot({path:`test-results/partner-clear-start-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
+ await page.getByRole('button',{name:'Добавить клиента',exact:true}).click();const form=page.getByRole('dialog',{name:'Добавить клиента',exact:true});await expect(form).toContainText('Шаг 1 из 2');await expect(form.getByRole('checkbox')).not.toBeChecked();await expect(form.getByRole('button',{name:'Проверить номер',exact:true})).toBeDisabled();
+ await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

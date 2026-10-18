@@ -1,6 +1,6 @@
 import {api,visitorApi,runtime} from '../pulse-data/runtime';
 import {listPulseLeads} from '../pulse-data';
-import {claimExpiresOn,claimDateError,hasSixMonthClaim} from './policy';
+import {claimExpiresOn,claimDateError,claimMonths} from './policy';
 import {businessDay} from '../pulse-data/business';
 import {PARTNER_TERMS_VERSION,partnerReward,partnerRejectReasons,partnerStageLabels,publicClientName,normalizePartnerPhone,type Partner,type PartnerInvite,type PartnerReferral,type PartnerReward,type PartnerCabinet,type PartnerRejectReason} from './model';
 type LocalReferral=PartnerReferral&{phone:string;lastStage:string;lastReceivedOn:string|null;attributionCode:string};
@@ -65,7 +65,7 @@ export async function getLeadPartner(leadId:string){if(runtime.enabled)return ap
 export async function reviewPartnerReferral(id:string,input:{revision:number;decision:'accept'|'reject';contactConfirmed:boolean;note:string;reason?:PartnerRejectReason}){
  if(runtime.enabled)return api('/control/partner-referrals/'+id+'/review',{method:'POST',body:JSON.stringify(input)});
  const s=read(),r=s.referrals.find(r=>r.id===id);if(!r||r.status!=='pending'||r.revision!==input.revision)throw new Error('Рекомендация уже рассмотрена');if(input.note.trim().length<2)throw new Error('Укажите результат проверки');
- if(input.decision==='accept'){if(!input.contactConfirmed)throw new Error('Подтвердите контакт с покупателем');if(clash(s,r).length)throw new Error('Есть совпадение в CRM или более ранняя рекомендация');r.status='accepted';r.acceptedAt=now();if(r.termsVersion&&hasSixMonthClaim(r.termsVersion)){r.claimStartedOn=businessDay();r.claimExpiresOn=claimExpiresOn(r.claimStartedOn);}event(r,'accepted','Клиент проверен и закреплён за партнёром');event(r,'stage',partnerStageLabels[r.stage]);}
+ if(input.decision==='accept'){if(!input.contactConfirmed)throw new Error('Подтвердите контакт с покупателем');if(clash(s,r).length)throw new Error('Есть совпадение в CRM или более ранняя рекомендация');r.status='accepted';r.acceptedAt=now();if(r.termsVersion&&claimMonths(r.termsVersion)){r.claimStartedOn=businessDay();r.claimExpiresOn=claimExpiresOn(r.claimStartedOn,claimMonths(r.termsVersion));}event(r,'accepted','Клиент проверен и закреплён за партнёром');event(r,'stage',partnerStageLabels[r.stage]);}
  else{if(!input.reason)throw new Error('Укажите причину отказа');r.status='rejected';r.rejectionReason=input.reason;event(r,'rejected',partnerRejectReasons[input.reason]);}r.reviewNote=input.note;r.revision++;write(s);return {ok:true};
 }
 export async function accruePartnerReward(id:string,revision:number,dealOn?:string){
