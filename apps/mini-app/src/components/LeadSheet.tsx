@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Input } from "./Input";
 import { postLead } from "../endpoints/leads_POST.schema";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
-import {rememberedPartnerInvite,subscribePartners} from "../../../../packages/partners/client";
+import {rememberedPartnerInvite,subscribePartners,clearPartnerInvite} from "../../../../packages/partners/client";
 import styles from "./LeadSheet.module.css";
 import {PersonalDataConsentDocument} from "../pages/personal-data-consent";
 
@@ -29,7 +29,10 @@ export function LeadSheet({children,title="Получить консультац
   const [invitation,setInvitation]=React.useState(rememberedPartnerInvite);
   const [referralConsent,setReferralConsent]=React.useState(false);
   React.useEffect(()=>subscribePartners(()=>setInvitation(rememberedPartnerInvite())),[]);
-  const activeCode=referralCode||invitation?.code;
+  const [declinedCode,setDeclinedCode]=React.useState<string>();
+  const candidateCode=referralCode||invitation?.code;
+  const activeCode=candidateCode!==declinedCode?candidateCode:undefined;
+  React.useEffect(()=>setReferralConsent(false),[activeCode]);
   const activeName=referralName||invitation?.partnerName;
 
   const submit=async(e:React.FormEvent)=>{
@@ -48,6 +51,8 @@ export function LeadSheet({children,title="Получить консультац
 
   return <Sheet onOpenChange={(open)=>{
     if(open){
+      setInvitation(rememberedPartnerInvite());
+      setReadingConsent(false);
       recordPulseEvent({eventType:"lead_form_open",entityType:propertyId?"property":"funnel",entityId:propertyId||source,metadata:{source,project:project||null}});
     }else{setReadingConsent(false);if(sent){key.current=crypto.randomUUID();setName("");setPhone("");}setConsent(false);setReferralConsent(false);setSent(false);setError(null)}
   }}>
@@ -61,6 +66,7 @@ export function LeadSheet({children,title="Получить консультац
           <label><span>Телефон</span><Input value={phone} onChange={(e)=>setPhone(e.target.value)} placeholder="+7 999 000-00-00" type="tel" inputMode="tel" autoComplete="tel" maxLength={24} required/></label>
           <label className={styles.consentRow}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} required/><span>Я даю <button type="button" onClick={()=>setReadingConsent(true)}>согласие на обработку персональных данных</button> для обработки моего обращения и подбора недвижимости.</span></label>
           {activeCode&&<label className={styles.consentRow}><input type="checkbox" checked={referralConsent} onChange={e=>setReferralConsent(e.target.checked)}/><span>Подтверждаю, что меня пригласил(а) {activeName||"партнёр PULSE"}. Согласен передавать этому партнёру моё имя, этапы покупки и результат рекомендации, включая начисление и выплату вознаграждения. Телефон, переписка и документы ему не передаются.</span></label>}
+          {activeCode&&<button type="button" className={styles.clearInvitation} onClick={()=>{setDeclinedCode(activeCode);setReferralConsent(false);clearPartnerInvite()}}>Я обратился самостоятельно</button>}
           {error&&<div className={styles.error}>{error}</div>}
           <button className={styles.submit} type="submit" disabled={sending||!consent}>{sending?"Отправляем…":"Отправить заявку"} <Send size={16}/></button>
           <small>{runtime.enabled?<><Link to="/privacy">Политика обработки персональных данных</Link></>:"Тестовая заявка · без отправки менеджеру."}</small>
