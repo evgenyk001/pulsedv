@@ -22,7 +22,7 @@ for(const code of [common,personal])test(`Own saved invitation ${code[0]} does n
  for(const name of ['Оставить заявку менеджеру','Связаться с PULSE.DV']){
   await page.getByRole('button',{name,exact:true}).click();
   const form=page.getByRole('dialog');await expect(form.getByRole('checkbox')).toHaveCount(1);
-  await expect(form).not.toContainText('меня пригласил');
+  await expect(form).not.toContainText('меня пригласил');expect(await page.evaluate(key=>localStorage.getItem(key),attr)).toBeNull();
   await form.getByRole('button',{name:'Закрыть заявку',exact:true}).click();await expect(form).toHaveCount(0);
  }
 });
