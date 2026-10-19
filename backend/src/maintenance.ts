@@ -18,6 +18,9 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
  const media:{leadId:string;legacy:string[]}[]=[];
 
  const result=await db.transaction(async sql=>{
+  await sql.query("delete from antifraud_observations where last_seen_at<now()-interval '90 days'");
+  await sql.query("delete from antifraud_devices where last_seen_at<now()-interval '180 days'");
+  await sql.query("delete from partner_security_attempts where created_at<now()-interval '90 days'");
   await sql.query("delete from partner_client_reservations where converted_referral_id is null and expires_at<now()-interval '30 days'");
   await sql.query('delete from auth_tokens where expires_at<=now()');
   await sql.query('delete from control_login_challenges where expires_at<now()-interval \'1 day\' or consumed_at is not null and consumed_at<now()-interval \'1 day\'');
@@ -35,6 +38,8 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
    for(const url of item.legacy)await sql.query('insert into media_cleanup(path) values($1) on conflict do nothing',[url.slice('/media/'.length)]);
   }
   if(leadIds.length){
+   await sql.query('delete from partner_risk_reviews where referral_id in(select id from partner_referrals where lead_id=any($1::uuid[]))',[leadIds]);
+   await sql.query('update partner_referrals set antifraud_device_id=null,antifraud_ip_hash=null,antifraud_initial=null where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query("update partner_invitations set label='Архивная рекомендация' where id in(select invitation_id from partner_referrals where lead_id=any($1::uuid[]))",[leadIds]);
    await sql.query('update partner_client_reservations set normalized_phone=null where converted_referral_id in(select id from partner_referrals where lead_id=any($1::uuid[]))',[leadIds]);
    await sql.query('update partner_client_claims set normalized_phone=null,buyer_user_id=null where referral_id in(select id from partner_referrals where lead_id=any($1::uuid[]))',[leadIds]);
@@ -45,7 +50,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
    await sql.query('delete from client_journeys where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query('delete from crm_tasks where lead_id=any($1::uuid[])',[leadIds]);
    await sql.query('delete from lead_score_history where lead_id=any($1::uuid[])',[leadIds]);
-   await sql.query("update leads set user_id=null,session_id=null,idempotency_key=null,submission_fingerprint=null,name='Удалено',phone='Удалено',comment=null,loss_note=null,request_context='{}'::jsonb,manager_id=null,score=0,priority='cold',score_reasons='[]'::jsonb,top_property_id=null,city=null,mortgage_program=null,next_action=null where id=any($1::uuid[])",[leadIds]);
+   await sql.query("update leads set user_id=null,session_id=null,idempotency_key=null,submission_fingerprint=null,name='Удалено',phone='Удалено',comment=null,loss_note=null,request_context='{}'::jsonb,antifraud_device_id=null,manager_id=null,score=0,priority='cold',score_reasons='[]'::jsonb,top_property_id=null,city=null,mortgage_program=null,next_action=null where id=any($1::uuid[])",[leadIds]);
   }
 
   const sessionRows=(await sql.query("select s.id from sessions s where s.last_seen_at<$1 and not exists(select 1 from leads l where l.session_id=s.id) limit 2000",[clientCutoff])).rows;

@@ -1,3 +1,4 @@
+import {assessPartnerRisk,recordRiskReview,requireRiskReviewed} from './partnerAntifraud';
 import {randomBytes,createHash,randomUUID} from 'node:crypto';
 import {offerText,offerSections,OFFER_VERSION,OFFER_VERSIONS} from '../../packages/partners/offer';
 import {claimExpiresOn,claimDateError,claimMonths} from '../../packages/partners/policy';
@@ -43,18 +44,14 @@ export async function preparePartnerReferral(sql:Sql,code:string|undefined,buyer
  }
  return partner;
 }
-export async function attachPartnerReferral(sql:Sql,leadId:string,buyerUserId:string|null,phone:string,code:string,partner:any){
+export async function attachPartnerReferral(sql:Sql,leadId:string,buyerUserId:string|null,phone:string,code:string,partner:any,deviceId?:string,ipHash?:string){
  if(normalizePartnerPhone(partner.phone)===phone)throw new HttpError(400,'Собственная покупка не участвует в программе рекомендаций');
  const row=(await sql.query('insert into partner_referrals(partner_id,invitation_id,lead_id,buyer_user_id,normalized_phone,terms_version,attribution_code) values($1,$2,$3,$4,$5,$6,$7) returning id',[partner.id,partner.invitation_id,leadId,buyerUserId,phone,partner.terms_version,code])).rows[0];
  await partnerEvent(sql,row.id,'submitted','Покупатель подтвердил рекомендацию. Проверяем уникальность');
- if(partner.reservation&&buyerUserId){
-  const start=businessDay();
-  await sql.query('insert into partner_client_claims(referral_id,normalized_phone,buyer_user_id) values($1,$2,$3)',[row.id,phone,buyerUserId]);
-  await sql.query("update partner_referrals set status='accepted',accepted_at=now(),claim_started_on=$2,claim_expires_on=$3,review_note='Автоматическая проверка CRM и подтверждение покупателя',revision=revision+1 where id=$1",[row.id,start,claimExpiresOn(start,claimMonths(partner.terms_version))]);
-  await sql.query('update partner_client_reservations set converted_referral_id=$2 where id=$1',[partner.reservation.id,row.id]);
-  await partnerEvent(sql,row.id,'accepted','Уникальность проверена автоматически. Клиент закреплён за партнёром на 1 месяц');
-  await partnerEvent(sql,row.id,'stage',partnerStageLabels.new);
- }
+ await sql.query('update partner_referrals set antifraud_device_id=$2,antifraud_ip_hash=$3 where id=$1',[row.id,deviceId??null,ipHash??null]);
+ const risk=await assessPartnerRisk(sql,row.id);
+ await sql.query('update partner_referrals set antifraud_initial=$2::jsonb where id=$1',[row.id,JSON.stringify(risk)]);
+ await partnerEvent(sql,row.id,'manual_review','Рекомендация получена. Ожидает проверки команды PULSE');
  return row.id as string;
 }
 // Compare timestamps inside PostgreSQL: JavaScript Date would discard microseconds.
@@ -86,6 +83,7 @@ async function requireUniqueForFinance(sql:Sql,r:any){
  const clash=await conflicts(sql,r);
  if(clash.self)throw new HttpError(409,'Собственная покупка не участвует в партнёрском вознаграждении');
  if(clash.matches.length||clash.claimed.length)throw new HttpError(409,'Выявлено совпадение покупателя. Разберите закрепление перед начислением или выплатой');
+ await requireRiskReviewed(sql,r);
 }
 const reservationSelect=`select b.*,i.code,i.label,exists(select 1 from partner_referrals r where r.partner_id=b.partner_id and r.invitation_id=b.invitation_id) as submitted from partner_client_reservations b join partner_invitations i on i.id=b.invitation_id`;
 function reservationDto(row:any){return {id:row.id,code:row.code,label:row.label,phoneHint:'••• '+row.normalized_phone.slice(-4),submitted:row.submitted===true,expiresAt:row.expires_at instanceof Date?row.expires_at.toISOString():row.expires_at,createdAt:row.created_at instanceof Date?row.created_at.toISOString():row.created_at};}
@@ -107,9 +105,10 @@ async function referralDtos(sql:Sql,rows:any[],privateView:boolean):Promise<Part
  const ids=rows.map(r=>r.id);
  const events=(await sql.query('select id,referral_id,kind,label,created_at from partner_referral_events where referral_id=any($1::uuid[]) order by sequence',[ids])).rows.map(camelRow);
  const rewards=(await sql.query("select * from partner_rewards where referral_id=any($1::uuid[]) order by (status='void'),created_at desc,id desc",[ids])).rows.map(r=>rewardDto(r,privateView));
+ const riskReviews=privateView?(await sql.query('select v.id,v.referral_id,v.stage,v.note,v.created_at,m.name as reviewer_name from partner_risk_reviews v left join team_members m on m.id=v.reviewer_id where v.referral_id=any($1::uuid[]) order by v.created_at desc,v.id desc',[ids])).rows.map(camelRow):[];
  return Promise.all(rows.map(async r=>{
   const clash=privateView?await conflicts(sql,{...r,buyer_user_id:r.buyer_user_id??r.lead_user_id}):null;
-  return {id:r.id,partnerId:r.partner_id,partnerName:r.partner_name,leadId:privateView?r.lead_id:null,invitationId:r.invitation_id,clientName:privateView?r.client_name:publicClientName(r.client_name||'Покупатель'),...(privateView?{clientPhone:r.client_phone,reviewNote:r.review_note||'',conflictLeads:clash!.matches.map(m=>({id:m.id,label:m.name+' · '+m.phone})),conflictDetails:clash!.matches.map(m=>m.name+' · '+m.phone+(m.partner_name?' · партнёр '+m.partner_name:' · прямое обращение')).join('\n')+(clash!.claimed.length?'\nЕсть подтверждённое закрепление':'')+(clash!.self?'\nСобственная покупка партнёра':'')}:{ }),termsVersion:r.terms_version,claimStartedOn:dateOnly(r.claim_started_on),claimExpiresOn:dateOnly(r.claim_expires_on),dealConfirmedOn:dateOnly(r.deal_confirmed_on),status:r.status,stage:r.stage,stageLabel:partnerStageLabels[r.stage]||'Обращение',conflict:!!clash&&(clash.matches.length>0||clash.claimed.length>0||clash.self),rejectionReason:r.rejection_reason,revision:r.revision,createdAt:r.created_at instanceof Date?r.created_at.toISOString():r.created_at,acceptedAt:r.accepted_at instanceof Date?r.accepted_at.toISOString():r.accepted_at,events:events.filter(e=>e.referralId===r.id) as any,reward:rewards.find(w=>w.referralId===r.id)??null};
+  return {id:r.id,partnerId:r.partner_id,partnerName:r.partner_name,leadId:privateView?r.lead_id:null,invitationId:r.invitation_id,clientName:privateView?r.client_name:publicClientName(r.client_name||'Покупатель'),...(privateView?{clientPhone:r.client_phone,reviewNote:r.review_note||'',antifraud:await assessPartnerRisk(sql,r.id),riskReviews:riskReviews.filter(v=>v.referralId===r.id).map(v=>({id:v.id,stage:v.stage,note:v.note,reviewerName:v.reviewerName,createdAt:v.createdAt})),conflictLeads:clash!.matches.map(m=>({id:m.id,label:m.name+' · '+m.phone})),conflictDetails:clash!.matches.map(m=>m.name+' · '+m.phone+(m.partner_name?' · партнёр '+m.partner_name:' · прямое обращение')).join('\n')+(clash!.claimed.length?'\nЕсть подтверждённое закрепление':'')+(clash!.self?'\nСобственная покупка партнёра':'')}:{ }),termsVersion:r.terms_version,claimStartedOn:dateOnly(r.claim_started_on),claimExpiresOn:dateOnly(r.claim_expires_on),dealConfirmedOn:dateOnly(r.deal_confirmed_on),status:r.status,stage:r.stage,stageLabel:partnerStageLabels[r.stage]||'Обращение',conflict:!!clash&&(clash.matches.length>0||clash.claimed.length>0||clash.self),rejectionReason:r.rejection_reason,revision:r.revision,createdAt:r.created_at instanceof Date?r.created_at.toISOString():r.created_at,acceptedAt:r.accepted_at instanceof Date?r.accepted_at.toISOString():r.accepted_at,events:events.filter(e=>e.referralId===r.id) as any,reward:rewards.find(w=>w.referralId===r.id)??null};
  }));
 }
 function referralFilter(filter:string){
@@ -200,6 +199,8 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
    if(held)return held.partner_id===p.id?{outcome:'reserved',message:'Этот номер уже забронирован за вами',reservation:reservationDto(held)}:{outcome:'not_unique',message:'Клиента нельзя добавить: он уже обращался к нам или закреплён. Если нужна проверка результата, напишите команде PULSE'};
    const count=Number((await sql.query("select count(*) as n from partner_client_reservations where partner_id=$1 and created_at>now()-interval '1 day'",[p.id])).rows[0].n);
    if(count>=20)throw new HttpError(429,'На сегодня доступно 20 проверок с бронью. Для большего потока свяжитесь с PULSE');
+   const activeCount=Number((await sql.query("select count(*) as n from partner_client_reservations where partner_id=$1 and released_at is null and converted_referral_id is null and expires_at>now()",[p.id])).rows[0].n);
+   if(activeCount>=20)throw new HttpError(429,'Достигнут лимит 20 активных броней. Дождитесь подтверждения покупателей или свяжитесь с PULSE');
    await sql.query('update partner_client_reservations set released_at=now() where normalized_phone=$1 and released_at is null and converted_referral_id is null and expires_at<=now()',[input.phone]);
    const invitation=(await sql.query('insert into partner_invitations(id,partner_id,code,label) values($1,$2,$3,$4) returning *',[randomUUID(),p.id,token('i'),input.label])).rows[0];
    const row=(await sql.query('insert into partner_client_reservations(id,partner_id,invitation_id,normalized_phone) values($1,$2,$3,$4) returning *',[input.idempotencyKey,p.id,invitation.id,input.phone])).rows[0];
@@ -218,7 +219,7 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
   const reservationTotal=Number((await db.query('select count(*) as n from partner_client_reservations where released_at is null and converted_referral_id is null and expires_at>now()')).rows[0].n);
   const rows=(await db.query(referralSelect+' where true'+referralFilter(q.filter)+' order by r.created_at desc,r.id limit $1 offset $2',[q.limit,(q.page-1)*q.limit])).rows;
   const counts=(await db.query("select count(*)::int as total,count(*) filter(where status='pending')::int as pending,count(*) filter(where exists(select 1 from partner_rewards w where w.referral_id=r.id and w.status='requested'))::int as requested,count(*) filter(where "+referralFilter('conflicts').slice(5)+")::int as conflicts from partner_referrals r")).rows[0];
-  return {reservationTotal,reservationPage:q.reservationPage,reservationHasMore:q.reservationPage*30<reservationTotal,counts,reservations:(await db.query(reservationSelect.replace('select b.*','select p.name as partner_name,b.*')+" join partner_profiles p on p.id=b.partner_id where b.released_at is null and b.converted_referral_id is null and b.expires_at>now() order by b.created_at desc,b.id limit 30 offset $1",[(q.reservationPage-1)*30])).rows.map(row=>({...reservationDto(row),partnerName:row.partner_name,phone:row.normalized_phone})),partners:(await db.query('select * from partner_profiles order by created_at desc limit 100')).rows.map(camelRow),referrals:await referralDtos(db,rows,true),page:q.page,total,hasMore:q.page*q.limit<total};
+  return {securityAttempts:(await db.query('select a.id,a.reason,a.created_at,p.name as partner_name from partner_security_attempts a left join partner_profiles p on p.id=a.partner_id order by a.created_at desc,a.id desc limit 20')).rows.map(camelRow),reservationTotal,reservationPage:q.reservationPage,reservationHasMore:q.reservationPage*30<reservationTotal,counts,reservations:(await db.query(reservationSelect.replace('select b.*','select p.name as partner_name,b.*')+" join partner_profiles p on p.id=b.partner_id where b.released_at is null and b.converted_referral_id is null and b.expires_at>now() order by b.created_at desc,b.id limit 30 offset $1",[(q.reservationPage-1)*30])).rows.map(row=>({...reservationDto(row),partnerName:row.partner_name,phone:row.normalized_phone})),partners:(await db.query('select * from partner_profiles order by created_at desc limit 100')).rows.map(camelRow),referrals:await referralDtos(db,rows,true),page:q.page,total,hasMore:q.page*q.limit<total};
  });
  app.get('/api/v1/control/partner-referrals/:id',{preHandler:editor},async request=>{
   const id=z.uuid().parse((request.params as any).id);const rows=(await db.query(referralSelect+' where r.id=$1',[id])).rows;if(!rows.length)throw new HttpError(404,'Рекомендация не найдена');return {referral:(await referralDtos(db,rows,true))[0]};
@@ -243,7 +244,7 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
   return db.transaction(async sql=>{const changed=await sql.query('update partner_profiles set status=$2 where id=$1 returning id',[id,input.status]);if(!changed.rows.length)throw new HttpError(404,'Партнёр не найден');await audit(sql,request.member!.id,'partner.status',id,input);return {ok:true};});
  });
  app.post('/api/v1/control/partner-referrals/:id/review',{preHandler:owner},async request=>{
-  const id=z.uuid().parse((request.params as any).id),input=z.object({revision:z.number().int().positive(),decision:z.enum(['accept','reject']),contactConfirmed:z.boolean(),reason:z.enum(['existing','duplicate','self','unconfirmed','fraud','other']).optional(),note:z.string().trim().min(2).max(1000)}).strict().parse(request.body);
+  const id=z.uuid().parse((request.params as any).id),input=z.object({revision:z.number().int().positive(),decision:z.enum(['accept','reject']),contactConfirmed:z.boolean(),riskAcknowledged:z.boolean().default(false),riskFingerprint:z.string().regex(/^[a-f0-9]{64}$/).optional(),reason:z.enum(['existing','duplicate','self','unconfirmed','fraud','other']).optional(),note:z.string().trim().min(2).max(1000)}).strict().parse(request.body);
   return db.transaction(async sql=>{
    const {r,lead}=await lockReferral(sql,id);
    if(r.revision!==input.revision||r.status!=='pending')throw new HttpError(409,'Рекомендация уже рассмотрена или изменилась');
@@ -252,6 +253,7 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
     const p=(await sql.query('select * from partner_profiles where id=$1',[r.partner_id])).rows[0];
     if((p.user_id&&p.user_id===r.buyer_user_id)||p.phone===r.normalized_phone)throw new HttpError(409,'Собственная покупка не участвует в программе');
     const clash=await conflicts(sql,r);if(clash.matches.length||clash.claimed.length)throw new HttpError(409,'Найдено совпадение в CRM или более ранняя рекомендация. Разберите совпадение перед закреплением');
+    await recordRiskReview(sql,id,request.member!.id,input.note,'accept',input.riskFingerprint,input.riskAcknowledged);
     await sql.query('insert into partner_client_claims(referral_id,normalized_phone,buyer_user_id) values($1,$2,$3)',[id,r.normalized_phone,r.buyer_user_id]);
     await sql.query('update partner_client_reservations set converted_referral_id=$3 where normalized_phone=$1 and partner_id=$2 and released_at is null and converted_referral_id is null',[r.normalized_phone,r.partner_id,id]);
     const start=claimMonths(r.terms_version)?businessDay():null;
@@ -264,13 +266,25 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
    await audit(sql,request.member!.id,'partner.review',id,{decision:input.decision});return {ok:true};
   });
  });
+ app.post('/api/v1/control/partner-referrals/:id/risk-review',{preHandler:owner},async request=>{
+  const id=z.uuid().parse((request.params as any).id),input=z.object({revision:z.number().int().positive(),contactConfirmed:z.literal(true),riskAcknowledged:z.boolean(),riskFingerprint:z.string().regex(/^[a-f0-9]{64}$/),note:z.string().trim().min(10).max(1000)}).strict().parse(request.body);
+  return db.transaction(async sql=>{
+   const {r,lead}=await lockReferral(sql,id);
+   if(r.revision!==input.revision||r.status!=='accepted'||!lead?.consent_at)throw new HttpError(409,'Обновите закрепление перед проверкой');
+   const clash=await conflicts(sql,r);if(clash.self||clash.matches.length||clash.claimed.length)throw new HttpError(409,'Сначала разберите конфликт покупателя');
+   await recordRiskReview(sql,id,request.member!.id,input.note,'finance',input.riskFingerprint,input.riskAcknowledged);
+   await sql.query('update partner_referrals set reviewed_by=$2,revision=revision+1 where id=$1',[id,request.member!.id]);
+   await audit(sql,request.member!.id,'partner.risk.review',id,{note:input.note,fingerprint:input.riskFingerprint});return {ok:true};
+  });
+ });
  app.post('/api/v1/control/partner-referrals/:id/accrue',{preHandler:owner},async request=>{
   const id=z.uuid().parse((request.params as any).id);const {revision,dealOn:inputDealOn}=z.object({revision:z.number().int().positive(),dealOn:z.iso.date().optional()}).strict().parse(request.body);
   return db.transaction(async sql=>{
    const {r,lead}=await lockReferral(sql,id);
-   const old=(await sql.query("select * from partner_rewards where referral_id=$1 and status<>'void'",[id])).rows[0];if(old)return {ok:true,reward:rewardDto(old,true)};
-   if(r.revision!==revision||r.status!=='accepted')throw new HttpError(409,'Сначала подтвердите актуальное закрепление');
+   if(r.status!=='accepted')throw new HttpError(409,'Сначала подтвердите актуальное закрепление');
    await requireUniqueForFinance(sql,r);
+   const old=(await sql.query("select * from partner_rewards where referral_id=$1 and status<>'void'",[id])).rows[0];if(old)return {ok:true,reward:rewardDto(old,true)};
+   if(r.revision!==revision)throw new HttpError(409,'Сначала подтвердите актуальное закрепление');
    if(!lead||!['deal','closed'].includes(lead.status)||!lead.finance?.receivedOn||!lead.finance?.commissionRub||lead.finance.receivedOn>businessDay())throw new HttpError(400,'Нужны завершённая сделка и фактическое поступление комиссии в карточке клиента');
    const date=dateOnly;const dealOn=inputDealOn||date(r.deal_confirmed_on)||businessDay();const error=claimDateError(date(r.claim_started_on),date(r.claim_expires_on),dealOn);if(error)throw new HttpError(400,error);
    await sql.query('update partner_referrals set deal_confirmed_on=$2 where id=$1',[id,dealOn]);

@@ -27,6 +27,7 @@ test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirm
  const login=async(email:string)=>{const r=await post('/api/v1/control/login',{email,password});assert.equal(r.statusCode,200,r.body);return {pulse_control:r.cookies.find(c=>c.name==='pulse_control')!.value}};
  const owner=await login('reservation-owner@example.test'),admin=await login('reservation-admin@example.test');
  let held:any,heldInput:any;
+ const accept=async(r:any)=>{const risk=(await app.inject({url:'/api/v1/control/partner-referrals/'+r.id,cookies:owner})).json().referral.antifraud;const result=await post('/api/v1/control/partner-referrals/'+r.id+'/review',{revision:r.revision,decision:'accept',contactConfirmed:true,note:'Контакт покупателя и сигналы проверены владельцем',riskAcknowledged:true,riskFingerprint:risk.fingerprint},headers,owner);assert.equal(result.statusCode,200,result.body);return (await db.query('select * from partner_referrals where id=$1',[r.id])).rows[0]};
  await t.test('requires verified partner and explicit permission; normalizes Russian phone formats',async()=>{
   assert.equal((await reserve(input('+79991111111'),guest)).statusCode,403);
   assert.equal((await reserve({...input('+79991111111'),contactConsent:false})).statusCode,400);
@@ -48,13 +49,13 @@ test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirm
   const r=await post('/api/v1/leads',leadInput('+79993333333'),guest);assert.equal(r.statusCode,200,r.body);
   const checked=await reserve(input('8 999 333 33 33'));assert.equal(checked.json().outcome,'not_unique');assert.ok(!checked.body.includes('Тестовый покупатель'));assert.ok(!checked.body.includes(r.json().id));
  });
- await t.test('buyer confirmation converts the hold to a one-month claim; retries cannot transfer ownership',async()=>{
+ await t.test('buyer confirmation waits for owner review; only owner review converts a hold to a one-month claim',async()=>{
   const wrong=await post('/api/v1/leads',leadInput('+79994444444',held.code),buyer);assert.equal(wrong.statusCode,409,wrong.body);
   const stolen=await post('/api/v1/leads',leadInput('+79991111111',pb.code),buyer);assert.equal(stolen.statusCode,409,stolen.body);
   const data=leadInput('+7 (999) 111-11-11',held.code),r=await post('/api/v1/leads',data,buyer);assert.equal(r.statusCode,200,r.body);
   const retry=await post('/api/v1/leads',data,buyer);assert.equal(retry.json().id,r.json().id);assert.equal(retry.json().duplicate,true);
   assert.equal((await post('/api/v1/leads',{...data,referralCode:pb.code},buyer)).statusCode,409);
-  const referral=(await db.query('select * from partner_referrals where lead_id=$1',[r.json().id])).rows[0];assert.equal(referral.status,'accepted');assert.equal(referral.partner_id,pa.id);
+  let referral=(await db.query('select * from partner_referrals where lead_id=$1',[r.json().id])).rows[0];assert.equal(referral.status,'pending');assert.equal(Number((await db.query('select count(*) as n from partner_client_claims where referral_id=$1',[referral.id])).rows[0].n),0);referral=await accept(referral);assert.equal(referral.status,'accepted');assert.equal(referral.partner_id,pa.id);
   const date=(v:any)=>(v instanceof Date?v.toISOString():String(v)).slice(0,10);assert.equal(date(referral.claim_started_on),businessDay());assert.equal(date(referral.claim_expires_on),claimExpiresOn(businessDay()));
   assert.equal(Number((await db.query('select count(*) as n from partner_client_claims where referral_id=$1',[referral.id])).rows[0].n),1);
   assert.equal((await reserve(input('+79991111111'),b)).json().outcome,'not_unique');
@@ -83,7 +84,7 @@ test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirm
   const hold=(await reserve(input('+79990123456'))).json().reservation,v=await visitor(810004);
   const direct=await post('/api/v1/leads',leadInput('+79990123456'),v);assert.equal(direct.statusCode,200,direct.body);
   const confirmed=await post('/api/v1/leads',leadInput('+79990123456',hold.code),v);assert.equal(confirmed.statusCode,200,confirmed.body);
-  const r=(await db.query('select status,partner_id from partner_referrals where lead_id=$1',[confirmed.json().id])).rows[0];assert.equal(r.status,'accepted');assert.equal(r.partner_id,pa.id);
+  const pending=(await db.query('select * from partner_referrals where lead_id=$1',[confirmed.json().id])).rows[0];assert.equal(pending.status,'pending');const r=await accept(pending);assert.equal(r.status,'accepted');assert.equal(r.partner_id,pa.id);
   assert.equal(Number((await db.query("select count(*) as n from partner_client_claims where normalized_phone='+79990123456'")).rows[0].n),1);
  });
  await t.test('verified identity cannot claim another phone after its first accepted referral',async()=>{
@@ -99,7 +100,7 @@ test('Partner reservations: atomic first claimant, CRM uniqueness, buyer confirm
  await t.test('an ordinary invitation also honors the existing reservation of the same partner',async()=>{
   const hold=(await reserve(input('+79990300001'))).json().reservation,v=await visitor(810006);
   const lead=await post('/api/v1/leads',leadInput('+79990300001',pa.code),v);assert.equal(lead.statusCode,200,lead.body);
-  const r=(await db.query('select * from partner_referrals where lead_id=$1',[lead.json().id])).rows[0];assert.equal(r.status,'accepted');assert.equal(r.partner_id,pa.id);
+  const pending=(await db.query('select * from partner_referrals where lead_id=$1',[lead.json().id])).rows[0];assert.equal(pending.status,'pending');const r=await accept(pending);assert.equal(r.status,'accepted');assert.equal(r.partner_id,pa.id);
   assert.equal((await db.query('select converted_referral_id from partner_client_reservations where id=$1',[hold.id])).rows[0].converted_referral_id,r.id);
   const stolen=await post('/api/v1/leads',leadInput('+79990300001',pb.code),await visitor());assert.equal(stolen.statusCode,409,stolen.body);
  });

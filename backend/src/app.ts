@@ -1,3 +1,4 @@
+import {antifraudCollector,observeVisitor} from './partnerAntifraud';
 import {registerClientNotificationRoutes,mergeNotificationReads} from './clientNotificationRoutes';
 import {configuredMap} from '../../packages/pulse-data/mapConfig';
 import {migrationsApplied} from './migrate';
@@ -38,6 +39,7 @@ const memberView=(row:any)=>({id:row.id,name:row.name,email:row.email,role:row.r
 export async function createApp(db:Database,config:RuntimeConfig){
  const app=Fastify({requestTimeout:120000,bodyLimit:1_500_000,trustProxy:config.TRUST_PROXY_HOPS?(_address:string,hop:number)=>hop<config.TRUST_PROXY_HOPS:false,logger:config.NODE_ENV!=='test'?{redact:['req.headers.authorization','req.headers.cookie','res.headers["set-cookie"]']}:false});
  await app.register(cookie);
+ app.addHook('preHandler',antifraudCollector(db,config.NODE_ENV==='production'));
  await app.register(rateLimit,{max:180,timeWindow:'1 minute'});
  const dummyPassword=await hashPassword('dummy-non-account-password');
  app.addHook('onRequest',async(request,reply)=>{
@@ -53,8 +55,11 @@ export async function createApp(db:Database,config:RuntimeConfig){
    if(!contentType.startsWith('application/json')&&!allowedMedia)throw new HttpError(415,mediaUpload?'Нужен JPG, PNG, WebP или PDF':'Требуется application/json');
   }
  });
- app.setErrorHandler((error,request,reply)=>{
+ app.setErrorHandler(async(error,request,reply)=>{
   if(error instanceof ZodError)return reply.code(400).send({error:error.issues.map(i=>`${i.path.join('.')}: ${i.message}`).join('; '),code:'VALIDATION'});
+  if(error instanceof HttpError&&request.visitor&&request.url==='/api/v1/leads'&&(request.body as any)?.referralCode&&[400,409].includes(error.statusCode)){
+   await db.query(`insert into partner_security_attempts(session_id,partner_id,reason) values($1,coalesce((select id from partner_profiles where code=$2),(select partner_id from partner_invitations where code=$2)),$3)`,[request.visitor.sessionId,(request.body as any).referralCode,error.message.slice(0,500)]);
+  }
   const status=error instanceof HttpError?error.statusCode:((error as any).statusCode||500);
   if(status>=500)request.log.error({err:error,requestId:request.id},'API request failed');
   return reply.code(status).send({error:status>=500?'Сервис временно недоступен. Повторите попытку.':error instanceof Error?error.message:'Ошибка запроса',requestId:request.id});
@@ -70,6 +75,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const token=request.headers.authorization?.replace(/^Bearer /,'')||request.cookies.pulse_visitor;if(!token)throw new HttpError(401,'Сессия не создана');
   const row=(await db.query("select s.id,s.user_id from auth_tokens t join sessions s on s.id=t.session_id where t.token_hash=$1 and t.kind='visitor' and t.expires_at>now()",[tokenHash(token)])).rows[0];
   if(!row)throw new HttpError(401,'Сессия истекла');request.visitor={sessionId:row.id,userId:row.user_id};
+  await observeVisitor(db,request,row.id);
   await db.query("update sessions set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.id]);
   if(row.user_id)await db.query("update app_users set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.user_id]);
  }
@@ -84,6 +90,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.post('/api/v1/auth/session',{config:{rateLimit:{max:12,timeWindow:'1 minute'}}},async(request,reply)=>{
   const input=z.object({source:z.string().max(100).optional(),medium:z.string().max(100).optional(),campaign:z.string().max(100).optional()}).parse(request.body);
   const result=await db.transaction(async sql=>{const id=randomUUID();await sql.query('insert into sessions(id,source,medium,campaign) values($1,$2,$3,$4)',[id,input.source||'direct',input.medium||null,input.campaign||null]);const auth=await issueToken(sql,'visitor',id);return {sessionId:id,accessToken:auth.token,expiresAt:auth.expiresAt};});
+  await observeVisitor(db,request,result.sessionId);
   reply.setCookie('pulse_visitor',result.accessToken,visitorCookieOptions);return result;
  });
  app.post('/api/v1/auth/cookie',{preHandler:visitor,config:{rateLimit:{max:30,timeWindow:'1 minute'}}},async(request,reply)=>{
@@ -137,7 +144,8 @@ export async function createApp(db:Database,config:RuntimeConfig){
    if(input.propertyId&&!await getCatalogProperty(sql,input.propertyId,'published'))throw new HttpError(400,'Объект больше не опубликован');
    const referringPartner=await preparePartnerReferral(sql,input.referralCode,session.userId,input.phone);
    const row=(await sql.query('insert into leads(session_id,user_id,idempotency_key,source,property_id,name,phone,comment,request_context,consent_at,consent_version,submission_fingerprint) values($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,now(),$10,$11) returning id',[session.sessionId,session.userId,input.idempotencyKey,source,input.propertyId??null,input.name,input.phone,input.comment??null,JSON.stringify(requestContext),config.CONSENT_VERSION,fingerprint])).rows[0];
-   if(referringPartner)await attachPartnerReferral(sql,row.id,session.userId,input.phone,input.referralCode!,referringPartner);
+   await sql.query('update leads set antifraud_device_id=$2 where id=$1',[row.id,request.antifraudDevice??null]);
+   if(referringPartner)await attachPartnerReferral(sql,row.id,session.userId,input.phone,input.referralCode!,referringPartner,request.antifraudDevice,request.antifraudIp);
    const repo=leadRepository(sql);
    await repo.insertEvents([{idempotencyKey:'lead:'+row.id,sessionId:session.sessionId,userId:session.userId,eventType:'lead_created',entityType:'lead',entityId:row.id,metadata:{source},createdAt:new Date().toISOString()}]);
    const processed=await processSessionIntent(repo,session.sessionId);

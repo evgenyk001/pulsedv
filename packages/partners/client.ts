@@ -5,7 +5,7 @@ import {businessDay} from '../pulse-data/business';
 import {PARTNER_TERMS_VERSION,partnerReward,partnerRejectReasons,partnerStageLabels,publicClientName,normalizePartnerPhone,type Partner,type PartnerInvite,type PartnerReferral,type PartnerReward,type PartnerCabinet,type PartnerRejectReason} from './model';
 type LocalReferral=PartnerReferral&{phone:string;lastStage:string;lastReceivedOn:string|null;attributionCode:string};
 type Store={myPartnerId:string|null;partners:Partner[];invitations:PartnerInvite[];referrals:LocalReferral[];rewards:PartnerReward[]};
-export type ControlPartners={reservationPage?:number;reservationTotal?:number;reservationHasMore?:boolean;counts?:{total:number;pending:number;requested:number;conflicts:number};reservations?:Array<import('./model').PartnerReservation&{partnerName:string;phone:string}>;partners:Partner[];referrals:PartnerReferral[];page:number;total:number;hasMore:boolean};
+export type ControlPartners={securityAttempts?:Array<{id:string;reason:string;createdAt:string;partnerName:string|null}>;reservationPage?:number;reservationTotal?:number;reservationHasMore?:boolean;counts?:{total:number;pending:number;requested:number;conflicts:number};reservations?:Array<import('./model').PartnerReservation&{partnerName:string;phone:string}>;partners:Partner[];referrals:PartnerReferral[];page:number;total:number;hasMore:boolean};
 const KEY='pulse.partners.v1',EVENT='pulse:partners',ATTRIBUTION='pulse.partner-invitation.v1';
 const uid=()=>crypto.randomUUID(),now=()=>new Date().toISOString();
 function read():Store{try{const s=JSON.parse(localStorage.getItem(KEY)||'null');if(s&&Array.isArray(s.partners)&&Array.isArray(s.invitations)&&Array.isArray(s.referrals)&&Array.isArray(s.rewards))return s}catch{}return {myPartnerId:null,partners:[],invitations:[],referrals:[],rewards:[]}}
@@ -63,7 +63,7 @@ export async function getControlPartners(page=1,filter='all',reservationPage=1):
 }
 export async function getControlPartnerReferral(id:string){if(runtime.enabled)return api<{referral:PartnerReferral}>('/control/partner-referrals/'+encodeURIComponent(id));const s=sync(read()),r=s.referrals.find(r=>r.id===id);if(!r)throw new Error('Рекомендация не найдена');return {referral:dto(s,r,true)};}
 export async function getLeadPartner(leadId:string){if(runtime.enabled)return api<{referral:PartnerReferral|null}>('/control/leads/'+encodeURIComponent(leadId)+'/partner');const s=sync(read()),r=s.referrals.find(r=>r.leadId===leadId);return {referral:r?dto(s,r,true):null};}
-export async function reviewPartnerReferral(id:string,input:{revision:number;decision:'accept'|'reject';contactConfirmed:boolean;note:string;reason?:PartnerRejectReason}){
+export async function reviewPartnerReferral(id:string,input:{revision:number;decision:'accept'|'reject';contactConfirmed:boolean;note:string;reason?:PartnerRejectReason;riskAcknowledged?:boolean;riskFingerprint?:string}){
  if(runtime.enabled)return api('/control/partner-referrals/'+id+'/review',{method:'POST',body:JSON.stringify(input)});
  const s=read(),r=s.referrals.find(r=>r.id===id);if(!r||r.status!=='pending'||r.revision!==input.revision)throw new Error('Рекомендация уже рассмотрена');if(input.note.trim().length<2)throw new Error('Укажите результат проверки');
  if(input.decision==='accept'){if(!input.contactConfirmed)throw new Error('Подтвердите контакт с покупателем');if(clash(s,r).length)throw new Error('Есть совпадение в CRM или более ранняя рекомендация');r.status='accepted';r.acceptedAt=now();if(r.termsVersion&&claimMonths(r.termsVersion)){r.claimStartedOn=businessDay();r.claimExpiresOn=claimExpiresOn(r.claimStartedOn,claimMonths(r.termsVersion));}event(r,'accepted','Клиент проверен и закреплён за партнёром');event(r,'stage',partnerStageLabels[r.stage]);}
@@ -94,3 +94,5 @@ export async function reservePartnerClient(input:{phone:string;label:string;cont
 }
 
 export async function releasePartnerReservation(id:string,reason:string){return api('/control/partner-reservations/'+encodeURIComponent(id)+'/release',{method:'POST',body:JSON.stringify({reason})});}
+
+export async function reviewPartnerRisk(id:string,input:{revision:number;contactConfirmed:true;riskAcknowledged:boolean;riskFingerprint:string;note:string}){if(!runtime.enabled)throw new Error('Проверка устройств доступна после подключения сервера');return api('/control/partner-referrals/'+id+'/risk-review',{method:'POST',body:JSON.stringify(input)});}
