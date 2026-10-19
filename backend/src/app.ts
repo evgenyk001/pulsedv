@@ -1,3 +1,4 @@
+import {configuredMap} from '../../packages/pulse-data/mapConfig';
 import {migrationsApplied} from './migrate';
 import {registerLossRoutes} from './lossRoutes';
 import {registerPartnerRoutes,lockBuyerIdentity,preparePartnerReferral,attachPartnerReferral,guardPartnerFinance,partnerLeadChanged} from './partnerRoutes';
@@ -78,7 +79,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.get('/ready',async()=>{if(!await migrationsApplied(db))throw new HttpError(503,'Примените миграции перед запуском');await readState(db);return {status:'ready'};});
  app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);const now=Date.now();const banners=state.banners.filter(b=>b.enabled&&(!b.startsAt||Date.parse(b.startsAt)<=now)&&(!b.endsAt||Date.parse(b.endsAt)>now));const {leadEngine:_privateLeadEngine,...publicState}=state;return {version,consentVersion:config.CONSENT_VERSION,state:{...publicState,properties:[],banners}};});
  app.get('/api/v1/public/legal',async()=>({name:config.LEGAL_OPERATOR_NAME,inn:config.LEGAL_OPERATOR_INN,email:config.LEGAL_CONTACT_EMAIL,address:config.LEGAL_OPERATOR_ADDRESS,version:config.CONSENT_VERSION}));
- app.get('/api/v1/public/map',async()=>{if(!config.MAP_2GIS_KEY)throw new HttpError(503,'Карта временно недоступна');return {provider:'2gis',key:config.MAP_2GIS_KEY};});
+ app.get('/api/v1/public/map',async()=>{const map=configuredMap({yandex:config.MAP_YANDEX_KEY,twoGis:config.MAP_2GIS_KEY});if(!map)throw new HttpError(503,'Карта временно недоступна');return map;});
  app.post('/api/v1/auth/session',{config:{rateLimit:{max:12,timeWindow:'1 minute'}}},async(request,reply)=>{
   const input=z.object({source:z.string().max(100).optional(),medium:z.string().max(100).optional(),campaign:z.string().max(100).optional()}).parse(request.body);
   const result=await db.transaction(async sql=>{const id=randomUUID();await sql.query('insert into sessions(id,source,medium,campaign) values($1,$2,$3,$4)',[id,input.source||'direct',input.medium||null,input.campaign||null]);const auth=await issueToken(sql,'visitor',id);return {sessionId:id,accessToken:auth.token,expiresAt:auth.expiresAt};});

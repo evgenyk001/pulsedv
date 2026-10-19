@@ -1,159 +1,113 @@
-import React from "react";
-import { load } from "@2gis/mapgl";
-import { PropertyRecord } from "../helpers/propertyTypes";
-import { getMapConfig } from "../endpoints/map_config_GET.schema";
-import styles from "./PropertyMap.module.css";
+import React from 'react';
+import {Minus,Plus,RotateCw} from 'lucide-react';
+import {PropertyRecord} from '../helpers/propertyTypes';
+import {getMapConfig} from '../endpoints/map_config_GET.schema';
+import {createPropertyMap,type Coordinates,type MapMarker,type PropertyMapAdapter} from '../helpers/propertyMapAdapter';
+import styles from './PropertyMap.module.css';
 
 type PropertyMapProps={
-  properties:PropertyRecord[];
-  selectedId?:string;
-  onSelect:(id:string)=>void;
-  onOpen?:(id:string)=>void;
-  immersive?:boolean;
-  city?:string;
+ properties:PropertyRecord[];
+ selectedId?:string;
+ onSelect:(id:string)=>void;
+ onOpen?:(id:string)=>void;
+ onShowList?:()=>void;
+ immersive?:boolean;
+ city?:string;
 };
+const located=(p:PropertyRecord)=>Number.isFinite(p.longitude)&&Number.isFinite(p.latitude)&&Math.abs(p.longitude!)<=180&&Math.abs(p.latitude!)<=90;
+const coordinates=(p:PropertyRecord):Coordinates=>[p.longitude!,p.latitude!];
+const price=(p:PropertyRecord)=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:6}).format(p.priceFrom);
 
-type LoadedMapGL=Awaited<ReturnType<typeof load>>;
-type MapInstance=InstanceType<LoadedMapGL["Map"]>;
-type HtmlMarkerInstance=InstanceType<LoadedMapGL["HtmlMarker"]>;
+export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,immersive=false,city}:PropertyMapProps){
+ const nodeRef=React.useRef<HTMLDivElement>(null);
+ const mapRef=React.useRef<PropertyMapAdapter|null>(null);
+ const markersRef=React.useRef<Array<{id:string;root:HTMLDivElement;pin:HTMLButtonElement;marker:MapMarker}>>([]);
+ const [status,setStatus]=React.useState<'loading'|'ready'|'error'>('loading');
+ const [provider,setProvider]=React.useState('');
+ const [attempt,setAttempt]=React.useState(0);
+ const selectRef=React.useRef(onSelect);selectRef.current=onSelect;
+ const openRef=React.useRef(onOpen);openRef.current=onOpen;
+ const selectedRef=React.useRef(selectedId);selectedRef.current=selectedId;
+ const initialRef=React.useRef<Coordinates>([131.91,43.12]);
+ const first=properties.find(p=>located(p)&&(!city||p.city===city));
+ if(first)initialRef.current=coordinates(first);
 
-export function PropertyMap({properties,selectedId,onSelect,onOpen,immersive=false,city}:PropertyMapProps){
-  const nodeRef=React.useRef<HTMLDivElement>(null);
-  const mapglRef=React.useRef<LoadedMapGL|null>(null);
-  const mapRef=React.useRef<MapInstance|null>(null);
-  const markersRef=React.useRef<HtmlMarkerInstance[]>([]);
-  const [status,setStatus]=React.useState<"loading"|"ready"|"error">("loading");
-  const [error,setError]=React.useState("");
-  const selectRef=React.useRef(onSelect);
-  selectRef.current=onSelect;
-  const openRef=React.useRef(onOpen);
-  openRef.current=onOpen;
+ React.useEffect(()=>{
+  const controller=new AbortController();
+  const init=async()=>{
+   try{
+    setStatus('loading');
+    const config=await getMapConfig();
+    if(controller.signal.aborted||!nodeRef.current)return;
+    setProvider(config.provider==='yandex'?'Яндекс Карты':'2ГИС');
+    const map=await createPropertyMap(config,nodeRef.current,initialRef.current,controller.signal);
+    if(controller.signal.aborted){map.destroy();return;}
+    mapRef.current=map;setStatus('ready');
+   }catch{
+    if(!controller.signal.aborted)setStatus('error');
+   }
+  };
+  void init();
+  return()=>{
+   controller.abort();
+   markersRef.current.forEach(item=>item.marker.destroy());markersRef.current=[];
+   mapRef.current?.destroy();mapRef.current=null;
+  };
+ },[attempt]);
 
-  React.useEffect(()=>{
-    let cancelled=false;
-    const init=async()=>{
-      if(!nodeRef.current||mapRef.current)return;
-      try{
-        setStatus("loading");
-        const [{key},mapgl]=await Promise.all([getMapConfig(),load()]);
-        if(cancelled||!nodeRef.current)return;
-        const initial=properties.find(p=>p.city===city&&p.longitude!=null&&p.latitude!=null)
-          ??properties.find(p=>p.longitude!=null&&p.latitude!=null);
-        const map=new mapgl.Map(nodeRef.current,{
-          key,
-          center:initial&&initial.longitude!=null&&initial.latitude!=null?[initial.longitude,initial.latitude]:[131.91,43.12],
-          zoom:11.2,
-          lang:"ru",
-          copyright:"bottomLeft",
-          enableTrackResize:true,
-          maxPitch:55,
-          lowZoomMaxPitch:35,
-          defaultBackgroundColor:"#E7ECEF",
-          controlsLayoutPadding:{left:10,bottom:92,right:10,top:10},
-        });
-        new mapgl.ZoomControl(map,{position:"bottomLeft"});
-        mapglRef.current=mapgl;
-        mapRef.current=map;
-        setStatus("ready");
-      }catch(err){
-        if(cancelled)return;
-        setError(err instanceof Error?err.message:"Не удалось открыть карту 2ГИС");
-        setStatus("error");
-      }
-    };
-    init();
-    return()=>{
-      cancelled=true;
-      markersRef.current.forEach(marker=>marker.destroy());
-      markersRef.current=[];
-      mapRef.current?.destroy();
-      mapRef.current=null;
-      mapglRef.current=null;
-    };
-  },[]);
+ React.useEffect(()=>{
+  const map=mapRef.current;
+  if(!map||status!=='ready')return;
+  markersRef.current.forEach(item=>item.marker.destroy());markersRef.current=[];
+  const visible=properties.filter(p=>located(p)&&(!city||p.city===city));
+  for(const property of visible){
+   const active=property.id===selectedRef.current;
+   const root=document.createElement('div');root.className=styles.marker;
+   const pin=document.createElement('button');pin.type='button';pin.className=styles.pricePin;
+   pin.setAttribute('aria-label',`${property.name}, от ${price(property)} млн рублей`);
+   const label=document.createElement('span');label.textContent='от '+price(property)+' млн';
+   const tip=document.createElement('i');tip.setAttribute('aria-hidden','true');
+   pin.append(label,tip);
+   pin.addEventListener('click',event=>{event.stopPropagation();selectRef.current(property.id)});
+   const card=document.createElement('button');card.type='button';card.className=styles.previewCard;
+   card.setAttribute('aria-label','Открыть '+property.name);
+   const image=property.coverImageUrl?document.createElement('img'):document.createElement('span');
+   if(image instanceof HTMLImageElement){image.src=property.coverImageUrl!;image.alt='';image.loading='lazy';}
+   else{image.textContent='PULSE';image.className=styles.placeholder;}
+   const copy=document.createElement('span');copy.className=styles.cardCopy;
+   const meta=document.createElement('small');meta.textContent=property.city+' · '+property.district;
+   const name=document.createElement('strong');name.textContent=property.name;
+   const detail=document.createElement('em');detail.textContent=(property.delivery||'Новостройка')+' · от '+price(property)+' млн ₽';
+   const open=document.createElement('b');open.textContent='Открыть ЖК →';
+   copy.append(meta,name,detail,open);card.append(image,copy);
+   card.addEventListener('click',event=>{event.stopPropagation();(openRef.current??selectRef.current)(property.id)});
+   root.append(pin,card);
+   const marker=map.addMarker(coordinates(property),root,active?2100:2000);
+   markersRef.current.push({id:property.id,root,pin,marker});
+  }
+  map.fit(visible.map(coordinates));
+ },[properties,city,status]);
 
-  React.useEffect(()=>{
-    const map=mapRef.current;
-    const mapgl=mapglRef.current;
-    if(!map||!mapgl||status!=="ready")return;
-    markersRef.current.forEach(marker=>marker.destroy());
-    markersRef.current=[];
+ React.useEffect(()=>{
+  const map=mapRef.current;
+  if(!map||status!=='ready')return;
+  for(const item of markersRef.current){
+   const active=item.id===selectedId;
+   item.root.classList.toggle(styles.markerActive,active);
+   item.pin.classList.toggle(styles.pricePinActive,active);
+   item.pin.setAttribute('aria-pressed',String(active));
+   item.marker.setZIndex(active?2100:2000);
+  }
+  const selected=properties.find(p=>p.id===selectedId&&located(p)&&(!city||p.city===city));
+  if(selected)map.center(coordinates(selected));
+ },[selectedId,properties,city,status]);
 
-    const visible=properties.filter(p=>p.latitude!=null&&p.longitude!=null&&(!city||p.city===city));
-    const coords=visible.map(p=>[p.longitude!,p.latitude!] as [number,number]);
+ React.useEffect(()=>{if(status==='ready')mapRef.current?.tilt(immersive)},[immersive,status]);
 
-    visible.forEach(property=>{
-      const active=property.id===selectedId;
-      const root=document.createElement("button");
-      root.type="button";
-      root.className=`${styles.pricePin} ${active?styles.pricePinActive:""}`;
-      root.setAttribute("aria-label",`${property.name}, от ${property.priceFrom.toFixed(1)} млн рублей`);
-      const price=document.createElement("span");
-      price.textContent="от "+property.priceFrom.toFixed(1).replace(".",",")+" млн";
-      const tip=document.createElement("i");
-      const card=document.createElement("button");
-      card.type="button";
-      card.className=styles.previewCard;
-      const image=property.coverImageUrl?document.createElement("img"):document.createElement("span");
-      if(property.coverImageUrl&&image instanceof HTMLImageElement){image.src=property.coverImageUrl;image.alt=""}else{image.textContent="PULSE";image.className=styles.placeholder}
-      const copy=document.createElement("span");copy.className=styles.cardCopy;
-      const meta=document.createElement("small");meta.textContent=property.city+" · "+property.district;
-      const name=document.createElement("strong");name.textContent=property.name;
-      const detail=document.createElement("em");detail.textContent=(property.delivery||"Новостройка")+" · от "+property.priceFrom.toFixed(1).replace(".",",")+" млн ₽";
-      const open=document.createElement("b");open.textContent="Открыть ЖК →";
-      copy.append(meta,name,detail,open);card.append(image,copy);
-      card.addEventListener("click",(event)=>{event.stopPropagation();(openRef.current??selectRef.current)(property.id)});
-      root.addEventListener("mouseenter",()=>root.classList.add(styles.pinHover));
-      root.addEventListener("mouseleave",()=>root.classList.remove(styles.pinHover));
-      root.append(card,price,tip);
-      root.addEventListener("click",(event)=>{
-        event.stopPropagation();
-        selectRef.current(property.id);
-      });
-      const marker=new mapgl.HtmlMarker(map,{
-        coordinates:[property.longitude!,property.latitude!],
-        html:root,
-        interactive:true,
-        anchor:[42,38],
-        zIndex:active?20:10,
-      });
-      markersRef.current.push(marker);
-    });
-
-    if(coords.length===1){
-      map.setCenter(coords[0],{animate:true,duration:420});
-      map.setZoom(13.2,{animate:true,duration:420});
-    }else if(coords.length>1){
-      const lngs=coords.map(x=>x[0]);
-      const lats=coords.map(x=>x[1]);
-      map.fitBounds({
-        northEast:[Math.max(...lngs),Math.max(...lats)],
-        southWest:[Math.min(...lngs),Math.min(...lats)],
-      },{
-        maxZoom:13.1,
-        padding:{top:64,right:54,bottom:150,left:54},
-        animation:{animate:true,duration:520},
-      });
-    }
-  },[properties,selectedId,city,status]);
-
-  React.useEffect(()=>{
-    const map=mapRef.current;
-    if(!map||status!=="ready")return;
-    map.setPitch(immersive?38:0,{animate:true,duration:420});
-  },[immersive,status]);
-
-  React.useEffect(()=>{
-    const map=mapRef.current;
-    const current=properties.find(p=>p.id===selectedId);
-    if(!map||!current||current.longitude==null||current.latitude==null||status!=="ready")return;
-    map.setCenter([current.longitude,current.latitude],{animate:true,duration:360});
-  },[selectedId,properties,status]);
-
-  return <div className={styles.wrap}>
-    <div ref={nodeRef} className={styles.map} data-allow-pinch-zoom="true" aria-label="Интерактивная карта 2ГИС с новостройками"/>
-    {status==="loading"&&<div className={styles.state}>Загружаем 2ГИС…</div>}
-    {status==="error"&&<div className={styles.state}><strong>Карта 2ГИС пока не подключена</strong><span>{error}</span></div>}
-    {status==="ready"&&<div className={styles.provider}>2ГИС</div>}
-  </div>;
+ return <div className={styles.wrap} aria-busy={status==='loading'}>
+  <div ref={nodeRef} className={styles.map} data-allow-pinch-zoom="true" aria-label={`Интерактивная карта${provider?' '+provider:''} с новостройками`}/>
+  {status==='loading'&&<div className={styles.state} role="status">Загружаем карту…</div>}
+  {status==='error'&&<div className={styles.state} role="status"><strong>Не удалось открыть карту</strong><span>Проверьте соединение или продолжите выбирать квартиры в списке.</span><div className={styles.stateActions}><button type="button" onClick={()=>setAttempt(value=>value+1)}><RotateCw size={15}/>Попробовать снова</button>{onShowList&&<button type="button" onClick={onShowList}>Открыть список ЖК</button>}</div></div>}
+  {status==='ready'&&<div className={styles.zoomControls} role="group" aria-label="Масштаб карты"><button type="button" aria-label="Увеличить карту" onClick={()=>mapRef.current?.zoom(1)}><Plus size={20}/></button><button type="button" aria-label="Уменьшить карту" onClick={()=>mapRef.current?.zoom(-1)}><Minus size={20}/></button></div>}
+ </div>;
 }

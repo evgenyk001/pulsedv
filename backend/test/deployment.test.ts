@@ -10,6 +10,7 @@ import {createApp} from '../src/app';
 const complete={NODE_ENV:'production',PUBLIC_ORIGIN:'https://pulse-real.ru',DATABASE_URL:'postgres://pulse:W8zR6vB4aT2yK9xQ7mN5dF3sH1cJ0uE6@db/pulse',BOT_TOKEN:'123456789:abcdefghijklmnopqrstuvwxyz12345',MAP_2GIS_KEY:'restricted-key',LEGAL_OPERATOR_NAME:'Оператор',LEGAL_OPERATOR_INN:'251105827238',LEGAL_OPERATOR_ADDRESS:'Адрес',LEGAL_CONTACT_EMAIL:'ops@example.ru',LEGAL_OPERATOR_REGISTRATION:'324253600041443',PARTNER_OFFER_PUBLISHED:'true',PARTNER_OFFER_APPROVED_VERSION:PARTNER_TERMS_VERSION};
 test('Deployment gate catches placeholders and incomplete integrations without exposing secrets',()=>{
  assert.deepEqual(deploymentIssues(readConfig(complete)),[]);
+ assert.deepEqual(deploymentIssues(readConfig({...complete,MAP_2GIS_KEY:'',MAP_YANDEX_KEY:'restricted-yandex-browser-key'})),[]);
  const issues=deploymentIssues(readConfig({...complete,PUBLIC_ORIGIN:'https://pulse.example.com',DATABASE_URL:'postgres://pulse:replace-with-a-long-random-url-safe-password@db/pulse',BOT_TOKEN:'',MAP_2GIS_KEY:'',LEGAL_CONTACT_EMAIL:'',PARTNER_OFFER_APPROVED_VERSION:'old'}));
  assert.ok(issues.filter(i=>i.level==='error').length>=6);
  assert.ok(!JSON.stringify(issues).includes('postgres://'));
