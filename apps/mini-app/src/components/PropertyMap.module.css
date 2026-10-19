@@ -1,5 +1,5 @@
 .wrap{position:relative;width:100%;height:100%;min-height:0;background:#e7ecef;container-type:inline-size;isolation:isolate}
-.map{position:absolute;inset:0;width:100%;height:100%;min-height:0;background:#e7ecef}
+.map{position:absolute;z-index:0;inset:0;width:100%;height:100%;min-height:0;background:#e7ecef}
 .marker{position:relative;width:90px;height:38px;transform:translate(-50%,calc(-100% - 5px))}
 .pricePin{position:relative;width:90px;height:38px;padding:0;border-radius:var(--app-radius-pill);border:1px solid rgba(255,255,255,.9);background:#253140;color:#fff;box-shadow:0 6px 18px #17202b30,inset 0 1px 0 #ffffff24;display:grid;place-items:center;font-family:var(--font-family-base);font-size:10px;font-weight:780;white-space:nowrap;cursor:pointer;transform-origin:50% 100%;transition:transform .24s var(--motion-spring),background .2s ease,box-shadow .2s ease}
 .pricePin i{position:absolute;bottom:-5px;width:10px;height:10px;background:inherit;border-right:1px solid #ffffffb8;border-bottom:1px solid #ffffffb8;transform:rotate(45deg)}
