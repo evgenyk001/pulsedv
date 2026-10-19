@@ -9,7 +9,7 @@ export COMPOSE_FILE="compose.yaml:deploy/compose.smoke.yaml"
 export SITE_DOMAIN=localhost
 export POSTGRES_PASSWORD
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
-export BOT_TOKEN= MAP_2GIS_KEY= PARTNER_OFFER_PUBLISHED=false PARTNER_OFFER_APPROVED_VERSION=
+export BOT_TOKEN= MAP_YANDEX_KEY= MAP_2GIS_KEY= PARTNER_OFFER_PUBLISHED=false PARTNER_OFFER_APPROVED_VERSION=
 export OWNER_EMAIL=owner@smoke.test OWNER_PASSWORD
 OWNER_PASSWORD=$(openssl rand -hex 24)
 compose(){ docker compose --env-file "$stage/empty.env" "$@"; }

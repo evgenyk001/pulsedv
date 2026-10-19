@@ -173,6 +173,11 @@ export default function CatalogPage(){
   const onQuery=(value:string)=>{setQuery(value);const next=new URLSearchParams(params);value?next.set("q",value):next.delete("q");setParams(next,{replace:true,flushSync:true});};
   const catalogReturnTo=React.useMemo(()=>{const next=new URLSearchParams(params);query?next.set("q",query):next.delete("q");const search=next.toString();return "/catalog"+(search?"?"+search:"")},[params,query]);
 
+  const openMapProperty=(id:string)=>{
+    try{sessionStorage.setItem('pulse.property.return',catalogReturnTo)}catch{}
+    navigate('/property/'+id,{state:{returnTo:catalogReturnTo}});
+  };
+
   const setView=(nextView:"list"|"map")=>{
     const next=new URLSearchParams(params);
     if(nextView==="map")next.set("view","map");else next.delete("view");
@@ -390,7 +395,7 @@ export default function CatalogPage(){
     </div>:<div className={styles.mapMode}>
       {isLoading?<div className={styles.empty}><strong>Загружаем карту</strong><span>Получаем объекты для отображения.</span></div>:
        error?<div className={styles.empty}><strong>Не удалось загрузить объекты</strong><span>Проверьте соединение.</span></div>:
-       !mapProperties.length?<div className={styles.empty}><strong>На карте нет подходящих объектов</strong><span>Измените фильтры или откройте список: у части ЖК координаты ещё не указаны.</span><button onClick={resetFilters}>Сбросить фильтры</button></div>:<PropertyMap properties={mapProperties} selectedId={selectedId} onSelect={setSelectedId} onOpen={id=>navigate("/property/"+id)} city={appliedCity==="Все"?undefined:appliedCity}/>}
+       !mapProperties.length?<div className={styles.empty}><strong>На карте нет подходящих объектов</strong><span>Измените фильтры или откройте список: у части ЖК координаты ещё не указаны.</span><button onClick={resetFilters}>Сбросить фильтры</button></div>:<PropertyMap properties={mapProperties} selectedId={selectedId} onSelect={setSelectedId} onShowList={()=>setView("list")} onOpen={openMapProperty} city={appliedCity==="Все"?undefined:appliedCity}/>}
     </div>}
   </div>;
 }

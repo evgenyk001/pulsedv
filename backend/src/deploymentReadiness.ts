@@ -1,3 +1,4 @@
+import {configuredMap} from '../../packages/pulse-data/mapConfig';
 import type {RuntimeConfig} from './config';
 import {PARTNER_TERMS_VERSION} from '../../packages/partners/model';
 
@@ -12,7 +13,7 @@ export function deploymentIssues(config:RuntimeConfig):DeploymentIssue[]{
  const password=decodeURIComponent(new URL(config.DATABASE_URL).password);
  if(!/^[A-Za-z0-9_-]{32,}$/.test(password)||/replace|password|example/i.test(password))error('Задайте случайный URL-safe пароль PostgreSQL длиной от 32 символов');
  if(!/^\d{5,}:[A-Za-z0-9_-]{20,}$/.test(config.BOT_TOKEN))error('Настройте BOT_TOKEN для входа Telegram, закрепов и уведомлений');
- if(!config.MAP_2GIS_KEY.trim())error('Настройте MAP_2GIS_KEY для рабочей карты');
+ if(!configuredMap({yandex:config.MAP_YANDEX_KEY,twoGis:config.MAP_2GIS_KEY}))error('Настройте MAP_YANDEX_KEY (Яндекс) или MAP_2GIS_KEY (2ГИС) для рабочей карты');
  if(!config.LEGAL_OPERATOR_NAME||!config.LEGAL_OPERATOR_INN||!config.LEGAL_OPERATOR_ADDRESS||!config.LEGAL_CONTACT_EMAIL)error('Заполните реквизиты оператора и контакт на страницах согласия и политики');
  if(!/^\d{10}(\d{2})?$/.test(config.LEGAL_OPERATOR_INN))error('ИНН оператора должен содержать 10 или 12 цифр');
  if(config.PARTNER_OFFER_PUBLISHED){
