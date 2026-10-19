@@ -36,8 +36,11 @@ for(const width of [320,390])test(`Antifraud Control ${width}px: signals, explic
  const accept=dialog.getByRole('button',{name:'Закрепить за партнёром',exact:true});await expect(accept).toBeDisabled();
  await dialog.getByRole('checkbox',{name:/Связались с покупателем/}).check();await dialog.getByRole('textbox',{name:'Внутренняя заметка проверки'}).fill('Созвонились, покупатель подтвердил рекомендацию. Совместное устройство объяснено.');await expect(accept).toBeDisabled();
  await dialog.getByRole('checkbox',{name:/Проверил сигналы/}).check();await expect(accept).toBeEnabled();
- const layout=await dialog.evaluate(el=>{const r=el.getBoundingClientRect();return {width:el.clientWidth,scroll:el.scrollWidth,overflow:[...el.querySelectorAll('*')].map(node=>{const b=node.getBoundingClientRect();return {tag:node.tagName,className:node.className,left:b.left,right:b.right,width:b.width}}).filter(v=>v.right>r.right+1||v.left<r.left-1)}});
- await expect.poll(()=>dialog.evaluate(el=>el.scrollWidth<=el.clientWidth+1),{message:JSON.stringify(layout)}).toBe(true);
+ // WebKit includes hidden native-select contents in a drawer's scrollWidth.
+ // Verify visible element bounds and actual page overflow instead.
+ const overflow=()=>dialog.evaluate(el=>{const r=el.getBoundingClientRect();return [...el.querySelectorAll('*')].map(node=>{const b=node.getBoundingClientRect();return {tag:node.tagName,className:node.className,left:b.left,right:b.right,width:b.width}}).filter(v=>v.width>0&&(v.right>r.right+1||v.left<r.left-1))});
+ await expect.poll(overflow).toEqual([]);
+ await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)).toBe(true);
  await dialog.screenshot({path:`test-results/partner-antifraud-${browserName}-${width}.png`});await accept.click();
  await expect(dialog.getByText('Актуальные результаты проверены владельцем.',{exact:true})).toBeVisible();expect(posted[0].riskAcknowledged).toBe(true);expect(posted[0].riskFingerprint).toBe(fingerprint);
  await dialog.getByRole('button',{name:'Закрыть рекомендацию',exact:true}).click();
