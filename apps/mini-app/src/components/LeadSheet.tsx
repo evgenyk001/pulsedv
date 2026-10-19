@@ -42,7 +42,6 @@ export function LeadSheet({children,title="Получить консультац
     try{
       const requestContext=context?{...context,...(project?{propertyName:project}:{})}:project?{propertyName:project}:undefined;
       const result=await postLead({idempotencyKey:key.current,source,propertyId:propertyId||null,name,phone,consent,comment:null,context:requestContext,...(activeCode&&referralConsent?{referralCode:activeCode,referralConsent:true}:{})});
-      if(candidateCode&&rememberedPartnerInvite()?.code===candidateCode)clearPartnerInvite();
       setLeadId(result.id);
       void cache.invalidateQueries({queryKey:["my-journeys"]});
       setSent(true);
