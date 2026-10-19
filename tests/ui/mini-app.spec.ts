@@ -1,4 +1,6 @@
 import { test,expect } from '@playwright/test';
+// Shell/navigation checks stay independent of live provider keys and external network.
+test.beforeEach(async({page})=>{await page.route('**/mini-app/map-config.json',route=>route.fulfill({json:{}}));});
 for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry, drag, switch`,async({page})=>{
  await page.setViewportSize({width,height:844});
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
