@@ -47,7 +47,7 @@ for(const width of [320,390])test(`Yandex SDK contract ${width}px: pins, zoom, s
  expect(last.center).toEqual([131.8855,43.1155]);expect(last.zoom).toBeUndefined();
  await page.getByRole('button',{name:'Открыть ЖК Приморский',exact:true}).click();
  await expect(page).toHaveURL(/#\/property\/primorskiy/);
- expect(await page.evaluate(()=>(window as any).__mapCalls.filter((x:any)=>x.type==='destroy').length)).toBe(1);
+ await expect.poll(()=>page.evaluate(()=>(window as any).__mapCalls.filter((x:any)=>x.type==='destroy').length)).toBe(1);
  await page.getByRole('link',{name:'Назад',exact:true}).click();await expect(page).toHaveURL(/view=map/);await expect(pin).toBeVisible();expect(requests).toBe(1);expect(errors).toEqual([]);
 });
 
