@@ -31,9 +31,11 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,im
  const selectRef=React.useRef(onSelect);selectRef.current=onSelect;
  const {isFavorite,toggle,error:favoriteError}=useFavoriteIds();
  const previewRef=React.useRef<HTMLElement>(null);
+ const [previewBottom,setPreviewBottom]=React.useState(72);
  const [zoom,setZoom]=React.useState(11);
  const [groupIds,setGroupIds]=React.useState<string[]>([]);
  const visible=React.useMemo(()=>properties.filter(p=>located(p)&&(!city||p.city===city)),[properties,city]);
+ const fitKey=visible.map(p=>`${p.id}:${p.longitude}:${p.latitude}`).join('|');
  const index=React.useMemo(()=>new Supercluster<{id:string}>({radius:100,extent:256,maxZoom:19,minZoom:5}).load(visible.map(p=>({type:'Feature' as const,geometry:{type:'Point' as const,coordinates:coordinates(p)},properties:{id:p.id}}))),[visible]);
  const group=visible.filter(p=>groupIds.includes(p.id));
  const [failedImage,setFailedImage]=React.useState<string>();
@@ -45,6 +47,22 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,im
  const initialRef=React.useRef<Coordinates>([131.91,43.12]);
  const first=properties.find(p=>located(p)&&(!city||p.city===city));
  if(first)initialRef.current=coordinates(first);
+
+ React.useLayoutEffect(()=>{
+  const node=nodeRef.current;if(!node)return;
+  let frame=0;
+  const measure=()=>{
+   cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{
+    const viewport=window.visualViewport;
+    const bottom=(viewport?.height??window.innerHeight)+(viewport?.offsetTop??0);
+    setPreviewBottom(Math.max(45,Math.round(node.getBoundingClientRect().bottom-bottom+110)));
+   });
+  };
+  const resize=new ResizeObserver(measure);resize.observe(node);measure();
+  window.addEventListener('scroll',measure,{passive:true,capture:true});window.addEventListener('resize',measure);
+  window.visualViewport?.addEventListener('resize',measure);
+  return()=>{cancelAnimationFrame(frame);resize.disconnect();window.removeEventListener('scroll',measure,true);window.removeEventListener('resize',measure);window.visualViewport?.removeEventListener('resize',measure);};
+ },[]);
 
  React.useEffect(()=>{
   const controller=new AbortController();
@@ -115,14 +133,13 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,im
  React.useEffect(()=>{
   if(status==='ready')mapRef.current?.fit(visible.map(coordinates));
   setGroupIds([]);
- },[visible,status]);
+ },[fitKey,status]);
 
  React.useEffect(()=>{
   const map=mapRef.current;
   if(!map||status!=='ready')return;
   for(const item of markersRef.current){
    const active=item.ids.includes(selectedId??'');
-   item.root.classList.toggle(styles.markerActive,active);
    item.pin.classList.toggle(styles.pricePinActive,active);
    item.pin.setAttribute('aria-pressed',String(active));
    item.pin.setAttribute('aria-expanded',String(active));
@@ -131,10 +148,10 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,im
   const selected=properties.find(p=>p.id===selectedId&&located(p)&&(!city||p.city===city));
   if(selected){
    const preview=previewRef.current;
-   const inset=preview?preview.offsetHeight+72+16:45;
+   const inset=preview?preview.offsetHeight+previewBottom+16:45;
    map.center(coordinates(selected),Math.min(inset,(nodeRef.current?.clientHeight??600)-120));
   }else map.resetInset();
- },[selectedId,properties,city,status]);
+ },[selectedId,properties,city,status,previewBottom]);
 
  React.useEffect(()=>{if(status==='ready')mapRef.current?.tilt(immersive)},[immersive,status]);
 
@@ -149,7 +166,7 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,im
   return()=>window.removeEventListener('keydown',escape);
  },[selected?.id,groupIds]);
 
- return <div className={styles.wrap} aria-busy={status==='loading'}>
+ return <div className={styles.wrap} style={{'--map-preview-bottom':previewBottom+'px'} as React.CSSProperties} aria-busy={status==='loading'}>
   <div ref={nodeRef} className={styles.map} data-allow-pinch-zoom="true" aria-label={`Интерактивная карта${provider?' '+provider:''} с новостройками`}/>
   {status==='loading'&&<div className={styles.state} role="status">Загружаем карту…</div>}
   {status==='error'&&<div className={styles.state} role="status"><strong>Не удалось открыть карту</strong><span>Проверьте соединение или продолжите выбирать квартиры в списке.</span><div className={styles.stateActions}><button type="button" onClick={()=>setAttempt(value=>value+1)}><RotateCw size={15}/>Попробовать снова</button>{onShowList&&<button type="button" onClick={onShowList}>Открыть список ЖК</button>}</div></div>}
