@@ -6,7 +6,11 @@ export type MapMarker={destroy:()=>void;setZIndex:(value:number)=>void};
 export type PropertyMapAdapter={
  addMarker:(coordinates:Coordinates,element:HTMLElement,zIndex:number)=>MapMarker;
  fit:(coordinates:Coordinates[])=>void;
- center:(coordinates:Coordinates)=>void;
+ center:(coordinates:Coordinates,bottomInset?:number)=>void;
+ expand:(coordinates:Coordinates,zoom:number)=>void;
+ getZoom:()=>number;
+ onZoom:(callback:(zoom:number)=>void)=>()=>void;
+ resetInset:()=>void;
  zoom:(delta:number)=>void;
  tilt:(immersive:boolean)=>void;
  destroy:()=>void;
@@ -83,7 +87,18 @@ export async function createPropertyMap(config:MapConfig,node:HTMLElement,initia
     }
     map.setLocation({bounds:[[Math.min(...xs),Math.min(...ys)],[Math.max(...xs),Math.max(...ys)]],duration:duration()});
    },
-   center:coordinates=>map.setLocation({center:coordinates,duration:duration()}),
+   center(coordinates,bottomInset=45){
+    map.setMargin([70,35,bottomInset,35]);
+    map.setLocation({center:coordinates,duration:duration()});
+   },
+   expand(coordinates,zoom){map.setMargin([70,35,45,35]);map.setLocation({center:coordinates,zoom,duration:duration()});},
+   getZoom:()=>map.zoom,
+   resetInset:()=>map.setMargin([70,35,45,35]),
+   onZoom(callback){
+    const listener=new sdk.YMapListener({onUpdate:({location})=>callback(location.zoom)});
+    map.addChild(listener);
+    return()=>map.removeChild(listener);
+   },
    zoom:delta=>map.setLocation({zoom:Math.max(5,Math.min(19,map.zoom+delta)),duration:duration()}),
    tilt:immersive=>map.setCamera({tilt:immersive?38*Math.PI/180:0,duration:duration()}),
    destroy:()=>map.destroy(),
@@ -109,7 +124,14 @@ export async function createPropertyMap(config:MapConfig,node:HTMLElement,initia
    map.fitBounds({northEast:[Math.max(...xs),Math.max(...ys)],southWest:[Math.min(...xs),Math.min(...ys)]},
     {maxZoom:13.1,padding:{top:70,right:35,bottom:45,left:35},animation:{animate:duration()>0,duration:duration()}});
   },
-  center:coordinates=>map.setCenter(coordinates,{animate:duration()>0,duration:duration()}),
+  center(coordinates,bottomInset=45){
+   map.setPadding({top:70,right:35,bottom:bottomInset,left:35});
+   map.setCenter(coordinates,{animate:duration()>0,duration:duration()});
+  },
+  expand(coordinates,zoom){map.setPadding({top:70,right:35,bottom:45,left:35});map.setCenter(coordinates,{animate:duration()>0,duration:duration()});map.setZoom(zoom);},
+  getZoom:()=>map.getZoom(),
+  resetInset:()=>{map.setPadding({top:70,right:35,bottom:45,left:35});},
+  onZoom(callback){const update=()=>callback(map.getZoom());map.on('zoom',update);return()=>{map.off('zoom',update)};},
   zoom:delta=>map.setZoom(Math.max(5,Math.min(19,map.getZoom()+delta)),{animate:duration()>0,duration:duration()}),
   tilt:immersive=>map.setPitch(immersive?38:0,{animate:duration()>0,duration:duration()}),
   destroy:()=>map.destroy(),
