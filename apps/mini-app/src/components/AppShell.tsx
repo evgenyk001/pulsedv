@@ -1,4 +1,3 @@
-import {prefetchMiniAppRoute} from '../helpers/routePreload';
 import {FavoriteSync} from "../helpers/useFavoriteIds";
 import {attribution} from '../../../../packages/journey/attribution';
 import React from "react";
@@ -21,13 +20,6 @@ export function AppShell({children}:{children:React.ReactNode}){
   const mortgageWarmed=React.useRef(false);
   const chatRoute=location.pathname==="/journey"&&new URLSearchParams(location.search).has("lead");
   const hideNav=location.pathname.startsWith("/property/")||chatRoute;
-
-  React.useEffect(()=>{
-    if(location.pathname!=='/'||document.hidden)return;
-    const warm=()=>{if(!document.hidden)prefetchMiniAppRoute('/catalog')};
-    if('requestIdleCallback' in window){const id=window.requestIdleCallback(warm,{timeout:2500});return()=>window.cancelIdleCallback(id);}
-    const timer=globalThis.setTimeout(warm,1500);return()=>globalThis.clearTimeout(timer);
-  },[location.pathname]);
 
   React.useEffect(()=>{
     const version=control.content.onboardingVersion;
