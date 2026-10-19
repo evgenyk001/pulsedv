@@ -51,6 +51,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
   const sessionRows=(await sql.query("select s.id from sessions s where s.last_seen_at<$1 and not exists(select 1 from leads l where l.session_id=s.id) limit 2000",[clientCutoff])).rows;
   const sessionIds=sessionRows.map(row=>String(row.id));
   if(sessionIds.length){
+   await sql.query('delete from client_notification_reads where owner=any($1::text[])',[sessionIds.map(id=>'session:'+id)]);
    await sql.query('delete from search_profiles where owner=any($1::text[])',[sessionIds.map(id=>'session:'+id)]);
    await sql.query("delete from favorite_sets where owner=any($1::text[])",[sessionIds.map(id=>'session:'+id)]);
    await sql.query('delete from sessions where id=any($1::uuid[])',[sessionIds]);
@@ -59,6 +60,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
   const userRows=(await sql.query("select u.id from app_users u where u.last_seen_at<$1 and not exists(select 1 from leads l where l.user_id=u.id) and not exists(select 1 from sessions s where s.user_id=u.id) and not exists(select 1 from partner_profiles p where p.user_id=u.id) limit 2000",[clientCutoff])).rows;
   const userIds=userRows.map(row=>String(row.id));
   if(userIds.length){
+   await sql.query('delete from client_notification_reads where owner=any($1::text[])',[userIds.map(id=>'user:'+id)]);
    await sql.query('delete from search_profiles where owner=any($1::text[])',[userIds.map(id=>'user:'+id)]);
    await sql.query("delete from favorite_sets where owner=any($1::text[])",[userIds.map(id=>'user:'+id)]);
    await sql.query('delete from app_users where id=any($1::uuid[])',[userIds]);

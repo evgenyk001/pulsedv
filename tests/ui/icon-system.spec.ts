@@ -21,9 +21,9 @@ for(const width of [320,390,430])test(`Outlined card icons remain consistent acr
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),route).toBe(true);
   if(['','profile','selection'].includes(route))await page.screenshot({path:`test-results/icon-system-${route||'home'}-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
  }
- // The same geometry survives the theme switch, and a saved heart keeps its contour.
+ // The same geometry survives the theme switch, and a saved heart uses a solid fill.
  await page.goto('/pulsedv/mini-app/#/profile');await page.evaluate(()=>document.documentElement.classList.add('dark'));
  const tile=page.locator('[data-icon-tile]').first();await expect(tile).toHaveCSS('width','36px');await expect(tile).toHaveCSS('border-top-width','1px');
- await page.goto('/pulsedv/mini-app/');const favorite=page.getByRole('button',{name:'Добавить в избранное',exact:true}).first();await expect(favorite).toBeVisible();await favorite.click();await expect(page.getByRole('button',{name:'Убрать из избранного',exact:true}).first().locator('svg')).toHaveAttribute('fill','none');
+ await page.goto('/pulsedv/mini-app/');const favorite=page.getByRole('button',{name:'Добавить в избранное',exact:true}).first();await expect(favorite).toBeVisible();await favorite.click();await expect(page.getByRole('button',{name:'Убрать из избранного',exact:true}).first().locator('svg')).toHaveAttribute('fill','currentColor');
  expect(errors).toEqual([]);
 });
