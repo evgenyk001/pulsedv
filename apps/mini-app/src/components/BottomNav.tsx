@@ -1,3 +1,4 @@
+import {prefetchMiniAppRoute} from '../helpers/routePreload';
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { NavMotionIcon,type NavMotionKind } from "./NavMotionIcon";
@@ -206,6 +207,9 @@ export function BottomNav(){
           className={styles.item}
           aria-current={index===activeIndex?"page":undefined}
           onClick={()=>selectItem(index)}
+          onPointerEnter={()=>prefetchMiniAppRoute(path)}
+          onFocus={()=>prefetchMiniAppRoute(path)}
+          onPointerDown={()=>prefetchMiniAppRoute(path)}
         >
           <span className={styles.icon} style={{transform:`translateY(${v.lift}px) scale(${v.iconScale})`}}><NavMotionIcon kind={icon} active={index===activeIndex}/></span>
           <span className={styles.label} style={{opacity:v.labelOpacity,transform:`translateY(${v.labelLift}px)`}}>{label}</span>

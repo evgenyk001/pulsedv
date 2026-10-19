@@ -115,3 +115,14 @@ test('Coincident projects retain exact count and each project remains reachable 
  await group.getByRole('button',{name:/ЖК Тест 9 /}).click();await expect(page.getByRole('article',{name:'ЖК Тест 9',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Открыть ЖК Тест 9',exact:true}).click();await expect(page).toHaveURL(/property\/cluster-9/);
 });
+
+test('Map background tap dismisses the project preview, while map controls and favorites keep it open',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await setup(page);
+ await page.route('https://api-maps.yandex.ru/v3/**',route=>route.fulfill({contentType:'application/javascript',body:sdkFixture}));
+ await page.goto(openMap);
+ await page.getByRole('button',{name:'ЖК Приморский, от 7,8 млн рублей',exact:true}).click();
+ const card=page.getByRole('article',{name:'ЖК Приморский',exact:true});await expect(card).toBeVisible();
+ await page.getByRole('button',{name:'Увеличить карту',exact:true}).click();await expect(card).toBeVisible();
+ await card.getByRole('button',{name:'Добавить в избранное',exact:true}).click();await expect(card).toBeVisible();
+ await page.getByTestId('map-sdk-contract').click({position:{x:10,y:10}});await expect(card).toHaveCount(0);
+});

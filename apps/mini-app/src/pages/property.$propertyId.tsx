@@ -98,7 +98,7 @@ export default function PropertyPage(){
       <div className={styles.fade}/>
       <Link to={returnTo} className={styles.back} aria-label="Назад"><ArrowLeft size={19}/></Link>
       <div className={styles.actions}>
-        <button onClick={()=>toggle(p.id)} className={favorite?styles.favorited:""} aria-pressed={favorite} aria-label={favorite?"Убрать из избранного":"В избранное"}><Heart size={18} fill="none"/></button>
+        <button onClick={()=>toggle(p.id)} className={favorite?styles.favorited:""} aria-pressed={favorite} aria-label={favorite?"Убрать из избранного":"В избранное"}><Heart size={18} fill={favorite?"currentColor":"none"}/></button>
         <button onClick={share} aria-label="Поделиться"><Share2 size={18}/></button>
       </div>
     </section>

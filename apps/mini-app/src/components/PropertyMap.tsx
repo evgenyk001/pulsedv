@@ -25,6 +25,7 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,im
  const nodeRef=React.useRef<HTMLDivElement>(null);
  const mapRef=React.useRef<PropertyMapAdapter|null>(null);
  const markersRef=React.useRef<Array<{ids:string[];root:HTMLDivElement;pin:HTMLButtonElement;marker:MapMarker}>>([]);
+ const mapPointer=React.useRef({x:0,y:0,moved:false});
  const [status,setStatus]=React.useState<'loading'|'ready'|'error'>('loading');
  const [provider,setProvider]=React.useState('');
  const [attempt,setAttempt]=React.useState(0);
@@ -167,7 +168,14 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,im
  },[selected?.id,groupIds]);
 
  return <div className={styles.wrap} style={{'--map-preview-bottom':previewBottom+'px'} as React.CSSProperties} aria-busy={status==='loading'}>
-  <div ref={nodeRef} className={styles.map} data-allow-pinch-zoom="true" aria-label={`Интерактивная карта${provider?' '+provider:''} с новостройками`}/>
+  <div ref={nodeRef} className={styles.map} data-allow-pinch-zoom="true"
+   onPointerDownCapture={event=>{mapPointer.current={x:event.clientX,y:event.clientY,moved:false}}}
+   onPointerMoveCapture={event=>{if(Math.hypot(event.clientX-mapPointer.current.x,event.clientY-mapPointer.current.y)>8)mapPointer.current.moved=true}}
+   onClickCapture={event=>{
+    const target=event.target instanceof Element?event.target:null;
+    if(mapPointer.current.moved||target?.closest('button,a,[role="button"]'))return;
+    onSelect(undefined);setGroupIds([]);
+   }} aria-label={`Интерактивная карта${provider?' '+provider:''} с новостройками`}/>
   {status==='loading'&&<div className={styles.state} role="status">Загружаем карту…</div>}
   {status==='error'&&<div className={styles.state} role="status"><strong>Не удалось открыть карту</strong><span>Проверьте соединение или продолжите выбирать квартиры в списке.</span><div className={styles.stateActions}><button type="button" onClick={()=>setAttempt(value=>value+1)}><RotateCw size={15}/>Попробовать снова</button>{onShowList&&<button type="button" onClick={onShowList}>Открыть список ЖК</button>}</div></div>}
   {status==='ready'&&<div className={styles.zoomControls} role="group" aria-label="Масштаб карты"><button type="button" aria-label="Увеличить карту" onClick={()=>mapRef.current?.zoom(1)}><Plus size={20}/></button><button type="button" aria-label="Уменьшить карту" onClick={()=>mapRef.current?.zoom(-1)}><Minus size={20}/></button></div>}

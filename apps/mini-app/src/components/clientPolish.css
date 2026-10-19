@@ -28,3 +28,7 @@
 /* Notifications and continuation cards use the shared neutral icon material. */
 .pulseResumeIcon,.pulseEmptyIcon,.pulseUpdateIcon{background:var(--icon-surface);color:var(--icon-ink);border:1px solid var(--icon-border);border-radius:12px}
 .pulseJourneyBenefits svg{color:var(--icon-ink)}
+
+.pulseNotificationBadge{position:absolute;right:-3px;top:-4px;min-width:19px;height:19px;padding:0 4px;display:grid;place-items:center;border:2px solid #fff;border-radius:999px;background:var(--primary);color:#fff;font-size:9px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;box-shadow:0 2px 7px #f20d1d24}
+.pulseUpdateRow p{margin:4px 0 0;color:var(--muted-foreground);font-size:11px;line-height:1.45;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.pulseUpdatesToolbar button:disabled{opacity:.55}
