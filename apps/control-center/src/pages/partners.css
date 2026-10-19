@@ -99,3 +99,5 @@
 @media(prefers-reduced-motion:reduce) { .partnersWorkspace .partnerReferralRow { transition:none; } }
 
 .partnersWorkspace details summary{padding:12px 0;overflow-wrap:anywhere;cursor:pointer;line-height:1.5}.partnersWorkspace details form{display:grid;gap:12px;padding:8px 0 18px}
+
+.partnerAntifraud{padding:20px;border:1px solid #d6e3de;border-radius:18px;background:#f5faf7;margin:18px 0}.partnerAntifraud.risk-high{border-color:#efb3b8;background:#fff4f4}.partnerAntifraud.risk-review{border-color:#ebd5a1;background:#fffaf0}.partnerAntifraud .sectionHeading{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.partnerAntifraud h3{margin:0}.partnerAntifraud li{margin:10px 0;line-height:1.5}.partnerAntifraud small{display:block;line-height:1.5;color:var(--muted,#697586)}.partnerAntifraud .signal-high{color:#9c1b2d}.partnerAntifraud .signal-review{color:#805a14}.partnerSecurityAttempts{margin:16px 0;padding:18px;border:1px solid #e2d5d5;border-radius:16px}.partnerSecurityAttempts li{margin:10px 0}.partnerSecurityAttempts small{display:block;color:var(--muted,#697586)}

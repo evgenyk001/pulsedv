@@ -45,7 +45,7 @@ test('Partners API: identity, attribution, uniqueness, own cabinet, immutable ac
  const leadInput=(phone:string,code?:string)=>({idempotencyKey:randomUUID(),source:'catalog',propertyId:null,name:'Покупатель Иванов',phone,comment:null,consent:true,consentVersion:config.CONSENT_VERSION,...(code?{referralCode:code,referralConsent:true}:{})});
  let partnerA:any,partnerB:any,invite:any,ref:any,leadId:string,reward:any,leadSubmission:any;
  const referral=(id:string)=>app.inject({url:'/api/v1/control/leads/'+id+'/partner',cookies:owner});
- const review=(r:any,decision='accept',reason?:string)=>control('/api/v1/control/partner-referrals/'+r.id+'/review',{revision:r.revision,decision,contactConfirmed:true,note:'Покупатель подтвердил рекомендацию. Сверили CRM.',...(reason?{reason}:{})});
+ const review=async(r:any,decision='accept',reason?:string)=>{const risk=(await referral(r.leadId)).json().referral.antifraud;return control('/api/v1/control/partner-referrals/'+r.id+'/review',{revision:r.revision,decision,contactConfirmed:true,note:'Покупатель подтвердил рекомендацию. Сверили CRM.',riskAcknowledged:true,riskFingerprint:risk.fingerprint,...(reason?{reason}:{})})};
  const patch=async(id:string,payload:any)=>{const current=(await app.inject({url:'/api/v1/control/leads/'+id,cookies:owner})).json().lead;return app.inject({method:'PATCH',url:'/api/v1/control/leads/'+id,headers,cookies:owner,payload:{expectedUpdatedAt:current.updatedAt,...payload}})};
  await t.test('only verified Telegram identity joins, terms are required and joining is idempotent',async()=>{
   assert.equal((await join(anonymous,'Guest','+79991234567')).statusCode,403);
