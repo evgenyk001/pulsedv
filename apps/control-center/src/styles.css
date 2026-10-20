@@ -617,6 +617,10 @@ main{
 .countBadge{min-width:28px;text-align:center}
 
 /* Analytical attribution block */
+.trafficLinkFields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:18px 0}
+.trafficLinkFields label,.trafficLinkOutput{display:grid;gap:7px;min-width:0;font-size:13px;color:var(--muted)}
+.trafficLinkFields input,.trafficLinkOutput input{width:100%;min-width:0;padding:11px;border:1px solid var(--pc-line);border-radius:12px;background:var(--pc-surface);color:var(--pc-text)}
+.trafficLinkOutput{margin-bottom:12px}
 .acquisitionPanel{
   position:relative;
   overflow:hidden;

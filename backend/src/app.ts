@@ -1,3 +1,4 @@
+import {registerAcquisitionRoutes,linkAcquisition} from './acquisitionRoutes';
 import {antifraudCollector,observeVisitor} from './partnerAntifraud';
 import {registerClientNotificationRoutes,mergeNotificationReads} from './clientNotificationRoutes';
 import {configuredMap} from '../../packages/pulse-data/mapConfig';
@@ -82,6 +83,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  const sessionLock=async(sql:Sql,id:string)=>{await sql.query('select id from sessions where id=$1 for update',[id]);};
  const cookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1/control',maxAge:8*3600};
  const visitorCookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1',maxAge:30*86400};
+ registerAcquisitionRoutes(app,db,config,visitor,control);
  app.get('/health',async()=>({status:'ok'}));
  app.get('/ready',async()=>{if(!await migrationsApplied(db))throw new HttpError(503,'Примените миграции перед запуском');await readState(db);return {status:'ready'};});
  app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);const now=Date.now();const banners=state.banners.filter(b=>b.enabled&&(!b.startsAt||Date.parse(b.startsAt)<=now)&&(!b.endsAt||Date.parse(b.endsAt)>now));const {leadEngine:_privateLeadEngine,...publicState}=state;return {version,consentVersion:config.CONSENT_VERSION,state:{...publicState,properties:[],banners}};});
@@ -113,6 +115,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    await mergeSearch(sql,request.visitor!.sessionId,row.id);
    await mergeNotificationReads(sql,request.visitor!.sessionId,row.id);
    await sql.query('update sessions set user_id=$2,telegram_start_param=$3 where id=$1',[request.visitor!.sessionId,row.id,verified.startParam]);
+   await linkAcquisition(sql,request.visitor!.sessionId,verified.startParam);
    for(const table of ['user_events','visitor_profiles','leads'])await sql.query(`update ${table} set user_id=$2 where session_id=$1`,[request.visitor!.sessionId,row.id]);
   });return {ok:true};
  });

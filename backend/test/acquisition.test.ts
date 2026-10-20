@@ -1,0 +1,85 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {createHmac,randomUUID} from 'node:crypto';
+import {testDatabase} from './database';
+import {migrate} from '../src/migrate';
+import {createApp} from '../src/app';
+import {readConfig} from '../src/config';
+import {hashPassword} from '../src/security';
+import {attribution} from '../../packages/journey/attribution';
+import {referralCodeFromStart} from '../../packages/partners/model';
+import {visitId} from '../../packages/journey/visit';
+
+test('Visit identity: refresh deduplicates; new referral domain and Telegram launch start new visits',()=>{
+ const globals=globalThis as any,old={window:globals.window,document:globals.document,sessionStorage:globals.sessionStorage},storage=new Map<string,string>();
+ globals.sessionStorage={getItem:(key:string)=>storage.get(key)||null,setItem:(key:string,value:string)=>storage.set(key,value)};
+ globals.window={location:{search:'',hash:'',origin:'https://pulsedv.ru'}};globals.document={referrer:'https://yandex.ru/search?q=home'};
+ try{
+  const first=visitId('miniapp');assert.equal(visitId('miniapp'),first);
+  globals.document.referrer='https://vk.com/';const second=visitId('miniapp');assert.notEqual(second,first);
+  globals.document.referrer='https://pulsedv.ru/';assert.equal(visitId('miniapp'),second);
+  globals.window.Telegram={WebApp:{initDataUnsafe:{start_param:'acq_'+'a'.repeat(32)}}};const launch=visitId('miniapp');assert.notEqual(launch,second);assert.equal(visitId('miniapp'),launch);
+  globals.window.Telegram.WebApp.initDataUnsafe.start_param='acq_'+'b'.repeat(32);assert.notEqual(visitId('miniapp'),launch);
+ }finally{for(const [key,value] of Object.entries(old)){if(value===undefined)delete globals[key];else globals[key]=value}}
+});
+
+test('Sources: tags override referrer; same-origin and invalid referrers disclose no URLs',()=>{
+ assert.deepEqual(attribution('?utm_source=vk&utm_medium=cpc&utm_campaign=homes&utm_content=a&utm_term=flat','https://search.example/private?phone=123','https://pulsedv.ru'),{source:'vk',medium:'cpc',campaign:'homes',content:'a',term:'flat',referrer:'search.example'});
+ assert.equal(attribution('','https://pulsedv.ru/secret?a=1','https://pulsedv.ru').source,'direct');
+ assert.equal(attribution('','https://yandex.ru/search/?text=personal','https://pulsedv.ru').source,'yandex.ru');
+ assert.equal(attribution('','javascript:alert(1)').source,'direct');
+ assert.equal(referralCodeFromStart('acq_'+randomUUID().replaceAll('-','')),null);
+});
+
+test('Acquisition: landing → signed Telegram / cookie → app → enquiry, deduplication and access',async t=>{
+ const db=await testDatabase();await migrate(db);
+ const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',BOT_TOKEN:'acquisition-test'});
+ const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close()});
+ const headers={origin:config.PUBLIC_ORIGIN,'content-type':'application/json'};
+ const post=(url:string,payload:any,accessToken?:string,cookies?:Record<string,string>)=>app.inject({method:'POST',url,headers:{...headers,...(accessToken?{authorization:'Bearer '+accessToken}:{})},payload,cookies});
+ const id=randomUUID(),body={id,search:'?utm_source=vk&utm_medium=cpc&utm_campaign=autumn&utm_content=ad1',referrer:'https://vk.com/private?email=secret'};
+ const landing=await post('/api/v1/public/traffic',body);assert.equal(landing.statusCode,200,landing.body);
+ const {url,qr}=landing.json();assert.match(url,/^https:\/\/t.me\/pulsedvbot\?startapp=acq_[a-f0-9]{32}$/);
+ const redirect=await app.inject(landing.json().go+'?placement=social');assert.equal(redirect.statusCode,302);assert.equal(redirect.headers.location,url);
+ assert.ok(landing.cookies.some(c=>c.name==='pulse_acquisition'&&c.httpOnly));
+ assert.equal((await post('/api/v1/public/traffic',{...body,search:'?utm_source=forged'})).statusCode,200);
+ assert.equal(Number((await db.query('select count(*) as n from acquisition_visits')).rows[0].n),1);
+ assert.equal((await db.query('select source,referrer from acquisition_visits where id=$1',[id])).rows[0].source,'vk');
+ assert.equal((await db.query('select referrer from acquisition_visits where id=$1',[id])).rows[0].referrer,'vk.com');
+ const svg=await app.inject(qr);assert.equal(svg.statusCode,200);assert.match(svg.headers['content-type']!,/image\/svg/);assert.match(svg.body,/<svg/);
+ const click={id:randomUUID(),visitId:id,placement:'primary'};
+ await post('/api/v1/public/traffic/click',click);await post('/api/v1/public/traffic/click',click);
+ assert.equal(Number((await db.query('select count(*) as n from acquisition_clicks')).rows[0].n),2);
+ const session=(await post('/api/v1/auth/session',{source:'direct'})).json();
+ const params=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id:910001,first_name:'Visitor'}),start_param:new URL(url).searchParams.get('startapp')!});
+ const key=createHmac('sha256','WebAppData').update(config.BOT_TOKEN!).digest();
+ params.set('hash',createHmac('sha256',key).update([...params].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n')).digest('hex'));
+ const auth=await post('/api/v1/auth/telegram',{initData:params.toString()},session.accessToken);assert.equal(auth.statusCode,200,auth.body);
+ const entry={id:randomUUID(),search:'',referrer:'',initData:params.toString()};
+ const opened=await post('/api/v1/me/acquisition',entry,session.accessToken);assert.equal(opened.statusCode,200,opened.body);
+ await post('/api/v1/me/acquisition',entry,session.accessToken);
+ assert.equal(Number((await db.query("select count(*) as n from acquisition_visits where surface='miniapp'")).rows[0].n),1);
+ const lead=await post('/api/v1/leads',{idempotencyKey:randomUUID(),source:'consultation',name:'Клиент',phone:'+79998887766',consent:true,consentVersion:config.CONSENT_VERSION},session.accessToken);assert.equal(lead.statusCode,200,lead.body);
+ // Returning through another campaign creates a new visit without replacing first-touch CRM attribution.
+ await post('/api/v1/me/acquisition',{id:randomUUID(),search:'?utm_source=instagram&utm_campaign=return'},session.accessToken);
+ assert.equal((await db.query('select source from sessions where id=$1',[session.sessionId])).rows[0].source,'vk');
+ const browser=(await post('/api/v1/auth/session',{})).json();
+ const cookieEntry=await post('/api/v1/me/acquisition',{id:randomUUID()},browser.accessToken,{pulse_acquisition:id});assert.equal(cookieEntry.statusCode,200,cookieEntry.body);
+ const returningId=randomUUID();await post('/api/v1/me/acquisition',{id:returningId,referrer:'https://yandex.ru/search'},browser.accessToken,{pulse_acquisition:id});
+ assert.equal((await db.query('select source from acquisition_visits where id=$1',[returningId])).rows[0].source,'yandex.ru');
+ const plain=(await post('/api/v1/auth/session',{})).json();
+ await post('/api/v1/me/acquisition',{id:randomUUID(),referrer:'https://yandex.ru/search?q=secret'},plain.accessToken);
+ assert.equal((await db.query('select source from sessions where id=$1',[plain.sessionId])).rows[0].source,'yandex.ru');
+ const password='acquisition-owner-password',hash=await hashPassword(password);
+ for(const role of ['owner','manager'])await db.query('insert into team_members(name,email,password_hash,role) values($1,$2,$3,$1)',[role,role+'@test.local',hash]);
+ const login=async(role:string)=>{const res=await post('/api/v1/control/login',{email:role+'@test.local',password});return {pulse_control:res.cookies.find(c=>c.name==='pulse_control')!.value}};
+ assert.equal((await app.inject('/api/v1/control/traffic')).statusCode,401);
+ assert.equal((await app.inject({url:'/api/v1/control/traffic',cookies:await login('manager')})).statusCode,403);
+ const report=await app.inject({url:'/api/v1/control/traffic',cookies:await login('owner')});assert.equal(report.statusCode,200,report.body);
+ const rows=report.json().items,vk=rows.find((r:any)=>r.source==='vk');
+ assert.equal(vk.landing,1);assert.equal(vk.clicks,1);assert.equal(vk.opened,1);assert.equal(vk.miniapp,2);assert.equal(vk.contacts,1);
+ assert.equal(rows.find((r:any)=>r.source==='instagram').contacts,0);
+ assert.ok(!report.body.includes('secret'));assert.ok(!report.body.includes('79998887766'));
+ assert.equal((await post('/api/v1/public/traffic',{id:randomUUID(),search:'x'.repeat(3001)})).statusCode,400);
+ const foreign=await app.inject({method:'POST',url:'/api/v1/public/traffic',headers:{...headers,origin:'https://evil.example'},payload:{id:randomUUID()}});assert.equal(foreign.statusCode,403);
+});
