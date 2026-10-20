@@ -29,7 +29,7 @@ function nextStep(r:PartnerReferral){
  if(r.status==='rejected')return partnerRejectReasons[r.rejectionReason as PartnerRejectReason]||'Условия программы не выполнены. Свяжитесь с PULSE, если нужна проверка решения.';
  if(r.status==='pending')return 'Связываемся с покупателем и проверяем, что он пришёл впервые. После проверки здесь появится результат.';
  if(r.reward?.status==='paid')return 'Выплата подтверждена агентством'+(r.reward.paidOn?' '+dateLabel(r.reward.paidOn):'')+'. Выплаченная сумма указана с учётом удержаний.';
- if(r.reward?.payoutStage==='agreed')return 'Способ получения согласован. Ниже указаны реквизиты или адрес и время приезда в офис. Выплата появится в истории после подтверждения командой.';
+ if(r.reward?.payoutStage==='agreed'&&['accrued','requested'].includes(r.reward.status))return 'Способ получения согласован. Ниже указаны реквизиты или адрес и время приезда в офис. Выплата появится в истории после подтверждения командой.';
  if(r.reward?.status==='requested')return 'Запрос принят. Команда согласует с вами способ получения и проверит документы. Здесь можно уточнить данные.';
  if(r.reward?.status==='accrued')return 'Вознаграждение начислено. Выберите удобный способ получения и отправьте данные команде.';
  if(r.reward?.status==='void')return 'Начисление отменено. Команда уточнит расчёт; прежняя запись остаётся в истории.';
