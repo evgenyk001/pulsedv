@@ -1,5 +1,6 @@
 import {isPublicEvent} from './eventContract';
 import { attribution } from '../journey/attribution';
+import {entrySearch,visitId} from '../journey/visit';
 import { DEFAULT_STATE, type PulseState, type PulseLead, type PulseTask, type PulseEvent, type PulseVisitorProfile } from './model';
 export type TeamMember={id:string;name:string;email:string;role:'owner'|'admin'|'manager';active:boolean;cities:string[];telegramUserId:string|null;mfaEnabled:boolean};
 export type Delivery={id:string;topic:string;attempts:number;lastError:string|null;processedAt:string|null;deadAt:string|null;createdAt:string;availableAt?:string};
@@ -38,7 +39,7 @@ async function session():Promise<Session>{
  sessionPromise=(async()=>{
   let stored:Session|null=null;try{stored=JSON.parse(localStorage.getItem(SESSION)||'null');}catch{}
   if(stored&&Date.parse(stored.expiresAt)>Date.now()+60_000)return stored;
-  const value=await api<Session>('/auth/session',{method:'POST',body:JSON.stringify(attribution(window.location.search||window.location.hash.split('?')[1]||''))});
+  const value=await api<Session>('/auth/session',{method:'POST',body:JSON.stringify(attribution(entrySearch(),document.referrer,window.location.origin))});
   try{localStorage.setItem(SESSION,JSON.stringify(value));}catch{}
   return value;
  })();try{return await sessionPromise;}catch(error){sessionPromise=null;throw error;}
@@ -56,6 +57,8 @@ export async function initializePublic(){
  if(!visitorCookieBound){await visitorApi('/auth/cookie',{method:'POST',body:'{}'});visitorCookieBound=true;}
  const initData=(window as any).Telegram?.WebApp?.initData;
  if(initData&&!telegramBound){await visitorApi('/auth/telegram',{method:'POST',body:JSON.stringify({initData})});telegramBound=true;}
+ // Analytics must not block the application or reset its authenticated identity.
+ void visitorApi('/me/acquisition',{method:'POST',body:JSON.stringify({id:visitId('miniapp'),search:entrySearch().slice(0,3000),referrer:document.referrer.slice(0,2000)})}).catch(()=>{});
 }
 type Bootstrap={state:PulseState;version:number;members:TeamMember[];notifications:Delivery[];counts:ControlCounts};
 type Paged<T>={items:T[];page:number;limit:number;total:number;hasMore:boolean};

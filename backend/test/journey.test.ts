@@ -32,7 +32,7 @@ test('Путь клиента: черновики, реакция, перехо�
  assert.throws(()=>applyJourney(j,{type:'showing_status',id:show.id,status:'completed',result:''},'manager',now));
  j=applyJourney(j,{type:'showing_status',id:show.id,status:'completed',result:'Обсудить альтернативу'},'manager',now);
  assert.equal(clientJourney(j).showings[0].result,'');
- assert.deepEqual(attribution('?utm_source=telegram&utm_campaign=autumn'),{source:'telegram',medium:'',campaign:'autumn'});
+ assert.deepEqual(attribution('?utm_source=telegram&utm_campaign=autumn'),{source:'telegram',medium:'',campaign:'autumn',content:'',term:'',referrer:''});
 });
 test('Journey API: доступ, конфликт версий, публикация, показы, аналитика и проверки каталога',async t=>{
  const db=await testDatabase();await migrate(db);const mediaRoot=await mkdtemp(join(tmpdir(),'pulse-journey-media-'));const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',MEDIA_ROOT:mediaRoot});const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close();await rm(mediaRoot,{recursive:true,force:true})});

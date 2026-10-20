@@ -1,4 +1,5 @@
 import {LossReasonsPanel} from '../components/LossReasonsPanel';
+import {TrafficPanel} from '../components/TrafficPanel';
 import {FinancePanel} from '../components/FinancePanel';
 import React from "react";
 import {AcquisitionPanel} from '../components/AcquisitionPanel';
@@ -53,7 +54,7 @@ export function AnalyticsPage(){
   ];
 
   return <PageFrame eyebrow="АНАЛИТИКА ПОВЕДЕНИЯ" title="Аналитика" description="Охват действий и обращения. Этапы считаются независимо и не означают последовательный путь одного клиента.">
-    <FinancePanel/><LossReasonsPanel/><AcquisitionPanel/><section className="metrics">
+    <TrafficPanel/><FinancePanel/><LossReasonsPanel/><AcquisitionPanel/><section className="metrics">
       <article><span>Сессии</span><strong>{sessions}</strong><small>технические сессии, не визиты</small></article>
       <article><span>Тёплые и выше</span><strong>{priorities.warm+priorities.hot+priorities.urgent}</strong><small>заметный интерес</small></article>
       <article><span>Лиды</span><strong>{leadsTotal}</strong><small>оставили контакты</small></article>

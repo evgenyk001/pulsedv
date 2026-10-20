@@ -18,6 +18,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
  const media:{leadId:string;legacy:string[]}[]=[];
 
  const result=await db.transaction(async sql=>{
+  await sql.query('delete from acquisition_visits where created_at<$1',[analyticsCutoff]);
   await sql.query("delete from antifraud_observations where last_seen_at<now()-interval '90 days'");
   await sql.query("delete from antifraud_devices where last_seen_at<now()-interval '180 days'");
   await sql.query("delete from partner_security_attempts where created_at<now()-interval '90 days'");

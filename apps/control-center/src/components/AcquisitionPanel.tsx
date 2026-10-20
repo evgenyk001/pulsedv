@@ -21,7 +21,7 @@ export function AcquisitionPanel(){
    <div><span>Контакты</span><strong>{contacts}</strong><small>{visits?Math.round(contacts/visits*100):0}% от технических сессий</small></div>
    <div><span>Сделки</span><strong>{deals}</strong><small><ArrowUpRight size={13}/> итоговая конверсия</small></div>
   </div>
-  <small className="acquisitionNote">Источники сохраняются по utm_source и utm_campaign. Старые переходы без меток не восстанавливаются. Расходы и окупаемость пока не учитываются.</small>
+  <small className="acquisitionNote">Первый источник сессии сохраняется по меткам UTM, переходу с лендинга или домену сайта-источника. Без переданного источника прямой вход и неизвестный источник неразличимы. Старые переходы не восстанавливаются. Расходы и окупаемость пока не учитываются.</small>
   {error&&<p className="errorNotice" role="alert">{error}</p>}
   <div className="journeyTable acquisitionTable"><table><thead><tr>{['Источник / кампания','Сессии','Контакты','Состоявшиеся показы','Сделки','Визит → контакт'].map(x=><th key={x}>{x}</th>)}</tr></thead><tbody>{rows.map(r=><tr key={JSON.stringify([r.source,r.campaign])}><td>{r.source==='direct'?'Прямой переход':r.source==='unknown'?'Источник неизвестен':r.source}{r.campaign&&' / '+r.campaign}</td><td>{r.visits}</td><td>{r.contacts}</td><td>{r.showings}</td><td>{r.deals}</td><td>{r.visits?Math.round(r.contacts/r.visits*100):0}%</td></tr>)}</tbody></table></div>
   {!rows.length&&<div className="acquisitionEmpty">Данные появятся после технических сессий в мини-приложение.</div>}
