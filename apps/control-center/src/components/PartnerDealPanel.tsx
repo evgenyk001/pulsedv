@@ -7,6 +7,9 @@ import {LOSS_REASONS,lossError,type LossReason} from '../../../../packages/pulse
 import {partnerStageLabels} from '../../../../packages/partners/model';
 import {ControlJourneyPanel} from '../../../../packages/journey/ControlJourneyPanel';
 import {usePulseState} from '../data';
+import {cleanManagerComment,leadRequestContext,describeLeadRequestContext} from '../../../../packages/pulse-data/leadContext';
+
+const makeDraft=(l:PulseLead):PulseLead=>({...l,comment:cleanManagerComment(l.comment),requestContext:leadRequestContext(l.requestContext,l.comment),finance:{...emptyFinance(),...l.finance}});
 
 async function readLead(id:string){return runtime.enabled?(await api<{lead:PulseLead}>('/control/leads/'+encodeURIComponent(id))).lead:listPulseLeads().find(l=>l.id===id)||null}
 export function PartnerLeadPreview({id}:{id:string}){
@@ -17,15 +20,16 @@ export function PartnerLeadPreview({id}:{id:string}){
 export function PartnerDealPanel({leadId,locked,onSaved,onDirtyChange}:{leadId:string;locked:boolean;onSaved:()=>void;onDirtyChange:(dirty:boolean)=>void}){
  const state=usePulseState();
  const [lead,setLead]=React.useState<PulseLead|null>(null),[draft,setDraft]=React.useState<PulseLead|null>(null),[error,setError]=React.useState(''),[notice,setNotice]=React.useState(''),[busy,setBusy]=React.useState(false),[tab,setTab]=React.useState<'deal'|'journey'>('deal');
- const load=React.useCallback(async()=>{const l=await readLead(leadId);if(!l)throw new Error('Карточка клиента недоступна');setLead(l);setDraft({...l,finance:{...emptyFinance(),...l.finance}})},[leadId]);
- React.useEffect(()=>{let live=true;void readLead(leadId).then(l=>{if(!live)return;if(!l){setError('Карточка клиента недоступна');return}setLead(l);setDraft({...l,finance:{...emptyFinance(),...l.finance}})}).catch(e=>{if(live)setError(e.message)});return()=>{live=false}},[leadId]);
+ const load=React.useCallback(async()=>{const l=await readLead(leadId);if(!l)throw new Error('Карточка клиента недоступна');setLead(l);setDraft(makeDraft(l));setError('')},[leadId]);
+ React.useEffect(()=>{let live=true;void readLead(leadId).then(l=>{if(!live)return;if(!l){setError('Карточка клиента недоступна');return}setLead(l);setDraft(makeDraft(l))}).catch(e=>{if(live)setError(e.message)});return()=>{live=false}},[leadId]);
  const save=async(e:React.FormEvent)=>{
   e.preventDefault();if(!draft||!lead||busy)return;
   const invalid=financeError(draft.finance!)||lossError(draft.status,draft.status==='lost'?draft.lossReason:null,draft.status==='lost'?draft.lossNote:null);if(invalid){setError(invalid);return}
-  const patch={status:draft.status,finance:draft.finance,comment:draft.comment||null,nextAction:draft.nextAction||null,manager:draft.manager,lossReason:draft.status==='lost'?draft.lossReason:null,lossNote:draft.status==='lost'?draft.lossNote:null,expectedUpdatedAt:lead.updatedAt};
-  setBusy(true);setError('');setNotice('');try{if(runtime.enabled)await updateRemote('leads',leadId,patch);else updatePulseLead(leadId,patch);await load();setNotice('Изменения сохранены. Этап обновится и у партнёра.');onSaved()}catch(e){setError(e instanceof Error?e.message:'Не удалось сохранить')}finally{setBusy(false)};
+  const patch={status:draft.status,finance:draft.finance,comment:draft.comment||null,...(draft.nextAction!==lead.nextAction?{nextAction:draft.nextAction||null}:{}),manager:draft.manager,lossReason:draft.status==='lost'?draft.lossReason:null,lossNote:draft.status==='lost'?draft.lossNote:null,expectedUpdatedAt:lead.updatedAt};
+  setBusy(true);setError('');setNotice('');try{if(runtime.enabled)await updateRemote('leads',leadId,patch);else updatePulseLead(leadId,{...patch,requestContext:draft.requestContext});await load();setNotice('Изменения сохранены. Этап обновится и у партнёра.');onSaved()}catch(e){setError(e instanceof Error?e.message:'Не удалось сохранить')}finally{setBusy(false)};
  };
- const dirty=!!lead&&!!draft&&JSON.stringify({...lead,finance:{...emptyFinance(),...lead.finance}})!==JSON.stringify(draft);
+ const dirty=!!lead&&!!draft&&JSON.stringify(makeDraft(lead))!==JSON.stringify(draft);
+ const context=draft?describeLeadRequestContext(draft.requestContext||{},draft.source):null;
  React.useEffect(()=>{onDirtyChange(dirty);return()=>onDirtyChange(false)},[dirty,onDirtyChange]);
  React.useEffect(()=>{if(!dirty)return;const prevent=(e:BeforeUnloadEvent)=>e.preventDefault();window.addEventListener('beforeunload',prevent);return()=>window.removeEventListener('beforeunload',prevent)},[dirty]);
  return <section className="partnerDealPanel" id="partner-deal" aria-label="Сделка клиента">
@@ -33,6 +37,7 @@ export function PartnerDealPanel({leadId,locked,onSaved,onDirtyChange}:{leadId:s
   <nav className="partnerLocalTabs" aria-label="Сделка в партнёрской рекомендации"><button type="button" aria-pressed={tab==='deal'} onClick={()=>setTab('deal')}>Этап и комиссия</button><button type="button" aria-pressed={tab==='journey'} onClick={()=>setTab('journey')}>Чат, подборки и показы</button></nav>
   {error&&<p className="errorNotice" role="alert">{error} <button type="button" className="secondaryAction" disabled={busy} onClick={()=>void load().catch(e=>setError(e.message))}>Загрузить актуальную карточку</button></p>}
   {!draft?<p role="status">Загружаем данные клиента…</p>:tab==='journey'?<ControlJourneyPanel leadId={leadId} properties={state.properties}/>:<form className="partnerForm" onSubmit={e=>void save(e)}>
+   {!!context?.lines.length&&<div className="partnersNotice"><b>{context.title}</b>{context.lines.map((line,index)=><p key={index}>{line}</p>)}</div>}
    <a className="secondaryAction" href={'tel:'+draft.phone}><Phone size={15}/>Позвонить покупателю: {draft.phone}</a>
    <label className="controlField"><span>На каком этапе покупатель</span><select aria-label="На каком этапе покупатель" value={draft.status} disabled={busy} onChange={e=>setDraft({...draft,status:e.target.value as PulseLead['status']})}>{Object.entries(partnerStageLabels).map(([key,label])=><option key={key} value={key} disabled={locked&&!['deal','closed'].includes(key)}>{label}</option>)}</select></label>
    {draft.status==='lost'&&<><label className="controlField"><span>Почему покупка не состоялась</span><select value={draft.lossReason||''} onChange={e=>setDraft({...draft,lossReason:(e.target.value||null) as LossReason|null})}><option value="">Выберите причину</option>{Object.entries(LOSS_REASONS).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>{draft.lossReason==='other'&&<label className="controlField"><span>Уточните причину</span><textarea value={draft.lossNote||''} maxLength={1000} onChange={e=>setDraft({...draft,lossNote:e.target.value})}/></label>}</>}
