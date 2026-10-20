@@ -37,6 +37,11 @@ const notices=`with owned as (
  '/property/'||(f->>'propertyId'),false
  from search_profiles p cross join lateral jsonb_array_elements(p.feed) f
  join catalog_properties c on c.id=f->>'propertyId' and c.status='published' where p.owner=$3
+ union all
+ select 'partner:'||e.id,'partner',e.label,'Откройте кабинет партнёра для подробностей',e.created_at,
+ '/partners?referral='||r.id,false
+ from partner_referral_events e join partner_referrals r on r.id=e.referral_id join partner_profiles p on p.id=r.partner_id
+ where p.user_id=$2::uuid and e.kind in ('accrued','payout_details','payout_agreed','payout_reopened','paid')
 ), notices as (
  select r.id,r.kind,r.title,r.body,r.at,r.href,(r.source_read or seen.notice_id is not null) as read
  from raw r left join client_notification_reads seen on seen.owner=$3 and seen.notice_id=r.id

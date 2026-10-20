@@ -4,6 +4,6 @@ import {getPartnerCabinet,subscribePartners} from '../../../../packages/partners
 import {subscribePartnerReturn} from '../../../../packages/partners/refresh';
 export function usePartners(page=1,tab='clients'){
  const client=useQueryClient();
- React.useEffect(()=>{const update=()=>{void client.invalidateQueries({queryKey:['partner-cabinet']})},unsubscribe=subscribePartners(update),returned=subscribePartnerReturn(update);return()=>{unsubscribe();returned()}},[client]);
+ React.useEffect(()=>{const update=()=>{void client.invalidateQueries({queryKey:['partner-cabinet']});void client.invalidateQueries({queryKey:['partner-referral']})},unsubscribe=subscribePartners(update),returned=subscribePartnerReturn(update);return()=>{unsubscribe();returned()}},[client]);
  return useQuery({queryKey:['partner-cabinet',page,tab],queryFn:()=>getPartnerCabinet(page,tab==='payments'?'payments':'all'),placeholderData:keepPreviousData,staleTime:Infinity,refetchInterval:false,refetchOnWindowFocus:false,refetchOnReconnect:false,refetchOnMount:'always'});
 }

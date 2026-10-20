@@ -11,11 +11,19 @@ import {hashPassword} from '../src/security';
 import {runSecurityMaintenance} from '../src/maintenance';
 import {businessDay,emptyFinance} from '../../packages/pulse-data/business';
 import {PARTNER_TERMS_VERSION,partnerReward,referralCodeFromStart} from '../../packages/partners/model';
+import {emptyPayout,cleanPayout,payoutError} from '../../packages/partners/payout';
 function signed(id:number,token:string){const p=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id,first_name:'Buyer'})});const secret=createHmac('sha256','WebAppData').update(token).digest();p.set('hash',createHmac('sha256',secret).update([...p.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n')).digest('hex'));return p.toString()}
 test('Partner amounts use kopecks, exact commission and valid Telegram invitation parameters',()=>{
  assert.deepEqual(partnerReward(100000),{commissionRub:100000,reserveMinor:600000,baseMinor:9400000,grossMinor:2820000});
  assert.equal(partnerReward(7543219).grossMinor,212718776);assert.throws(()=>partnerReward(100.2));assert.throws(()=>partnerReward(-1));
  assert.equal(referralCodeFromStart('ref_p01234567890123456789'),'p01234567890123456789');assert.equal(referralCodeFromStart('ref_../../leads'),null);
+});
+test('Payout data keeps only the chosen method and validates receiving details without requesting banking secrets',()=>{
+ const p={...emptyPayout('Анна Иванова','8 999 123-45-67'),method:'bank' as const,account:'40817810099910004312',bic:'044525225',inn:'123456789012',bankName:'Банк'};
+ assert.equal(payoutError(p),'');assert.equal(payoutError({...p,bic:'123'}).length>0,true);
+ const cash=cleanPayout({...p,method:'cash'});assert.equal(cash.contactPhone,'+79991234567');assert.equal(cash.account,'');assert.equal(cash.bic,'');assert.equal(cash.inn,'');assert.equal(cash.bankName,'');
+ assert.equal(payoutError(cash),'');assert.match(payoutError(cash,true),/адрес/);
+ assert.match(payoutError({...p,method:'contact'},true),/конкретный способ/);
 });
 test('One calendar month clamps month end and legacy durations stay intact; deal date must be real, inclusive and within the claim',()=>{
  assert.equal(claimExpiresOn('2026-01-31'),'2026-02-28');assert.equal(claimExpiresOn('2024-01-31'),'2024-02-29');assert.equal(claimExpiresOn('2026-08-31'),'2026-09-30');assert.equal(claimExpiresOn('2026-12-31'),'2027-01-31');assert.equal(claimExpiresOn('2026-10-18'),'2026-11-18');
@@ -124,6 +132,45 @@ test('Partners API: identity, attribution, uniqueness, own cabinet, immutable ac
   assert.equal(Number((await db.query('select count(*) as n from partner_rewards where referral_id=$1',[ref.id])).rows[0].n),2);
   const request=()=>post('/api/v1/me/partner/rewards/'+reward.id+'/request',{recipientType:'person'});assert.equal((await request()).statusCode,200);assert.equal((await request()).statusCode,200);
   reward=(await referral(leadId)).json().referral.reward;assert.equal(reward.status,'requested');assert.equal(reward.revision,2);
+ });
+ await t.test('receiving coordination is owned, revision checked, cash requires an appointment and partner changes block payment',async()=>{
+  const url='/api/v1/control/partner-rewards/'+reward.id+'/payout-plan',own='/api/v1/me/partner/rewards/'+reward.id;
+  const refresh=async()=>{reward=(await referral(leadId)).json().referral.reward};
+  assert.equal((await get('/api/v1/me/partner/referrals/'+ref.id,b)).statusCode,404);
+  const detail=(await get('/api/v1/me/partner/referrals/'+ref.id)).json().referral;
+  assert.equal(detail.clientPhone,undefined);assert.equal(detail.partnerContact,undefined);assert.equal(detail.leadId,null);assert.equal(detail.reviewNote,undefined);
+  const controlDetail=(await referral(leadId)).json().referral;assert.equal(controlDetail.partnerContact.phone,partnerA.phone);
+  assert.equal((await control(url,{revision:reward.revision,decision:'request_details'},admin)).statusCode,403);
+  assert.equal((await control(url,{revision:reward.revision,decision:'request_details'})).statusCode,200);await refresh();
+  const cash={...emptyPayout('Анна Иванова',partnerA.phone),method:'cash' as const};
+  assert.equal((await post(own+'/request',{revision:reward.revision,payout:cash,recipientType:'person'},b)).statusCode,404);
+  assert.equal((await post(own+'/request',{revision:reward.revision-1,payout:cash,recipientType:'person'})).statusCode,409);
+  assert.equal((await post(own+'/request',{revision:reward.revision,payout:{...cash,cvv:'123'},recipientType:'person'})).statusCode,400);
+  assert.equal((await post(own+'/request',{revision:reward.revision,payout:cash,recipientType:'person'})).statusCode,200);await refresh();
+  assert.equal(reward.payoutStage,'details_received');assert.equal(reward.payoutDetails.method,'cash');
+  const plan={revision:reward.revision,decision:'agree',payout:cash,recipientType:'person',contactConfirmed:true};
+  assert.equal((await control(url,plan)).statusCode,400);
+  const agreed={...cash,officeAddress:'Владивосток, Тестовая улица, 1, офис 2',meetingAt:new Date(Date.now()+86400000).toISOString(),note:'Вход со двора, позвоните перед приездом'};
+  assert.equal((await control(url,{...plan,payout:{...agreed,meetingAt:new Date(Date.now()-86400000).toISOString()}})).statusCode,400);
+  assert.equal((await control(url,{...plan,payout:agreed,contactConfirmed:false})).statusCode,400);
+  assert.equal((await control(url,{...plan,payout:agreed})).statusCode,200);await refresh();
+  assert.equal(reward.payoutStage,'agreed');
+  const agreedOwn=(await get('/api/v1/me/partner/referrals/'+ref.id)).json().referral;assert.deepEqual(agreedOwn.reward.payoutDetails,cleanPayout(agreed));
+  assert.equal((await post(own+'/request',{revision:reward.revision,payout:{...cash,method:'sbp'},recipientType:'person'})).statusCode,409);
+  assert.equal((await post(own+'/change-request',{revision:reward.revision},b)).statusCode,404);
+  const stale=reward.revision;assert.equal((await post(own+'/change-request',{revision:stale})).statusCode,200);await refresh();
+  assert.equal(reward.payoutStage,'details_needed');assert.equal((await db.query('select payout_agreed_by,payout_agreed_at from partner_rewards where id=$1',[reward.id])).rows[0].payout_agreed_at,null);
+  const pay={revision:reward.revision,withheldMinor:0,paidOn:businessDay(),payoutReference:'Payment',documentReference:'Contract',documentsChecked:true};
+  assert.equal((await control('/api/v1/control/partner-rewards/'+reward.id+'/pay',pay)).statusCode,409);
+  assert.equal((await control(url,{...plan,revision:stale,payout:agreed})).statusCode,409);
+  const sbp={...emptyPayout('Анна Иванова',partnerA.phone),method:'sbp' as const,bankName:'Тестовый банк',note:'После 12:00'};
+  assert.equal((await control(url,{...plan,revision:reward.revision,payout:sbp})).statusCode,200);await refresh();
+  assert.equal(reward.payoutDetails.officeAddress,'');assert.equal(reward.payoutStage,'agreed');
+  const inbox=(await get('/api/v1/me/notifications')).json();assert.ok(inbox.items.some((e:any)=>e.kind==='partner'&&e.href==='/partners?referral='+ref.id));
+  const foreign=(await get('/api/v1/me/notifications',b)).json();assert.ok(!foreign.items.some((e:any)=>e.href==='/partners?referral='+ref.id));
+  const outbox=JSON.stringify((await db.query("select payload from outbox_events where topic in ('user.partner','manager.journey') and aggregate_id=$1",[ref.id])).rows);
+  assert.ok(!outbox.includes(agreed.officeAddress));assert.ok(!outbox.includes(partnerA.phone));assert.ok(!outbox.includes(sbp.bankName));
+  const audits=JSON.stringify((await db.query("select * from audit_log where action='partner.payout.plan'")).rows);assert.ok(!audits.includes(agreed.officeAddress));assert.ok(!audits.includes(partnerA.phone));
  });
  await t.test('payout needs owner, documents and actual date; concurrency cannot pay twice; summary subtracts gross',async()=>{
   const url='/api/v1/control/partner-rewards/'+reward.id+'/pay',payload={revision:reward.revision,withheldMinor:366600,paidOn:businessDay(),payoutReference:'Payment-001',documentReference:'Contract-001 / act',documentsChecked:true};

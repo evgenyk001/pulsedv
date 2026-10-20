@@ -1,4 +1,5 @@
 import {OFFER_VERSION} from './offer';
+import type {PayoutDetails,PayoutStage} from './payout';
 export const PARTNER_TERMS_VERSION=OFFER_VERSION;
 export const PARTNER_REWARD_BPS=3000;
 export const PARTNER_RESERVE_BPS=600;
@@ -8,10 +9,10 @@ export type RewardStatus='accrued'|'requested'|'paid'|'void';
 export type Partner={id:string;userId:string|null;name:string;phone:string;code:string;status:PartnerStatus;termsVersion:string;termsAcceptedAt?:string;createdAt:string};
 export type PartnerInvite={id:string;partnerId:string;code:string;label:string;createdAt:string;submitted?:boolean};
 export type PartnerEvent={id:string;referralId:string;kind:string;label:string;createdAt:string};
-export type PartnerReward={id:string;referralId:string;commissionRub:number;receivedOn?:string;dealOn?:string|null;reserveMinor:number;baseMinor:number;grossMinor:number;status:RewardStatus;recipientType:string|null;requestedAt:string|null;paidOn:string|null;withheldMinor:number;paidMinor:number;payoutReference?:string|null;documentReference?:string|null;revision:number;createdAt:string};
+export type PartnerReward={id:string;referralId:string;commissionRub:number;receivedOn?:string;dealOn?:string|null;reserveMinor:number;baseMinor:number;grossMinor:number;status:RewardStatus;recipientType:string|null;requestedAt:string|null;paidOn:string|null;withheldMinor:number;paidMinor:number;payoutReference?:string|null;documentReference?:string|null;payoutDetails?:PayoutDetails|null;payoutStage?:PayoutStage|null;revision:number;createdAt:string};
 export type PartnerRiskSignal={code:string;label:string;severity:'info'|'review'|'high';evidence:string[]};
 export type PartnerRisk={version:1;level:'clear'|'review'|'high';signals:PartnerRiskSignal[];fingerprint:string;checkedAt:string;manualRequired:true;phoneVerification:'manual';reviewed:boolean;reviewedAt:string|null};
-export type PartnerReferral={id:string;partnerId:string;partnerName:string;leadId:string|null;invitationId:string|null;clientName:string;clientPhone?:string;status:ReferralStatus;stage:string;stageLabel:string;conflict:boolean;conflictDetails?:string;conflictLeads?:Array<{id:string;label:string}>;reviewNote?:string;antifraud?:PartnerRisk;riskReviews?:Array<{id:string;stage:string;note:string;reviewerName:string|null;createdAt:string}>;rejectionReason:string|null;revision:number;createdAt:string;acceptedAt:string|null;termsVersion?:string;claimStartedOn?:string|null;claimExpiresOn?:string|null;dealConfirmedOn?:string|null;events:PartnerEvent[];reward:PartnerReward|null};
+export type PartnerReferral={id:string;partnerId:string;partnerName:string;partnerContact?:{phone:string;telegramUsername:string|null};leadId:string|null;invitationId:string|null;clientName:string;clientPhone?:string;status:ReferralStatus;stage:string;stageLabel:string;conflict:boolean;conflictDetails?:string;conflictLeads?:Array<{id:string;label:string}>;reviewNote?:string;antifraud?:PartnerRisk;riskReviews?:Array<{id:string;stage:string;note:string;reviewerName:string|null;createdAt:string}>;rejectionReason:string|null;revision:number;createdAt:string;acceptedAt:string|null;termsVersion?:string;claimStartedOn?:string|null;claimExpiresOn?:string|null;dealConfirmedOn?:string|null;events:PartnerEvent[];reward:PartnerReward|null};
 export type PartnerSummary={accruedMinor:number;paidMinor:number;pendingCount:number;acceptedCount:number};
 export type PartnerReservation={id:string;code:string;label:string;phoneHint:string;expiresAt:string;createdAt:string;submitted?:boolean};
 export type ReservationResult={outcome:'reserved'|'not_unique'|'self'|'expired'|'confirmed';message:string;reservation?:PartnerReservation};

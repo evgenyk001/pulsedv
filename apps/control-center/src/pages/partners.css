@@ -30,7 +30,7 @@
 .partnerProfileRow b { color:var(--pc-text); font-size:13px; }
 .partnerProfileRow small { display:block; color:var(--pc-muted); margin-top:5px; font-size:11px; }
 .partnersPaging { display:flex; gap:12px; align-items:center; justify-content:center; color:var(--pc-muted); font-size:12px; }
-.partnerDrawer { width:min(640px,100%); overflow-x:hidden; }
+.partnerDrawer { width:min(900px,100%); overflow-x:hidden; }
 .partnerDrawer .drawerHeader { align-items:flex-start; gap:14px; }
 .partnerDrawer .drawerHeader>div { min-width:0; overflow-wrap:anywhere; }
 .partnerIdentity { display:flex; flex-direction:column; gap:9px; padding:18px 0; font-size:13px; color:var(--pc-muted); }
@@ -113,5 +113,25 @@
 .partnerSecurityAttempts li{margin:10px 0}.partnerSecurityAttempts small{display:block;color:var(--pc-muted)}
 .control .partnerDrawer>*{min-width:0;max-width:100%;box-sizing:border-box}
 .control .partnerDrawer fieldset{min-inline-size:0;width:100%}
+.partnersGuide,.partnerNextAction{padding:22px;border:1px solid var(--pc-line);background:var(--pc-surface);border-radius:20px;line-height:1.6}
+.partnersGuide p,.partnerNextAction p{color:var(--pc-muted);font-size:13px;margin:8px 0 16px}
+.partnersGuide p:last-child{margin-bottom:0}
+.partnerNextAction{background:linear-gradient(120deg,rgba(242,13,29,.1),var(--pc-surface));margin-bottom:16px}
+.partnerNextAction small{color:#ff9aa3;font-size:10px;letter-spacing:.08em}.partnerNextAction h3{margin:6px 0;font-size:20px;line-height:1.35}
+.partnerStepNav,.partnerLocalTabs,.partnerContactActions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;min-width:0;align-items:center}
+.partnerStepNav button,.partnerLocalTabs button{padding:10px 13px;min-height:44px;border:1px solid var(--pc-line);border-radius:12px;background:var(--pc-surface);color:var(--pc-text);font:inherit;font-size:12px;cursor:pointer}
+.partnerLocalTabs button[aria-pressed=true]{background:rgba(242,13,29,.13);border-color:#f20d1d;color:#ffb2ba}
+.partnerSectionTitle{display:flex;gap:12px;align-items:flex-start;margin:20px 0 14px;min-width:0}
+.partnerSectionTitle>span{display:grid;place-items:center;width:32px;height:32px;flex:none;background:rgba(242,13,29,.12);border-radius:10px;color:#ff9aa3;font-weight:700}
+.partnerSectionTitle>div{min-width:0}.partnerSectionTitle h3{margin:0;font-size:17px;line-height:1.4}.partnerSectionTitle p{margin:5px 0 0;color:var(--pc-muted);font-size:12px;line-height:1.6}
+.partnerDealPanel,.partnerPayoutPanel{min-width:0;border-top:1px solid var(--pc-line);margin-top:24px;padding-top:4px}
+.partnerPayoutPanel{display:grid;gap:12px}.partnerPayoutPanel>.partnerSectionTitle{margin-bottom:0}.partnerPayoutPanel>p,.partnerPayoutPanel>small{font-size:12px;line-height:1.6;color:var(--pc-muted);margin:0}
+.partnerContactActions{margin:0}.partnerContactActions>b{flex-basis:100%;font-size:14px}.partnerContactActions a{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;max-width:100%}
+.partnerFinanceFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.partnerSaved{padding:14px 16px;border:1px solid rgba(66,184,140,.3);background:rgba(66,184,140,.08);border-radius:14px;color:#a6e3c4!important;font-size:13px;line-height:1.6}
+.partnerRowNext{display:block;margin-top:8px;color:#ffb2ba;font-size:11px;line-height:1.45}
+.partnerConflictPreview{padding:14px;margin-top:12px;border:1px solid var(--pc-line);border-radius:12px;background:var(--pc-surface)}
+.partnerDrawer [id^=partner-]{scroll-margin-top:18px}.partnerDrawer #partner-history{border-top:1px solid var(--pc-line);margin-top:24px;padding-top:10px}
+@media(max-width:600px){.partnerFinanceFields{grid-template-columns:minmax(0,1fr)}.partnerNextAction{padding:17px}.partnerStepNav button{flex:1 0 30%}.partnerContactActions a{flex:1 0 100%}.partnerNextAction .primaryAction{width:100%}}
 .control .partnerDrawer .partnerForm>*{min-width:0;max-width:100%;box-sizing:border-box}
 @media(max-width:380px){.partnerAntifraud{padding:14px}.partnerAntifraud .sectionHeading>b{flex-basis:100%;font-size:12px}.partnerAntifraud .partnerCheckbox>span{flex:1;min-width:0}}
