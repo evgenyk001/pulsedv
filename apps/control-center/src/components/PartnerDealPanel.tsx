@@ -8,6 +8,7 @@ import {partnerStageLabels} from '../../../../packages/partners/model';
 import {ControlJourneyPanel} from '../../../../packages/journey/ControlJourneyPanel';
 import {usePulseState} from '../data';
 import {cleanManagerComment,leadRequestContext,describeLeadRequestContext} from '../../../../packages/pulse-data/leadContext';
+import {contactPhoneHref} from '../../../../packages/partners/payout';
 
 const makeDraft=(l:PulseLead):PulseLead=>({...l,comment:cleanManagerComment(l.comment),requestContext:leadRequestContext(l.requestContext,l.comment),finance:{...emptyFinance(),...l.finance}});
 
@@ -30,6 +31,7 @@ export function PartnerDealPanel({leadId,locked,onSaved,onDirtyChange}:{leadId:s
  };
  const dirty=!!lead&&!!draft&&JSON.stringify(makeDraft(lead))!==JSON.stringify(draft);
  const context=draft?describeLeadRequestContext(draft.requestContext||{},draft.source):null;
+ const call=draft?contactPhoneHref(draft.phone):null;
  React.useEffect(()=>{onDirtyChange(dirty);return()=>onDirtyChange(false)},[dirty,onDirtyChange]);
  React.useEffect(()=>{if(!dirty)return;const prevent=(e:BeforeUnloadEvent)=>e.preventDefault();window.addEventListener('beforeunload',prevent);return()=>window.removeEventListener('beforeunload',prevent)},[dirty]);
  return <section className="partnerDealPanel" id="partner-deal" aria-label="Сделка клиента">
@@ -38,7 +40,7 @@ export function PartnerDealPanel({leadId,locked,onSaved,onDirtyChange}:{leadId:s
   {error&&<p className="errorNotice" role="alert">{error} <button type="button" className="secondaryAction" disabled={busy} onClick={()=>void load().catch(e=>setError(e.message))}>Загрузить актуальную карточку</button></p>}
   {!draft?<p role="status">Загружаем данные клиента…</p>:tab==='journey'?<ControlJourneyPanel leadId={leadId} properties={state.properties}/>:<form className="partnerForm" onSubmit={e=>void save(e)}>
    {!!context?.lines.length&&<div className="partnersNotice"><b>{context.title}</b>{context.lines.map((line,index)=><p key={index}>{line}</p>)}</div>}
-   <a className="secondaryAction" href={'tel:'+draft.phone}><Phone size={15}/>Позвонить покупателю: {draft.phone}</a>
+   {call&&<a className="secondaryAction" href={call}><Phone size={15}/>Позвонить покупателю: {draft.phone}</a>}
    <label className="controlField"><span>На каком этапе покупатель</span><select aria-label="На каком этапе покупатель" value={draft.status} disabled={busy} onChange={e=>setDraft({...draft,status:e.target.value as PulseLead['status']})}>{Object.entries(partnerStageLabels).map(([key,label])=><option key={key} value={key} disabled={locked&&!['deal','closed'].includes(key)}>{label}</option>)}</select></label>
    {draft.status==='lost'&&<><label className="controlField"><span>Почему покупка не состоялась</span><select value={draft.lossReason||''} onChange={e=>setDraft({...draft,lossReason:(e.target.value||null) as LossReason|null})}><option value="">Выберите причину</option>{Object.entries(LOSS_REASONS).map(([id,label])=><option key={id} value={id}>{label}</option>)}</select></label>{draft.lossReason==='other'&&<label className="controlField"><span>Уточните причину</span><textarea value={draft.lossNote||''} maxLength={1000} onChange={e=>setDraft({...draft,lossNote:e.target.value})}/></label>}</>}
    <label className="controlField"><span>Кто ведёт покупателя</span><select value={draft.manager||''} disabled={busy} onChange={e=>setDraft({...draft,manager:e.target.value||null})}><option value="">Пока не назначен</option>{runtime.snapshot.members.filter(m=>m.active||m.id===draft.manager).map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>

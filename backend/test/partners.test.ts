@@ -11,7 +11,7 @@ import {hashPassword} from '../src/security';
 import {runSecurityMaintenance} from '../src/maintenance';
 import {businessDay,emptyFinance} from '../../packages/pulse-data/business';
 import {PARTNER_TERMS_VERSION,partnerReward,referralCodeFromStart} from '../../packages/partners/model';
-import {emptyPayout,cleanPayout,payoutError} from '../../packages/partners/payout';
+import {emptyPayout,cleanPayout,payoutError,contactPhoneHref} from '../../packages/partners/payout';
 function signed(id:number,token:string){const p=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id,first_name:'Buyer'})});const secret=createHmac('sha256','WebAppData').update(token).digest();p.set('hash',createHmac('sha256',secret).update([...p.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n')).digest('hex'));return p.toString()}
 test('Partner amounts use kopecks, exact commission and valid Telegram invitation parameters',()=>{
  assert.deepEqual(partnerReward(100000),{commissionRub:100000,reserveMinor:600000,baseMinor:9400000,grossMinor:2820000});
@@ -19,6 +19,8 @@ test('Partner amounts use kopecks, exact commission and valid Telegram invitatio
  assert.equal(referralCodeFromStart('ref_p01234567890123456789'),'p01234567890123456789');assert.equal(referralCodeFromStart('ref_../../leads'),null);
 });
 test('Payout data keeps only the chosen method and validates receiving details without requesting banking secrets',()=>{
+ assert.equal(contactPhoneHref('8 (999) 123-45-67'),'tel:+79991234567');assert.equal(contactPhoneHref('javascript:alert(1)'),null);assert.equal(contactPhoneHref('" onmouseover="alert(1)'),null);
+ assert.equal(contactPhoneHref(' +7 999 123 45 67\r\n'), 'tel:+79991234567');
  const p={...emptyPayout('Анна Иванова','8 999 123-45-67'),method:'bank' as const,account:'40817810099910004312',bic:'044525225',inn:'123456789012',bankName:'Банк'};
  assert.equal(payoutError(p),'');assert.equal(payoutError({...p,bic:'123'}).length>0,true);
  const cash=cleanPayout({...p,method:'cash'});assert.equal(cash.contactPhone,'+79991234567');assert.equal(cash.account,'');assert.equal(cash.bic,'');assert.equal(cash.inn,'');assert.equal(cash.bankName,'');

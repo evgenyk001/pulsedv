@@ -5,6 +5,11 @@ export type PayoutDetails={method:PayoutMethod;recipientName:string;contactPhone
 export const payoutMethods:Record<PayoutMethod,string>={contact:'Обсудить с командой',sbp:'Перевод по СБП',bank:'По банковским реквизитам',cash:'Наличными в офисе'};
 export const payoutStages:Record<PayoutStage,string>={details_needed:'Нужно согласовать получение',details_received:'Партнёр передал данные',agreed:'Получение согласовано'};
 export const emptyPayout=(name='',phone=''):PayoutDetails=>({method:'contact',recipientName:name,contactPhone:phone,sbpPhone:phone,bankName:'',account:'',bic:'',inn:'',officeAddress:'',meetingAt:'',note:''});
+/** Keep the tel scheme fixed; never interpolate raw CRM or form text into a dial link. */
+export function contactPhoneHref(value:string){
+ const phone=normalizePartnerPhone(value);
+ return /^\+[1-9]\d{9,14}$/.test(phone)?'tel:+'+encodeURIComponent(phone.slice(1)):null;
+}
 export function cleanPayout(p:PayoutDetails):PayoutDetails{
  const clean=Object.fromEntries(Object.entries(p).map(([k,v])=>[k,typeof v==='string'?v.trim():v])) as PayoutDetails;
  clean.contactPhone=normalizePartnerPhone(clean.contactPhone);clean.sbpPhone=normalizePartnerPhone(clean.sbpPhone);
