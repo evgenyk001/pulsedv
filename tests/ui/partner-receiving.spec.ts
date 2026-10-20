@@ -4,6 +4,8 @@ import {OFFER_VERSION} from '../../packages/partners/offer';
 import {emptyPayout} from '../../packages/partners/payout';
 
 for(const width of [390,1440])test(`Partner receiving ${width}px: arrange office pickup in Control, partner sees appointment and can request changes`,async({page,browserName})=>{
+ // This crosses both apps, repeats agreement changes and captures large mobile-WebKit screenshots.
+ test.setTimeout(90000);
  await page.setViewportSize({width,height:900});await page.emulateMedia({reducedMotion:'reduce'});
  await page.addInitScript(({state,version,payout})=>{
   localStorage.setItem('pulse.partner.guide.v1','seen');localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion);
