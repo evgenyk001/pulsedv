@@ -125,6 +125,9 @@ test('Partners API: identity, attribution, uniqueness, own cabinet, immutable ac
   assert.equal((await patch(leadId,{finance:{...emptyFinance(),commissionRub:200000,receivedOn:businessDay()}})).statusCode,409);
   assert.equal((await patch(leadId,{status:'showing'})).statusCode,409);
   assert.equal((await post('/api/v1/me/partner/rewards/'+reward.id+'/request',{recipientType:'person'},b)).statusCode,404);
+  const plan=await control('/api/v1/control/partner-rewards/'+reward.id+'/payout-plan',{revision:reward.revision,decision:'agree',payout:{...emptyPayout('Анна Иванова',partnerA.phone),method:'sbp',bankName:'Тестовый банк'},recipientType:'person',contactConfirmed:true});assert.equal(plan.statusCode,200,plan.body);
+  reward=(await referral(leadId)).json().referral.reward;
+  assert.equal((await post('/api/v1/me/partner/rewards/'+reward.id+'/request',{recipientType:'company'})).statusCode,409);
  });
  await t.test('unpaid accrual can be voided and corrected without erasing history',async()=>{
   assert.equal((await control('/api/v1/control/partner-rewards/'+reward.id+'/void',{revision:reward.revision,reason:'Проверка первичных документов'})).statusCode,200);
