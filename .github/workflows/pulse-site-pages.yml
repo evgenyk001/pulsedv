@@ -9,6 +9,7 @@ on:
       - "package*.json"
       - ".github/workflows/runtime-check.yml"
       - "dist/**"
+      - "scripts/build-seo.mjs"
       - "apps/mini-app/**"
       - "apps/control-center/**"
       - "packages/**"
@@ -16,6 +17,9 @@ on:
   pull_request:
     branches: ["main"]
     paths:
+      - "dist/**"
+      - "scripts/build-seo.mjs"
+      - "tests/seo.test.mjs"
       - "apps/mini-app/**"
       - "apps/control-center/**"
       - "packages/**"
@@ -112,6 +116,8 @@ jobs:
         run: node --check dist/script.js
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
+      - name: Prepare search-safe preview metadata
+        run: node scripts/build-seo.mjs --preview
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:

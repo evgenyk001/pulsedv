@@ -9,6 +9,7 @@ COPY apps/mini-app apps/mini-app
 COPY apps/control-center apps/control-center
 COPY packages packages
 COPY dist dist
+COPY scripts scripts
 ENV VITE_PULSE_MODE=api
 ENV VITE_API_BASE_URL=/api/v1
 RUN npm run build
