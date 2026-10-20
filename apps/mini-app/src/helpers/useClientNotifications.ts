@@ -4,7 +4,8 @@ import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import {loadJourneys} from '../../../../packages/journey/client';
 import {clientUpdates} from '../../../../packages/journey/updates';
 import {getMySearch} from './useMySearch';
-export type ClientNotice={id:string;kind:'message'|'collection'|'showing'|'search';title:string;body:string;at:string;href:string;read:boolean};
+import {localPartnerNotices} from '../../../../packages/partners/client';
+export type ClientNotice={id:string;kind:'message'|'collection'|'showing'|'search'|'partner';title:string;body:string;at:string;href:string;read:boolean};
 export type ClientInbox={items:ClientNotice[];unreadCount:number};
 const KEY='pulse.read-updates.v1';
 function readIds():string[]{try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(v)?v.filter((id):id is string=>typeof id==='string'):[]}catch{return []}}
@@ -12,6 +13,7 @@ async function localInbox():Promise<ClientInbox>{
  const [journeys,search]=await Promise.all([loadJourneys(true),getMySearch()]);
  const seen=new Set(readIds());
  const items:ClientNotice[]=[...clientUpdates(journeys.items,Infinity).map(u=>({id:u.id,kind:u.kind,body:u.body,title:u.title,at:u.at,href:'/journey?lead='+encodeURIComponent(u.leadId)+(u.kind==='collection'?'&tab=collections':u.kind==='showing'?'&tab=showings':''),read:!!u.read||seen.has(u.id)})),...search.feed.map(u=>({id:'search:'+u.id,kind:'search' as const,title:u.title,body:u.name,at:u.at,href:'/property/'+encodeURIComponent(u.propertyId),read:seen.has('search:'+u.id)}))];
+ items.push(...localPartnerNotices().map(item=>({...item,read:seen.has(item.id)})));
  items.sort((a,b)=>Date.parse(b.at)-Date.parse(a.at)||a.id.localeCompare(b.id));
  return {items,unreadCount:items.filter(item=>!item.read).length};
 }
@@ -31,8 +33,8 @@ export function useClientNotifications(){
  const cache=useQueryClient();
  React.useEffect(()=>{
   const refresh=()=>void cache.invalidateQueries({queryKey:['client-notifications']});
-  const storage=(event:StorageEvent)=>{if(event.key===null||['pulse.dv.journeys.v1','pulse.dv.control.leads.v1','pulse.my-search.v1',KEY].includes(event.key))refresh();};
-  const sources=['pulse:journey','pulse:control-leads','pulse:control-state','pulse-favorites','pulse:notification-read'];
+  const storage=(event:StorageEvent)=>{if(event.key===null||['pulse.dv.journeys.v1','pulse.dv.control.leads.v1','pulse.my-search.v1','pulse.partners.v1',KEY].includes(event.key))refresh();};
+  const sources=['pulse:partners','pulse:journey','pulse:control-leads','pulse:control-state','pulse-favorites','pulse:notification-read'];
   for(const source of sources)window.addEventListener(source,refresh);window.addEventListener('storage',storage);
   return()=>{for(const source of sources)window.removeEventListener(source,refresh);window.removeEventListener('storage',storage);};
  },[cache]);

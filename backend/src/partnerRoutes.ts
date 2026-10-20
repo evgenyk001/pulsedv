@@ -1,4 +1,6 @@
 import {assessPartnerRisk,recordRiskReview,requireRiskReviewed} from './partnerAntifraud';
+import {registerPartnerPayoutRoutes,payoutSchema,payoutNotice} from './partnerPayout';
+import {payoutError} from '../../packages/partners/payout';
 import {randomBytes,createHash,randomUUID} from 'node:crypto';
 import {offerText,offerSections,OFFER_VERSION,OFFER_VERSIONS} from '../../packages/partners/offer';
 import {claimExpiresOn,claimDateError,claimMonths} from '../../packages/partners/policy';
@@ -98,7 +100,8 @@ async function identityUnavailable(sql:Sql,phone:string,userId:string|null=null,
 }
 function rewardDto(row:any,privateView:boolean):PartnerReward{
  const r=camelRow(row);
- return {id:r.id,referralId:r.referralId,commissionRub:Number(r.commissionRub),receivedOn:String(r.receivedOn).slice(0,10),dealOn:r.dealOn?String(r.dealOn).slice(0,10):null,reserveMinor:Number(r.reserveMinor),baseMinor:Number(r.baseMinor),grossMinor:Number(r.grossMinor),status:r.status,recipientType:r.recipientType,requestedAt:r.requestedAt,paidOn:r.paidOn?String(r.paidOn).slice(0,10):null,withheldMinor:Number(r.withheldMinor),paidMinor:Number(r.paidMinor),revision:r.revision,createdAt:r.createdAt,...(privateView?{payoutReference:r.payoutReference,documentReference:r.documentReference}:{})};
+ const coordination={payoutDetails:r.payoutDetails??null,payoutStage:r.payoutStage??null};
+ return {id:r.id,referralId:r.referralId,commissionRub:Number(r.commissionRub),receivedOn:String(r.receivedOn).slice(0,10),dealOn:r.dealOn?String(r.dealOn).slice(0,10):null,reserveMinor:Number(r.reserveMinor),baseMinor:Number(r.baseMinor),grossMinor:Number(r.grossMinor),status:r.status,recipientType:r.recipientType,requestedAt:r.requestedAt,paidOn:r.paidOn?String(r.paidOn).slice(0,10):null,withheldMinor:Number(r.withheldMinor),paidMinor:Number(r.paidMinor),revision:r.revision,createdAt:r.createdAt,...coordination,...(privateView?{payoutReference:r.payoutReference,documentReference:r.documentReference}:{})};
 }
 async function referralDtos(sql:Sql,rows:any[],privateView:boolean):Promise<PartnerReferral[]>{
  if(!rows.length)return [];
@@ -108,7 +111,7 @@ async function referralDtos(sql:Sql,rows:any[],privateView:boolean):Promise<Part
  const riskReviews=privateView?(await sql.query('select v.id,v.referral_id,v.stage,v.note,v.created_at,m.name as reviewer_name from partner_risk_reviews v left join team_members m on m.id=v.reviewer_id where v.referral_id=any($1::uuid[]) order by v.created_at desc,v.id desc',[ids])).rows.map(camelRow):[];
  return Promise.all(rows.map(async r=>{
   const clash=privateView?await conflicts(sql,{...r,buyer_user_id:r.buyer_user_id??r.lead_user_id}):null;
-  return {id:r.id,partnerId:r.partner_id,partnerName:r.partner_name,leadId:privateView?r.lead_id:null,invitationId:r.invitation_id,clientName:privateView?r.client_name:publicClientName(r.client_name||'Покупатель'),...(privateView?{clientPhone:r.client_phone,reviewNote:r.review_note||'',antifraud:await assessPartnerRisk(sql,r.id),riskReviews:riskReviews.filter(v=>v.referralId===r.id).map(v=>({id:v.id,stage:v.stage,note:v.note,reviewerName:v.reviewerName,createdAt:v.createdAt})),conflictLeads:clash!.matches.map(m=>({id:m.id,label:m.name+' · '+m.phone})),conflictDetails:clash!.matches.map(m=>m.name+' · '+m.phone+(m.partner_name?' · партнёр '+m.partner_name:' · прямое обращение')).join('\n')+(clash!.claimed.length?'\nЕсть подтверждённое закрепление':'')+(clash!.self?'\nСобственная покупка партнёра':'')}:{ }),termsVersion:r.terms_version,claimStartedOn:dateOnly(r.claim_started_on),claimExpiresOn:dateOnly(r.claim_expires_on),dealConfirmedOn:dateOnly(r.deal_confirmed_on),status:r.status,stage:r.stage,stageLabel:partnerStageLabels[r.stage]||'Обращение',conflict:!!clash&&(clash.matches.length>0||clash.claimed.length>0||clash.self),rejectionReason:r.rejection_reason,revision:r.revision,createdAt:r.created_at instanceof Date?r.created_at.toISOString():r.created_at,acceptedAt:r.accepted_at instanceof Date?r.accepted_at.toISOString():r.accepted_at,events:events.filter(e=>e.referralId===r.id) as any,reward:rewards.find(w=>w.referralId===r.id)??null};
+  return {id:r.id,partnerId:r.partner_id,partnerName:r.partner_name,leadId:privateView?r.lead_id:null,invitationId:r.invitation_id,clientName:privateView?r.client_name:publicClientName(r.client_name||'Покупатель'),...(privateView?{partnerContact:{phone:r.partner_phone,telegramUsername:r.partner_telegram||null},clientPhone:r.client_phone,reviewNote:r.review_note||'',antifraud:await assessPartnerRisk(sql,r.id),riskReviews:riskReviews.filter(v=>v.referralId===r.id).map(v=>({id:v.id,stage:v.stage,note:v.note,reviewerName:v.reviewerName,createdAt:v.createdAt})),conflictLeads:clash!.matches.map(m=>({id:m.id,label:m.name+' · '+m.phone})),conflictDetails:clash!.matches.map(m=>m.name+' · '+m.phone+(m.partner_name?' · партнёр '+m.partner_name:' · прямое обращение')).join('\n')+(clash!.claimed.length?'\nЕсть подтверждённое закрепление':'')+(clash!.self?'\nСобственная покупка партнёра':'')}:{ }),termsVersion:r.terms_version,claimStartedOn:dateOnly(r.claim_started_on),claimExpiresOn:dateOnly(r.claim_expires_on),dealConfirmedOn:dateOnly(r.deal_confirmed_on),status:r.status,stage:r.stage,stageLabel:partnerStageLabels[r.stage]||'Обращение',conflict:!!clash&&(clash.matches.length>0||clash.claimed.length>0||clash.self),rejectionReason:r.rejection_reason,revision:r.revision,createdAt:r.created_at instanceof Date?r.created_at.toISOString():r.created_at,acceptedAt:r.accepted_at instanceof Date?r.accepted_at.toISOString():r.accepted_at,events:events.filter(e=>e.referralId===r.id) as any,reward:rewards.find(w=>w.referralId===r.id)??null};
  }));
 }
 function referralFilter(filter:string){
@@ -118,7 +121,7 @@ function referralFilter(filter:string){
  if(filter==='conflicts')return ` and (exists(select 1 from partner_profiles p where p.id=r.partner_id and (p.phone=r.normalized_phone or p.user_id=coalesce(r.buyer_user_id,(select user_id from leads where id=r.lead_id)))) or exists(select 1 from partner_client_claims c where c.referral_id<>r.id and (c.normalized_phone=r.normalized_phone or c.buyer_user_id=coalesce(r.buyer_user_id,(select user_id from leads where id=r.lead_id)))) or exists(select 1 from leads x left join partner_referrals t on t.lead_id=x.id where x.id<>r.lead_id and (x.normalized_phone=r.normalized_phone or x.user_id=coalesce(r.buyer_user_id,(select user_id from leads where id=r.lead_id))) and (t.status='accepted' or (x.created_at<${priorityTime('r')} and not (coalesce(t.status,'')='rejected' and coalesce(t.rejection_reason,'')='unconfirmed')))))`;
  return '';
 }
-const referralSelect=`select r.*,p.name as partner_name,l.name as client_name,l.phone as client_phone,l.user_id as lead_user_id,l.status as stage from partner_referrals r join partner_profiles p on p.id=r.partner_id left join leads l on l.id=r.lead_id`;
+const referralSelect=`select r.*,p.name as partner_name,p.phone as partner_phone,pu.telegram_username as partner_telegram,l.name as client_name,l.phone as client_phone,l.user_id as lead_user_id,l.status as stage from partner_referrals r join partner_profiles p on p.id=r.partner_id left join app_users pu on pu.id=p.user_id left join leads l on l.id=r.lead_id`;
 export async function guardPartnerFinance(sql:Sql,leadId:string,finance:any,status:string){
  const row=(await sql.query("select w.* from partner_rewards w join partner_referrals r on r.id=w.referral_id where r.lead_id=$1 and w.status<>'void'",[leadId])).rows[0];
  if(row&&(Number(row.commission_rub)!==finance?.commissionRub||String(row.received_on instanceof Date?row.received_on.toISOString().slice(0,10):row.received_on)!==finance?.receivedOn||!['deal','closed'].includes(status)))throw new HttpError(409,'Вознаграждение уже начислено. Сначала отмените неоплаченное начисление в разделе «Партнёры»');
@@ -130,6 +133,7 @@ export async function partnerLeadChanged(sql:Sql,leadId:string,previous:any,next
  if(previous.finance?.receivedOn!==next.finance?.receivedOn&&next.finance?.receivedOn)await partnerEvent(sql,r.id,'commission','Комиссия получена агентством. Вознаграждение ожидает проверки');
 }
 export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visitor,editor,owner}:{db:Database;config:RuntimeConfig;visitor:(r:FastifyRequest)=>Promise<void>;editor:(r:FastifyRequest)=>Promise<void>;owner:(r:FastifyRequest)=>Promise<void>}){
+ registerPartnerPayoutRoutes(app,db,config,owner);
  const operator={name:config.LEGAL_OPERATOR_NAME,inn:config.LEGAL_OPERATOR_INN,email:config.LEGAL_CONTACT_EMAIL,address:config.LEGAL_OPERATOR_ADDRESS,registration:config.LEGAL_OPERATOR_REGISTRATION};
  const published=config.PARTNER_OFFER_PUBLISHED&&config.PARTNER_OFFER_APPROVED_VERSION===OFFER_VERSION&&Object.values(operator).every(Boolean);
  const acceptance=async(sql:Sql,p:any)=>{const text=offerText(),hash=createHash('sha256').update(JSON.stringify({version:OFFER_VERSION,text,operator})).digest('hex');await sql.query('insert into partner_terms_acceptances(partner_id,terms_version,document_text,document_sha256,operator_snapshot,publication_state) values($1,$2,$3,$4,$5::jsonb,$6)',[p.id,OFFER_VERSION,text,hash,JSON.stringify(operator),published?'published':'draft']);};
@@ -208,11 +212,33 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
   });
  });
  app.post('/api/v1/me/partner/rewards/:id/request',{preHandler:authenticated},async request=>{
-  const id=z.uuid().parse((request.params as any).id),input=z.object({recipientType:z.enum(['person','ip','company','npd'])}).strict().parse(request.body);
-  return db.transaction(async sql=>{const p=await profile(sql,request.visitor!.userId!);const w=(await sql.query('select w.* from partner_rewards w join partner_referrals r on r.id=w.referral_id where w.id=$1 and r.partner_id=$2 for update of w',[id,p.id])).rows[0];if(!w)throw new HttpError(404,'Начисление не найдено');
-   if(w.status==='requested')return {ok:true};if(w.status!=='accrued')throw new HttpError(409,'Начисление недоступно для оформления');
-   await sql.query("update partner_rewards set status='requested',recipient_type=$2,requested_at=now(),revision=revision+1 where id=$1",[id,input.recipientType]);await partnerEvent(sql,w.referral_id,'payout_requested','Партнёр запросил оформление выплаты');return {ok:true};
+  const id=z.uuid().parse((request.params as any).id),input=z.object({recipientType:z.enum(['person','ip','company','npd']),revision:z.number().int().positive().optional(),payout:payoutSchema.optional()}).strict().parse(request.body);
+  return db.transaction(async sql=>{const p=await profile(sql,request.visitor!.userId!);const base=(await sql.query('select w.referral_id from partner_rewards w join partner_referrals r on r.id=w.referral_id where w.id=$1 and r.partner_id=$2',[id,p.id])).rows[0];if(!base)throw new HttpError(404,'Начисление не найдено');await sql.query('select id from partner_referrals where id=$1 for update',[base.referral_id]);const w=(await sql.query('select * from partner_rewards where id=$1 for update',[id])).rows[0];
+   if(!['accrued','requested'].includes(w.status))throw new HttpError(409,'Начисление недоступно для оформления');
+   if(w.payout_stage==='agreed'&&(input.payout||w.status!=='requested'))throw new HttpError(409,'Получение уже согласовано. Сначала запросите изменение договорённости');
+   if(input.payout){if(input.revision!==w.revision)throw new HttpError(409,'Данные выплаты изменились. Обновите кабинет');if(w.payout_stage==='agreed')throw new HttpError(409,'Получение уже согласовано. Свяжитесь с командой для изменения');const error=payoutError(input.payout);if(error)throw new HttpError(400,error);}
+   else if(w.status==='requested')return {ok:true};
+   await sql.query("update partner_rewards set status='requested',recipient_type=$2,requested_at=now(),payout_details=coalesce($3::jsonb,payout_details),payout_stage=case when $3::jsonb is null then payout_stage when $3::jsonb->>'method'='contact' then 'details_needed' else 'details_received' end,revision=revision+1 where id=$1",[id,input.recipientType,input.payout?JSON.stringify(input.payout):null]);await partnerEvent(sql,w.referral_id,'payout_requested','Партнёр запросил оформление выплаты');await payoutNotice(sql,config,w.referral_id,'Нужно согласовать выплату партнёру',true);return {ok:true};
   });
+ });
+ app.post('/api/v1/me/partner/rewards/:id/change-request',{preHandler:authenticated},async request=>{
+  const id=z.uuid().parse((request.params as any).id),input=z.object({revision:z.number().int().positive()}).strict().parse(request.body);
+  return db.transaction(async sql=>{
+   const p=await profile(sql,request.visitor!.userId!);
+   const base=(await sql.query('select w.referral_id from partner_rewards w join partner_referrals r on r.id=w.referral_id where w.id=$1 and r.partner_id=$2',[id,p.id])).rows[0];
+   if(!base)throw new HttpError(404,'Начисление не найдено');
+   await sql.query('select id from partner_referrals where id=$1 for update',[base.referral_id]);
+   const w=(await sql.query('select * from partner_rewards where id=$1 for update',[id])).rows[0];
+   if(w.revision!==input.revision||w.payout_stage!=='agreed'||!['accrued','requested'].includes(w.status))throw new HttpError(409,'Получение уже изменилось или выплата выполнена');
+   await sql.query("update partner_rewards set payout_stage='details_needed',payout_agreed_by=null,payout_agreed_at=null,revision=revision+1 where id=$1",[id]);
+   await partnerEvent(sql,w.referral_id,'payout_reopened','Партнёр попросил изменить договорённость о получении');
+   await payoutNotice(sql,config,w.referral_id,'Партнёр просит изменить получение вознаграждения',true);
+   return {ok:true};
+  });
+ });
+ app.get('/api/v1/me/partner/referrals/:id',{preHandler:authenticated},async request=>{
+  const id=z.uuid().parse((request.params as any).id),rows=(await db.query(referralSelect+' where r.id=$1 and p.user_id=$2',[id,request.visitor!.userId])).rows;
+  if(!rows.length)throw new HttpError(404,'Рекомендация не найдена');return {referral:(await referralDtos(db,rows,false))[0]};
  });
  app.get('/api/v1/control/partners',{preHandler:editor},async request=>{
   const q=pageSchema.extend({reservationPage:z.coerce.number().int().min(1).max(100000).default(1)}).parse(request.query);const total=Number((await db.query('select count(*) as n from partner_referrals r where true'+referralFilter(q.filter))).rows[0].n);
@@ -289,8 +315,8 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
    const date=dateOnly;const dealOn=inputDealOn||date(r.deal_confirmed_on)||businessDay();const error=claimDateError(date(r.claim_started_on),date(r.claim_expires_on),dealOn);if(error)throw new HttpError(400,error);
    await sql.query('update partner_referrals set deal_confirmed_on=$2 where id=$1',[id,dealOn]);
    const amount=partnerReward(lead.finance.commissionRub,r.reserve_bps,r.reward_bps);
-   const w=(await sql.query('insert into partner_rewards(referral_id,commission_rub,received_on,reserve_minor,base_minor,gross_minor,approved_by,deal_on) values($1,$2,$3,$4,$5,$6,$7,$8) returning *',[id,amount.commissionRub,lead.finance.receivedOn,amount.reserveMinor,amount.baseMinor,amount.grossMinor,request.member!.id,dealOn])).rows[0];
-   await partnerEvent(sql,id,'accrued','Вознаграждение начислено после проверки полученной комиссии');await audit(sql,request.member!.id,'partner.accrue',id,{grossMinor:amount.grossMinor,dealOn});return {ok:true,reward:rewardDto(w,true)};
+   const w=(await sql.query("insert into partner_rewards(referral_id,commission_rub,received_on,reserve_minor,base_minor,gross_minor,approved_by,deal_on,payout_stage) values($1,$2,$3,$4,$5,$6,$7,$8,'details_needed') returning *",[id,amount.commissionRub,lead.finance.receivedOn,amount.reserveMinor,amount.baseMinor,amount.grossMinor,request.member!.id,dealOn])).rows[0];
+   await partnerEvent(sql,id,'accrued','Вознаграждение начислено после проверки полученной комиссии');await payoutNotice(sql,config,id,'Вознаграждение начислено — выберите способ получения');await audit(sql,request.member!.id,'partner.accrue',id,{grossMinor:amount.grossMinor,dealOn});return {ok:true,reward:rewardDto(w,true)};
   });
  });
  app.post('/api/v1/control/partner-rewards/:id/pay',{preHandler:owner},async request=>{
@@ -301,13 +327,14 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
    await requireUniqueForFinance(sql,r);
    if(w.revision!==input.revision||!['accrued','requested'].includes(w.status))throw new HttpError(409,'Выплата уже изменилась или недоступна');
    if(input.withheldMinor>Number(w.gross_minor))throw new HttpError(400,'Удержания больше начисления');
+   if(w.payout_stage&&(w.payout_stage!=='agreed'||!w.payout_details||payoutError(w.payout_details,true)))throw new HttpError(409,'Сначала согласуйте с партнёром способ получения');
    await sql.query("update partner_rewards set status='paid',withheld_minor=$2,paid_minor=gross_minor-$2,paid_on=$3,payout_reference=$4,document_reference=$5,paid_by=$6,revision=revision+1 where id=$1",[id,input.withheldMinor,input.paidOn,input.payoutReference,input.documentReference,request.member!.id]);
-   await partnerEvent(sql,w.referral_id,'paid','Выплата подтверждена агентством');await audit(sql,request.member!.id,'partner.pay',id,{paidMinor:Number(w.gross_minor)-input.withheldMinor,paidOn:input.paidOn});return {ok:true};
+   await partnerEvent(sql,w.referral_id,'paid','Выплата подтверждена агентством');await payoutNotice(sql,config,w.referral_id,'Выплата вознаграждения подтверждена');await audit(sql,request.member!.id,'partner.pay',id,{paidMinor:Number(w.gross_minor)-input.withheldMinor,paidOn:input.paidOn});return {ok:true};
   });
  });
  app.post('/api/v1/control/partner-rewards/:id/void',{preHandler:owner},async request=>{
   const id=z.uuid().parse((request.params as any).id),input=z.object({revision:z.number().int().positive(),reason:z.string().trim().min(5).max(1000)}).strict().parse(request.body);
-  return db.transaction(async sql=>{const w=(await sql.query('select * from partner_rewards where id=$1 for update',[id])).rows[0];if(!w)throw new HttpError(404,'Начисление не найдено');if(w.revision!==input.revision||!['accrued','requested'].includes(w.status))throw new HttpError(409,'Оплаченное начисление нельзя отменить');
+  return db.transaction(async sql=>{const base=(await sql.query('select referral_id from partner_rewards where id=$1',[id])).rows[0];if(!base)throw new HttpError(404,'Начисление не найдено');await sql.query('select id from partner_referrals where id=$1 for update',[base.referral_id]);const w=(await sql.query('select * from partner_rewards where id=$1 for update',[id])).rows[0];if(w.revision!==input.revision||!['accrued','requested'].includes(w.status))throw new HttpError(409,'Оплаченное начисление нельзя отменить');
    await sql.query("update partner_rewards set status='void',revision=revision+1 where id=$1",[id]);await partnerEvent(sql,w.referral_id,'void','Неоплаченное начисление отменено агентством');await audit(sql,request.member!.id,'partner.void',id,{reason:input.reason});return {ok:true};
   });
  });

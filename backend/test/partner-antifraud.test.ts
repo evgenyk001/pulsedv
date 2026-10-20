@@ -68,7 +68,9 @@ test('Server antifraud: opaque marks, cross-account signals, mandatory owner rev
   const review={revision:r.revision,contactConfirmed:true,riskAcknowledged:true,riskFingerprint:r.antifraud.fingerprint,note:'Повторно подтвердили личность, совместное устройство объяснено'};
   assert.equal((await control('/api/v1/control/partner-referrals/'+r.id+'/risk-review',review)).statusCode,409);
   assert.equal((await control('/api/v1/control/partner-referrals/'+r.id+'/risk-review',{...review,riskFingerprint:current.antifraud.fingerprint})).statusCode,200);
-  current=await detail(r.id);assert.equal(current.antifraud.reviewed,true);assert.equal((await control('/api/v1/control/partner-rewards/'+reward.id+'/pay',pay)).statusCode,200);
+  current=await detail(r.id);assert.equal(current.antifraud.reviewed,true);
+  const agreed=await control('/api/v1/control/partner-rewards/'+reward.id+'/payout-plan',{revision:reward.revision,decision:'agree',payout:{method:'sbp',recipientName:'Партнёр Тестовый',contactPhone:'+79995550101',sbpPhone:'+79995550101',bankName:'Тестовый банк'},recipientType:'person',contactConfirmed:true});assert.equal(agreed.statusCode,200,agreed.body);
+  assert.equal((await control('/api/v1/control/partner-rewards/'+reward.id+'/pay',{...pay,revision:reward.revision+1})).statusCode,200);
   assert.equal(Number((await db.query('select count(*) as n from partner_risk_reviews where referral_id=$1',[r.id])).rows[0].n),2);
  });
  await t.test('earlier direct enquiry is linked through its original browser mark despite a new account and phone',async()=>{

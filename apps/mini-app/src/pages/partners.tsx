@@ -1,11 +1,12 @@
 import {IconTile} from '../components/IconTile';
 import React from 'react';
 import {createPortal} from 'react-dom';
-import {Link} from 'react-router-dom';
+import {Link,useSearchParams} from 'react-router-dom';
+import {PartnerReceivingForm} from '../components/PartnerReceivingForm';
 import {useQueryClient,useQuery} from '@tanstack/react-query';
 import {ArrowLeft,UsersRound,Send,Copy,UserPlus,ChevronRight,Check,Wallet,RefreshCw,ShieldCheck,Info,Clock3,CheckCircle2,XCircle,ArrowUpRight} from 'lucide-react';
 import {runtime,api} from '../../../../packages/pulse-data/runtime';
-import {joinPartner,acceptPartnerTerms,createPartnerInvite,requestPartnerPayout,reservePartnerClient} from '../../../../packages/partners/client';
+import {joinPartner,acceptPartnerTerms,createPartnerInvite,getOwnPartnerReferral,reservePartnerClient} from '../../../../packages/partners/client';
 import {PARTNER_TERMS_VERSION,partnerReward,partnerMoney,partnerLink,referralLabels,rewardLabels,partnerRejectReasons,type PartnerRejectReason,type PartnerReferral} from '../../../../packages/partners/model';
 import {usePartners} from '../helpers/usePartners';
 import {PageHeader} from '../components/PageHeader';
@@ -27,9 +28,10 @@ const dateLabel=(date:string)=>new Date(date).toLocaleDateString('ru-RU',{timeZo
 function nextStep(r:PartnerReferral){
  if(r.status==='rejected')return partnerRejectReasons[r.rejectionReason as PartnerRejectReason]||'Условия программы не выполнены. Свяжитесь с PULSE, если нужна проверка решения.';
  if(r.status==='pending')return 'Связываемся с покупателем и проверяем, что он пришёл впервые. После проверки здесь появится результат.';
- if(r.reward?.status==='paid')return 'Выплата подтверждена агентством'+(r.reward.paidOn?' '+dateLabel(r.reward.paidOn):'')+'. Сумма перевода указана с учётом удержаний.';
- if(r.reward?.status==='requested')return 'Запрос на выплату принят. Команда проверит документы и реквизиты, затем подтвердит перевод.';
- if(r.reward?.status==='accrued')return 'Вознаграждение начислено. Выберите статус получателя и запросите оформление выплаты.';
+ if(r.reward?.status==='paid')return 'Выплата подтверждена агентством'+(r.reward.paidOn?' '+dateLabel(r.reward.paidOn):'')+'. Выплаченная сумма указана с учётом удержаний.';
+ if(r.reward?.payoutStage==='agreed'&&['accrued','requested'].includes(r.reward.status))return 'Способ получения согласован. Ниже указаны реквизиты или адрес и время приезда в офис. Выплата появится в истории после подтверждения командой.';
+ if(r.reward?.status==='requested')return 'Запрос принят. Команда согласует с вами способ получения и проверит документы. Здесь можно уточнить данные.';
+ if(r.reward?.status==='accrued')return 'Вознаграждение начислено. Выберите удобный способ получения и отправьте данные команде.';
  if(r.reward?.status==='void')return 'Начисление отменено. Команда уточнит расчёт; прежняя запись остаётся в истории.';
  if(r.stage==='lost')return 'Покупка не состоялась. Если планы покупателя изменятся, свяжитесь с командой PULSE.';
  if(r.claimExpiresOn&&r.claimExpiresOn<businessDay())return 'Срок закрепления завершён. Если покупка состоялась в срок, команда проверит вознаграждение после получения комиссии.';
@@ -56,8 +58,11 @@ export default function PartnersPage(){
  const reserveKey=React.useRef(crypto.randomUUID());
  const [name,setName]=React.useState(''),[phone,setPhone]=React.useState(''),[consent,setConsent]=React.useState(false),[upgradeConsent,setUpgradeConsent]=React.useState(false);
  const [busy,setBusy]=React.useState(false),[error,setError]=React.useState(''),[notice,setNotice]=React.useState('');
- const [sheet,setSheet]=React.useState<PartnerSheet|null>(null),[selectedId,setSelectedId]=React.useState<string|null>(null);
- const [label,setLabel]=React.useState(''),[inviteCode,setInviteCode]=React.useState<string|null>(null),[recipient,setRecipient]=React.useState('person');
+ const [sheet,setSheet]=React.useState<PartnerSheet|null>(null);
+ const [params,setParams]=useSearchParams(),selectedId=params.get('referral');
+ const setSelectedId=(id:string|null)=>{const next=new URLSearchParams(params);if(id)next.set('referral',id);else next.delete('referral');setParams(next,{replace:!id})};
+ const deep=useQuery({queryKey:['partner-referral',selectedId],queryFn:()=>getOwnPartnerReferral(selectedId!),enabled:!!selectedId,staleTime:0});
+ const [label,setLabel]=React.useState(''),[inviteCode,setInviteCode]=React.useState<string|null>(null);
  const inviteKey=React.useRef(crypto.randomUUID()),guideShown=React.useRef(false);
  const dismissSheet=()=>{if(sheet==='guide'){try{localStorage.setItem(GUIDE_KEY,'seen')}catch{}}setSheet(null);setError('')};
  React.useEffect(()=>{if(q.isLoading||!q.data||guideShown.current)return;guideShown.current=true;try{if(localStorage.getItem(GUIDE_KEY)==='seen')return}catch{}setSheet('guide')},[q.isLoading,q.data]);
@@ -65,17 +70,18 @@ export default function PartnersPage(){
  const offerReady=!runtime.enabled||program.data?.offerPublished===true;
  const p=q.data?.partner,needsTerms=!!p&&p.termsVersion!==PARTNER_TERMS_VERSION,canInvite=p?.status==='active'&&!needsTerms;
  const waiting=(q.data?.reservations||[]).filter(r=>!r.submitted),unsubmittedInvites=(q.data?.invitations||[]).filter(i=>!i.submitted&&!q.data?.reservations?.some(r=>r.code===i.code));
- const selected=q.data?.referrals.find(r=>r.id===selectedId),summary=q.data?.summary;
+ const selected=(deep.data?.referral?.id===selectedId?deep.data.referral:null)||q.data?.referrals.find(r=>r.id===selectedId),summary=q.data?.summary;
+ React.useEffect(()=>{if(deep.error)setError(deep.error instanceof Error?deep.error.message:'Не удалось открыть рекомендацию')},[deep.error]);
  const shareUrl=partnerLink(inviteCode||p?.code||'',window.location.origin+window.location.pathname,runtime.enabled?program.data?.botUsername:undefined);
  const run=async(fn:()=>Promise<unknown>)=>{
   if(busy)return false;setBusy(true);setError('');
-  try{await fn();await cache.invalidateQueries({queryKey:['partner-cabinet']},{throwOnError:true});return true}
+  try{await fn();await Promise.all([cache.invalidateQueries({queryKey:['partner-cabinet']},{throwOnError:true}),cache.invalidateQueries({queryKey:['partner-referral']},{throwOnError:true})]);return true}
   catch(e){setError(e instanceof Error?e.message:'Не удалось выполнить действие');return false}
   finally{setBusy(false)}
  };
  const openSheet=(kind:PartnerSheet)=>{setError('');setSheet(kind);if(kind==='upgrade')setUpgradeConsent(false)};
  const startReserve=()=>{setClientPhone('');setClientLabel('');setContactConsent(false);setReservationResult(null);reserveKey.current=crypto.randomUUID();openSheet('reserve')};
- const openReferral=(r:PartnerReferral)=>{setError('');setSelectedId(r.id);setRecipient('person')};
+ const openReferral=(r:PartnerReferral)=>{setError('');setSelectedId(r.id)};
  const copy=async()=>{if(!canInvite)return;try{await navigator.clipboard.writeText(shareUrl);setNotice('Ссылка скопирована')}catch{setNotice('Скопируйте ссылку из поля ниже')}};
  const share=async()=>{if(!canInvite)return;try{if(navigator.share){await navigator.share({title:'PULSE.DV',text:'Поможем выбрать квартиру и разобраться с ипотекой. Оставьте заявку по моему приглашению и подтвердите, что пришли от меня.',url:shareUrl});setSheet(null)}else await copy()}catch(e){if(!(e instanceof DOMException&&e.name==='AbortError'))setNotice('Скопируйте ссылку из поля приглашения')}};
  React.useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(''),3500);return()=>clearTimeout(timer)},[notice]);
@@ -186,7 +192,7 @@ export default function PartnersPage(){
    {error&&<p className={styles.error} role="alert">{error}</p>}
    <section className={styles.progress} data-status={selected.status}><span>{selected.status==='rejected'?<XCircle size={21}/>:selected.reward?.status==='paid'?<CheckCircle2 size={21}/>:selected.status==='accepted'&&!expired(selected)?<ShieldCheck size={21}/>:<Clock3 size={21}/>}</span><div><b>{selected.reward?rewardLabels[selected.reward.status]:selected.status==='accepted'?selected.stageLabel:referralLabels[selected.status]}</b><p>{nextStep(selected)}</p>{selected.status==='accepted'&&<small>{claimLabel(selected.claimExpiresOn)}</small>}</div></section>
    <ClientJourney referral={selected} detail/>
-   {selected.reward&&<section className={styles.card}><h2>{rewardLabels[selected.reward.status]}</h2><div className={styles.calculation}><span>Комиссия агентства<b>{partnerMoney(selected.reward.commissionRub*100)}</b></span><span>Вычет 6%<b>{partnerMoney(selected.reward.reserveMinor)}</b></span><span>База для расчёта<b>{partnerMoney(selected.reward.baseMinor)}</b></span><span>Вознаграждение 30%<b>{partnerMoney(selected.reward.grossMinor)}</b></span>{selected.reward.status==='paid'&&<><span>Удержания<b>{partnerMoney(selected.reward.withheldMinor)}</b></span><span>Переведено<b>{partnerMoney(selected.reward.paidMinor)}</b></span></>}</div><p className={styles.hint}>Начисление до налогов получателя. Сумма перевода зависит от документов и необходимых удержаний.</p>{selected.reward.status==='accrued'&&<div className={styles.form}><label>Статус получателя<NativeSelect aria-label="Статус получателя" value={recipient} onChange={e=>setRecipient(e.target.value)}><option value="person">Физическое лицо</option><option value="ip">Индивидуальный предприниматель</option><option value="company">Организация</option><option value="npd">Самозанятый — проверка договора</option></NativeSelect></label><button className={styles.primary} disabled={busy} onClick={()=>void run(()=>requestPartnerPayout(selected.reward!.id,recipient))}>Запросить оформление выплаты</button></div>}</section>}
+   {selected.reward&&<section className={styles.card}><h2>{rewardLabels[selected.reward.status]}</h2><div className={styles.calculation}><span>Комиссия агентства<b>{partnerMoney(selected.reward.commissionRub*100)}</b></span><span>Вычет 6%<b>{partnerMoney(selected.reward.reserveMinor)}</b></span><span>База для расчёта<b>{partnerMoney(selected.reward.baseMinor)}</b></span><span>Вознаграждение 30%<b>{partnerMoney(selected.reward.grossMinor)}</b></span>{selected.reward.status==='paid'&&<><span>Удержания<b>{partnerMoney(selected.reward.withheldMinor)}</b></span><span>{selected.reward.payoutDetails?.method==='cash'?'Выдано наличными':'Переведено'}<b>{partnerMoney(selected.reward.paidMinor)}</b></span></>}</div><p className={styles.hint}>Начисление до налогов получателя. Сумма перевода зависит от документов и необходимых удержаний.</p>{['accrued','requested','paid'].includes(selected.reward.status)&&<PartnerReceivingForm reward={selected.reward} name={p?.name||''} phone={p?.phone||''} busy={busy} run={run}/>}</section>}
    <h3 className={styles.historyTitle}>История рекомендации</h3><ol className={styles.timeline}>{selected.events.map(e=><li key={e.id} data-kind={e.kind}><span>{['rejected','void'].includes(e.kind)?<XCircle size={12}/>:<Check size={12}/>}</span><div><b>{e.label}</b><small>{new Date(e.createdAt).toLocaleString('ru-RU',{timeZone:'Asia/Vladivostok',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})}</small></div></li>)}</ol>
   </>}</SheetContent></Sheet>
  </div>;
