@@ -6,11 +6,12 @@ import {coordinatePartnerPayout} from '../../../../packages/partners/client';
 import type {PartnerReferral} from '../../../../packages/partners/model';
 export function PartnerPayoutPanel({referral,owner,busy,run,onDirtyChange}:{referral:PartnerReferral;owner:boolean;busy:boolean;run:(fn:()=>Promise<unknown>)=>Promise<void>;onDirtyChange:(dirty:boolean)=>void}){
  const w=referral.reward!,[details,setDetails]=React.useState(()=>({...emptyPayout(referral.partnerName,referral.partnerContact?.phone),...w.payoutDetails})),[confirmed,setConfirmed]=React.useState(false),[recipient,setRecipient]=React.useState(w.recipientType||'person');
- React.useEffect(()=>{setDetails({...emptyPayout(referral.partnerName,referral.partnerContact?.phone),...w.payoutDetails});setConfirmed(false);setRecipient(w.recipientType||'person')},[w.id,w.revision]);
+ // Initialise before paint so a delayed effect cannot erase the first Safari edit.
+ React.useLayoutEffect(()=>{setDetails({...emptyPayout(referral.partnerName,referral.partnerContact?.phone),...w.payoutDetails});setConfirmed(false);setRecipient(w.recipientType||'person')},[w.id,w.revision]);
  const error=payoutError(details,true),username=referral.partnerContact?.telegramUsername;
  const call=contactPhoneHref(details.contactPhone||referral.partnerContact?.phone||'');
  const changed=JSON.stringify(details)!==JSON.stringify({...emptyPayout(referral.partnerName,referral.partnerContact?.phone),...w.payoutDetails})||recipient!==(w.recipientType||'person');
- React.useEffect(()=>{if(changed)setConfirmed(false)},[JSON.stringify(details),recipient]);
+ React.useLayoutEffect(()=>{if(changed)setConfirmed(false)},[JSON.stringify(details),recipient]);
  React.useEffect(()=>{onDirtyChange(changed);return()=>onDirtyChange(false)},[changed,onDirtyChange]);
  React.useEffect(()=>{if(!changed)return;const prevent=(e:BeforeUnloadEvent)=>e.preventDefault();window.addEventListener('beforeunload',prevent);return()=>window.removeEventListener('beforeunload',prevent)},[changed]);
  return <section className="partnerPayoutPanel" id="partner-receiving" aria-label="Согласование получения вознаграждения">
