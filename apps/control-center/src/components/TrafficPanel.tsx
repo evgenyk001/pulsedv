@@ -17,7 +17,7 @@ export function TrafficPanel(){
  const url=new URL('https://pulsedv.ru/');
  for(const [key,value] of [['utm_source',source],['utm_medium',medium],['utm_campaign',campaign],['utm_content',content]])if(value.trim())url.searchParams.set(key,value.trim());
  return <section className="panel acquisitionPanel">
-  <div className="acquisitionHead"><div><span className="kicker">ЛЕНДИНГ И ПРИЛОЖЕНИЕ</span><h2>Откуда приходят клиенты</h2><p>Последние 90 дней. Повторное открытие в той же вкладке в течение 30 минут считается одним визитом. Это визиты браузеров, а не число людей.</p></div></div>
+  <div className="acquisitionHead"><div><span className="kicker">ЛЕНДИНГ И ПРИЛОЖЕНИЕ</span><h2>Откуда приходят клиенты</h2><p>Последние 90 дней. Повторное открытие в той же вкладке в течение 30 минут считается одним визитом, пока не изменился источник перехода. Это визиты браузеров, а не число людей.</p></div></div>
   {!runtime.enabled&&<p className="acquisitionNote">В превью сбор общей статистики выключен. Посещения начнут сохраняться после подключения сервера.</p>}
   {error&&<p className="errorNotice" role="alert">Статистика не загрузилась: {error}</p>}
   {data?.limited&&<p className="errorNotice">Показаны первые 500 сочетаний меток. Итоги ниже относятся только к показанным строкам.</p>}

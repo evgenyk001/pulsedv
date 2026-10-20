@@ -1,7 +1,9 @@
 /* First-party analytics. The page and Telegram links remain usable without the API. */
 (() => {
  'use strict';
- const key='pulse.visit.landing.v1',search=location.search.slice(0,3000),campaign=new URLSearchParams(search).get('utm_source')?search:'';
+ const key='pulse.visit.landing.v1',search=location.search.slice(0,3000);
+ let campaign=new URLSearchParams(search).get('utm_source')?search:'';
+ if(!campaign)try{const ref=new URL(document.referrer);if(['https:','http:'].includes(ref.protocol)&&ref.origin!==location.origin)campaign='ref:'+ref.hostname.toLowerCase()}catch{}
  let visit=null;
  try{visit=JSON.parse(sessionStorage.getItem(key)||'null')}catch{}
  if(!visit||!Number.isFinite(visit.at)||Date.now()-visit.at>1800000||(campaign&&campaign!==visit.campaign))visit={id:crypto.randomUUID(),at:Date.now(),campaign};

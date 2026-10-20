@@ -15,6 +15,8 @@ test('Landing preserves the campaign, server redirect and cross-device QR; reloa
  expect(visits[0].search).toContain('utm_content=ad1');
  await page.reload();await expect(cta).toHaveAttribute('href',/placement=primary$/);expect(visits[1].id).toBe(visits[0].id);
  await page.goto('/pulsedv/?utm_source=instagram&utm_campaign=return');await expect(cta).toHaveAttribute('href',/placement=primary$/);expect(visits[2].id).not.toBe(visits[0].id);
+ await page.goto('/pulsedv/',{referer:'https://yandex.ru/'});await expect(cta).toHaveAttribute('href',/placement=primary$/);expect(visits[3].id).not.toBe(visits[2].id);
+ await page.goto('/pulsedv/',{referer:'https://vk.com/'});await expect(cta).toHaveAttribute('href',/placement=primary$/);expect(visits[4].id).not.toBe(visits[3].id);
 });
 
 test('Analytics failure preserves native Telegram links and does not break the landing',async({page})=>{

@@ -8,6 +8,20 @@ import {readConfig} from '../src/config';
 import {hashPassword} from '../src/security';
 import {attribution} from '../../packages/journey/attribution';
 import {referralCodeFromStart} from '../../packages/partners/model';
+import {visitId} from '../../packages/journey/visit';
+
+test('Visit identity: refresh deduplicates; new referral domain and Telegram launch start new visits',()=>{
+ const globals=globalThis as any,old={window:globals.window,document:globals.document,sessionStorage:globals.sessionStorage},storage=new Map<string,string>();
+ globals.sessionStorage={getItem:(key:string)=>storage.get(key)||null,setItem:(key:string,value:string)=>storage.set(key,value)};
+ globals.window={location:{search:'',hash:'',origin:'https://pulsedv.ru'}};globals.document={referrer:'https://yandex.ru/search?q=home'};
+ try{
+  const first=visitId('miniapp');assert.equal(visitId('miniapp'),first);
+  globals.document.referrer='https://vk.com/';const second=visitId('miniapp');assert.notEqual(second,first);
+  globals.document.referrer='https://pulsedv.ru/';assert.equal(visitId('miniapp'),second);
+  globals.window.Telegram={WebApp:{initDataUnsafe:{start_param:'acq_'+'a'.repeat(32)}}};const launch=visitId('miniapp');assert.notEqual(launch,second);assert.equal(visitId('miniapp'),launch);
+  globals.window.Telegram.WebApp.initDataUnsafe.start_param='acq_'+'b'.repeat(32);assert.notEqual(visitId('miniapp'),launch);
+ }finally{for(const [key,value] of Object.entries(old)){if(value===undefined)delete globals[key];else globals[key]=value}}
+});
 
 test('Sources: tags override referrer; same-origin and invalid referrers disclose no URLs',()=>{
  assert.deepEqual(attribution('?utm_source=vk&utm_medium=cpc&utm_campaign=homes&utm_content=a&utm_term=flat','https://search.example/private?phone=123','https://pulsedv.ru'),{source:'vk',medium:'cpc',campaign:'homes',content:'a',term:'flat',referrer:'search.example'});
@@ -41,7 +55,7 @@ test('Acquisition: landing → signed Telegram / cookie → app → enquiry, ded
  const key=createHmac('sha256','WebAppData').update(config.BOT_TOKEN!).digest();
  params.set('hash',createHmac('sha256',key).update([...params].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n')).digest('hex'));
  const auth=await post('/api/v1/auth/telegram',{initData:params.toString()},session.accessToken);assert.equal(auth.statusCode,200,auth.body);
- const entry={id:randomUUID(),search:'',referrer:''};
+ const entry={id:randomUUID(),search:'',referrer:'',initData:params.toString()};
  const opened=await post('/api/v1/me/acquisition',entry,session.accessToken);assert.equal(opened.statusCode,200,opened.body);
  await post('/api/v1/me/acquisition',entry,session.accessToken);
  assert.equal(Number((await db.query("select count(*) as n from acquisition_visits where surface='miniapp'")).rows[0].n),1);
@@ -51,6 +65,8 @@ test('Acquisition: landing → signed Telegram / cookie → app → enquiry, ded
  assert.equal((await db.query('select source from sessions where id=$1',[session.sessionId])).rows[0].source,'vk');
  const browser=(await post('/api/v1/auth/session',{})).json();
  const cookieEntry=await post('/api/v1/me/acquisition',{id:randomUUID()},browser.accessToken,{pulse_acquisition:id});assert.equal(cookieEntry.statusCode,200,cookieEntry.body);
+ const returningId=randomUUID();await post('/api/v1/me/acquisition',{id:returningId,referrer:'https://yandex.ru/search'},browser.accessToken,{pulse_acquisition:id});
+ assert.equal((await db.query('select source from acquisition_visits where id=$1',[returningId])).rows[0].source,'yandex.ru');
  const plain=(await post('/api/v1/auth/session',{})).json();
  await post('/api/v1/me/acquisition',{id:randomUUID(),referrer:'https://yandex.ru/search?q=secret'},plain.accessToken);
  assert.equal((await db.query('select source from sessions where id=$1',[plain.sessionId])).rows[0].source,'yandex.ru');

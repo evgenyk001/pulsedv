@@ -58,7 +58,7 @@ export async function initializePublic(){
  const initData=(window as any).Telegram?.WebApp?.initData;
  if(initData&&!telegramBound){await visitorApi('/auth/telegram',{method:'POST',body:JSON.stringify({initData})});telegramBound=true;}
  // Analytics must not block the application or reset its authenticated identity.
- void visitorApi('/me/acquisition',{method:'POST',body:JSON.stringify({id:visitId('miniapp'),search:entrySearch().slice(0,3000),referrer:document.referrer.slice(0,2000)})}).catch(()=>{});
+ void visitorApi('/me/acquisition',{method:'POST',body:JSON.stringify({id:visitId('miniapp'),search:entrySearch().slice(0,3000),referrer:document.referrer.slice(0,2000),...(initData?{initData}:{})})}).catch(()=>{});
 }
 type Bootstrap={state:PulseState;version:number;members:TeamMember[];notifications:Delivery[];counts:ControlCounts};
 type Paged<T>={items:T[];page:number;limit:number;total:number;hasMore:boolean};

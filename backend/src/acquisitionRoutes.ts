@@ -6,8 +6,10 @@ import type {RuntimeConfig} from './config';
 import {attribution} from '../../packages/journey/attribution';
 import {HttpError} from './security';
 import {randomUUID} from 'node:crypto';
+import {verifyTelegramInitData} from './telegramInitData';
 
 const input=z.object({id:z.uuid(),search:z.string().max(3000).default(''),referrer:z.string().max(2000).default('')}).strict();
+const visitInput=input.extend({initData:z.string().max(15000).optional()});
 const token=(id:string)=>'acq_'+id.replaceAll('-','');
 const telegram=(id:string,username:string)=>'https://t.me/'+username+'?startapp='+token(id);
 function tokenId(value:string|null|undefined){
@@ -43,13 +45,17 @@ export function registerAcquisitionRoutes(app:FastifyInstance,db:Database,config
   return {ok:true};
  });
  app.post('/api/v1/me/acquisition',{preHandler:visitor},async r=>{
-  const body=input.parse(r.body),a=attribution(body.search,body.referrer,config.PUBLIC_ORIGIN),sessionId=r.visitor!.sessionId;
+  const body=visitInput.parse(r.body),a=attribution(body.search,body.referrer,config.PUBLIC_ORIGIN),sessionId=r.visitor!.sessionId;
   await db.transaction(async sql=>{
    await sql.query('select id from sessions where id=$1 for update',[sessionId]);
    const cookie=z.uuid().safeParse(r.cookies.pulse_acquisition);
-   if(cookie.success)await linkAcquisition(sql,sessionId,token(cookie.data));
-   const session=(await sql.query('select telegram_start_param from sessions where id=$1',[sessionId])).rows[0];
-   const parent=tokenId(session.telegram_start_param)||(cookie.success?cookie.data:null);
+   const session=(await sql.query('select u.telegram_user_id from sessions s left join app_users u on u.id=s.user_id where s.id=$1',[sessionId])).rows[0];
+   let launch:string|null=null;
+   if(body.initData&&config.BOT_TOKEN)try{const verified=verifyTelegramInitData(body.initData,config.BOT_TOKEN);if(verified.user&&String(verified.user.id)===String(session.telegram_user_id))launch=tokenId(verified.startParam)}catch{}
+   // A fresh external entry must not inherit a stale cookie or an earlier Telegram launch.
+   const explicit=!!new URLSearchParams(body.search).get('utm_source')||!!a.referrer;
+   const parent=launch||(!explicit&&cookie.success?cookie.data:null);
+   if(parent)await linkAcquisition(sql,sessionId,token(parent));
    const landing=parent?(await sql.query("select * from acquisition_visits where id=$1 and surface='landing' and created_at>now()-interval '30 days'",[parent])).rows[0]:null;
    const source=new URLSearchParams(body.search).has('utm_source')?a:(landing||a);
    await sql.query(`insert into acquisition_visits(id,surface,source,medium,campaign,content,term,referrer) values($1,'miniapp',$2,$3,$4,$5,$6,$7) on conflict do nothing`,[body.id,source.source,source.medium||'',source.campaign||'',source.content||'',source.term||'',source.referrer||'']);
