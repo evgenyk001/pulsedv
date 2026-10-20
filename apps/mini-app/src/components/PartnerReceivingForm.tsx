@@ -8,6 +8,8 @@ import styles from '../pages/partners.module.css';
 export function PartnerReceivingForm({reward,name,phone,busy,run}:{reward:PartnerReward;name:string;phone:string;busy:boolean;run:(fn:()=>Promise<unknown>)=>Promise<boolean>}){
  const [details,setDetails]=React.useState(()=>({...emptyPayout(name,phone),...reward.payoutDetails})),[recipient,setRecipient]=React.useState(reward.recipientType||'person');
  React.useEffect(()=>{setDetails({...emptyPayout(name,phone),...reward.payoutDetails});setRecipient(reward.recipientType||'person')},[reward.id,reward.revision]);
+ // A notification can load the referral before the cabinet profile. Fill missing defaults without replacing edits.
+ React.useEffect(()=>{setDetails(current=>({...current,recipientName:current.recipientName||name,contactPhone:current.contactPhone||phone,sbpPhone:current.sbpPhone||phone}))},[name,phone]);
  const locked=reward.payoutStage==='agreed'||reward.status==='paid',error=payoutError(details);
  return <section className={styles.form} aria-label="Получение вознаграждения"><h3>{locked?'Получение вознаграждения':'Как вам удобно получить деньги?'}</h3>
   {reward.payoutStage&&<p className={styles.hint}>{payoutStages[reward.payoutStage]}</p>}
