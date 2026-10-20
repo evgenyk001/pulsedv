@@ -37,6 +37,7 @@ export function PartnersPage(){
  const referrals=data?.referrals||[],pending=referrals.filter(r=>r.status==='pending'),requested=referrals.filter(r=>r.reward?.status==='requested'),conflicts=referrals.filter(r=>r.conflict);
  const visible=referrals;
  const w=selected?.reward;
+ React.useLayoutEffect(()=>{setDocs(false)},[w?.id,w?.revision]);
  const suggested=selected?partnerNextAction(selected):null;
  const next=suggested?.anchor==='partner-payment'&&!owner?{title:'Передайте выплату на подтверждение владельцу',detail:'Получение согласовано. Владелец проверяет документы и подтверждает фактическую выплату.',anchor:'partner-receiving'}:suggested;
  React.useEffect(()=>{setDealDirty(false);setPayoutDirty(false);setConflictPreview(null);setNotice('')},[selectedId]);
