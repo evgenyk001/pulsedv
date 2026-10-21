@@ -19,7 +19,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - run: npm run build -w apps/mini-app
+      - run: npm run build
       - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright test tests/ui/property-experience.spec.ts --workers=1
       - run: npx playwright test --config=playwright.finance-webkit.config.ts tests/ui/property-experience.spec.ts --workers=1
