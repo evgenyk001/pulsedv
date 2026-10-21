@@ -42,7 +42,7 @@ export default function PropertyPage(){
   const rememberedReturn=propertyReturn();
   const returnTo=stateReturn??rememberedReturn;
   const {data:p,isLoading,error,refetch}=usePropertyDetail(propertyId);
-  const heroRef=usePropertyHeroMotion(p?.id);
+  const heroRef=usePropertyHeroMotion(!isLoading&&!error?p?.id:undefined);
   const control=usePulseControlState();
   const savedScenario=React.useMemo(()=>readMortgageScenario(localStorage),[]);
   const {toggle,isFavorite}=useFavoriteIds();

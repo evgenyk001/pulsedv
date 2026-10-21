@@ -23,6 +23,11 @@ for(const width of [320,390,430])test(`Property experience ${width}px: fullscree
  // This cross-app flow includes full-page screenshots, mortgage, lead submission and CRM verification.
  test.setTimeout(browserName==="webkit"?60000:30000);
  await page.emulateMedia({reducedMotion:"reduce"});
+ // Exercise the older-browser fallback at 320px; wider cases use native scroll timelines.
+ if(width===320)await page.addInitScript(()=>{
+  const supports=CSS.supports.bind(CSS);
+  CSS.supports=(property:string,value?:string)=>property==='animation-timeline'?false:value===undefined?supports(property):supports(property,value);
+ });
  await page.setViewportSize({width,height:844});await seed(page);
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/pulsedv/mini-app/#/property/primorskiy');
