@@ -19,7 +19,8 @@ export function AppShell({children}:{children:React.ReactNode}){
   const [storyOverlayOpen,setStoryOverlayOpen]=React.useState(false);
   const mortgageWarmed=React.useRef(false);
   const chatRoute=location.pathname==="/journey"&&new URLSearchParams(location.search).has("lead");
-  const hideNav=location.pathname.startsWith("/property/")||chatRoute;
+  const propertyRoute=location.pathname.startsWith("/property/");
+  const hideNav=propertyRoute||chatRoute;
 
   React.useEffect(()=>{
     const version=control.content.onboardingVersion;
@@ -75,7 +76,7 @@ export function AppShell({children}:{children:React.ReactNode}){
     recordPulseEvent({eventType:"page_view",entityType:"route",entityId:location.pathname,metadata:{search:location.search}});
   },[location.pathname,location.search]);
 
-  return <div className={styles.viewport}><NavigationMemory/><FavoriteSync/>
+  return <div className={`${styles.viewport} ${propertyRoute?styles.propertyViewport:""}`}><NavigationMemory/><FavoriteSync/>
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
     <main className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
       <div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:""}`}>{children}</div>
