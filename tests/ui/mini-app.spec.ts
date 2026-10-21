@@ -207,6 +207,7 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
 
 
 test('PULSE Select smart query: readable input and unobstructed touch target',async({page})=>{
+  await page.emulateMedia({reducedMotion:'reduce'});
   await page.setViewportSize({width:390,height:844});
   await page.goto('/pulsedv/mini-app/');
   const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
