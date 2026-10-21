@@ -20,6 +20,8 @@ async function seed(page:Page,state=fixture()){
 }
 
 for(const width of [320,390,430])test(`Property experience ${width}px: fullscreen gallery, exact price, minimum and CRM context`,async({page,browserName})=>{
+ // This cross-app flow includes full-page screenshots, mortgage, lead submission and CRM verification.
+ test.setTimeout(browserName==="webkit"?60000:30000);
  await page.emulateMedia({reducedMotion:"reduce"});
  await page.setViewportSize({width,height:844});await seed(page);
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
