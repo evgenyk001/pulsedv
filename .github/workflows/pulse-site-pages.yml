@@ -123,7 +123,7 @@ jobs:
       - name: Prepare search-safe preview metadata
         run: node scripts/build-seo.mjs --preview
       - name: Upload static site
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: dist
       - name: Deploy
