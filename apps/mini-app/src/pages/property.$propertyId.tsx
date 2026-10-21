@@ -236,12 +236,12 @@ export default function PropertyPage(){
       </Sheet>
     </main>
 
-    <div className={styles.ctaBar}>
+    <div className={styles.ctaBar} role="region" aria-label="Действия с ЖК">
       {presentation?<a className={styles.secondary} href={presentation.url} target="_blank" rel="noreferrer"><FileText size={17}/><span>Презентация</span></a>:<LeadSheet title="Получить презентацию" project={p.name} propertyId={p.id} source="presentation">
         <button className={styles.secondary}><Send size={17}/><span>Презентация</span></button>
       </LeadSheet>}
       <LeadSheet title="Узнать наличие" project={p.name} propertyId={p.id} source="property">
-        <button className={styles.primary}>Узнать наличие <ChevronRight size={18}/></button>
+        <button className={styles.primary}><ChevronRight size={29}/><span>Узнать наличие</span></button>
       </LeadSheet>
     </div>
   </div>;
