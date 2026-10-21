@@ -76,10 +76,10 @@ export function AppShell({children}:{children:React.ReactNode}){
     recordPulseEvent({eventType:"page_view",entityType:"route",entityId:location.pathname,metadata:{search:location.search}});
   },[location.pathname,location.search]);
 
-  return <div className={`${styles.viewport} ${propertyRoute?styles.propertyViewport:""}`}><NavigationMemory/><FavoriteSync/>
+  return <div className={styles.viewport}><NavigationMemory/><FavoriteSync/>
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
     <main className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
-      <div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:""}`}>{children}</div>
+      <div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:propertyRoute?styles.propertyFrame:""}`}>{children}</div>
     </main>
     {!hideNav&&!storyOverlayOpen&&<BottomNav/>}
     {showOnboarding&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}

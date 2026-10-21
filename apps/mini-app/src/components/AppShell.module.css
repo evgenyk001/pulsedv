@@ -1,6 +1,5 @@
 .viewport{min-height:100dvh;background:linear-gradient(180deg,#fafbfd 0%,var(--background) 28%,#f3f5f8 100%);color:var(--foreground);font-family:var(--font-family-base);position:relative;overflow-x:hidden}.shell{width:min(100%,var(--content-max));min-height:100dvh;margin:0 auto;padding:calc(var(--pulse-safe-top) + 10px) calc(18px + var(--pulse-safe-right)) calc(120px + var(--pulse-safe-bottom));padding-left:calc(18px + var(--pulse-safe-left));position:relative;z-index:1}.fullPage{padding-bottom:0}.routeFrame{min-height:100%;animation:routeIn .28s var(--motion-soft) backwards;transform-origin:50% 18%;}.ambientOne,.ambientTwo{position:fixed;pointer-events:none;filter:blur(78px);opacity:.58;border-radius:999px}.ambientOne{width:300px;height:300px;right:-150px;top:-120px;background:rgba(102,150,203,.13)}.ambientTwo{width:280px;height:280px;left:-170px;bottom:7%;background:rgba(242,13,29,.045)}@keyframes routeIn{0%{opacity:.72;transform:translateY(7px) scale(.997)}58%{opacity:.98}100%{opacity:1;transform:translateY(0) scale(1)}}@media(prefers-reduced-motion:reduce){.routeFrame{animation:none}}@media(max-width:360px){.shell{padding-left:calc(14px + var(--pulse-safe-left));padding-right:calc(14px + var(--pulse-safe-right))}}
 .chatRoute{animation:none;transform:none}
 
-/* Clip horizontal overflow without creating a vertical scroll container for the sticky property hero. */
-.propertyViewport{overflow-x:clip}
-:global(html):has(.propertyViewport),:global(body):has(.propertyViewport),:global(#root):has(.propertyViewport){overflow-x:clip}
+/* A fixed property hero must use the viewport even during route entry. */
+.propertyFrame{animation:none;transform:none}
