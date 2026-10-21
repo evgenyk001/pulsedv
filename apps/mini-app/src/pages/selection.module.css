@@ -224,7 +224,6 @@
   .pulseRing{width:74px;height:74px}
   .resultHero>.pulseRing{width:84px;height:84px}
   .coreCopy>small{font-size:7.4px}
-  .smartInput input{font-size:8.7px!important}
   .resultIntro{align-items:flex-start;flex-direction:column;gap:4px}
   .resultIntro small{text-align:left;max-width:none}
 }

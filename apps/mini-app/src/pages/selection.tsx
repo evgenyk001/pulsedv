@@ -668,7 +668,7 @@ export default function SelectionPage(){
     <section className={styles.liveRequest} aria-live="polite">
       <div className={styles.liveRequestTop}>
         <div><span>ВАШ ЗАПРОС</span><div className={styles.requestCount}>{catalog.isLoading?<strong className={styles.requestLoading}>Сверяем каталог…</strong>:<><strong>{eligible.length}</strong><span>{plural(eligible.length,["вариант подходит","варианта подходят","вариантов подходят"])}</span></>}</div></div>
-        {!catalog.isLoading&&strongCount>0&&<div className={styles.liveBadge}><Check size={12}/>{strongCount+" сильных"}</div>}
+        {!catalog.isLoading&&strongCount>0&&<div className={styles.liveBadge} aria-label={strongCount+" "+plural(strongCount,["сильное совпадение","сильных совпадения","сильных совпадений"])}><Check size={12}/>{strongCount+" "+plural(strongCount,["сильное","сильных","сильных"])}</div>}
       </div>
       <div className={styles.liveRequestChips}>
         <span>{city}</span>
