@@ -483,6 +483,7 @@ export default function SelectionPage(){
   const scenarios=React.useMemo<Scenario[]>(()=>{
     const items:Scenario[]=[];
     const base={eligible:eligible.length,strong:strongCount};
+    const extraLabel=(count:number,strong=false)=>{const n=Math.max(0,count);return "+"+n+" "+plural(n,strong?["сильное","сильных","сильных"]:["вариант","варианта","вариантов"]);};
     const gainFor=(next:SelectionCriteria)=>{
       const measured=measure(next);
       return {measured,gain:Math.max(measured.eligible-base.eligible,measured.strong-base.strong)};
@@ -490,24 +491,24 @@ export default function SelectionPage(){
 
     if(purchaseMode==="mortgage"){
       const paymentResult=gainFor({...criteria,monthlyPayment:monthlyPayment+10_000});
-      items.push({id:"more-payment",title:"+10 тыс. ₽ к платежу",detail:"Остальные пожелания не меняются.",value:"+"+Math.max(0,paymentResult.measured.eligible-base.eligible)+" вариантов",gain:paymentResult.gain});
+      items.push({id:"more-payment",title:"+10 тыс. ₽ к платежу",detail:"Остальные пожелания не меняются.",value:extraLabel(paymentResult.measured.eligible-base.eligible),gain:paymentResult.gain});
 
       const downResult=gainFor({...criteria,downPayment:downPayment+500_000});
-      items.push({id:"more-down",title:"+500 тыс. ₽ к взносу",detail:"Проверим влияние большего первоначального взноса.",value:"+"+Math.max(0,downResult.measured.eligible-base.eligible)+" вариантов",gain:downResult.gain});
+      items.push({id:"more-down",title:"+500 тыс. ₽ к взносу",detail:"Проверим влияние большего первоначального взноса.",value:extraLabel(downResult.measured.eligible-base.eligible),gain:downResult.gain});
     }else{
       const extra=Math.max(500_000,Math.round(budget[1]*.08/100_000)*100_000);
       const result=gainFor({...criteria,max:Math.min(maxPrice,budget[1]+extra)});
-      items.push({id:"more-payment",title:"Чуть расширить бюджет",detail:"Добавить до "+shortRub(extra)+" к верхней границе.",value:"+"+Math.max(0,result.measured.eligible-base.eligible)+" вариантов",gain:result.gain});
+      items.push({id:"more-payment",title:"Чуть расширить бюджет",detail:"Добавить до "+shortRub(extra)+" к верхней границе.",value:extraLabel(result.measured.eligible-base.eligible),gain:result.gain});
     }
 
     if(preferences.length){
       const result=gainFor({...criteria,preferences:preferences.slice(0,-1)});
-      items.push({id:"relax-preference",title:"Без «"+preferenceLabel(preferences[preferences.length-1])+"»",detail:"Ослабим только один мягкий приоритет.",value:"+"+Math.max(0,result.measured.strong-base.strong)+" сильных",gain:result.gain});
+      items.push({id:"relax-preference",title:"Без «"+preferenceLabel(preferences[preferences.length-1])+"»",detail:"Ослабим только один мягкий приоритет.",value:extraLabel(result.measured.strong-base.strong,true),gain:result.gain});
     }
 
     if(delivery!=="Не важно"){
       const result=gainFor({...criteria,delivery:"Не важно"});
-      items.push({id:"relax-delivery",title:"Гибче по сроку сдачи",detail:"Не ограничивать выбор одним сроком.",value:"+"+Math.max(0,result.measured.strong-base.strong)+" сильных",gain:result.gain});
+      items.push({id:"relax-delivery",title:"Гибче по сроку сдачи",detail:"Не ограничивать выбор одним сроком.",value:extraLabel(result.measured.strong-base.strong,true),gain:result.gain});
     }
 
     return items.sort((a,b)=>b.gain-a.gain).slice(0,3);
@@ -623,7 +624,7 @@ export default function SelectionPage(){
         <div className={styles.scenarioList}>
           {scenarios.map(item=><button type="button" key={item.id} onClick={()=>applyScenario(item.id)}>
             <span><strong>{item.title}</strong><small>{item.detail}</small></span>
-            <span className={styles.scenarioOutcome} data-gain={item.gain>0?"positive":"neutral"}><b>{item.gain<=0?"Без новых вариантов":item.value.startsWith("+0 ")?"+"+item.gain+" сильных":item.value}</b><ChevronRight size={16}/></span>
+            <span className={styles.scenarioOutcome} data-gain={item.gain>0?"positive":"neutral"}><b>{item.gain<=0?"Без новых вариантов":item.value.startsWith("+0 ")?"+"+item.gain+" "+plural(item.gain,["сильное","сильных","сильных"]):item.value}</b><ChevronRight size={16}/></span>
           </button>)}
         </div>
       </section>}

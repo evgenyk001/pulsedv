@@ -12,6 +12,7 @@ for(const width of [320,390,430])test(`Select composer ${width}px: request, live
  const composer=page.getByRole('region',{name:'Ваш подбор',exact:true});
  await expect(composer).toContainText('Можно своими словами');await expect(composer).toContainText('ВАШ ЗАПРОС');
  await expect(page.getByText('SMART INPUT',{exact:true})).toHaveCount(0);
+ await composer.screenshot({path:`test-results/select-composer-idle-${browserName}-${width}.png`,animations:'disabled'});
  const input=composer.getByRole('textbox',{name:'Опишите квартиру своими словами'});
  await input.fill('Однушка во Владивостоке, до 290 тыс./мес');await input.press('Enter');
  await expect(composer).toContainText('PULSE понял');
