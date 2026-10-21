@@ -206,7 +206,8 @@ test('Mini App banners: premium chrome without dismiss or counters',async({page}
 
 
 
-test('PULSE Select smart query: unified rounded search control',async({page})=>{
+test('PULSE Select smart query: readable input and unobstructed touch target',async({page})=>{
+  await page.emulateMedia({reducedMotion:'reduce'});
   await page.setViewportSize({width:390,height:844});
   await page.goto('/pulsedv/mini-app/');
   const skip=page.getByRole('button',{name:'Пропустить онбординг'});if(await skip.count())await skip.click();
@@ -217,24 +218,26 @@ test('PULSE Select smart query: unified rounded search control',async({page})=>{
     const shell=el.parentElement as HTMLElement|null;
     const button=shell?.querySelector('button') as HTMLElement|null;
     if(!shell||!button)return null;
-    const shellStyle=getComputedStyle(shell);
-    const buttonStyle=getComputedStyle(button);
+    const inputStyle=getComputedStyle(el);
     const shellRect=shell.getBoundingClientRect();
     const buttonRect=button.getBoundingClientRect();
     return {
       shellHeight:shellRect.height,
-      shellRadius:parseFloat(shellStyle.borderRadius),
-      shellBackground:shellStyle.backgroundColor,
+      inputFontSize:parseFloat(inputStyle.fontSize),
+      inputRight:el.getBoundingClientRect().right,
+      buttonLeft:buttonRect.left,
+      contained:buttonRect.left>=shellRect.left&&buttonRect.right<=shellRect.right&&buttonRect.top>=shellRect.top&&buttonRect.bottom<=shellRect.bottom,
       buttonWidth:buttonRect.width,
       buttonHeight:buttonRect.height,
-      buttonRadius:parseFloat(buttonStyle.borderRadius),
     };
   });
   expect(metrics).not.toBeNull();
   expect(metrics?.shellHeight??0).toBeGreaterThanOrEqual(52);
-  expect(metrics?.shellRadius??0).toBeGreaterThan(20);
-  expect(Math.abs((metrics?.buttonWidth??0)-(metrics?.buttonHeight??0))).toBeLessThan(1);
-  expect(metrics?.buttonRadius??0).toBeGreaterThanOrEqual(19);
+  expect(metrics?.inputFontSize??0).toBeGreaterThanOrEqual(16);
+  expect(metrics?.buttonWidth??0).toBeGreaterThanOrEqual(44);
+  expect(metrics?.buttonHeight??0).toBeGreaterThanOrEqual(44);
+  expect(metrics?.contained).toBe(true);
+  expect(metrics?.inputRight??Infinity).toBeLessThanOrEqual(metrics?.buttonLeft??0);
   await input.focus();
   await page.screenshot({path:'test-results/mini-app-select-smart-input.png',fullPage:true,animations:'disabled'});
 });
