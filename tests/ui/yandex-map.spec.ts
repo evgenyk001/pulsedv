@@ -79,6 +79,8 @@ for(const width of [320,390,430])test(`Map preview ${width}px: bounded card, fav
  const pin=page.getByRole('button',{name:'ЖК Приморский, от 7,8 млн рублей',exact:true});
  await pin.click();const card=page.getByRole('article',{name:'ЖК Приморский',exact:true});
  await expect(card).toBeVisible();await expect(card.getByRole('heading',{name:'ЖК Приморский',exact:true})).toBeVisible();
+ // Visibility precedes the end of previewIn; measure the final layout, not a moving frame.
+ await card.evaluate(async node=>{await Promise.all(node.getAnimations().map(animation=>animation.finished))});
  const map=await page.getByLabel('Интерактивная карта Яндекс Карты с новостройками',{exact:true}).boundingBox();
  const box=await card.boundingBox();expect(box!.x).toBeGreaterThanOrEqual(map!.x);expect(box!.x+box!.width).toBeLessThanOrEqual(map!.x+map!.width+1);expect(box!.y+box!.height).toBeLessThanOrEqual(map!.y+map!.height-40);
  expect(await page.evaluate(()=>(window as any).__mapCalls.filter((x:any)=>x.type==='margin').at(-1).margin[2])).toBeGreaterThan(150);
