@@ -27,7 +27,7 @@
   height: 100%;
   min-height: 460px;
   margin: 0 auto;
-  padding: max(12px, env(safe-area-inset-top, 0px)) 24px max(20px, env(safe-area-inset-bottom, 0px));
+  padding: max(12px, var(--pulse-safe-top)) max(24px, var(--pulse-safe-right)) max(20px, var(--pulse-safe-bottom)) max(24px, var(--pulse-safe-left));
   display: grid;
   grid-template-rows: 3px 56px minmax(0, 1fr) 30px;
 }

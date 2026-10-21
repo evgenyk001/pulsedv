@@ -210,4 +210,13 @@ button,a,input{
 .dark{--icon-surface:#2A303A;--icon-ink:#B7C0CD;--icon-border:rgba(255,255,255,.12);--list-surface:#232831;--list-divider:rgba(255,255,255,.09);--list-chevron:#7C8796;--list-pressed:rgba(255,255,255,.045)}
 @media(min-resolution:2dppx){:root{--list-hairline:.5px}}
 
-html{scroll-padding-bottom:calc(108px + env(safe-area-inset-bottom,0px))}
+html{scroll-padding-bottom:calc(108px + var(--pulse-safe-bottom))}
+
+/* Telegram SDK updates these variables on safe-area/fullscreen/orientation changes.
+   Content insets are relative to the system safe area. Browser fallback is native env(). */
+:root {
+  --pulse-safe-top: calc(max(env(safe-area-inset-top, 0px), var(--tg-safe-area-inset-top, 0px)) + var(--tg-content-safe-area-inset-top, 0px));
+  --pulse-safe-bottom: calc(max(env(safe-area-inset-bottom, 0px), var(--tg-safe-area-inset-bottom, 0px)) + var(--tg-content-safe-area-inset-bottom, 0px));
+  --pulse-safe-left: calc(max(env(safe-area-inset-left, 0px), var(--tg-safe-area-inset-left, 0px)) + var(--tg-content-safe-area-inset-left, 0px));
+  --pulse-safe-right: calc(max(env(safe-area-inset-right, 0px), var(--tg-safe-area-inset-right, 0px)) + var(--tg-content-safe-area-inset-right, 0px));
+}
