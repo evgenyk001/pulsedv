@@ -3,4 +3,4 @@
 
 /* Clip horizontal overflow without creating a vertical scroll container for the sticky property hero. */
 .propertyViewport{overflow-x:clip}
-:global(#root):has(.propertyViewport){overflow-x:clip}
+:global(html):has(.propertyViewport),:global(body):has(.propertyViewport),:global(#root):has(.propertyViewport){overflow-x:clip}
