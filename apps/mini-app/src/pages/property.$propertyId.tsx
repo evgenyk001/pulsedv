@@ -1,3 +1,4 @@
+import {usePropertyHeroMotion} from "../helpers/usePropertyHeroMotion";
 import {IconTile} from '../components/IconTile';
 import { PropertyFreshness } from '../components/PropertyFreshness';
 import React from "react";
@@ -41,6 +42,7 @@ export default function PropertyPage(){
   const rememberedReturn=propertyReturn();
   const returnTo=stateReturn??rememberedReturn;
   const {data:p,isLoading,error,refetch}=usePropertyDetail(propertyId);
+  const heroRef=usePropertyHeroMotion(!isLoading&&!error?p?.id:undefined);
   const control=usePulseControlState();
   const savedScenario=React.useMemo(()=>readMortgageScenario(localStorage),[]);
   const {toggle,isFavorite}=useFavoriteIds();
@@ -93,7 +95,7 @@ export default function PropertyPage(){
   };
 
   return <div className={styles.page}>
-    <section className={styles.hero}>
+    <section ref={heroRef} className={styles.hero}>
       <PropertyGallery key={p.id} name={p.name} photos={gallery} index={photoIndex} onIndexChange={setPhotoIndex}/>
       <div className={styles.fade}/>
       <Link to={returnTo} className={styles.back} aria-label="Назад"><ArrowLeft size={19}/></Link>

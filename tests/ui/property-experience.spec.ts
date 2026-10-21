@@ -23,6 +23,11 @@ for(const width of [320,390,430])test(`Property experience ${width}px: fullscree
  // This cross-app flow includes full-page screenshots, mortgage, lead submission and CRM verification.
  test.setTimeout(browserName==="webkit"?60000:30000);
  await page.emulateMedia({reducedMotion:"reduce"});
+ // Exercise the older-browser fallback at 320px; wider cases use native scroll timelines.
+ if(width===320)await page.addInitScript(()=>{
+  const supports=CSS.supports.bind(CSS);
+  CSS.supports=(property:string,value?:string)=>property==='animation-timeline'?false:value===undefined?supports(property):supports(property,value);
+ });
  await page.setViewportSize({width,height:844});await seed(page);
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/pulsedv/mini-app/#/property/primorskiy');
@@ -30,11 +35,19 @@ for(const width of [320,390,430])test(`Property experience ${width}px: fullscree
  await expect(page.getByText('от '+rub(7543219)+' ₽',{exact:true}).first()).toBeVisible();
  const hero=page.locator('section[class*="_hero_"]').first();
  const title=page.getByRole('heading',{name:'ЖК Приморский',exact:true});
+ // Safari samples fixed/sticky ancestors at the top edge to choose an opaque status-bar tint.
+ const hasTopTintCandidate=()=>page.evaluate(()=>{
+  let node=document.elementFromPoint(innerWidth/2,4);
+  while(node){if(['fixed','sticky'].includes(getComputedStyle(node).position))return true;node=node.parentElement;}
+  return false;
+ });
+ await expect.poll(hasTopTintCandidate).toBe(false);
  const heroBefore=(await hero.boundingBox())!,titleBefore=(await title.boundingBox())!;
  await page.evaluate(()=>window.scrollTo({top:160,behavior:'instant'}));
  await expect.poll(()=>page.evaluate(()=>Math.round(window.scrollY))).toBe(160);
  await expect.poll(async()=>Math.abs((await hero.boundingBox())!.y-heroBefore.y)).toBeLessThan(1);
  await expect.poll(async()=>Math.round(titleBefore.y-(await title.boundingBox())!.y)).toBe(160);
+ await expect.poll(hasTopTintCandidate).toBe(false);
  // The white sheet must receive taps where it covers the pinned photo.
  expect(await title.evaluate(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})).toBe(true);
  await page.screenshot({path:`test-results/property-overlap-${browserName}-${width}.png`});

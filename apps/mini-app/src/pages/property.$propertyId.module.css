@@ -1,10 +1,12 @@
-.page{--property-hero-height:clamp(300px,54dvh,440px);padding-top:var(--property-hero-height);margin:calc(-10px - var(--pulse-safe-top)) -18px 0;min-height:100dvh;background:var(--background);padding-bottom:112px;isolation:isolate}
+.page{--property-hero-height:clamp(300px,54dvh,440px);margin:calc(-10px - var(--pulse-safe-top)) -18px 0;min-height:100dvh;background:var(--background);padding-bottom:112px;isolation:isolate}
 .loading,.notFound{padding:42px 18px;font-size:11px;color:var(--muted-foreground)}
 .notFound{display:flex;flex-direction:column;gap:10px}
 .notFound strong{color:var(--foreground);font-size:14px}
 .notFound a{color:var(--primary);text-decoration:none;font-weight:700}
 
-.hero{height:var(--property-hero-height);position:fixed;top:0;left:calc(50% + (var(--pulse-safe-left) - var(--pulse-safe-right))/2);transform:translateX(-50%);width:calc(min(100%,var(--content-max)) - var(--pulse-safe-left) - var(--pulse-safe-right));z-index:0;overflow:hidden;background:var(--muted)}
+.hero{height:var(--property-hero-height);position:relative;z-index:0;overflow:hidden;background:var(--muted);will-change:transform}
+.hero[data-hero-motion=native]{animation-name:heroCover;animation-duration:auto;animation-timing-function:linear;animation-fill-mode:both;animation-timeline:scroll(root block);animation-range:0px var(--property-hero-height)}
+@keyframes heroCover{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,var(--property-hero-height),0)}}
 .gallery{width:100%;height:100%;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
 .gallery::-webkit-scrollbar{display:none}
 .heroSlide{flex:0 0 100%;width:100%;height:100%;scroll-snap-align:center;scroll-snap-stop:always}
