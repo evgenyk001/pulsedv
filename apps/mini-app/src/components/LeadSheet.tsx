@@ -30,7 +30,9 @@ export function LeadSheet({children,title="Получить консультац
   const [referralConsent,setReferralConsent]=React.useState(false);
   React.useEffect(()=>subscribePartners(()=>setInvitation(rememberedPartnerInvite())),[]);
   const [declinedCode,setDeclinedCode]=React.useState<string>();
-  const candidateCode=referralCode||invitation?.code;
+  // Direct agency/manager contact is separate from a partner application.
+  const directContact=source==="profile-manager"||source==="profile-contact";
+  const candidateCode=directContact?undefined:(referralCode||invitation?.code);
   const activeCode=candidateCode!==declinedCode?candidateCode:undefined;
   React.useEffect(()=>setReferralConsent(false),[activeCode]);
   const activeName=referralName||invitation?.partnerName;

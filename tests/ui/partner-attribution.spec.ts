@@ -36,19 +36,24 @@ test('Invitation preview cannot create a buyer form or remember its partner',asy
  await expect(page.getByRole('dialog').getByRole('checkbox')).toHaveCount(1);
 });
 
-test('Buyer can remove a remembered invitation and send an ordinary lead without referral sharing',async({page})=>{
+test('Ordinary agency contact ignores a remembered invitation without sharing buyer data',async({page})=>{
  await fixture(page);await page.goto('/pulsedv/mini-app/#/profile');await page.getByRole('button',{name:'Связаться с PULSE.DV',exact:true}).click();
- const form=page.getByRole('dialog');await expect(form.getByRole('checkbox')).toHaveCount(2);
- await form.getByRole('checkbox',{name:/Подтверждаю, что меня пригласил/}).check();
- await form.getByRole('button',{name:'Я обратился самостоятельно',exact:true}).click();
- await expect(form.getByRole('checkbox')).toHaveCount(1);await expect(form).not.toContainText('Евгений Козменко');
- expect(await page.evaluate(key=>localStorage.getItem(key),attr)).toBeNull();
+ const form=page.getByRole('dialog');await expect(form.getByRole('checkbox')).toHaveCount(1);
+ await expect(form).not.toContainText('Евгений Козменко');
+ expect(await page.evaluate(key=>localStorage.getItem(key),attr)).not.toBeNull();
  await form.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Прямой клиент');await form.getByRole('textbox',{name:'Телефон',exact:true}).fill('+79995550202');
  await form.getByRole('checkbox',{name:/Я даю согласие/}).check();await form.getByRole('button',{name:'Отправить заявку',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Обращение создано',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pulse.partners.v1')!).referrals)).toHaveLength(0);
  await page.reload();await page.getByRole('button',{name:'Связаться с PULSE.DV',exact:true}).click();
  await expect(page.getByRole('dialog').getByRole('checkbox')).toHaveCount(1);
+});
+
+test('Ordinary manager contact ignores another partner invitation',async({page})=>{
+ await fixture(page);await page.goto('/pulsedv/mini-app/#/profile');
+ await page.getByRole('button',{name:'Оставить заявку менеджеру',exact:true}).click();
+ const form=page.getByRole('dialog');await expect(form.getByRole('checkbox')).toHaveCount(1);
+ await expect(form).not.toContainText('меня пригласил');
 });
 
 test('Expired invitation is rechecked when opening a form that was already mounted',async({page})=>{

@@ -9,12 +9,12 @@
   .right{top:0;right:0;bottom:0;width:100%;max-width:400px;border-top-left-radius:var(--radius-md);border-bottom-left-radius:var(--radius-md)}
 
   .bottom{
-    left:max(8px,env(safe-area-inset-left,0px));
-    right:max(8px,env(safe-area-inset-right,0px));
-    bottom:calc(8px + env(safe-area-inset-bottom,0px));
+    left:max(8px,var(--pulse-safe-left));
+    right:max(8px,var(--pulse-safe-right));
+    bottom:calc(8px + var(--pulse-safe-bottom));
     width:auto;
     height:auto;
-    max-height:min(82dvh,680px);
+    max-height:min(82dvh,680px,calc(100dvh - var(--pulse-safe-top) - var(--pulse-safe-bottom) - 16px));
     padding:var(--app-sheet-top) var(--app-sheet-inline) var(--app-sheet-bottom);
     border-radius:var(--app-radius-sheet)!important;
     overflow-y:auto;
