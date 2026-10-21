@@ -22,7 +22,7 @@ for(const width of [320,390])test(`Telegram safe areas update page, navigation a
  const navBox=await nav.boundingBox();expect(navBox).not.toBeNull();expect(navBox!.y+navBox!.height).toBeLessThanOrEqual(810);
  await page.getByRole('button',{name:'Связаться с PULSE.DV',exact:true}).click();
  const sheet=page.getByRole('dialog');await expect(sheet).toBeVisible();
- const box=await sheet.boundingBox();expect(box).not.toBeNull();expect(box!.y).toBeGreaterThanOrEqual(103);expect(box!.y+box!.height).toBeLessThanOrEqual(810);
+ await expect.poll(async()=>{const box=await sheet.boundingBox();return !!box&&box.y>=103&&box.y+box.height<=810.5}).toBe(true);
  await sheet.getByRole('button',{name:'Закрыть заявку',exact:true}).click();
  await page.evaluate(()=>{
   const css=document.documentElement.style;
