@@ -15,7 +15,6 @@ import {
   Home,
   Paintbrush,
   RotateCcw,
-  Search,
   ShieldCheck,
   Sparkles,
   Trees,
@@ -619,13 +618,12 @@ export default function SelectionPage(){
 
       {control.select.whatIfEnabled&&scenarios.length>0&&<section className={styles.whatIf}>
         <div className={styles.whatIfHead}>
-          <div><Sparkles size={16}/><span>Хотите больше вариантов?</span></div>
-          <p>PULSE уже посчитал, что изменится от одного небольшого шага.</p>
+          <IconTile><Sparkles/></IconTile><div><span>Другие сценарии покупки</span><p>Измените один параметр и сравните результат.</p></div>
         </div>
         <div className={styles.scenarioList}>
           {scenarios.map(item=><button type="button" key={item.id} onClick={()=>applyScenario(item.id)}>
             <span><strong>{item.title}</strong><small>{item.detail}</small></span>
-            <b>{item.value}<ChevronRight size={14}/></b>
+            <span className={styles.scenarioOutcome} data-gain={item.gain>0?"positive":"neutral"}><b>{item.gain<=0?"Без новых вариантов":item.value.startsWith("+0 ")?"+"+item.gain+" сильных":item.value}</b><ChevronRight size={16}/></span>
           </button>)}
         </div>
       </section>}
@@ -650,26 +648,27 @@ export default function SelectionPage(){
       <p>Не анкета и не сотня фильтров. Один живой запрос, который можно уточнять в любом порядке.</p>
     </header>
 
+    <section className={styles.requestComposer} aria-label="Ваш подбор">
     {control.select.smartQueryEnabled&&<section className={styles.smartPrompt}>
-      <div className={styles.smartPromptHead}><IconTile><Sparkles/></IconTile><span>Можно своими словами</span><small>SMART INPUT</small></div>
+      <div className={styles.smartPromptHead}><IconTile><Sparkles/></IconTile><div><span>Можно своими словами</span><small>Город, бюджет и то, что важно</small></div></div>
       <div className={styles.smartInput}>
-        <Search size={17}/>
-        <Input
+        <textarea
+          rows={2}
           value={smartQuery}
           onChange={event=>{setSmartQuery(event.target.value);setSmartStatus("");}}
-          onKeyDown={event=>{if(event.key==="Enter"){event.preventDefault();applySmartQuery();}}}
+          onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey&&!event.nativeEvent.isComposing){event.preventDefault();applySmartQuery();}}}
           placeholder="Двушка во Владивостоке, до 70 тыс./мес, у моря"
           aria-label="Опишите квартиру своими словами"
         />
-        <button type="button" onClick={applySmartQuery} aria-label="Понять запрос"><ChevronRight size={18}/></button>
+        <button type="button" onClick={applySmartQuery} aria-label="Понять запрос"><ArrowRight size={19}/></button>
       </div>
       {smartStatus&&<div className={styles.smartStatus}><Check size={13}/>{smartStatus}</div>}
     </section>}
 
     <section className={styles.liveRequest} aria-live="polite">
       <div className={styles.liveRequestTop}>
-        <div><span>ВАШ ЗАПРОС</span><strong>{catalog.isLoading?"Сверяем каталог…":eligible.length+" "+plural(eligible.length,["вариант","варианта","вариантов"])}</strong></div>
-        <div className={styles.liveBadge}>{strongCount?strongCount+" сильных":"LIVE"}</div>
+        <div><span>ВАШ ЗАПРОС</span><div className={styles.requestCount}>{catalog.isLoading?<strong className={styles.requestLoading}>Сверяем каталог…</strong>:<><strong>{eligible.length}</strong><span>{plural(eligible.length,["вариант подходит","варианта подходят","вариантов подходят"])}</span></>}</div></div>
+        {!catalog.isLoading&&strongCount>0&&<div className={styles.liveBadge}><Check size={12}/>{strongCount+" сильных"}</div>}
       </div>
       <div className={styles.liveRequestChips}>
         <span>{city}</span>
@@ -679,6 +678,8 @@ export default function SelectionPage(){
         {preferences.slice(0,2).map(id=><span key={id}>{preferenceLabel(id)}</span>)}
       </div>
       {catalog.isError&&<div className={styles.catalogIssue}>Не удалось обновить каталог. Проверьте соединение и повторите позже.</div>}
+    </section>
+
     </section>
 
     <section className={styles.selectPanels}>
