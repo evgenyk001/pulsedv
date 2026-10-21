@@ -241,7 +241,7 @@ export default function PropertyPage(){
         <button className={styles.secondary}><Send size={17}/><span>Презентация</span></button>
       </LeadSheet>}
       <LeadSheet title="Узнать наличие" project={p.name} propertyId={p.id} source="property">
-        <button className={styles.primary}><ChevronRight size={29}/><span>Узнать наличие</span></button>
+        <button className={styles.primary}><span>Узнать наличие</span><ChevronRight size={18}/></button>
       </LeadSheet>
     </div>
   </div>;

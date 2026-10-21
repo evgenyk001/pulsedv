@@ -20,11 +20,24 @@ async function seed(page:Page,state=fixture()){
 }
 
 for(const width of [320,390,430])test(`Property experience ${width}px: fullscreen gallery, exact price, minimum and CRM context`,async({page,browserName})=>{
+ await page.emulateMedia({reducedMotion:"reduce"});
  await page.setViewportSize({width,height:844});await seed(page);
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/pulsedv/mini-app/#/property/primorskiy');
  await expect(page.getByRole('heading',{name:'ЖК Приморский',exact:true})).toBeVisible();
  await expect(page.getByText('от '+rub(7543219)+' ₽',{exact:true}).first()).toBeVisible();
+ const hero=page.locator('section[class*="_hero_"]').first();
+ const title=page.getByRole('heading',{name:'ЖК Приморский',exact:true});
+ const heroBefore=(await hero.boundingBox())!,titleBefore=(await title.boundingBox())!;
+ await page.evaluate(()=>window.scrollTo({top:160,behavior:'instant'}));
+ await expect.poll(()=>page.evaluate(()=>Math.round(window.scrollY))).toBe(160);
+ await expect.poll(async()=>Math.abs((await hero.boundingBox())!.y-heroBefore.y)).toBeLessThan(1);
+ await expect.poll(async()=>Math.round(titleBefore.y-(await title.boundingBox())!.y)).toBe(160);
+ // The white sheet must receive taps where it covers the pinned photo.
+ expect(await title.evaluate(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})).toBe(true);
+ await page.screenshot({path:`test-results/property-overlap-${browserName}-${width}.png`});
+ await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));
+ await expect.poll(()=>page.evaluate(()=>window.scrollY)).toBe(0);
  await page.screenshot({path:`test-results/property-page-${browserName}-${width}.png`,fullPage:true});
  const photos=page.getByRole('button',{name:'Открыть все фотографии'});await photos.click();
  const viewer=page.getByRole('dialog',{name:'ЖК Приморский',exact:true});await expect(viewer).toBeVisible();
