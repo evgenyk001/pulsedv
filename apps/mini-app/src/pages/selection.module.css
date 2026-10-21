@@ -258,7 +258,7 @@
 .liveRequestTop{position:relative;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .liveRequestTop>div:first-child{display:flex;flex-direction:column;min-width:0;gap:5px}
 
-.liveBadge{flex:none;min-height:27px;padding:0 8px;border-radius:10px;background:rgba(242,13,29,.055);border:0;color:var(--primary);display:flex;align-items:center;gap:4px;font-size:7.5px;font-weight:650;letter-spacing:0}
+.liveBadge{flex:none;min-height:27px;padding:0 8px;border-radius:10px;background:rgba(242,13,29,.055);border:0;color:#bd1b2c;display:flex;align-items:center;gap:4px;font-size:7.5px;font-weight:650;letter-spacing:0}
 .liveRequestChips{position:relative;display:flex;flex-wrap:wrap;gap:5px;margin-top:13px}
 .liveRequestChips span{min-height:25px;padding:0 8px;border-radius:9px;background:rgba(233,237,243,.68);border:0;display:flex;align-items:center;color:#526174;font-size:8.1px;font-weight:550;line-height:1.35}
 .catalogIssue{position:relative;margin-top:10px;padding:9px 10px;border-radius:13px;background:rgba(200,69,75,.07);color:#93444a;font-size:8px;line-height:1.4}
@@ -349,7 +349,7 @@
 .scenarioList .scenarioOutcome{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;gap:8px;color:var(--muted-foreground)}
 .scenarioOutcome b{display:block;min-width:0;font-size:8px;font-weight:600;line-height:1.4;text-align:right;white-space:normal}
 .scenarioOutcome>svg{flex:none;width:26px;height:26px;padding:5px;border-radius:50%;background:rgba(231,235,241,.7);stroke-width:1.7}
-.scenarioOutcome[data-gain="positive"]{color:var(--primary)}
+.scenarioOutcome[data-gain="positive"]{color:#bd1b2c}
 .scenarioOutcome[data-gain="positive"]>svg{background:rgba(242,13,29,.07)}
 @media(max-width:360px){.smartPrompt,.liveRequest,.whatIf{padding-left:13px;padding-right:13px}.smartInput{gap:9px;padding-left:11px}.smartInput textarea{height:68px}.smartInput textarea::placeholder{font-size:11.5px}.scenarioList button{grid-template-columns:minmax(0,1fr) 94px;gap:8px}.smartPromptHead>div>span{font-size:11px}.requestCount>span{max-width:88px;font-size:9px}}
 @media(hover:hover){.scenarioList button:hover{background:rgba(235,239,244,.4)}}

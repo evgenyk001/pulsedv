@@ -6,6 +6,7 @@ on:
       - 'apps/mini-app/src/pages/selection.tsx'
       - 'apps/mini-app/src/pages/selection.module.css'
       - 'tests/ui/select-composer.spec.ts'
+      - 'tests/ui/mini-app.spec.ts'
       - '.github/workflows/select-review.yml'
 permissions:
   contents: read
@@ -22,6 +23,7 @@ jobs:
       - run: npm run build -w apps/mini-app
       - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright test tests/ui/select-composer.spec.ts --workers=1
+      - run: npx playwright test tests/ui/mini-app.spec.ts --grep 'PULSE Select smart query' --workers=1
       - run: npx playwright test --config=playwright.finance-webkit.config.ts tests/ui/select-composer.spec.ts --workers=1
       - uses: actions/upload-artifact@v4
         if: always()
