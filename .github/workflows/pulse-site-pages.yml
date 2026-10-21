@@ -10,6 +10,8 @@ on:
       - ".github/workflows/runtime-check.yml"
       - "dist/**"
       - "scripts/build-seo.mjs"
+      - "tests/ui/**"
+      - "playwright*.ts"
       - "apps/mini-app/**"
       - "apps/control-center/**"
       - "packages/**"
@@ -19,6 +21,8 @@ on:
     paths:
       - "dist/**"
       - "scripts/build-seo.mjs"
+      - "tests/ui/**"
+      - "playwright*.ts"
       - "tests/seo.test.mjs"
       - "apps/mini-app/**"
       - "apps/control-center/**"
