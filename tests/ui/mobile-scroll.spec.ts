@@ -48,9 +48,9 @@ for(const width of [320,390,430])test(`Mobile scroll ${width}px: every route and
  for(const route of routes){
   await test.step(route,async()=>{
    await page.goto('/pulsedv/mini-app/#'+route);
-   await expect(page.locator('main')).toBeVisible();
+   await expect(page.locator('main').first()).toBeVisible();
    await expect(page.locator('.screenLoadState')).toHaveCount(0);
-   await expect(page.locator('main')).not.toHaveText('');
+   await expect(page.locator('main').first()).not.toHaveText('');
    await noSidewaysPage(page);
    await page.evaluate(()=>window.scrollTo({top:document.documentElement.scrollHeight,behavior:'instant'}));
    await noSidewaysPage(page);
