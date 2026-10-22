@@ -3,7 +3,10 @@
   .overlay[data-state="open"]{animation:overlayIn .34s cubic-bezier(.2,.8,.2,1)}
   .overlay[data-state="closed"]{animation:overlayOut .24s ease both}
 
-  .content{position:fixed;z-index:var(--z-overlay);display:flex;flex-direction:column;background:var(--popup);color:var(--popup-foreground);box-shadow:var(--shadow-lg);overscroll-behavior:contain;font-family:var(--font-family-base)}
+  .content{position:fixed;z-index:var(--z-overlay);display:flex;flex-direction:column;min-width:0;overflow-x:hidden;overflow-wrap:anywhere;background:var(--popup);color:var(--popup-foreground);box-shadow:var(--shadow-lg);overscroll-behavior:contain;font-family:var(--font-family-base)}
+  /* A scrolling column must keep its children's natural height. Otherwise flex
+     shrink compresses cards while their text and forms spill out of them. */
+  .content>*{flex-shrink:0;min-width:0}
   .top{top:0;left:0;right:0;height:80vh;max-height:500px;border-bottom-left-radius:var(--radius-md);border-bottom-right-radius:var(--radius-md)}
   .left{top:0;left:0;bottom:0;width:100%;max-width:400px;border-top-right-radius:var(--radius-md);border-bottom-right-radius:var(--radius-md)}
   .right{top:0;right:0;bottom:0;width:100%;max-width:400px;border-top-left-radius:var(--radius-md);border-bottom-left-radius:var(--radius-md)}
