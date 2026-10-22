@@ -25,13 +25,14 @@ body{
 html::-webkit-scrollbar,
 body::-webkit-scrollbar,
 #root::-webkit-scrollbar,
-#root *::-webkit-scrollbar{
+body *::-webkit-scrollbar{
   width:0!important;
   height:0!important;
   display:none!important;
   background:transparent!important;
 }
-#root *{
+/* Dialogs, sheets and photo viewers are portalled directly into body. */
+body *{
   scrollbar-width:none;
   -ms-overflow-style:none;
 }
