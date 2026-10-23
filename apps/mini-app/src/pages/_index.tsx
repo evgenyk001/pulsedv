@@ -21,7 +21,7 @@ export default function HomePage(){
   return <div className={styles.page}>
     <header className={styles.header}>
       <div className={styles.brand}>
-        <div><div className={styles.brandName}>PULSE.DV</div><div className={styles.brandSub}>Новостройки Приморья</div></div>
+        <div><div className={styles.brandName}>PULSEDV.RU</div><div className={styles.brandSub}>Новостройки Приморья</div></div>
       </div>
       <div className={styles.headerActions}>
         <ClientUpdates className={styles.iconButton}/>
@@ -47,7 +47,7 @@ export default function HomePage(){
     <ContinueChoice/>
 
     <section className={styles.section}>
-      <div className={styles.sectionHead}><div><span>Выбор PULSE.DV</span><h2>Стоит посмотреть</h2></div><Link to="/catalog">Все <ChevronRight size={15}/></Link></div>
+      <div className={styles.sectionHead}><div><span>Выбор PULSEDV.RU</span><h2>Стоит посмотреть</h2></div><Link to="/catalog">Все <ChevronRight size={15}/></Link></div>
       <div className={styles.propertyRail}>{isLoading&&<p role="status">Загружаем проекты…</p>}{error&&<p role="alert">Не удалось загрузить проекты. <button onClick={()=>void refetch()}>Повторить</button></p>}{!isLoading&&properties.map(p=><PropertyCard key={p.id} property={p}/>)}</div>
     </section>
 

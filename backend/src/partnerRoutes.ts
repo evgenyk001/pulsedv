@@ -1,3 +1,4 @@
+import {requirePartnerBiometric} from './partnerBiometrics';
 import {assessPartnerRisk,recordRiskReview,requireRiskReviewed} from './partnerAntifraud';
 import {registerPartnerPayoutRoutes,payoutSchema,payoutNotice} from './partnerPayout';
 import {payoutError} from '../../packages/partners/payout';
@@ -26,7 +27,7 @@ export async function lockBuyerIdentity(sql:Sql,phone:string,userId:string|null)
 async function resolveCode(sql:Sql,code:string,lock=false){
  let p=(await sql.query('select *,null::uuid as invitation_id from partner_profiles where code=$1'+(lock?' for update':''),[code])).rows[0];
  if(!p){const invite=(await sql.query('select * from partner_invitations where code=$1',[code])).rows[0];if(invite)p={...(await sql.query('select * from partner_profiles where id=$1'+(lock?' for update':''),[invite.partner_id])).rows[0],invitation_id:invite.id};}
- if(!p||p.status!=='active'||p.terms_version!==PARTNER_TERMS_VERSION)throw new HttpError(404,'Приглашение недоступно. Свяжитесь с PULSE.DV');
+ if(!p||p.status!=='active'||p.terms_version!==PARTNER_TERMS_VERSION)throw new HttpError(404,'Приглашение недоступно. Свяжитесь с PULSEDV.RU');
  return p;
 }
 export async function preparePartnerReferral(sql:Sql,code:string|undefined,buyerUserId:string|null,phone?:string){
@@ -138,7 +139,7 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
  const published=config.PARTNER_OFFER_PUBLISHED&&config.PARTNER_OFFER_APPROVED_VERSION===OFFER_VERSION&&Object.values(operator).every(Boolean);
  const acceptance=async(sql:Sql,p:any)=>{const text=offerText(),hash=createHash('sha256').update(JSON.stringify({version:OFFER_VERSION,text,operator})).digest('hex');await sql.query('insert into partner_terms_acceptances(partner_id,terms_version,document_text,document_sha256,operator_snapshot,publication_state) values($1,$2,$3,$4,$5::jsonb,$6)',[p.id,OFFER_VERSION,text,hash,JSON.stringify(operator),published?'published':'draft']);};
  const requirePublished=()=>{if(!published)throw new HttpError(409,'Программа ещё готовится к запуску: окончательная оферта не опубликована');};
- const authenticated=async(r:FastifyRequest)=>{await visitor(r);if(!r.visitor!.userId)throw new HttpError(403,'Откройте приложение в Telegram для подключения к программе');};
+ const authenticated=async(r:FastifyRequest)=>{await visitor(r);await requirePartnerBiometric(db,r,/\/rewards\/[^/]+\/(request|change)/.test(r.url));if(!r.visitor!.userId)throw new HttpError(403,'Откройте приложение в Telegram для подключения к программе');};
  const profile=async(sql:Sql,userId:string)=>{const p=(await sql.query('select * from partner_profiles where user_id=$1',[userId])).rows[0];if(!p)throw new HttpError(403,'Подключитесь к партнёрской программе');return p;};
  const pageSchema=z.object({page:z.coerce.number().int().min(1).max(100000).default(1),limit:z.coerce.number().int().min(1).max(100).default(30),filter:z.enum(['all','payments','pending','conflicts','payouts']).default('all')}).strict();
  app.get('/api/v1/public/partner-program',async()=>({termsVersion:PARTNER_TERMS_VERSION,rewardBps:PARTNER_REWARD_BPS,reserveBps:PARTNER_RESERVE_BPS,botUsername:config.TELEGRAM_BOT_USERNAME,offerUrl:'/partner-offer/',offerPublished:published}));
@@ -146,7 +147,7 @@ export async function registerPartnerRoutes(app:FastifyInstance,{db,config,visit
  app.get('/api/v1/public/partner-invites/:code',{config:{rateLimit:{max:40,timeWindow:'1 minute'}}},async request=>{
   const p=await resolveCode(db,codeSchema.parse((request.params as any).code));return {partnerName:p.name,code:(request.params as any).code,termsVersion:PARTNER_TERMS_VERSION};
  });
- app.get('/api/v1/me/partner',{preHandler:visitor},async request=>{
+ app.get('/api/v1/me/partner',{preHandler:async r=>{await visitor(r);await requirePartnerBiometric(db,r)}},async request=>{
   const q=pageSchema.parse(request.query),userId=request.visitor!.userId;
   const emptySummary={accruedMinor:0,paidMinor:0,pendingCount:0,acceptedCount:0};
   if(!userId)return {authenticated:false,partner:null,referrals:[],invitations:[],page:q.page,total:0,hasMore:false,summary:emptySummary};

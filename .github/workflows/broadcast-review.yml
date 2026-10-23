@@ -3,6 +3,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'packages/partners/biometrics.ts'
+      - 'apps/mini-app/src/components/PartnerSecurity.tsx'
+      - 'tests/ui/partner-security.spec.ts'
       - 'packages/broadcasts/**'
       - 'apps/control-center/src/pages/Broadcast*'
       - 'apps/control-center/src/pages/broadcasts.css'
@@ -26,13 +29,14 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run build
       - run: npx playwright install --with-deps chromium webkit
-      - run: npx playwright test tests/ui/broadcasts.spec.ts --workers=1
-      - run: npx playwright test --config=playwright.finance-webkit.config.ts tests/ui/broadcasts.spec.ts --workers=1
+      - run: npx playwright test tests/ui/broadcasts.spec.ts tests/ui/partner-security.spec.ts --workers=1
+      - run: npx playwright test --config=playwright.finance-webkit.config.ts tests/ui/broadcasts.spec.ts tests/ui/partner-security.spec.ts --workers=1
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: pulse-broadcast-review
           path: |
             test-results/broadcasts-*.png
+            test-results/partner-security-*.png
             playwright-report
             playwright-report-finance-webkit

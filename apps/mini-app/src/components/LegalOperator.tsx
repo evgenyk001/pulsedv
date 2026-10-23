@@ -2,7 +2,7 @@ import {useQuery} from '@tanstack/react-query';
 import {api,runtime} from '../../../../packages/pulse-data/runtime';
 export function LegalOperator(){
  const query=useQuery({queryKey:['public-legal'],enabled:runtime.enabled,queryFn:()=>api<{name:string;inn:string;email:string;address:string}>('/public/legal'),staleTime:300000});
- if(!runtime.enabled)return <p>Тестовая версия. Приём реальных обращений пока недоступен.</p>;
+ if(!runtime.enabled)return <p>Приём обращений пока недоступен.</p>;
  if(query.isPending)return <p>Загружаем сведения об операторе…</p>;
  if(query.isError)return <p>Не удалось загрузить реквизиты. <button onClick={()=>void query.refetch()}>Повторить</button></p>;
  const info=query.data;

@@ -44,21 +44,21 @@ export function leadContextText(context:Record<string,unknown>){
 function managerText(event:OutboxRecord){
   if(event.topic==='manager.broadcast_test')return userText(event);
   if(event.topic==='manager.showing_reminder')return userText(event);
-  if(event.topic==="manager.security_code")return `PULSE.DV · подтверждение входа\nКод: ${asString(event.payload.code)??"—"}\nНикому не сообщайте этот код. Он действует 5 минут.`;
-  if(event.topic==="manager.journey")return `PULSE.DV · Обращение клиента\n${asString(event.payload.title)??"Клиент обновил обращение"}\n${asString(event.payload.body)??"Откройте карточку клиента"}`;
-  if(event.topic==="manager.interest_changed")return `PULSE.DV · Изменение интереса\n${asString(event.payload.title)??"Клиент уточнил запрос"}\n${asString(event.payload.body)??"Откройте карточку клиента"}`;
+  if(event.topic==="manager.security_code")return `PULSEDV.RU · подтверждение входа\nКод: ${asString(event.payload.code)??"—"}\nНикому не сообщайте этот код. Он действует 5 минут.`;
+  if(event.topic==="manager.journey")return `PULSEDV.RU · Обращение клиента\n${asString(event.payload.title)??"Клиент обновил обращение"}\n${asString(event.payload.body)??"Откройте карточку клиента"}`;
+  if(event.topic==="manager.interest_changed")return `PULSEDV.RU · Изменение интереса\n${asString(event.payload.title)??"Клиент уточнил запрос"}\n${asString(event.payload.body)??"Откройте карточку клиента"}`;
   const source=asString(event.payload.source)??'';const sources:Record<string,string>={property:'Карточка ЖК',selection:'Подбор квартиры',catalog:'Каталог',mortgage:'Ипотека',home:'Главная',profile:'Профиль',presentation:'Презентация ЖК',general:'Консультация'};const origin=sources[source.split('-')[0]]??'Мини-приложение';
-  if(event.topic==='manager.new_lead')return `PULSE.DV · Новая заявка\n${asString(event.payload.name)??'Клиент'}\nТелефон: ${asString(event.payload.phone)??'В карточке клиента'}\n${asString(event.payload.propertyName)??'Подбор квартиры'}\nГород: ${asString(event.payload.city)??'Пока не указан'}\nИсточник: ${origin}\n${asString(event.payload.contextSummary)??''}\n${asString(event.payload.comment)??''}\n${asString(event.payload.nextAction)??'Свяжитесь с клиентом'}`;
+  if(event.topic==='manager.new_lead')return `PULSEDV.RU · Новая заявка\n${asString(event.payload.name)??'Клиент'}\nТелефон: ${asString(event.payload.phone)??'В карточке клиента'}\n${asString(event.payload.propertyName)??'Подбор квартиры'}\nГород: ${asString(event.payload.city)??'Пока не указан'}\nИсточник: ${origin}\n${asString(event.payload.contextSummary)??''}\n${asString(event.payload.comment)??''}\n${asString(event.payload.nextAction)??'Свяжитесь с клиентом'}`;
   const score=event.payload.score??"—";
   const priority=event.payload.priority??"new";
   const city=event.payload.city??"—";
   const action=event.payload.nextAction??"Открыть лид в PULSE Control";
   const labels:Record<string,string>={cold:'Новый интерес',warm:'Заинтересованный клиент',hot:'Горячий клиент',urgent:'Нужна быстрая связь',new:'Новый клиент'};
-  return `PULSE.DV · ${labels[String(priority)]??'Активность клиента'}\nИнтерес: ${score}/100\nГород: ${city}\n${action}`;
+  return `PULSEDV.RU · ${labels[String(priority)]??'Активность клиента'}\nИнтерес: ${score}/100\nГород: ${city}\n${action}`;
 }
 
 function userText(event:OutboxRecord){
-  const title=asString(event.payload.title)??"PULSE.DV";
+  const title=asString(event.payload.title)??"PULSEDV.RU";
   const body=asString(event.payload.body)??"Есть обновление по вашему подбору.";
   return `${title}${['user.broadcast','manager.broadcast_test'].includes(event.topic)?'\n\n':'\n'}${body}`;
 }
@@ -98,7 +98,7 @@ export async function processNotificationOutbox(
         if(!userId)throw new Error("userId missing");
         const chatId=await repo.userTelegramUserId(userId);
         if(!chatId)throw new Error("user Telegram id missing");
-        if((isShowingReminder(event.topic)||event.topic==='user.search_updates'||event.topic==='user.broadcast')&&!await repo.canDeliver(event)){await repo.markSkipped(event.id,event.topic==='user.broadcast'?'Broadcast cancelled or subscription changed':event.topic==='user.search_updates'?'Search subscription changed':undefined);continue;}
+        if((isShowingReminder(event.topic)||event.topic==='user.partner_security_code'||event.topic==='user.search_updates'||event.topic==='user.broadcast')&&!await repo.canDeliver(event)){await repo.markSkipped(event.id,event.topic==='user.broadcast'?'Broadcast cancelled or subscription changed':event.topic==='user.search_updates'?'Search subscription changed':undefined);continue;}
         await telegram.sendMessage({
           chatId,
           text:userText(event),

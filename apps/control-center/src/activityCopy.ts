@@ -180,7 +180,7 @@ export function describeEvent(event:PulseEvent,state:PulseState){
     case "lead_form_open":
       return {title:`Открыл форму консультации${propertyName?` по ${propertyName}`:""}`,detail:"Высокий интерес к контакту с менеджером"};
     case "contact_click":
-      return {title:"Нажал «Связаться»",detail:propertyName||"Попытка связаться с PULSE.DV"};
+      return {title:"Нажал «Связаться»",detail:propertyName||"Попытка связаться с PULSEDV.RU"};
     case "lead_created":
       return {title:"Оставил заявку",detail:propertyName||"Передал контакты менеджеру"};
     case "onboarding_complete":

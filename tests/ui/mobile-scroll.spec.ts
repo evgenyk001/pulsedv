@@ -72,8 +72,8 @@ for(const width of [320,390,430])test(`Mobile scroll ${width}px: every route and
  await page.getByRole('button',{name:'История подборов',exact:true}).click();
  await checkSheet(page,page.getByRole('dialog',{name:'История подборов',exact:true}));
  await page.keyboard.press('Escape');
- await page.getByRole('button',{name:'О сервисе PULSE.DV',exact:true}).click();
- await checkSheet(page,page.getByRole('dialog',{name:'О PULSE.DV',exact:true}));
+ await page.getByRole('button',{name:'О сервисе PULSEDV.RU',exact:true}).click();
+ await checkSheet(page,page.getByRole('dialog',{name:'О PULSEDV.RU',exact:true}));
  await page.keyboard.press('Escape');
  await page.getByRole('button',{name:'Оставить заявку менеджеру',exact:true}).click();
  await checkSheet(page,page.getByRole('dialog'));

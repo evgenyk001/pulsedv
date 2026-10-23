@@ -181,7 +181,7 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,im
   {status==='ready'&&<div className={styles.zoomControls} role="group" aria-label="Масштаб карты"><button type="button" aria-label="Увеличить карту" onClick={()=>mapRef.current?.zoom(1)}><Plus size={20}/></button><button type="button" aria-label="Уменьшить карту" onClick={()=>mapRef.current?.zoom(-1)}><Minus size={20}/></button></div>}
   {status==='ready'&&selected&&<article ref={previewRef} key={selected.id} id="map-project-preview" className={styles.previewCard} aria-label={selected.name}>
    <div className={styles.previewHero}>
-    {image&&failedImage!==image?<img src={catalogImageVariant(image,'card')} alt="" decoding="async" onError={event=>{if(event.currentTarget.getAttribute('src')!==image)event.currentTarget.src=image;else setFailedImage(image)}}/>:<div className={styles.imageFallback}><Building2 size={40}/><span>PULSE.DV</span></div>}
+    {image&&failedImage!==image?<img src={catalogImageVariant(image,'card')} alt="" decoding="async" onError={event=>{if(event.currentTarget.getAttribute('src')!==image)event.currentTarget.src=image;else setFailedImage(image)}}/>:<div className={styles.imageFallback}><Building2 size={40}/><span>PULSEDV.RU</span></div>}
     <div className={styles.heroShade}/>
     {selected.className&&<span className={styles.classBadge}>{selected.className}</span>}
     <div className={styles.heroActions}>

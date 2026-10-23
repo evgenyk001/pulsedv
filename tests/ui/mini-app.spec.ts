@@ -258,7 +258,7 @@ test('PULSE Select removes dead live-count card and keeps a chevron action',asyn
 
 test('Control preview: object editor and real state changes',async({page})=>{
  await page.setViewportSize({width:1440,height:1000});await page.goto('/pulsedv/control-center/');
- await expect(page.getByText('Тестовая версия · учебные данные')).toBeVisible();
+ await expect(page.getByText('Локальные данные')).toBeVisible();
  await page.getByRole('link',{name:'Объекты',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Добавляйте десятки и сотни ЖК за один проход',exact:true})).toBeVisible();
  await expect(page.getByText('БАЗА ОБЪЕКТОВ',{exact:true})).toBeVisible();
@@ -287,7 +287,7 @@ test('Control content: banner campaigns can be created, enabled and linked',asyn
  await page.getByRole('button',{name:'Новый баннер',exact:true}).click();
  const card=page.locator('.bannerCampaignCard').last();
  await card.getByLabel('Тип кампании').selectOption('partner');
- await card.getByLabel('Метка над заголовком').fill('Партнёр PULSE.DV');
+ await card.getByLabel('Метка над заголовком').fill('Партнёр PULSEDV.RU');
  await card.getByLabel('Заголовок').fill('Тестовая партнёрская кампания');
  await card.getByLabel('Описание').fill('Проверяем управляемый баннер без правки клиентского кода.');
  await card.getByLabel('Куда ведёт').selectOption('external');

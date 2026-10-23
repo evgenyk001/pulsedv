@@ -100,7 +100,7 @@ function PreviewObjectsPage(){
 
       {list.length?<div className="catalogObjectGrid">{list.map(item=><button key={item.id} className="catalogObjectCard" onClick={()=>setSelected(item.id)}>
         <div className="catalogObjectImage">
-          {item.coverImageUrl?<img src={item.coverImageUrl} alt=""/>:<div className="objectPlaceholder"><Building2 size={24}/><span>PULSE.DV</span></div>}
+          {item.coverImageUrl?<img src={item.coverImageUrl} alt=""/>:<div className="objectPlaceholder"><Building2 size={24}/><span>PULSEDV.RU</span></div>}
           <span className={'statusChip '+item.status}>{item.status==='published'?'Опубликован':item.status==='draft'?'Черновик':'Архив'}</span>
         </div>
         <div className="catalogObjectBody">

@@ -19,7 +19,7 @@ async function fixture(page:Page,own=false,code=personal){
 
 for(const code of [common,personal])test(`Own saved invitation ${code[0]} does not appear in ordinary profile forms`,async({page})=>{
  await fixture(page,true,code);await page.goto('/pulsedv/mini-app/#/profile');
- for(const name of ['Оставить заявку менеджеру','Связаться с PULSE.DV']){
+ for(const name of ['Оставить заявку менеджеру','Связаться с PULSEDV.RU']){
   await page.getByRole('button',{name,exact:true}).click();
   const form=page.getByRole('dialog');await expect(form.getByRole('checkbox')).toHaveCount(1);
   await expect(form).not.toContainText('меня пригласил');expect(await page.evaluate(key=>localStorage.getItem(key),attr)).toBeNull();
@@ -37,7 +37,7 @@ test('Invitation preview cannot create a buyer form or remember its partner',asy
 });
 
 test('Ordinary agency contact ignores a remembered invitation without sharing buyer data',async({page})=>{
- await fixture(page);await page.goto('/pulsedv/mini-app/#/profile');await page.getByRole('button',{name:'Связаться с PULSE.DV',exact:true}).click();
+ await fixture(page);await page.goto('/pulsedv/mini-app/#/profile');await page.getByRole('button',{name:'Связаться с PULSEDV.RU',exact:true}).click();
  const form=page.getByRole('dialog');await expect(form.getByRole('checkbox')).toHaveCount(1);
  await expect(form).not.toContainText('Евгений Козменко');
  expect(await page.evaluate(key=>localStorage.getItem(key),attr)).not.toBeNull();
@@ -45,7 +45,7 @@ test('Ordinary agency contact ignores a remembered invitation without sharing bu
  await form.getByRole('checkbox',{name:/Я даю согласие/}).check();await form.getByRole('button',{name:'Отправить заявку',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Обращение создано',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pulse.partners.v1')!).referrals)).toHaveLength(0);
- await page.reload();await page.getByRole('button',{name:'Связаться с PULSE.DV',exact:true}).click();
+ await page.reload();await page.getByRole('button',{name:'Связаться с PULSEDV.RU',exact:true}).click();
  await expect(page.getByRole('dialog').getByRole('checkbox')).toHaveCount(1);
 });
 
@@ -58,9 +58,9 @@ test('Ordinary manager contact ignores another partner invitation',async({page})
 
 test('Expired invitation is rechecked when opening a form that was already mounted',async({page})=>{
  await fixture(page);await page.goto('/pulsedv/mini-app/#/profile');
- await expect(page.getByRole('button',{name:'Связаться с PULSE.DV',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Связаться с PULSEDV.RU',exact:true})).toBeVisible();
  await page.evaluate(key=>{const v=JSON.parse(localStorage.getItem(key)!);v.expiresAt=Date.now()-1;localStorage.setItem(key,JSON.stringify(v));},attr);
- await page.getByRole('button',{name:'Связаться с PULSE.DV',exact:true}).click();
+ await page.getByRole('button',{name:'Связаться с PULSEDV.RU',exact:true}).click();
  await expect(page.getByRole('dialog').getByRole('checkbox')).toHaveCount(1);
 });
 

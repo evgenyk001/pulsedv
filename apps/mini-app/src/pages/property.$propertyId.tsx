@@ -63,7 +63,7 @@ export default function PropertyPage(){
   if(!p)return <div className={styles.notFound}><strong>Объект не найден</strong><Link to="/catalog">Вернуться в каталог</Link></div>;
 
   const favorite=isFavorite(p.id);
-  const developer=p.developerName&&p.developerName!=="Партнёр PULSE.DV"?p.developerName:"";
+  const developer=p.developerName&&!/^Партнёр (PULSE\.DV|PULSEDV\.RU)$/.test(p.developerName)?p.developerName:"";
   const gallery=propertyPhotos(p);
   const mortgageRule=control.mortgagePrograms.find(rule=>rule.id===savedScenario?.programId)??control.mortgagePrograms[0];
   const minDown=mortgageRule?minimumMortgageDown(propertyPriceRub(p.priceFrom),mortgageRule.minDownPct):null;
@@ -227,12 +227,12 @@ export default function PropertyPage(){
         <SheetTrigger asChild>
           <button className={styles.developer}>
             <IconTile as="div" className={styles.devIcon}><Building2 size={20}/></IconTile>
-            <div><span>Застройщик</span><strong>{developer||"Информация уточняется"}</strong><small><ShieldCheck size={12}/> Данные проекта в базе PULSE.DV</small></div>
+            <div><span>Застройщик</span><strong>{developer||"Информация уточняется"}</strong><small><ShieldCheck size={12}/> Данные проекта в базе PULSEDV.RU</small></div>
             <ChevronRight size={18}/>
           </button>
         </SheetTrigger>
         <SheetContent side="bottom" className={styles.developerSheet}>
-          <SheetHeader><SheetTitle>{developer||"О проекте"}</SheetTitle><SheetDescription>Перед бронированием менеджер PULSE.DV уточнит актуальные цены, наличие квартир и условия покупки.</SheetDescription></SheetHeader>
+          <SheetHeader><SheetTitle>{developer||"О проекте"}</SheetTitle><SheetDescription>Перед бронированием менеджер PULSEDV.RU уточнит актуальные цены, наличие квартир и условия покупки.</SheetDescription></SheetHeader>
           <div className={styles.developerInfo}><ShieldCheck size={22}/><span><strong>Проверим перед сделкой</strong><small>Данные в приложении используются для подбора. Коммерческие условия могут меняться.</small></span></div>
         </SheetContent>
       </Sheet>

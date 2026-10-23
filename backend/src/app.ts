@@ -1,3 +1,4 @@
+import {registerPartnerBiometricRoutes} from './partnerBiometrics';
 import {registerAcquisitionRoutes,linkAcquisition} from './acquisitionRoutes';
 import {registerBroadcastRoutes} from './broadcastRoutes';
 import {antifraudCollector,observeVisitor} from './partnerAntifraud';
@@ -39,7 +40,7 @@ const uuid=(value:unknown)=>z.uuid().parse(value);
 const memberView=(row:any)=>({id:row.id,name:row.name,email:row.email,role:row.role,active:row.active,cities:row.cities,telegramUserId:row.telegram_user_id?.toString()??null,mfaEnabled:!!row.mfa_enabled});
 
 export async function createApp(db:Database,config:RuntimeConfig){
- const app=Fastify({requestTimeout:120000,bodyLimit:1_500_000,trustProxy:config.TRUST_PROXY_HOPS?(_address:string,hop:number)=>hop<config.TRUST_PROXY_HOPS:false,logger:config.NODE_ENV!=='test'?{redact:['req.headers.authorization','req.headers.cookie','res.headers["set-cookie"]']}:false});
+ const app=Fastify({requestTimeout:120000,bodyLimit:1_500_000,trustProxy:config.TRUST_PROXY_HOPS?(_address:string,hop:number)=>hop<config.TRUST_PROXY_HOPS:false,logger:config.NODE_ENV!=='test'?{redact:['req.headers.authorization','req.headers.cookie','req.headers["x-partner-unlock"]','res.headers["set-cookie"]']}:false});
  await app.register(cookie);
  app.addHook('preHandler',antifraudCollector(db,config.NODE_ENV==='production'));
  await app.register(rateLimit,{max:180,timeWindow:'1 minute'});
@@ -216,6 +217,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  app.get('/api/v1/control/me',{preHandler:control},async request=>({member:request.member}));
  app.post('/api/v1/control/logout',{preHandler:control},async(request,reply)=>{await db.query('delete from auth_tokens where token_hash=$1',[tokenHash(request.cookies.pulse_control!)]);reply.clearCookie('pulse_control',cookieOptions);return {ok:true};});
  await registerFinanceRoutes(app,db,control);
+ registerPartnerBiometricRoutes(app,db,config,visitor);
  await registerPartnerRoutes(app,{db,config,visitor,editor,owner});
  await registerLossRoutes(app,db,control);
  await registerInterestRoutes(app,db,control);

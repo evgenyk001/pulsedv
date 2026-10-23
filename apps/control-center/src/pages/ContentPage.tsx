@@ -6,7 +6,7 @@ import { updatePulseState, type PulseBanner, type PulseBannerKind } from "../../
 import { api, runtime } from "../../../../packages/pulse-data/runtime";
 
 const kinds:Record<PulseBannerKind,{label:string;hint:string}>={
-  promo:{label:"Промо",hint:"Собственные услуги и продукты PULSE.DV"},
+  promo:{label:"Промо",hint:"Собственные услуги и продукты PULSEDV.RU"},
   giveaway:{label:"Розыгрыш",hint:"Конкурсы, подарки и специальные механики"},
   partner:{label:"Партнёр",hint:"Реклама и предложения сторонних компаний"},
 };
@@ -50,7 +50,7 @@ export function ContentPage(){
     const banner:PulseBanner={
       id:"banner-"+crypto.randomUUID(),title:"Новый баннер",body:"",imageUrl:null,ctaLabel:"Подробнее",
       actionUrl:"/catalog",city:null,audience:null,enabled:false,sortOrder:max+1,
-      kind:"promo",eyebrow:"PULSE.DV",startsAt:null,endsAt:null,
+      kind:"promo",eyebrow:"PULSEDV.RU",startsAt:null,endsAt:null,
     };
     setBanners(items=>[...items,banner]);
   };
@@ -163,9 +163,9 @@ export function ContentPage(){
             <div className="bannerCampaignGrid">
               <div className="bannerCampaignEditor">
                 <div className="formGrid">
-                  <label className="controlField"><span>Тип кампании</span><select value={kind} onChange={e=>patchBanner(banner.id,{kind:e.target.value as PulseBannerKind})}><option value="promo">Промо PULSE.DV</option><option value="giveaway">Розыгрыш</option><option value="partner">Партнёрская реклама</option></select><small>{kinds[kind].hint}</small></label>
+                  <label className="controlField"><span>Тип кампании</span><select value={kind} onChange={e=>patchBanner(banner.id,{kind:e.target.value as PulseBannerKind})}><option value="promo">Промо PULSEDV.RU</option><option value="giveaway">Розыгрыш</option><option value="partner">Партнёрская реклама</option></select><small>{kinds[kind].hint}</small></label>
                   <label className="switchControl"><span><b>Показывать баннер</b><small>Выключенный баннер остаётся в системе.</small></span><input aria-label={"Показывать "+banner.title} type="checkbox" checked={banner.enabled} onChange={e=>patchBanner(banner.id,{enabled:e.target.checked})}/></label>
-                  <label className="controlField wide"><span>Метка над заголовком</span><input value={banner.eyebrow??banner.city??""} maxLength={120} placeholder={kind==="partner"?"Партнёр PULSE.DV":kind==="giveaway"?"Розыгрыш":"PULSE.DV"} onChange={e=>patchBanner(banner.id,{eyebrow:e.target.value||null,city:null})}/></label>
+                  <label className="controlField wide"><span>Метка над заголовком</span><input value={banner.eyebrow??banner.city??""} maxLength={120} placeholder={kind==="partner"?"Партнёр PULSEDV.RU":kind==="giveaway"?"Розыгрыш":"PULSEDV.RU"} onChange={e=>patchBanner(banner.id,{eyebrow:e.target.value||null,city:null})}/></label>
                   <label className="controlField wide"><span>Заголовок</span><input value={banner.title} maxLength={250} onChange={e=>patchBanner(banner.id,{title:e.target.value})}/></label>
                   <label className="controlField wide"><span>Описание</span><textarea rows={3} value={banner.body} maxLength={1000} onChange={e=>patchBanner(banner.id,{body:e.target.value})}/></label>
                 </div>
@@ -199,7 +199,7 @@ export function ContentPage(){
                 <div className="bannerPreview" aria-label={"Предпросмотр "+banner.title}>
                   {banner.imageUrl?<img src={banner.imageUrl} alt=""/>:<div className="bannerPreviewPlaceholder"><ImageUp size={30}/><span>Загрузите изображение</span></div>}
                   <div className="bannerPreviewShade"/>
-                  <div className="bannerPreviewContent"><small>{banner.eyebrow||banner.city||banner.audience||(kind==="partner"?"Партнёр PULSE.DV":kind==="giveaway"?"Розыгрыш":"PULSE.DV")}</small><h3>{banner.title||"Заголовок баннера"}</h3><p>{banner.body||"Короткое описание предложения."}</p>{banner.actionUrl&&<span>{banner.ctaLabel||"Подробнее"} <ExternalLink size={13}/></span>}</div>
+                  <div className="bannerPreviewContent"><small>{banner.eyebrow||banner.city||banner.audience||(kind==="partner"?"Партнёр PULSEDV.RU":kind==="giveaway"?"Розыгрыш":"PULSEDV.RU")}</small><h3>{banner.title||"Заголовок баннера"}</h3><p>{banner.body||"Короткое описание предложения."}</p>{banner.actionUrl&&<span>{banner.ctaLabel||"Подробнее"} <ExternalLink size={13}/></span>}</div>
                 </div>
                 <div className="bannerStats"><div><span>Показы</span><b>{stats.impressions}</b></div><div><span>Клики</span><b>{stats.clicks}</b></div><div><span>CTR</span><b>{stats.ctr}%</b></div></div>
                 <small className="bannerStatsNote">Статистика считается по событиям Mini App. В боевом режиме данные поступают с устройств пользователей.</small>

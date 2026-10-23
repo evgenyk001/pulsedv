@@ -1,3 +1,4 @@
+import {partnerGrant} from '../partners/securityState';
 import {isPublicEvent} from './eventContract';
 import { attribution } from '../journey/attribution';
 import {entrySearch,visitId} from '../journey/visit';
@@ -46,7 +47,8 @@ async function session():Promise<Session>{
 }
 export async function visitorApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
  const identity=await session();
- try{return await api<T>(path,{...options,headers:{...options.headers,Authorization:'Bearer '+identity.accessToken}});}catch(error){
+ try{return await api<T>(path,{...options,headers:{...options.headers,Authorization:'Bearer '+identity.accessToken,...(path.startsWith('/me/partner')&&partnerGrant()?{'X-Partner-Unlock':partnerGrant()}:{})}});}catch(error){
+  if(error instanceof ApiError&&error.status===423&&path.startsWith('/me/partner'))window.dispatchEvent(new Event('pulse:partner-locked'));
   if(error instanceof ApiError&&error.status===401){sessionPromise=null;telegramBound=false;visitorCookieBound=false;try{localStorage.removeItem(SESSION);}catch{}}
   throw error;
  }

@@ -1,3 +1,4 @@
+import {PartnerSecurityGate} from './components/PartnerSecurity';
 import { configureRuntime } from "../../../packages/pulse-data/runtime";
 import { RuntimeGate } from "./components/RuntimeGate";
 import React from "react";
@@ -57,7 +58,7 @@ function App(){
           <Route path="/favorites" element={<FavoritesPage/>}/>
           <Route path="/journey" element={<JourneyPage/>}/>
           <Route path="/partner-offer" element={<PartnerOfferPage/>}/>
-          <Route path="/partners" element={<PartnersPage/>}/>
+          <Route path="/partners" element={<PartnerSecurityGate><PartnersPage/></PartnerSecurityGate>}/>
           <Route path="/partner-invite" element={<PartnerInvitePage/>}/>
           <Route path="/profile" element={<ProfilePage/>}/>
           <Route path="/my-search" element={<MySearchPage/>}/>
