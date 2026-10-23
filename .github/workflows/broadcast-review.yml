@@ -1,0 +1,38 @@
+name: Broadcast mobile review
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/broadcasts/**'
+      - 'apps/control-center/src/pages/Broadcast*'
+      - 'apps/control-center/src/pages/broadcasts.css'
+      - 'apps/mini-app/src/components/Announcement*'
+      - 'apps/mini-app/src/components/announcementPreferences.css'
+      - 'backend/src/broadcast*'
+      - 'backend/src/telegramSender.ts'
+      - 'tests/ui/broadcasts.spec.ts'
+      - '.github/workflows/broadcast-review.yml'
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npx playwright test tests/ui/broadcasts.spec.ts --workers=1
+      - run: npx playwright test --config=playwright.finance-webkit.config.ts tests/ui/broadcasts.spec.ts --workers=1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pulse-broadcast-review
+          path: |
+            test-results/broadcasts-*.png
+            playwright-report
+            playwright-report-finance-webkit

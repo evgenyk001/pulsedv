@@ -1,4 +1,6 @@
 import {validateMedia} from './mediaValidation';
+import sharp from 'sharp';
+import {HttpError} from './security';
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -25,6 +27,20 @@ export async function registerContentRoutes(
 ){
   const {db,config,editor}=deps;
   registerBinaryParsers(app,Object.keys(mediaSpec));
+
+  app.post('/api/v1/control/content/broadcast-media',{preHandler:editor,bodyLimit:9*1024*1024,config:{rateLimit:{max:20,timeWindow:'1 minute'}}},async request=>{
+    const type=(request.headers['content-type']||'').split(';')[0].trim().toLowerCase();
+    if(!mediaSpec[type])throw new HttpError(415,'Выберите JPG, PNG или WebP');
+    const original=await readBinaryBody(request.body,8*1024*1024);
+    const clean=await validateMedia(type,original,1600);
+    const meta=await sharp(clean).metadata();
+    if(!meta.width||!meta.height||Math.max(meta.width/meta.height,meta.height/meta.width)>20)throw new HttpError(400,'Фото слишком узкое или длинное. Выберите другое изображение');
+    const body=await sharp(clean).flatten({background:'#ffffff'}).jpeg({quality:88}).toBuffer();
+    const filename=randomUUID()+'.jpg';await mkdir(join(config.MEDIA_ROOT,'broadcasts'),{recursive:true});
+    await writeFile(join(config.MEDIA_ROOT,'broadcasts',filename),body);
+    await audit(db,request.member!.id,'broadcast.media.upload',null,{size:body.length});
+    return {imageUrl:'/media/broadcasts/'+filename};
+  });
 
   app.post("/api/v1/control/content/banner-media",{
     preHandler:editor,
