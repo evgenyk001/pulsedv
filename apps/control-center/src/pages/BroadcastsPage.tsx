@@ -20,7 +20,7 @@ export function BroadcastsPage(){
  const requestId=React.useRef(crypto.randomUUID());
  const refresh=React.useCallback(async()=>setData(await listBroadcasts(page)),[page]);
  React.useEffect(()=>{void refresh().catch(e=>setError(e.message))},[refresh]);
- React.useEffect(()=>{if(item.status==='draft')sessionStorage.setItem(CACHE,JSON.stringify(item));else sessionStorage.removeItem(CACHE)},[item]);
+ React.useEffect(()=>{try{if(item.status==='draft')sessionStorage.setItem(CACHE,JSON.stringify(item));else sessionStorage.removeItem(CACHE)}catch{setError('Черновик не поместился в памяти этой вкладки. Уменьшите фото и сохраните его снова')}},[item]);
  React.useEffect(()=>{const guard=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue=''}};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard)},[dirty]);
  useDialog(review||stopping,()=>{if(!busy){setReview(false);setStopping(false)}});
  const locked=item.status!=='draft',validation=broadcastError(item),saved=item.version>0&&!dirty;

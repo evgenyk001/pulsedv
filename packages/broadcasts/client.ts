@@ -2,7 +2,7 @@ import {api,runtime,visitorApi} from '../pulse-data/runtime';
 import {broadcastError,type Broadcast,type BroadcastContent,type BroadcastList} from './index';
 const KEY='pulse.broadcasts.v1',SUB='pulse.announcements.v1';
 const read=():Broadcast[]=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return []}};
-const write=(items:Broadcast[])=>localStorage.setItem(KEY,JSON.stringify(items));
+const write=(items:Broadcast[])=>{try{localStorage.setItem(KEY,JSON.stringify(items))}catch{throw Error('Не хватает места для тестового черновика. Уменьшите фото или подготовьте рассылку на серверной версии')}};
 export async function listBroadcasts(page=1):Promise<BroadcastList>{
  if(runtime.enabled)return api('/control/broadcasts?page='+page);
  const all=read().sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt));
