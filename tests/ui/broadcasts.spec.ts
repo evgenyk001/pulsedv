@@ -25,6 +25,6 @@ for(const width of [320,390,1440])test(`Broadcasts ${width}px: draft, preview co
  await expect(editor.getByLabel('Заголовок',{exact:true})).toBeDisabled();
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
  await page.screenshot({path:`test-results/broadcasts-${browserName}-${width}.png`,fullPage:true});
- await page.goto('/pulsedv/mini-app/#/profile');const toggle=page.getByRole('switch',{name:'Получать анонсы PULSEDV.RU'});await expect(toggle).toBeEnabled();const icon=page.locator('.announcementPreference [data-icon-tile]');await expect(icon).toHaveCSS('width','36px');await expect(icon).toHaveCSS('height','36px');await toggle.click();await expect(toggle).toBeChecked();await page.reload();await expect(toggle).toBeChecked();await toggle.click();await expect(toggle).not.toBeChecked();
+ await page.goto('/pulsedv/mini-app/#/profile');const toggle=page.getByRole('switch',{name:'Получать анонсы PULSEDV.RU'});await expect(toggle).toBeEnabled();const icon=page.getByRole('region',{name:'Уведомления',exact:true}).locator('[data-icon-tile]');await expect(icon).toHaveCSS('width','36px');await expect(icon).toHaveCSS('height','36px');await toggle.click();await expect(toggle).toBeChecked();await page.reload();await expect(toggle).toBeChecked();await toggle.click();await expect(toggle).not.toBeChecked();
  await expect.poll(()=>page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);expect(errors).toEqual([]);
 });

@@ -15,11 +15,13 @@ export async function authenticateBiometric(m:BiometricManager,reason:string){
 }
 export async function securitySettings(){return runtime.enabled?visitorApi<{enabled:boolean;authenticated:boolean}>('/me/partner-security'):{enabled:false,authenticated:false};}
 let pendingLock:Promise<unknown>=Promise.resolve();
-export function lockPartner(){setPartnerGrant('');if(runtime.enabled)pendingLock=visitorApi('/me/partner-security/lock',{method:'POST',body:'{}'}).catch(()=>{});return pendingLock;}
+let lockGeneration=0;
+export function lockPartner(){lockGeneration++;setPartnerGrant('');if(runtime.enabled)pendingLock=visitorApi('/me/partner-security/lock',{method:'POST',body:'{}'}).catch(()=>{});return pendingLock;}
 export async function unlockPartner(reason='Вход в партнёрский кабинет'){
- await pendingLock;const m=await biometricManager();if(!m)throw Error('Откройте приложение в мобильном Telegram или восстановите доступ через код');
+ const generation=lockGeneration;await pendingLock;const m=await biometricManager();if(!m)throw Error('Откройте приложение в мобильном Telegram или восстановите доступ через код');
  const token=await authenticateBiometric(m,reason);
- const result=await visitorApi<{grant:string}>('/me/partner-security/unlock',{method:'POST',body:JSON.stringify({token,deviceId:m.deviceId})});setPartnerGrant(result.grant);
+ if(generation!==lockGeneration)throw Error('Вход отменён. Откройте кабинет ещё раз');
+ const result=await visitorApi<{grant:string}>('/me/partner-security/unlock',{method:'POST',body:JSON.stringify({token,deviceId:m.deviceId})});if(generation!==lockGeneration){void lockPartner();throw Error('Вход отменён. Откройте кабинет ещё раз')}setPartnerGrant(result.grant);
 }
 export async function enablePartnerBiometrics(){
  const m=await biometricManager();if(!m?.isBiometricAvailable)throw Error('На этом устройстве биометрия недоступна');
