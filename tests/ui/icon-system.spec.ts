@@ -18,9 +18,19 @@ for(const width of [320,390,430])test(`Outlined card icons remain consistent acr
    return {width:css.width,height:css.height,radius:css.borderRadius,border:css.borderTopWidth,color:css.color,stroke:glyph?.strokeWidth,glyphWidth:glyph?.width,glyphHeight:glyph?.height};
   }));
   for(const actual of sizes)expect(actual,route).toEqual({width:'36px',height:'36px',radius:'12px',border:'1px',color:'rgb(89, 101, 118)',stroke:'1.8px',glyphWidth:'20px',glyphHeight:'20px'});
+  const back=page.locator('[data-back-link]');
+  if(['my-search','journey','privacy','personal-data-consent','partner-offer'].includes(route)||route.startsWith('property/')){
+   await expect(back).toBeVisible();await expect(back).toHaveAccessibleName(/.+/);
+   await expect(back).toHaveCSS('width','40px');await expect(back).toHaveCSS('height','40px');await expect(back).toHaveCSS('border-radius','50%');
+   await expect(back.locator('svg')).toHaveCSS('width','20px');
+   await back.focus();await expect(back).toBeFocused();
+   await expect(back).toHaveCSS('outline-style','solid');
+  }
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),route).toBe(true);
-  if(['','profile','selection'].includes(route))await page.screenshot({path:`test-results/icon-system-${route||'home'}-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
+  if(['','profile','selection','my-search','privacy'].includes(route))await page.screenshot({path:`test-results/icon-system-${route||'home'}-${browserName}-${width}.png`,fullPage:true,animations:'disabled'});
  }
+ await page.goto('/pulsedv/mini-app/#/my-search');
+ await page.getByRole('link',{name:'Назад в профиль',exact:true}).click();await expect(page).toHaveURL(/#\/profile$/);
  // The same geometry survives the theme switch, and a saved heart uses a solid fill.
  await page.goto('/pulsedv/mini-app/#/profile');await page.evaluate(()=>document.documentElement.classList.add('dark'));
  const tile=page.locator('[data-icon-tile]').first();await expect(tile).toHaveCSS('width','36px');await expect(tile).toHaveCSS('border-top-width','1px');

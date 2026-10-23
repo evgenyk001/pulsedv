@@ -1,0 +1,8 @@
+.back{display:grid;place-items:center;flex:none;align-self:flex-start;width:var(--app-icon-action);height:var(--app-icon-action);box-sizing:border-box;padding:0;border:1px solid var(--app-card-border);border-radius:50%;background:var(--app-card);box-shadow:var(--app-card-shadow);color:var(--foreground);text-decoration:none;cursor:pointer;transition:transform .16s var(--motion-press),background-color .16s ease}
+.back>svg{width:20px;height:20px;flex:none}
+.back:active{transform:scale(.95)}
+.back:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+.compact{width:var(--app-icon-compact);height:var(--app-icon-compact)}
+.hero{border-color:rgba(255,255,255,.72);background:rgba(255,255,255,.72);color:#172033;backdrop-filter:blur(20px) saturate(1.2);box-shadow:0 8px 24px rgba(13,21,31,.12)}
+@media(hover:hover){.back:hover{background:var(--muted)}.hero:hover{background:rgba(255,255,255,.9)}}
+@media(prefers-reduced-motion:reduce){.back{transition:none}}

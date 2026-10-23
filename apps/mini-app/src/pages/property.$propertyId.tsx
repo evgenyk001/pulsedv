@@ -1,3 +1,4 @@
+import {BackLink} from "../components/BackLink";
 import {usePropertyHeroMotion} from "../helpers/usePropertyHeroMotion";
 import {IconTile} from '../components/IconTile';
 import { PropertyFreshness } from '../components/PropertyFreshness';
@@ -12,7 +13,7 @@ import {minimumMortgageDown,readMortgageScenario} from "../../../../packages/dom
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
 import { Link, useParams, useLocation } from "react-router-dom";
 import {
-  ArrowLeft, Heart, Share2, MapPin, CalendarDays, Building2, Waves, Trees, CarFront,
+  Heart, Share2, MapPin, CalendarDays, Building2, Waves, Trees, CarFront,
   Baby, ShieldCheck, ChevronRight, Send, Sparkles, MapPinned, LayoutGrid, Ruler,
   WalletCards, FileText, ArrowDown, MessageCircle
 } from "lucide-react";
@@ -98,7 +99,7 @@ export default function PropertyPage(){
     <section ref={heroRef} className={styles.hero}>
       <PropertyGallery key={p.id} name={p.name} photos={gallery} index={photoIndex} onIndexChange={setPhotoIndex}/>
       <div className={styles.fade}/>
-      <Link to={returnTo} className={styles.back} aria-label="Назад"><ArrowLeft size={19}/></Link>
+      <BackLink to={returnTo} className={styles.back} hero aria-label="Назад"/>
       <div className={styles.actions}>
         <button onClick={()=>toggle(p.id)} className={favorite?styles.favorited:""} aria-pressed={favorite} aria-label={favorite?"Убрать из избранного":"В избранное"}><Heart size={18} fill={favorite?"currentColor":"none"}/></button>
         <button onClick={share} aria-label="Поделиться"><Share2 size={18}/></button>

@@ -1,8 +1,9 @@
+import {BackLink} from "../components/BackLink";
 import {IconTile} from '../components/IconTile';
 import {NativeSelect} from "../components/NativeSelect";
 import React from 'react';
 import {Link,useSearchParams} from 'react-router-dom';
-import {Bell,BellRing,Search,Heart,ChevronRight,SlidersHorizontal,Sparkles,RefreshCw,Check,ArrowLeft} from 'lucide-react';
+import {Bell,BellRing,Search,Heart,ChevronRight,SlidersHorizontal,Sparkles,RefreshCw,Check,} from 'lucide-react';
 import {PageHeader} from '../components/PageHeader';
 import {LeadSheet} from '../components/LeadSheet';
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from '../components/Sheet';
@@ -28,7 +29,7 @@ export default function MySearchPage(){
  const valid=!!minText&&!!maxText&&Number(minText)>=0&&Number(maxText)>0&&Number(minText)<=Number(maxText)&&Number(maxText)<=1e10;
  const submit=async(e:React.FormEvent)=>{e.preventDefault();if(!valid)return;try{await save.mutateAsync({...settings,criteria:{...draft,min:Number(minText),max:Number(maxText)}});setOpen(false);setParams({}, {replace:true});setNotice('Поиск сохранён. Будем отслеживать новые подходящие варианты.')}catch{}};
  return <div className={styles.page}>
-  <Link className={styles.back} to='/profile'><ArrowLeft size={16}/>В профиль</Link>
+  <BackLink to="/profile" aria-label="Назад в профиль"/>
   <PageHeader eyebrow='Ваши предпочтения' title='Мой поиск' subtitle='Сохраните запрос — возвращайтесь к подходящим ЖК и изменениям в избранном.'/>
   {isLoading?<div className={styles.card} role='status'>Загружаем ваш поиск…</div>:error?<div className={styles.card} role='alert'>Не удалось загрузить поиск.<button className={styles.secondary} onClick={()=>void refetch()}>Попробовать снова</button></div>:<>
   <section className={styles.card} aria-label='Сохранённый поиск'>

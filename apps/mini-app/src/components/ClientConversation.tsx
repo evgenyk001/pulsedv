@@ -1,9 +1,10 @@
+import {BackLink} from "./BackLink";
 import {NativeSelect} from "./NativeSelect";
 import {useMessageHistory} from '../../../../packages/journey/useMessageHistory';
 import React from 'react';
 import {Link,useSearchParams} from 'react-router-dom';
 import {useQueryClient} from '@tanstack/react-query';
-import {ArrowLeft, ArrowDown, ArrowUp, CalendarDays, Check, CheckCheck, ChevronRight, FileText, Image as ImageIcon, MessageCircle, Paperclip, RefreshCw, Sparkles, Building2, X} from 'lucide-react';
+import {ArrowDown, ArrowUp, CalendarDays, Check, CheckCheck, ChevronRight, FileText, Image as ImageIcon, MessageCircle, Paperclip, RefreshCw, Sparkles, Building2, X} from 'lucide-react';
 import {markJourneyRead,saveJourney,uploadJourneyAttachment,type JourneyEntry} from '../../../../packages/journey/client';
 import {type JourneyAttachment,type JourneyCommand,type Reaction,reactionLabels,showingLabels} from '../../../../packages/journey/model';
 import {ShowingChange} from '../../../../packages/journey/ShowingChange';
@@ -71,7 +72,7 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
  const invalidShowingTime=!!at&&!isFutureVladivostokInput(at);
  const limitReached=false;
  return <div className={`${styles.conversation} ${tab==='chat'?'':styles.detailsMode}`} ref={root}>
-  <header className={styles.chatHeader}><Link className={styles.iconButton} to="/journey" aria-label="Все мои обращения"><ArrowLeft size={21}/></Link><span className={styles.avatar}>{entry.managerName?entry.managerName.trim().split(/\s+/).map(n=>n[0]).slice(0,2).join(''):<MessageCircle size={21}/>}</span><div><h1>{entry.managerName||'Команда PULSEDV.RU'}</h1><small>{entry.managerName?'Ваш менеджер по недвижимости':'Менеджер пока не назначен'}</small></div><button className={styles.iconButton} aria-label="Обновить переписку" disabled={query.isFetching||busy} onClick={()=>void query.refetch()}><RefreshCw size={17}/></button></header>
+  <header className={styles.chatHeader}><BackLink compact to="/journey" aria-label="Все мои обращения"/><span className={styles.avatar}>{entry.managerName?entry.managerName.trim().split(/\s+/).map(n=>n[0]).slice(0,2).join(''):<MessageCircle size={21}/>}</span><div><h1>{entry.managerName||'Команда PULSEDV.RU'}</h1><small>{entry.managerName?'Ваш менеджер по недвижимости':'Менеджер пока не назначен'}</small></div><button className={styles.iconButton} aria-label="Обновить переписку" disabled={query.isFetching||busy} onClick={()=>void query.refetch()}><RefreshCw size={17}/></button></header>
   <div className={styles.subject}><span>{subject||'Обсуждение квартиры'}</span><small>{journeyStatus(entry.status)}</small></div>
   <div className={styles.tabs} role="tablist" aria-label="Разделы обращения">{[{id:'chat',label:'Переписка',Icon:MessageCircle,count:0},{id:'collections',label:'Подборки',Icon:Sparkles,count:j.collections.length},{id:'showings',label:'Показы',Icon:CalendarDays,count:j.showings.filter(s=>['requested','confirmed'].includes(s.status)).length}].map(({id,label,Icon,count})=><button key={id} id={'tab-'+id} type="button" role="tab" aria-selected={tab===id} aria-controls={'panel-'+id} tabIndex={tab===id?0:-1} onClick={()=>setTab(id)} onKeyDown={e=>{const ids=['chat','collections','showings'];const step=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(step){e.preventDefault();const next=ids[(ids.indexOf(id)+step+3)%3];setTab(next);requestAnimationFrame(()=>document.getElementById('tab-'+next)?.focus())}}}><Icon size={16}/>{label}{count>0&&<span>{count}</span>}</button>)}</div>
   {!runtime.enabled&&<p className={styles.demo}>Сообщения сохраняются на устройстве. Отправка команде пока недоступна.</p>}

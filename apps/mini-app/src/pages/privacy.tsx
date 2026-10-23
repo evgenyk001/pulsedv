@@ -1,13 +1,14 @@
+import {BackLink} from "../components/BackLink";
 import {IconTile} from '../components/IconTile';
 import {LegalOperator} from '../components/LegalOperator';
 import { Link } from "react-router-dom";
-import { ArrowLeft, ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import styles from "./legal.module.css";
 
 export default function PrivacyPage(){
   return <div className={styles.page}>
     <header className={styles.topbar}>
-      <Link to="/profile" aria-label="Назад в профиль"><ArrowLeft size={20}/></Link>
+      <BackLink to="/profile" aria-label="Назад в профиль"/>
       <span>Персональные данные</span>
     </header>
 
