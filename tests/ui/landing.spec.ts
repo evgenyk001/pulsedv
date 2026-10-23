@@ -69,3 +69,28 @@ test('Landing, Mini App and Control load the supplied mark as their browser icon
   const apple=page.locator('link[rel="apple-touch-icon"]');await expect(apple).toHaveAttribute('sizes','180x180');expect((await request.get(await apple.evaluate((el:HTMLLinkElement)=>el.href))).ok()).toBe(true);
  }
 });
+
+test('Home screen installation uses PULSEDV.RU and full-size app icons',async({page,request})=>{
+ await page.goto('/pulsedv/mini-app/');
+ await expect(page).toHaveTitle('PULSEDV.RU');
+ for(const name of ['application-name','apple-mobile-web-app-title'])await expect(page.locator(`meta[name="${name}"]`)).toHaveAttribute('content','PULSEDV.RU');
+ const apple=page.locator('link[rel="apple-touch-icon"]');
+ const appleUrl=await apple.evaluate((el:HTMLLinkElement)=>el.href);
+ const assertPng=async(url:string,size:number)=>{
+  const response=await request.get(url);expect(response.ok()).toBe(true);
+  expect(response.headers()['content-type']).toContain('image/png');
+  const bytes=await response.body();expect(bytes.subarray(0,8).toString('hex')).toBe('89504e470d0a1a0a');
+  expect(bytes.readUInt32BE(16)).toBe(size);expect(bytes.readUInt32BE(20)).toBe(size);
+  expect(bytes[25]).toBe(2); // Opaque RGB, including corners: the OS applies its own icon shape.
+ };
+ await assertPng(appleUrl,180);
+ const manifestUrl=await page.locator('link[rel="manifest"]').evaluate((el:HTMLLinkElement)=>el.href);
+ const response=await request.get(manifestUrl);expect(response.ok()).toBe(true);
+ expect(response.headers()['content-type']).toContain('application/manifest+json');
+ const manifest=await response.json();
+ expect(manifest.name).toBe('PULSEDV.RU');expect(manifest.short_name).toBe('PULSEDV.RU');expect(manifest.display).toBe('standalone');
+ expect(new URL(manifest.start_url,manifestUrl).pathname).toBe('/pulsedv/mini-app/');
+ expect(new URL(manifest.scope,manifestUrl).pathname).toBe('/pulsedv/mini-app/');
+ expect(manifest.icons.some((icon:{purpose:string})=>icon.purpose==='maskable')).toBe(true);
+ for(const icon of manifest.icons)await assertPng(new URL(icon.src,manifestUrl).href,Number(icon.sizes.split('x')[0]));
+});
