@@ -1,3 +1,6 @@
+import React from 'react';
+import {publishedCatalogFacets} from '../../../../packages/domain/catalogFacets';
+import {api,runtime} from '../../../../packages/pulse-data/runtime';
 import { PageFrame } from "../components/PageFrame";
 import { usePulseEvents, usePulseState } from "../data";
 import { updatePulseState, type PulseEvent } from "../../../../packages/pulse-data";
@@ -32,6 +35,10 @@ const money=(value:number)=>value?new Intl.NumberFormat("ru-RU",{maximumFraction
 export function SelectPage(){
   const state=usePulseState();
   const events=usePulseEvents();
+  const [serverFacets,setServerFacets]=React.useState<{rooms:string[];deliveries:string[]}|null>(null);
+  const [facetError,setFacetError]=React.useState('');
+  React.useEffect(()=>{if(!runtime.enabled)return;setFacetError('');const abort=new AbortController();void api<{rooms:string[];deliveries:string[]}>("/public/catalog/meta",{signal:abort.signal}).then(value=>{if(!abort.signal.aborted)setServerFacets(value)}).catch(()=>{if(!abort.signal.aborted)setFacetError('Не удалось загрузить каталог')});return()=>abort.abort()},[state.properties]);
+  const facets=runtime.enabled?serverFacets:publishedCatalogFacets(state.properties);
   const submissions=events.filter(event=>event.eventType==="select_submit");
   const uniqueSessions=new Set(submissions.map(event=>event.sessionId)).size;
   const averageMatch=submissions.length
@@ -66,8 +73,9 @@ export function SelectPage(){
       <p>Настройте города, параметры поиска и приоритеты подбора. Изменения появятся в Mini App после сохранения.</p>
       <div className="formGrid" style={{marginTop:16}}>
         <label className="controlField wide"><span>Города через запятую</span><input value={state.select.cities.join(", ")} onChange={e=>patch({cities:e.target.value.split(",").map(x=>x.trim()).filter(Boolean)})}/></label>
-        <label className="controlField wide"><span>Комнаты</span><input value={state.select.roomOptions.join(", ")} onChange={e=>patch({roomOptions:e.target.value.split(",").map(x=>x.trim()).filter(Boolean)})}/></label>
-        <label className="controlField wide"><span>Дополнительные сроки сдачи</span><input value={state.select.deliveryOptions.join(", ")} onChange={e=>patch({deliveryOptions:e.target.value.split(",").map(x=>x.trim()).filter(Boolean)})}/></label>
+        <label className="controlField wide"><span>Комнатность из опубликованных ЖК</span><input readOnly value={facets?facets.rooms.join(", ")||"Нет загруженных планировок":facetError||"Загружаем каталог…"}/></label>
+        <label className="controlField wide"><span>Сроки сдачи из опубликованных ЖК</span><input readOnly value={facets?facets.deliveries.join(", ")||"Сроки не указаны":facetError||"Загружаем каталог…"}/></label>
+        <p className="wide">Эти списки обновляются автоматически. Чтобы добавить комнатность или срок сдачи, укажите их в опубликованной карточке ЖК и его планировках.</p>
 
         <label className="switchControl">
           <span><b>Умная строка запроса</b><small>Разобрать свободный запрос и заполнить живой конструктор параметров.</small></span>

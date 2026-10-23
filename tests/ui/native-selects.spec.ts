@@ -27,3 +27,25 @@ for(const width of [320,390,430])test(`Native pickers ${width}px: draft/apply/re
  const options=await rooms.locator('option').allTextContents();if(options.length>1){await rooms.selectOption({label:options[1]});await expect(rooms).toHaveValue(options[1]);}
  await noOverflow();expect(errors).toEqual([]);
 });
+
+test('Every search picker uses only published catalog rooms and delivery years',async({page})=>{
+ const state=structuredClone(DEFAULT_STATE);
+ const template=state.properties[0];
+ const make=(id:string,status:'published'|'draft'|'archived',room:string,delivery:string)=>({...structuredClone(template),id,status,delivery,floorplans:[{...template.floorplans[0],roomLabel:room}]});
+ state.properties=[make('one','published','Студия','Сдан'),make('two','published','2','III кв. 2032'),make('five','published','5-комнатная','2032'),make('draft','draft','8','2040'),make('archived','archived','9','2041')];
+ state.select.roomOptions=['1','4'];state.select.deliveryOptions=['2026','2030'];
+ await page.addInitScript(state=>{localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state));localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion)},state);
+ const roomValues=['Все','Студия','2','5'];
+ const values=async(selector:ReturnType<typeof page.getByRole>)=>selector.locator('option').evaluateAll(nodes=>nodes.map(n=>(n as HTMLOptionElement).value));
+ await page.goto('/pulsedv/mini-app/#/catalog');await page.getByRole('button',{name:'Фильтры',exact:true}).click();
+ const sheet=page.getByRole('dialog');
+ await expect.poll(()=>values(sheet.getByRole('combobox',{name:'Комнатность',exact:true}))).toEqual(roomValues);
+ await expect.poll(()=>values(sheet.getByRole('combobox',{name:'Срок сдачи',exact:true}))).toEqual(['Любой','Сдан','2032']);
+ await page.goto('/pulsedv/mini-app/#/my-search?draft=1');
+ await expect.poll(()=>values(page.getByRole('dialog').getByRole('combobox',{name:'Комнатность',exact:true}))).toEqual(roomValues);
+ await expect.poll(()=>values(page.getByRole('dialog').getByRole('combobox',{name:'Срок сдачи',exact:true}))).toEqual(['Любой','Сдан','2032']);
+ await page.goto('/pulsedv/mini-app/#/selection');
+ await expect.poll(()=>values(page.getByRole('combobox',{name:'Комнатность',exact:true}))).toEqual(roomValues);
+ await page.getByRole('button',{name:/Когда нужны ключи/}).click();
+ await expect.poll(()=>values(page.getByRole('combobox',{name:'Срок сдачи',exact:true}))).toEqual(['Не важно','Сдан','2032']);
+});

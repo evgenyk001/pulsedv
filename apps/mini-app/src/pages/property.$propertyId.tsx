@@ -1,3 +1,4 @@
+import {sortRoomLabels,normalizeRoomLabel} from '../../../../packages/domain/catalogFacets';
 import {BackLink} from "../components/BackLink";
 import {usePropertyHeroMotion} from "../helpers/usePropertyHeroMotion";
 import {IconTile} from '../components/IconTile';
@@ -71,12 +72,10 @@ export default function PropertyPage(){
   const presentation=p.documents?.find(doc=>doc.kind==="presentation");
   const jump=(id:string)=>document.getElementById(id)?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
 
-  const roomOptions=[
-    ...new Set([...p.floorplans].sort((a,b)=>a.sortOrder-b.sortOrder).map(plan=>plan.roomLabel)),
-  ];
+  const roomOptions=sortRoomLabels(p.floorplans.map(plan=>plan.roomLabel));
   const activeRoom=selectedRoom&&roomOptions.includes(selectedRoom)?selectedRoom:(roomOptions[0]||"");
   const visiblePlans=p.floorplans
-    .filter(plan=>!activeRoom||plan.roomLabel===activeRoom)
+    .filter(plan=>!activeRoom||normalizeRoomLabel(plan.roomLabel)===activeRoom)
     .sort((a,b)=>(a.priceFrom??Infinity)-(b.priceFrom??Infinity)||a.sortOrder-b.sortOrder);
   const fromPulse=returnTo.startsWith("/selection");
   const highlightFeature=[...p.features].sort((a,b)=>a.sortOrder-b.sortOrder)[0];

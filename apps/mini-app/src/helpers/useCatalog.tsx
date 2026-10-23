@@ -72,3 +72,9 @@ export function useMapCatalog(filters:Omit<CatalogFilters,"page"|"limit"|"view">
     enabled,
   });
 }
+
+/** All published objects are represented by metadata, independently of result pagination. */
+export function useCatalogFacets(){
+ const query=useCatalogMeta();
+ return {...query,rooms:query.data?.rooms??[],deliveries:query.data?.deliveries??[]};
+}

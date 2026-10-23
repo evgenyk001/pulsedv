@@ -1,3 +1,4 @@
+import {publishedCatalogFacets,roomChoiceLabel} from '../../../../packages/domain/catalogFacets';
 import {IconTile} from '../components/IconTile';
 import React from "react";
 import { useNavigate } from "react-router-dom";
@@ -122,6 +123,8 @@ export default function SelectionPage(){
   const {data:bounds}=usePriceBounds();
   const catalog=useSelectionProperties();
   const properties=catalog.data??[];
+  const facets=React.useMemo(()=>publishedCatalogFacets(catalog.data??[]),[catalog.data]);
+  const roomOptions=React.useMemo(()=>["Все",...facets.rooms],[facets.rooms]);
   const minPrice=bounds?.minPriceRub??FALLBACK_MIN;
   const maxPrice=bounds?.maxPriceRub??FALLBACK_MAX;
   const priceStep=bounds?.stepRub??FALLBACK_STEP;
@@ -136,9 +139,7 @@ export default function SelectionPage(){
   const defaultCity=control.select.cities.includes(saved.city||"")
     ?saved.city!
     :control.select.cities[0]??"Владивосток";
-  const defaultRooms=control.select.roomOptions.includes(saved.rooms||"")
-    ?saved.rooms!
-    :control.select.roomOptions.includes("2")?"2":control.select.roomOptions[0]??"1";
+  const defaultRooms=saved.rooms||"2";
 
   const [showResult,setShowResult]=React.useState(saved.showResult===true);
   const [showAll,setShowAll]=React.useState(false);
@@ -173,8 +174,8 @@ export default function SelectionPage(){
 
   React.useEffect(()=>{
     if(!control.select.cities.includes(city))setCity(control.select.cities[0]??"Владивосток");
-    if(!control.select.roomOptions.includes(rooms))setRooms(control.select.roomOptions[0]??"1");
-  },[control.select.cities,control.select.roomOptions,city,rooms]);
+    if(catalog.isSuccess&&!roomOptions.includes(rooms))setRooms(facets.rooms.includes("2")?"2":facets.rooms[0]??"Все");
+  },[control.select.cities,roomOptions,city,rooms,catalog.isSuccess,facets.rooms]);
 
   React.useEffect(()=>{
     if(!control.select.mortgageEnabled&&purchaseMode!=="cash")setPurchaseMode("cash");
@@ -209,23 +210,11 @@ export default function SelectionPage(){
     budgetInitialized.current=true;
   },[bounds,saved.budget]);
 
-  const deliveryOptions=React.useMemo(()=>{
-    const currentYear=new Date().getFullYear();
-    const years=new Set<string>();
-    for(let year=currentYear;year<=Math.max(2030,currentYear+4);year++)years.add(String(year));
-    for(const value of control.select.deliveryOptions){
-      const match=value.match(/20\d{2}/);
-      if(match)years.add(match[0]);
-    }
-    for(const property of properties){
-      for(const match of property.delivery.matchAll(/20\d{2}/g))years.add(match[0]);
-    }
-    return ["Не важно","Сдан",...[...years].sort((a,b)=>Number(a)-Number(b))];
-  },[control.select.deliveryOptions,properties]);
+  const deliveryOptions=React.useMemo(()=>["Не важно",...facets.deliveries],[facets.deliveries]);
 
   React.useEffect(()=>{
-    if(!deliveryOptions.includes(delivery))setDelivery("Не важно");
-  },[delivery,deliveryOptions]);
+    if(catalog.isSuccess&&!deliveryOptions.includes(delivery))setDelivery("Не важно");
+  },[delivery,deliveryOptions,catalog.isSuccess]);
 
   const appliedMortgageScenario=React.useMemo(()=>{
     if(purchaseMode!=="mortgage"||!mortgageScenario)return null;
@@ -358,7 +347,7 @@ export default function SelectionPage(){
     if(/студи/.test(text)){nextRooms="Студия";found++;}
     else if(/двуш|2\s*[- ]?(?:комн|к\b)|двухкомнат/.test(text)){nextRooms="2";found++;}
     else if(/однуш|1\s*[- ]?(?:комн|к\b)|однокомнат/.test(text)){nextRooms="1";found++;}
-    else if(/треш|трехкомнат|3\s*[- ]?(?:комн|к\b)/.test(text)){nextRooms="3+";found++;}
+    else if(/треш|трехкомнат|3\s*[- ]?(?:комн|к\b)/.test(text)){nextRooms=facets.rooms.includes("3")?"3":"3+";found++;}
 
     const mortgageIntent=/ипотек|платеж|платёж|в месяц|\/мес/.test(text);
     const cashIntent=/налич|без ипотек|полная стоимость/.test(text);
@@ -411,7 +400,7 @@ export default function SelectionPage(){
     }
 
     setCity(nextCity);
-    setRooms(nextRooms);
+    if(roomOptions.includes(nextRooms))setRooms(nextRooms);
     setPurchaseMode(nextMode);
     setBudget(nextBudget);
     setBudgetDraft([formatRub(nextBudget[0]),formatRub(nextBudget[1])]);
@@ -532,7 +521,7 @@ export default function SelectionPage(){
   };
 
   const panelSummary=(id:PanelId)=>{
-    if(id==="essentials")return city+" · "+(rooms==="Студия"?"Студия":rooms+" комн.");
+    if(id==="essentials")return city+" · "+roomChoiceLabel(rooms);
     if(id==="finance")return purchaseMode==="mortgage"
       ?formatRub(downPayment)+" ₽ ПВ · "+Math.round(monthlyPayment/1000)+" тыс./мес"
       :shortRub(budget[0])+" — "+shortRub(budget[1]);
@@ -569,7 +558,7 @@ export default function SelectionPage(){
         }</p>
         <div className={styles.summaryChips}>
           <span><Home size={13}/>{city}</span>
-          <span>{rooms==="Студия"?"Студия":rooms+" комн."}</span>
+          <span>{roomChoiceLabel(rooms)}</span>
           <span>{financeLabel}</span>
           {delivery!=="Не важно"&&<span>{delivery==="Сдан"?"Сдан":"до "+delivery}</span>}
         </div>
@@ -673,7 +662,7 @@ export default function SelectionPage(){
       </div>
       <div className={styles.liveRequestChips}>
         <span>{city}</span>
-        <span>{rooms==="Студия"?"Студия":rooms+" комн."}</span>
+        <span>{roomChoiceLabel(rooms)}</span>
         <span>{financeLabel}</span>
         {delivery!=="Не важно"&&<span>{delivery==="Сдан"?"Сдан":delivery}</span>}
         {preferences.slice(0,2).map(id=><span key={id}>{preferenceLabel(id)}</span>)}
@@ -693,7 +682,7 @@ export default function SelectionPage(){
           </div>
           <div className={styles.fieldBlock}>
             <label>Комнатность</label>
-            <NativeSelect aria-label="Комнатность" value={rooms} onChange={e=>{setStarted(true);setRooms(e.target.value);safeHaptic();}}>{control.select.roomOptions.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
+            <NativeSelect aria-label="Комнатность" value={rooms} onChange={e=>{setStarted(true);setRooms(e.target.value);safeHaptic();}}>{roomOptions.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
           </div>
         </div>}
       </article>

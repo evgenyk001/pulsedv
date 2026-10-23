@@ -1,3 +1,4 @@
+import {publishedCatalogFacets} from '../../../../packages/domain/catalogFacets';
 import { getPulseState } from "../../../../packages/pulse-data";
 import { api, runtime } from "../../../../packages/pulse-data/runtime";
 import { hasSea, matchesBudgetAndRooms, deliveryMatches } from "../../../../packages/domain/propertyMatch";
@@ -9,7 +10,7 @@ export type CatalogFilters={
   min?:number;max?:number;sort?:CatalogSort;ids?:string[];view?:"card"|"match";
 };
 export type CatalogPageResult={items:PropertyRecord[];page:number;limit:number;total:number;hasMore:boolean};
-export type CatalogMeta={minPriceRub:number;maxPriceRub:number;stepRub:number;total:number;cities:{city:string;count:number}[]};
+export type CatalogMeta={rooms:string[];deliveries:string[];minPriceRub:number;maxPriceRub:number;stepRub:number;total:number;cities:{city:string;count:number}[]};
 
 const toQuery=(filters:CatalogFilters)=>{
   const params=new URLSearchParams();
@@ -66,6 +67,7 @@ export async function getCatalogMeta():Promise<CatalogMeta>{
     const counts=new Map<string,number>();
     for(const property of items)counts.set(property.city,(counts.get(property.city)||0)+1);
     return{
+      ...publishedCatalogFacets(items),
       minPriceRub:prices.length?Math.min(...prices):4_000_000,
       maxPriceRub:prices.length?Math.max(...prices):25_000_000,
       stepRub:100_000,total:items.length,

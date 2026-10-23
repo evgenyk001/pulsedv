@@ -78,3 +78,13 @@ test('Owner receives new leads without a manager, duplicate submissions do not r
  await db.query("update team_members set telegram_user_id=null where role='owner'");await db.query("insert into outbox_events(topic,aggregate_type,payload) values('manager.new_lead','lead','{}')");
  await processNotificationOutbox(outboxRepository(db),{async sendMessage(){assert.fail('must not fall back to manager')}},10);assert.equal((await db.query("select last_error from outbox_events where processed_at is null")).rows[0].last_error,'owner Telegram id missing');
 });
+
+test('Saved search accepts catalog room counts beyond the former fixed picker',async t=>{
+ const {put,get}=await fixture(t);
+ for(const rooms of ['5','4+','10']){
+  const response=await put({...settings,criteria:{...settings.criteria!,rooms}});
+  assert.equal(response.statusCode,200,response.body);
+  assert.equal((await get()).json().settings.criteria.rooms,rooms);
+ }
+ assert.equal((await put({...settings,criteria:{...settings.criteria!,rooms:'arbitrary'}})).statusCode,400);
+});

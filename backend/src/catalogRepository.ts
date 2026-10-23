@@ -1,3 +1,4 @@
+import {catalogFacets} from '../../packages/domain/catalogFacets';
 import { randomUUID } from "node:crypto";
 import type { Sql } from "./database";
 import type { PulseProperty } from "../../packages/pulse-data/model";
@@ -113,7 +114,7 @@ export async function listCatalog(sql:Sql,options:CatalogListOptions={}){
     const planConditions=["fp.property_id=p.id","fp.price_from is not null"];
     if(specific){
       if(rooms==="Студия")planConditions.push("fp.room_label ilike '%студ%'");
-      else planConditions.push("coalesce(substring(fp.room_label from '[0-9]+')::int,0)"+(rooms==="3+"?">=3":"="+add(Number(rooms)||-1)));
+      else planConditions.push("coalesce(substring(fp.room_label from '[0-9]+')::int,0)"+(/^\d+\+$/.test(rooms)?">="+add(parseInt(rooms)):"="+add(Number(rooms)||-1)));
     }
     const baseConditions=["not exists(select 1 from catalog_property_floorplans fp0 where fp0.property_id=p.id)"];
     if(minM!==undefined){const v=add(minM);planConditions.push("fp.price_from>="+v);baseConditions.push("p.price_from>="+v);}
@@ -161,7 +162,10 @@ export async function catalogMeta(sql:Sql,status:"published"|"all"="published"){
     ) prices`)).rows[0];
   const countRow=(await sql.query(`select count(*)::int as total from catalog_properties ${propertyWhere}`)).rows[0];
   const cities=(await sql.query(`select city,count(*)::int as count from catalog_properties ${propertyWhere} group by city order by city`)).rows;
+  const labels=(await sql.query(`select distinct fp.room_label from catalog_property_floorplans fp join catalog_properties p on p.id=fp.property_id where true ${joinedStatus}`)).rows;
+  const deliveries=(await sql.query(`select distinct delivery from catalog_properties ${propertyWhere}`)).rows;
   return{
+    ...catalogFacets(labels.map(item=>String(item.room_label)),deliveries.map(item=>String(item.delivery))),
     minPriceRub:Math.round(Number(row?.min_price??0)*1_000_000),
     maxPriceRub:Math.round(Number(row?.max_price??0)*1_000_000),
     stepRub:100_000,
