@@ -1,10 +1,11 @@
+import {BackLink} from "../components/BackLink";
 import {IconTile} from '../components/IconTile';
 import React from 'react';
 import {createPortal} from 'react-dom';
 import {Link,useSearchParams} from 'react-router-dom';
 import {PartnerReceivingForm} from '../components/PartnerReceivingForm';
 import {useQueryClient,useQuery} from '@tanstack/react-query';
-import {ArrowLeft,UsersRound,Send,Copy,UserPlus,ChevronRight,Check,Wallet,RefreshCw,ShieldCheck,Info,Clock3,CheckCircle2,XCircle,ArrowUpRight} from 'lucide-react';
+import {UsersRound,Send,Copy,UserPlus,ChevronRight,Check,Wallet,RefreshCw,ShieldCheck,Info,Clock3,CheckCircle2,XCircle,ArrowUpRight} from 'lucide-react';
 import {runtime,api} from '../../../../packages/pulse-data/runtime';
 import {joinPartner,acceptPartnerTerms,createPartnerInvite,getOwnPartnerReferral,reservePartnerClient} from '../../../../packages/partners/client';
 import {PARTNER_TERMS_VERSION,partnerReward,partnerMoney,partnerLink,referralLabels,rewardLabels,partnerRejectReasons,type PartnerRejectReason,type PartnerReferral} from '../../../../packages/partners/model';
@@ -98,7 +99,7 @@ export default function PartnersPage(){
   <span className={styles.clientEnd}>{r.reward&&<b>{partnerMoney(r.reward.status==='paid'?r.reward.paidMinor:r.reward.grossMinor)}</b>}<ChevronRight size={15}/></span>
  </button>;
  return <div className={styles.page}>
-  <nav className={styles.topbar} aria-label="Навигация"><Link to="/profile" className={styles.back} aria-label="Вернуться в профиль"><ArrowLeft size={20}/></Link>
+  <nav className={styles.topbar} aria-label="Навигация"><BackLink to="/profile" aria-label="Вернуться в профиль"/>
    {p?<h1>Партнёрам</h1>:<span className={styles.navTitle}>Партнёрам</span>}
    <button className={styles.helpButton} aria-label="Как закрепить клиента и получить выплату" title="Как это работает" onClick={()=>openSheet('guide')}><Info size={20}/></button>
    {p&&<button className={styles.refresh} aria-label="Обновить рекомендации" title="Обновить" aria-busy={q.isFetching} disabled={q.isFetching} onClick={()=>void q.refetch()}><RefreshCw size={20}/></button>}
