@@ -45,7 +45,7 @@ export function roomMatches(label:string,rooms:string){
   if(rooms==='Все'||rooms==='Не важно')return true;
   if(rooms==='Студия')return normalized.includes('студ');
   const count=Number(normalized.match(/\d+/)?.[0]||0);
-  return rooms==='3+'?count>=3:count===Number(rooms);
+  return /^\d+\+$/.test(rooms)?count>=parseInt(rooms):count===Number(rooms);
 }
 
 export function matchingPlans(property:PulseProperty,c:Pick<Criteria,'rooms'|'min'|'max'>){

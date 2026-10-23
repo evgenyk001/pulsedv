@@ -1,3 +1,5 @@
+import {usePulseControlState} from '../helpers/usePulseControlState';
+import {useCatalogFacets} from '../helpers/useCatalog';
 import {BackLink} from "../components/BackLink";
 import {IconTile} from '../components/IconTile';
 import {NativeSelect} from "../components/NativeSelect";
@@ -9,7 +11,6 @@ import {LeadSheet} from '../components/LeadSheet';
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from '../components/Sheet';
 import {Switch} from '../components/Switch';
 import {Input} from '../components/Input';
-import {usePulseControlState} from '../helpers/usePulseControlState';
 import {useMySearch} from '../helpers/useMySearch';
 import {runtime} from '../../../../packages/pulse-data/runtime';
 import {searchUrl,type SearchCriteria,type SearchSettings} from '../../../../packages/my-search';
@@ -19,12 +20,16 @@ const initial:SearchCriteria={q:'',city:'Все',rooms:'Все',min:4000000,max:
 const modes={any:'Любой способ покупки',cash:'За свои средства',mortgage:'В ипотеку'};
 function paramPrice(v:string|null,fallback:number){const n=Number(v);return v&&Number.isFinite(n)&&n>=0?(n<1000?n*1000000:n):fallback}
 export default function MySearchPage(){
- const {data,isLoading,error,refetch,save}=useMySearch(),control=usePulseControlState();const [params,setParams]=useSearchParams();
+ const {data,isLoading,error,refetch,save}=useMySearch();const facets=useCatalogFacets();const control=usePulseControlState();const [params,setParams]=useSearchParams();
  const [open,setOpen]=React.useState(params.get('draft')==='1'),[draft,setDraft]=React.useState<SearchCriteria>(initial),[notice,setNotice]=React.useState('');
  const [minText,setMinText]=React.useState('4000000'),[maxText,setMaxText]=React.useState('25000000');
  const settings=data?.settings??{criteria:null,watchFavorites:false,telegram:false};const c=settings.criteria;
- const begin=()=>{const next=c??initial;setDraft(next);setMinText(String(next.min));setMaxText(String(next.max));setOpen(true)};
+ const begin=()=>{const base=c??initial;const next={...base,rooms:facets.rooms.includes(base.rooms)?base.rooms:"Все",delivery:facets.deliveries.includes(base.delivery)?base.delivery:"Любой"};setDraft(next);setMinText(String(next.min));setMaxText(String(next.max));setOpen(true)};
  React.useEffect(()=>{if(params.get('draft')!=='1')return;const next={...initial,q:params.get('q')??'',city:params.get('city')??'Все',rooms:params.get('rooms')??'Все',delivery:params.get('delivery')??'Любой',sea:params.get('sea')==='1',min:paramPrice(params.get('min'),initial.min),max:paramPrice(params.get('max'),initial.max)};setDraft(next);setMinText(String(next.min));setMaxText(String(next.max));},[params]);
+ React.useEffect(()=>{
+  if(!open||!facets.isSuccess)return;
+  setDraft(d=>{const rooms=facets.rooms.includes(d.rooms)?d.rooms:'Все',delivery=facets.deliveries.includes(d.delivery)?d.delivery:'Любой';return rooms===d.rooms&&delivery===d.delivery?d:{...d,rooms,delivery}});
+ },[open,facets.isSuccess,facets.rooms,facets.deliveries]);
  const update=async(next:SearchSettings)=>{setNotice('');try{await save.mutateAsync(next);setNotice('Сохранено')}catch{}};
  const valid=!!minText&&!!maxText&&Number(minText)>=0&&Number(maxText)>0&&Number(minText)<=Number(maxText)&&Number(maxText)<=1e10;
  const submit=async(e:React.FormEvent)=>{e.preventDefault();if(!valid)return;try{await save.mutateAsync({...settings,criteria:{...draft,min:Number(minText),max:Number(maxText)}});setOpen(false);setParams({}, {replace:true});setNotice('Поиск сохранён. Будем отслеживать новые подходящие варианты.')}catch{}};
@@ -53,9 +58,9 @@ export default function MySearchPage(){
   {(notice||save.error)&&<p className={styles.notice} role={save.error?'alert':'status'}>{save.error?(save.error as Error).message:notice}</p>}
   <Sheet open={open} onOpenChange={next=>{setOpen(next);if(!next&&params.get('draft')==='1')setParams({}, {replace:true})}}><SheetContent side='bottom' className={styles.sheet}><SheetHeader><SheetTitle>Ваш поиск квартиры</SheetTitle><SheetDescription>Сохраним параметры и покажем новые совпадения.</SheetDescription></SheetHeader><form className={styles.form} onSubmit={submit}>
    <div className={styles.two}><label><span>Город</span><NativeSelect aria-label="Город" value={draft.city} onChange={e=>setDraft({...draft,city:e.target.value})}>{[...new Set(['Все',...control.select.cities,draft.city])].map(v=><option key={v}>{v}</option>)}</NativeSelect></label>
-   <label><span>Комнатность</span><NativeSelect aria-label="Комнатность" value={draft.rooms} onChange={e=>setDraft({...draft,rooms:e.target.value})}>{['Все','Студия','1','2','3','3+','4'].map(v=><option key={v}>{v}</option>)}</NativeSelect></label></div>
+   <label><span>Комнатность</span><NativeSelect aria-label="Комнатность" value={draft.rooms} onChange={e=>setDraft({...draft,rooms:e.target.value})}>{['Все',...facets.rooms].map(v=><option key={v}>{v}</option>)}</NativeSelect></label></div>
    <div className={styles.two}><label><span>Бюджет от, ₽</span><Input aria-label='Бюджет поиска от' inputMode='numeric' value={minText} onChange={e=>setMinText(e.target.value.replace(/\D/g,''))}/></label><label><span>Бюджет до, ₽</span><Input aria-label='Бюджет поиска до' inputMode='numeric' value={maxText} onChange={e=>setMaxText(e.target.value.replace(/\D/g,''))}/></label></div>
-   <div className={styles.two}><label><span>Срок сдачи</span><NativeSelect aria-label="Срок сдачи" value={draft.delivery} onChange={e=>setDraft({...draft,delivery:e.target.value})}>{[...new Set(['Любой',...control.select.deliveryOptions,draft.delivery])].map(v=><option key={v}>{v}</option>)}</NativeSelect></label>
+   <div className={styles.two}><label><span>Срок сдачи</span><NativeSelect aria-label="Срок сдачи" value={draft.delivery} onChange={e=>setDraft({...draft,delivery:e.target.value})}>{['Любой',...facets.deliveries].map(v=><option key={v}>{v}</option>)}</NativeSelect></label>
    <label><span>Способ покупки</span><NativeSelect aria-label="Способ покупки" value={draft.purchaseMode} onChange={e=>setDraft({...draft,purchaseMode:e.target.value as SearchCriteria['purchaseMode']})}>{Object.entries(modes).map(([v,label])=><option value={v} key={v}>{v==='any'?'Не важно':label}</option>)}</NativeSelect></label></div>
    <label><span>ЖК, район или застройщик</span><Input value={draft.q} maxLength={200} onChange={e=>setDraft({...draft,q:e.target.value})} placeholder='Необязательно'/></label>
    <div className={styles.setting}><span>У моря</span><Switch aria-label='Поиск у моря' checked={draft.sea} onCheckedChange={sea=>setDraft({...draft,sea})}/></div>

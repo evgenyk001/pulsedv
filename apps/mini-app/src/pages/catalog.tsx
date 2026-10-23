@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTr
 import { Slider } from "../components/Slider";
 import { PropertyCard } from "../components/PropertyCard";
 import { PageHeader } from "../components/PageHeader";
-import { useCatalogInfinite, useMapCatalog, useSelectionProperties } from "../helpers/useCatalog";
+import { useCatalogInfinite, useMapCatalog, useSelectionProperties, useCatalogFacets } from "../helpers/useCatalog";
 import { usePriceBounds } from "../helpers/usePriceBounds";
 import { PropertyMap } from "../components/PropertyMap";
 import { Input } from "../components/Input";
@@ -46,6 +46,7 @@ const sortLabels:Record<SortMode,string>={
 export default function CatalogPage(){
   const [params,setParams]=useSearchParams();
   const control=usePulseControlState();
+  const facets=useCatalogFacets();
   const {data:bounds}=usePriceBounds();
   const minBound=bounds?.minPriceRub??FALLBACK_MIN;
   const maxBound=bounds?.maxPriceRub??FALLBACK_MAX;
@@ -78,8 +79,13 @@ export default function CatalogPage(){
   const appliedMax=parsePriceParam(params.get("max"))??maxBound;
 
   const cityOptions=React.useMemo(()=>["Все",...new Set(control.select.cities.filter(Boolean))],[control.select.cities]);
-  const roomOptions=React.useMemo(()=>["Все",...new Set(control.select.roomOptions.filter(value=>value&&value!=="Все"&&value!=="Не важно"))],[control.select.roomOptions]);
-  const deliveryOptions=React.useMemo(()=>["Любой",...new Set(control.select.deliveryOptions.filter(value=>value&&value!=="Любой"&&value!=="Не важно"))],[control.select.deliveryOptions]);
+  const roomOptions=React.useMemo(()=>["Все",...facets.rooms],[facets.rooms]);
+  const deliveryOptions=React.useMemo(()=>["Любой",...facets.deliveries],[facets.deliveries]);
+  React.useEffect(()=>{
+    if(!facets.isSuccess||!filterOpen)return;
+    if(!roomOptions.includes(rooms))setRooms("Все");
+    if(!deliveryOptions.includes(delivery))setDelivery("Любой");
+  },[facets.isSuccess,filterOpen,roomOptions,deliveryOptions,rooms,delivery]);
 
   React.useEffect(()=>{
     if(initialSort&&sortLabels[initialSort])return;

@@ -7,7 +7,7 @@ import {listCatalog} from './catalogRepository';
 import {HttpError} from './security';
 import {defaultSearchSettings,sameSearchCriteria,searchSnapshot,searchChanges,type SearchSettings,type SearchUpdate} from '../../packages/my-search';
 
-const criteria=z.object({q:z.string().trim().max(200),city:z.string().min(1).max(100),rooms:z.enum(['Все','Не важно','Студия','1','2','3','3+','4']),min:z.number().finite().int().min(0).max(1e10),max:z.number().finite().int().positive().max(1e10),delivery:z.string().min(1).max(100),sea:z.boolean(),purchaseMode:z.enum(['any','cash','mortgage'])}).strict().refine(c=>c.min<=c.max,'Проверьте диапазон бюджета');
+const criteria=z.object({q:z.string().trim().max(200),city:z.string().min(1).max(100),rooms:z.string().regex(/^(?:Все|Не важно|Студия|(?:[1-9]\d?|100)\+?)$/),min:z.number().finite().int().min(0).max(1e10),max:z.number().finite().int().positive().max(1e10),delivery:z.string().min(1).max(100),sea:z.boolean(),purchaseMode:z.enum(['any','cash','mortgage'])}).strict().refine(c=>c.min<=c.max,'Проверьте диапазон бюджета');
 const settingsSchema=z.object({criteria:criteria.nullable(),watchFavorites:z.boolean(),telegram:z.boolean()}).strict();
 export async function searchCatalog(sql:Sql){
  const items=[];let page=1;
