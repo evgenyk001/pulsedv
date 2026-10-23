@@ -306,7 +306,7 @@ export default function CatalogPage(){
     Number(priceRange[0]>minBound||priceRange[1]<maxBound);
 
   return <div className={styles.page}>
-    <PageHeader eyebrow="Каталог PULSE.DV" title="Новостройки" subtitle="Подбирайте спокойно — по району, бюджету и сроку сдачи."/>
+    <PageHeader eyebrow="Каталог PULSEDV.RU" title="Новостройки" subtitle="Подбирайте спокойно — по району, бюджету и сроку сдачи."/>
     <Link className={styles.saveSearch} to={"/my-search?"+new URLSearchParams({draft:"1",q:deferredQuery,city:appliedCity,rooms:appliedRooms,min:String(appliedMin),max:String(appliedMax),delivery:appliedDelivery,sea:appliedSea?"1":"0"})}><IconTile><Bell/></IconTile><span><b>Сохранить этот поиск</b><small>Следить за новыми подходящими ЖК</small></span><ChevronRight size={16}/></Link>
 
     <SegmentedControl value={view} onChange={setView} ariaLabel="Режим каталога" options={[

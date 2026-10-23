@@ -61,7 +61,7 @@ export function LeadSheet({children,title="Получить консультац
     <SheetTrigger asChild>{children}</SheetTrigger>
     <SheetContent side="bottom" className={styles.sheet}>
       <SheetClose className={styles.dismiss} aria-label="Закрыть заявку"><X size={18}/></SheetClose>
-      {readingConsent?<><SheetHeader><SheetTitle>Согласие на обработку данных</SheetTitle><SheetDescription>После прочтения вернитесь к заполненной заявке.</SheetDescription></SheetHeader><button type="button" className={styles.submit} onClick={()=>setReadingConsent(false)}>Вернуться к заявке</button><PersonalDataConsentDocument/></>:sent?<div className={styles.success}><CheckCircle2 size={38}/><h2>{runtime.enabled?"Заявка принята":"Обращение создано"}</h2><p>{runtime.enabled?"Менеджер PULSE.DV свяжется с вами и уточнит детали"+(project?" по "+project:"")+".":"Тестовая заявка создана. Менеджеру она не отправляется."}</p><Link className={styles.submit} to={"/journey"+(leadId?"?lead="+leadId:"")}>Открыть моё обращение <ArrowRight size={17}/></Link></div>:<>
+      {readingConsent?<><SheetHeader><SheetTitle>Согласие на обработку данных</SheetTitle><SheetDescription>После прочтения вернитесь к заполненной заявке.</SheetDescription></SheetHeader><button type="button" className={styles.submit} onClick={()=>setReadingConsent(false)}>Вернуться к заявке</button><PersonalDataConsentDocument/></>:sent?<div className={styles.success}><CheckCircle2 size={38}/><h2>{runtime.enabled?"Заявка принята":"Обращение создано"}</h2><p>{runtime.enabled?"Менеджер PULSEDV.RU свяжется с вами и уточнит детали"+(project?" по "+project:"")+".":"Обращение сохранено на устройстве. Отправка менеджеру пока недоступна."}</p><Link className={styles.submit} to={"/journey"+(leadId?"?lead="+leadId:"")}>Открыть моё обращение <ArrowRight size={17}/></Link></div>:<>
         <SheetHeader><SheetTitle>{title}</SheetTitle><SheetDescription>{project?(project+". "):""}Оставьте контакт — всё остальное обсудим без спешки.</SheetDescription></SheetHeader>
         <form className={styles.form} onSubmit={submit}>
           <label><span>Как к вам обращаться</span><Input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Имя" autoComplete="given-name" maxLength={100} required/></label>
@@ -71,7 +71,7 @@ export function LeadSheet({children,title="Получить консультац
           {activeCode&&<button type="button" className={styles.clearInvitation} onClick={()=>{setDeclinedCode(activeCode);setReferralConsent(false);clearPartnerInvite()}}>Я обратился самостоятельно</button>}
           {error&&<div className={styles.error}>{error}</div>}
           <button className={styles.submit} type="submit" disabled={sending||!consent}>{sending?"Отправляем…":"Отправить заявку"} <Send size={16}/></button>
-          <small>{runtime.enabled?<><Link to="/privacy">Политика обработки персональных данных</Link></>:"Тестовая заявка · без отправки менеджеру."}</small>
+          <small>{runtime.enabled?<><Link to="/privacy">Политика обработки персональных данных</Link></>:"Отправка менеджеру пока недоступна."}</small>
         </form>
       </>}
     </SheetContent>

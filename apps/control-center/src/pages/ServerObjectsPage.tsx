@@ -358,7 +358,7 @@ export function ServerObjectsPage(){
       {loading?<div className="emptyState catalogLoading"><PackageOpen size={26}/><strong>Загружаем каталог</strong><span>Получаем только текущую страницу — каталог не перегружает Control даже при 1000+ ЖК.</span></div>:
         data.items.length?<div className="catalogObjectGrid">{data.items.map(item=><button key={item.id} className="catalogObjectCard" onClick={()=>void open(item.id)}>
           <div className="catalogObjectImage">
-            {item.coverImageUrl?<img src={item.coverImageUrl} alt=""/>:<div className="objectPlaceholder"><Building2 size={24}/><span>PULSE.DV</span></div>}
+            {item.coverImageUrl?<img src={item.coverImageUrl} alt=""/>:<div className="objectPlaceholder"><Building2 size={24}/><span>PULSEDV.RU</span></div>}
             <span className={"statusChip "+item.status}>{item.status==="published"?"Опубликован":item.status==="draft"?"Черновик":"Архив"}</span>
           </div>
           <div className="catalogObjectBody">

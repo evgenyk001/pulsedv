@@ -49,7 +49,7 @@ export function PromoCarousel(){
   const slides=React.useMemo<Slide[]>(()=>managed.length?managed.map((banner,index)=>({
     id:banner.id,
     image:banner.imageUrl===DEFAULT_PARTNER_BANNER.imageUrl?asset("_cdn/static/partner-referral.webp"):optimizedImage(banner.imageUrl||'')||(fallbackSlides.find(slide=>slide.to===banner.actionUrl)||fallbackSlides[index%fallbackSlides.length]).image,
-    eyebrow:banner.eyebrow||banner.city||banner.audience||(banner.kind==="partner"?"Партнёр PULSE.DV":banner.kind==="giveaway"?"Специальное предложение":"PULSE.DV"),
+    eyebrow:banner.eyebrow||banner.city||banner.audience||(banner.kind==="partner"?"Партнёр PULSEDV.RU":banner.kind==="giveaway"?"Специальное предложение":"PULSEDV.RU"),
     title:banner.title,
     text:banner.body,
     cta:banner.ctaLabel||"Подробнее",

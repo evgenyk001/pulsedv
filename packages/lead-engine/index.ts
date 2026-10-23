@@ -53,7 +53,7 @@ export const DEFAULT_LEAD_ENGINE_CONFIG:LeadEngineConfig={
     {id:"select_submit",eventType:"select_submit",label:"Прошёл PULSE Select",weight:18,maxCount:1},
     {id:"property_share",eventType:"property_share",label:"Делился объектом",weight:8,maxCount:2},
     {id:"lead_form_open",eventType:"lead_form_open",label:"Открыл форму консультации",weight:15,maxCount:2},
-    {id:"contact_click",eventType:"contact_click",label:"Пытался связаться с PULSE.DV",weight:20,maxCount:2},
+    {id:"contact_click",eventType:"contact_click",label:"Пытался связаться с PULSEDV.RU",weight:20,maxCount:2},
     {id:"lead_created",eventType:"lead_created",label:"Оставил контакт",weight:35,maxCount:1},
     {id:"return_visit",eventType:"return_visit",label:"Вернулся в приложение",weight:8,maxCount:2},
   ]
