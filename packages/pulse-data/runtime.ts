@@ -1,3 +1,4 @@
+import {pageIsLeaving,pageRequestSignal} from './pageLifecycle';
 import {partnerGrant} from '../partners/securityState';
 import {isPublicEvent} from './eventContract';
 import { attribution } from '../journey/attribution';
@@ -25,7 +26,7 @@ export function runtimeError(error:unknown){runtime.error=error instanceof Error
 export class ApiError extends Error{constructor(public status:number,message:string){super(message);}}
 export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
  let response:Response;
- try{response=await fetch(runtime.base+path,{...options,credentials:'same-origin',headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers},signal:options.signal??AbortSignal.timeout(12000)});}catch(error){throw new ApiError(0,error instanceof Error&&error.name==='TimeoutError'?'Сервер не успел ответить. Проверьте данные и повторите попытку':error instanceof Error&&error.name==='AbortError'?'Запрос отменён':'Нет связи с сервером. Проверьте соединение и повторите попытку');}
+ try{response=await fetch(runtime.base+path,{...options,credentials:'same-origin',headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers},signal:typeof AbortSignal.any==='function'?AbortSignal.any([options.signal??AbortSignal.timeout(12000),pageRequestSignal()]):options.signal??AbortSignal.timeout(12000)});}catch(error){throw new ApiError(0,error instanceof Error&&error.name==='TimeoutError'?'Сервер не успел ответить. Проверьте данные и повторите попытку':error instanceof Error&&error.name==='AbortError'?'Запрос отменён':'Нет связи с сервером. Проверьте соединение и повторите попытку');}
  const body=await response.json().catch(()=>({}));
  if(!response.ok)throw new ApiError(response.status,body.error||'Не удалось выполнить запрос');return body;
 }
@@ -54,7 +55,9 @@ export async function visitorApi<T=any>(path:string,options:RequestInit={}):Prom
  }
 }
 export async function initializePublic(){
+ if(pageIsLeaving())return;
  const data=await api('/public/state');runtime.snapshot={...empty,state:{...empty.state,...data.state},version:data.version};runtime.consentVersion=data.consentVersion;runtime.ready=true;runtime.error=null;notify();
+ if(pageIsLeaving())return;
  await session();
  if(!visitorCookieBound){await visitorApi('/auth/cookie',{method:'POST',body:'{}'});visitorCookieBound=true;}
  const initData=(window as any).Telegram?.WebApp?.initData;
