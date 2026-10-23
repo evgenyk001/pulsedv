@@ -1,4 +1,5 @@
 import React from "react";
+import {ArrowRight} from "lucide-react";
 import { getPulseState, recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./Onboarding.module.css";
 
@@ -36,12 +37,20 @@ export function Onboarding({onDone}:{onDone:()=>void}){
     }}
   >
     <div className={styles.stage}>
+     <div className={styles.canvas}>
       <img className={styles.screen} src={slides[index]} alt="" draggable={false} fetchPriority="high" loading="eager" decoding="async" width={941} height={1672} onLoad={e=>setLoaded(e.currentTarget.getAttribute('src'))}/>
-      <button type="button" className={styles.skipHotspot} onClick={finish} aria-label="Пропустить онбординг"/>
-      <button type="button" className={styles.primaryHotspot} onClick={next} aria-label={index===0?"Продолжить":"Начать"}/>
-      <div className={styles.dotHotspots} aria-label="Страницы онбординга">
-        {slides.map((_,i)=><button key={i} type="button" onClick={()=>setIndex(i)} aria-label={"Экран "+(i+1)}/>)}
+      {/* Artwork stays intact; cover its baked-in controls with a shared UI layer. */}
+      <div className={styles.skipCover}>
+       <button type="button" className={styles.skip} onClick={finish} aria-label="Пропустить онбординг"><span>Пропустить</span></button>
       </div>
+      <div className={styles.footer}>
+       <button type="button" className={styles.primary} onClick={next}><span>{index===0?"Продолжить":"Начать"}</span><ArrowRight aria-hidden="true" size={22} strokeWidth={1.8}/></button>
+       <div className={styles.pagination} role="group" aria-label="Страницы онбординга">
+        <span className={styles.activePill} style={{transform:`translateX(${index*32}px)`}} aria-hidden="true"/>
+        {slides.map((_,i)=><button key={i} type="button" onClick={()=>setIndex(i)} aria-label={"Экран "+(i+1)} aria-current={i===index?"step":undefined}><span/></button>)}
+       </div>
+      </div>
+     </div>
     </div>
   </section>;
 }
