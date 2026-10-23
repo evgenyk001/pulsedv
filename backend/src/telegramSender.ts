@@ -3,9 +3,9 @@ import {TelegramDeliveryError,type TelegramBotSender} from './notificationWorker
 export function telegramSender(config:Pick<RuntimeConfig,'BOT_TOKEN'|'PUBLIC_ORIGIN'>,send:typeof fetch=fetch):TelegramBotSender{
  return {async sendMessage(input){
   const local=(url:string)=>url.startsWith(config.PUBLIC_ORIGIN+'/');
-  const links:{text:string;url:string}[][]=[];
-  if(input.deepLink&&(input.buttonLabel||local(input.deepLink)))links.push([{text:input.buttonLabel|| (input.deepLink.includes('/control-center/')?'Открыть PULSE Control':input.deepLink.includes('/my-search')?'Открыть мой поиск':'Открыть обращение'),url:input.deepLink}]);
-  if(input.preferencesLink&&local(input.preferencesLink))links.push([{text:'Настроить анонсы',url:input.preferencesLink}]);
+  const links:{text:string;url?:string;web_app?:{url:string}}[][]=[];
+  if(input.deepLink&&(input.buttonLabel||local(input.deepLink)))links.push([{text:input.buttonLabel|| (input.deepLink.includes('/control-center/')?'Открыть PULSE Control':input.deepLink.includes('/my-search')?'Открыть мой поиск':'Открыть обращение'),...(input.preferencesLink&&local(input.deepLink)&&input.deepLink.includes('/mini-app/')?{web_app:{url:input.deepLink}}:{url:input.deepLink})}]);
+  if(input.preferencesLink&&local(input.preferencesLink))links.push([{text:'Настроить анонсы',web_app:{url:input.preferencesLink}}]);
   const photo=input.imageUrl?config.PUBLIC_ORIGIN+input.imageUrl:null;
   const escape=(text:string)=>text.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
   const [title,...body]=input.text.split('\n\n');
