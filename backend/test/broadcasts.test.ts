@@ -14,7 +14,15 @@ import {outboxRepository} from '../src/outboxRepository';
 import {processNotificationOutbox,TelegramDeliveryError} from '../src/notificationWorker';
 import {telegramSender} from '../src/telegramSender';
 import {broadcastText} from '../../packages/broadcasts';
+import {ensureAnnouncementWriteAccess} from '../../packages/broadcasts/telegramPermission';
 const content={kind:'apartment',title:'Квартира дня',body:'ЖК у моря. Условия уточнит менеджер.',imageUrl:null,buttonLabel:'Смотреть ЖК',buttonPath:'/property/primorskiy'};
+test('Announcement permission: grant, decline, existing permission, unsupported Telegram and missing callback',async()=>{
+ let calls=0;await ensureAnnouncementWriteAccess({requestWriteAccess:callback=>{calls++;callback(true)}});assert.equal(calls,1);
+ await ensureAnnouncementWriteAccess({initDataUnsafe:{user:{allows_write_to_pm:true}},requestWriteAccess:()=>{throw Error('must not ask again')}});
+ await assert.rejects(ensureAnnouncementWriteAccess({requestWriteAccess:callback=>callback(false)}),/Анонсы не включены/);
+ await assert.rejects(ensureAnnouncementWriteAccess(undefined),/обновлённом Telegram/);
+ await assert.rejects(ensureAnnouncementWriteAccess({requestWriteAccess:()=>{}},1),/не подтвердил/);
+});
 async function fixture(t:any,bot=true){
  const db=await testDatabase();await migrate(db);const media=await mkdtemp(join(tmpdir(),'pulse-broadcast-'));const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',BOT_TOKEN:bot?'test-token':'',MEDIA_ROOT:media});const app=await createApp(db,config);await app.ready();t.after(async()=>{await app.close();await db.close();await rm(media,{recursive:true,force:true})});
  const headers={origin:config.PUBLIC_ORIGIN,'content-type':'application/json'};
