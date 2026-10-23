@@ -17,11 +17,15 @@ export type NotificationOutboxRepository={
   markProcessed(id:string):Promise<void>;
   markSkipped(id:string,reason?:string):Promise<void>;
   markFailed(id:string,error:string,nextAttemptAt:string):Promise<void>;
+  markUndeliverable?(id:string,error:string):Promise<void>;
 };
 
 export type TelegramBotSender={
-  sendMessage(input:{chatId:string;text:string;deepLink?:string|null}):Promise<void>;
+  sendMessage(input:{chatId:string;text:string;deepLink?:string|null;imageUrl?:string|null;buttonLabel?:string|null;preferencesLink?:string|null;richTitle?:boolean}):Promise<void>;
 };
+export class TelegramDeliveryError extends Error{
+ constructor(message:string,public retryAfterSeconds=0,public permanent=false){super(message)}
+}
 
 function asString(value:unknown){
   return typeof value==="string"?value:null;
@@ -38,6 +42,7 @@ export function leadContextText(context:Record<string,unknown>){
 }
 
 function managerText(event:OutboxRecord){
+  if(event.topic==='manager.broadcast_test')return userText(event);
   if(event.topic==='manager.showing_reminder')return userText(event);
   if(event.topic==="manager.security_code")return `PULSE.DV · подтверждение входа\nКод: ${asString(event.payload.code)??"—"}\nНикому не сообщайте этот код. Он действует 5 минут.`;
   if(event.topic==="manager.journey")return `PULSE.DV · Обращение клиента\n${asString(event.payload.title)??"Клиент обновил обращение"}\n${asString(event.payload.body)??"Откройте карточку клиента"}`;
@@ -55,7 +60,7 @@ function managerText(event:OutboxRecord){
 function userText(event:OutboxRecord){
   const title=asString(event.payload.title)??"PULSE.DV";
   const body=asString(event.payload.body)??"Есть обновление по вашему подбору.";
-  return `${title}\n${body}`;
+  return `${title}${['user.broadcast','manager.broadcast_test'].includes(event.topic)?'\n\n':'\n'}${body}`;
 }
 
 function retryAt(attempts:number){
@@ -70,6 +75,7 @@ export async function processNotificationOutbox(
 ){
   const batch=await repo.claimBatch(limit);
   let processed=0;
+  let retryAfterSeconds=0;
 
   for(const event of batch){
     try{
@@ -78,24 +84,26 @@ export async function processNotificationOutbox(
         const managerId=asString(event.payload.managerId);
         // Work alerts go only to the owner. Authentication codes remain private to their member.
         if(event.topic==='manager.security_code'&&!managerId)throw new Error("managerId missing");
-        const chatId=event.topic==='manager.security_code'?await repo.managerTelegramUserId(managerId!):await repo.ownerTelegramUserId();
+        const chatId=['manager.security_code','manager.broadcast_test'].includes(event.topic)?await repo.managerTelegramUserId(managerId!):await repo.ownerTelegramUserId();
         if(!chatId)throw new Error(event.topic==='manager.security_code'?"manager Telegram id missing":"owner Telegram id missing");
         if(isShowingReminder(event.topic)&&!await repo.canDeliver(event)){await repo.markSkipped(event.id);continue;}
         await telegram.sendMessage({
           chatId,
           text:managerText(event),
           deepLink:asString(event.payload.deepLink),
+          ...(event.topic==='manager.broadcast_test'?{imageUrl:asString(event.payload.imageUrl),buttonLabel:asString(event.payload.buttonLabel),preferencesLink:asString(event.payload.preferencesLink),richTitle:true}:{}),
         });
       }else if(event.topic.startsWith("user.")){
         const userId=asString(event.payload.userId);
         if(!userId)throw new Error("userId missing");
         const chatId=await repo.userTelegramUserId(userId);
         if(!chatId)throw new Error("user Telegram id missing");
-        if((isShowingReminder(event.topic)||event.topic==='user.search_updates')&&!await repo.canDeliver(event)){await repo.markSkipped(event.id,event.topic==='user.search_updates'?'Search subscription changed':undefined);continue;}
+        if((isShowingReminder(event.topic)||event.topic==='user.search_updates'||event.topic==='user.broadcast')&&!await repo.canDeliver(event)){await repo.markSkipped(event.id,event.topic==='user.broadcast'?'Broadcast cancelled or subscription changed':event.topic==='user.search_updates'?'Search subscription changed':undefined);continue;}
         await telegram.sendMessage({
           chatId,
           text:userText(event),
           deepLink:asString(event.payload.deepLink),
+          ...(event.topic==='user.broadcast'?{imageUrl:asString(event.payload.imageUrl),buttonLabel:asString(event.payload.buttonLabel),preferencesLink:asString(event.payload.preferencesLink),richTitle:true}:{}),
         });
       }else{
         throw new Error("unsupported outbox topic: "+event.topic);
@@ -105,9 +113,12 @@ export async function processNotificationOutbox(
       processed++;
     }catch(error){
       const message=error instanceof Error?error.message:String(error);
-      await repo.markFailed(event.id,message,retryAt(event.attempts));
+      if(error instanceof TelegramDeliveryError&&error.permanent&&repo.markUndeliverable)await repo.markUndeliverable(event.id,message);
+      else await repo.markFailed(event.id,message,error instanceof TelegramDeliveryError&&error.retryAfterSeconds?new Date(Date.now()+error.retryAfterSeconds*1000+1000).toISOString():retryAt(event.attempts));
+      // Respect a Telegram-wide flood pause rather than trying the rest of the batch.
+      if(error instanceof TelegramDeliveryError&&error.retryAfterSeconds){retryAfterSeconds=error.retryAfterSeconds;break;}
     }
   }
 
-  return{claimed:batch.length,processed};
+  return{claimed:batch.length,processed,...(retryAfterSeconds?{retryAfterSeconds}:{})};
 }

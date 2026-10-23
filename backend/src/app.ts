@@ -1,4 +1,5 @@
 import {registerAcquisitionRoutes,linkAcquisition} from './acquisitionRoutes';
+import {registerBroadcastRoutes} from './broadcastRoutes';
 import {antifraudCollector,observeVisitor} from './partnerAntifraud';
 import {registerClientNotificationRoutes,mergeNotificationReads} from './clientNotificationRoutes';
 import {configuredMap} from '../../packages/pulse-data/mapConfig';
@@ -50,7 +51,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const contentType=request.headers['content-type']||'';
    const catalogMediaUpload=request.url.startsWith('/api/v1/control/catalog/')&&request.url.includes('/media');
    const journeyAttachmentUpload=(request.url.startsWith('/api/v1/control/journeys/')||request.url.startsWith('/api/v1/me/journeys/'))&&request.url.includes('/attachments');
-   const bannerMediaUpload=request.url.startsWith('/api/v1/control/content/banner-media');
+   const bannerMediaUpload=request.url.startsWith('/api/v1/control/content/banner-media')||request.url.startsWith('/api/v1/control/content/broadcast-media');
    const mediaUpload=catalogMediaUpload||journeyAttachmentUpload||bannerMediaUpload;
    const allowedMedia=mediaUpload&&(['image/jpeg','image/png','image/webp','application/pdf'].some(type=>contentType.startsWith(type)));
    if(!contentType.startsWith('application/json')&&!allowedMedia)throw new HttpError(415,mediaUpload?'Нужен JPG, PNG, WebP или PDF':'Требуется application/json');
@@ -220,6 +221,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  await registerInterestRoutes(app,db,control);
  await registerFavoriteRoutes(app,db,visitor);
  await registerSearchRoutes(app,db,visitor);
+ await registerBroadcastRoutes(app,db,config,visitor,editor);
  await registerClientNotificationRoutes(app,db,visitor);
  await registerJourneyRoutes(app,db,control,visitor,editor,config.PUBLIC_ORIGIN,config);
 

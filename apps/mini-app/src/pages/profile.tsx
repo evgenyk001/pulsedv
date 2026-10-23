@@ -1,4 +1,5 @@
 import {IconTile} from '../components/IconTile';
+import {AnnouncementPreferences} from '../components/AnnouncementPreferences';
 import {GroupedMenu,MenuLink,MenuButton} from "../components/GroupedMenu";
 import {useClientJourneys} from "../helpers/useClientJourneys";
 import React from "react";
@@ -57,6 +58,7 @@ export default function ProfilePage(){
         </SheetContent>
       </Sheet>
     </GroupedMenu>
+    <AnnouncementPreferences/>
     <GroupedMenu title="О приложении">
       <MenuLink to="/privacy" icon={<ShieldCheck/>} title="Персональные данные"/>
       <Sheet>

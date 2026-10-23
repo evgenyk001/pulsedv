@@ -1,4 +1,5 @@
 import {PartnersPage} from "./pages/PartnersPage";
+import {BroadcastsPage} from './pages/BroadcastsPage';
 import { JourneyPage } from './pages/JourneyPage';
 import { runtime } from "../../../packages/pulse-data/runtime";
 import { useRuntime } from "./RuntimeShell";
@@ -31,6 +32,7 @@ const sections=[
   {to:"/mortgage",label:"Ипотека",group:"Продукт",icon:BadgePercent,end:false},
   {to:"/select",label:"PULSE Select",group:"Продукт",icon:Sparkles,end:false},
   {to:"/content",label:"Контент",group:"Продукт",icon:Images,end:false},
+  {to:"/broadcasts",label:"Рассылки",group:"Продукт",icon:Bell,end:false},
   {to:"/analytics",label:"Аналитика",group:"Контроль",icon:ChartNoAxesCombined,end:false},
   {to:"/settings",label:"Настройки",group:"Контроль",icon:Settings2,end:false},
 ] as const;
@@ -106,6 +108,7 @@ export function App(){
         <Route path="/mortgage" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<MortgagePage/>}/>
         <Route path="/select" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<SelectPage/>}/>
         <Route path="/content" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<ContentPage/>}/>
+        <Route path="/broadcasts" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<BroadcastsPage/>}/>
         <Route path="/analytics" element={<AnalyticsPage/>}/>
         <Route path="/settings" element={runtime.enabled&&runtime.member?.role==="manager"?<p>Раздел доступен администратору.</p>:<SettingsPage/>}/>
       </Routes>
