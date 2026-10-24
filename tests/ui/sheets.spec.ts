@@ -88,20 +88,38 @@ test('Bottom sheets follow keyboard viewport changes and recover on reopen',asyn
  await page.screenshot({path:'test-results/sheet-reopened-safe-area.png'});
 });
 
-// Pause the real CSS exit halfway through: conditional partner content must
-// survive dismissal, rather than collapsing before Radix removes the portal.
+// Observe actual frames without pausing/restarting CSS animations. Restarting
+// a pending CSSAnimation can emit animationstart again under CI load.
+async function watchExit(dialog:Locator){
+ await dialog.evaluate(el=>{
+  const frames:unknown[]=[];Object.assign(window,{sheetExitFrames:frames});
+  const sample=()=>{
+   if(!el.isConnected)return;
+   if(el.getAttribute('data-state')==='closed'){
+    const rect=el.getBoundingClientRect(),style=getComputedStyle(el),overlay=document.querySelector('[data-sheet-overlay][data-state="closed"]');
+    frames.push({height:rect.height,top:rect.top,opacity:Number(style.opacity),inert:(el as HTMLElement).inert,text:el.textContent,duration:style.animationDuration,overlayDuration:overlay?getComputedStyle(overlay).animationDuration:null,overlayOpacity:overlay?Number(getComputedStyle(overlay).opacity):null});
+   }
+   requestAnimationFrame(sample);
+  };requestAnimationFrame(sample);
+ });
+}
+async function checkExit(page:Page,before:{height:number,y:number},text:string){
+ await expect(page.locator('[role="dialog"]')).toHaveCount(0);
+ const frames=await page.evaluate(()=>(window as unknown as {sheetExitFrames:{height:number,top:number,opacity:number,inert:boolean,text:string,duration:string,overlayDuration:string|null,overlayOpacity:number|null}[]}).sheetExitFrames);
+ expect(frames.length).toBeGreaterThan(1);
+ for(const frame of frames){
+  expect(Math.abs(frame.height-before.height)).toBeLessThan(1.1);expect(frame.text).toContain(text);expect(frame.opacity).toBe(1);expect(frame.inert).toBe(true);
+  if(frame.overlayDuration!==null)expect(frame.duration).toBe(frame.overlayDuration);
+ }
+ expect(frames.some(frame=>frame.top>before.y+20&&frame.top<844)).toBe(true);
+ expect(frames.some(frame=>frame.overlayOpacity!==null&&frame.overlayOpacity>0&&frame.overlayOpacity<1)).toBe(true);
+}
+
 test('Partner guide keeps its body and geometry throughout the exit',async({page})=>{
  await page.setViewportSize({width:390,height:844});await seed(page);await page.goto('/pulsedv/mini-app/#/partners');
- const dialog=page.getByRole('dialog');await docked(page,dialog);
- const before=(await dialog.boundingBox())!;
- await dialog.evaluate(el=>el.addEventListener('animationstart',()=>{if(el.getAttribute('data-state')==='closed')for(const animation of el.getAnimations()){animation.pause();animation.currentTime=Number(animation.effect!.getTiming().duration)/2} }));
- await dialog.getByRole('button',{name:'Понятно, начнём',exact:true}).click();
- const closing=page.locator('[role="dialog"][data-state="closed"]');
- await expect(closing.getByText('Когда будут деньги?',{exact:true})).toHaveCount(1);
- const halfway=await closing.evaluate(el=>({height:el.getBoundingClientRect().height,opacity:getComputedStyle(el).opacity}));
- expect(halfway.height).toBeCloseTo(before.height,0);
- expect(Number(halfway.opacity)).toBe(1);
- await closing.evaluate(el=>el.getAnimations().forEach(a=>a.play()));await expect(closing).toHaveCount(0);
+ const dialog=page.getByRole('dialog');await docked(page,dialog);const before=(await dialog.boundingBox())!;
+ await watchExit(dialog);await dialog.getByRole('button',{name:'Понятно, начнём',exact:true}).click();
+ await checkExit(page,before,'Когда будут деньги?');
 });
 
 for(const method of ['escape','backdrop','swipe'] as const)test(`Partner client details retain content during ${method} dismissal`,async({page})=>{
@@ -113,23 +131,23 @@ for(const method of ['escape','backdrop','swipe'] as const)test(`Partner client 
  await page.goto('/pulsedv/mini-app/#/partners');
  await page.getByRole('button',{name:/Иван П/}).click();const dialog=page.getByRole('dialog');await docked(page,dialog);
  const before=(await dialog.boundingBox())!;
- await dialog.evaluate(el=>el.addEventListener('animationstart',()=>{
-  if(el.getAttribute('data-state')!=='closed')return;
-  for(const node of [el,document.querySelector('[data-sheet-overlay]')!])for(const animation of node.getAnimations()){animation.pause();animation.currentTime=Number(animation.effect!.getTiming().duration)/2}
- }));
+ await watchExit(dialog);
  if(method==='escape')await page.keyboard.press('Escape');
  else if(method==='backdrop')await page.mouse.click(4,70);
  else {await dragHandle(page,dialog,190);await page.mouse.up()}
- const closing=page.locator('[role="dialog"][data-state="closed"]');
- await expect(closing).toContainText('Покупатель подтвердил рекомендацию');
- await expect.poll(()=>closing.evaluate(el=>el.getBoundingClientRect().top)).toBeGreaterThan(before.y+20);
- const midway=await closing.evaluate(el=>{
-  const overlay=document.querySelector('[data-sheet-overlay]')!;
-  return {height:el.getBoundingClientRect().height,top:el.getBoundingClientRect().top,opacity:getComputedStyle(el).opacity,inert:(el as HTMLElement).inert,duration:getComputedStyle(el).animationDuration,overlayDuration:getComputedStyle(overlay).animationDuration,overlayOpacity:Number(getComputedStyle(overlay).opacity)};
- });
- expect(midway.height).toBeCloseTo(before.height,0);expect(midway.top).toBeGreaterThan(before.y+20);expect(midway.opacity).toBe('1');expect(midway.inert).toBe(true);
- expect(midway.duration).toBe(midway.overlayDuration);expect(midway.overlayOpacity).toBeGreaterThan(0);expect(midway.overlayOpacity).toBeLessThan(1);
- await closing.evaluate(el=>{for(const node of [el,document.querySelector('[data-sheet-overlay]')!])node.getAnimations().forEach(a=>a.play())});
- await expect(closing).toHaveCount(0);
+ await checkExit(page,before,'Покупатель подтвердил рекомендацию');
  await page.getByRole('button',{name:/Иван П/}).click();await docked(page,dialog);await expect(dialog).toContainText('Покупатель подтвердил рекомендацию');
+});
+
+test('Quick dismissal waits for exit and recovers when animationend is lost',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await seed(page);await page.goto('/pulsedv/mini-app/#/profile');
+ const open=page.getByRole('button',{name:'Связаться с PULSEDV.RU',exact:true});await open.click();
+ const dialog=page.locator('[role="dialog"]');await expect(dialog).toBeVisible();
+ await dialog.getByRole('button',{name:'Закрыть заявку',exact:true}).dispatchEvent('click');
+ await expect(dialog).toHaveAttribute('data-state','closed');
+ // Browsers can cancel CSS animations without delivering animationend.
+ await dialog.evaluate(el=>el.getAnimations().forEach(animation=>animation.cancel()));
+ await expect(dialog).toHaveCount(0,{timeout:1500});
+ await open.click();await docked(page,dialog);
+ await expect(dialog).toBeFocused();
 });
