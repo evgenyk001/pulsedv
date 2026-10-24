@@ -88,31 +88,36 @@ test('Bottom sheets follow keyboard viewport changes and recover on reopen',asyn
  await page.screenshot({path:'test-results/sheet-reopened-safe-area.png'});
 });
 
-// Observe actual frames without pausing/restarting CSS animations. Restarting
-// a pending CSSAnimation can emit animationstart again under CI load.
+// Inspect the real CSS keyframes deterministically. Headless mobile WebKit
+// can throttle rAF to fewer frames than a normal 380 ms exit. Stretch only
+// these inspection animations, pause once via MutationObserver (never from
+// animationstart), then seek their actual timeline and finish normally.
 async function watchExit(dialog:Locator){
  await dialog.evaluate(el=>{
-  const frames:unknown[]=[];Object.assign(window,{sheetExitFrames:frames});
-  const sample=()=>{
-   if(!el.isConnected)return;
-   if(el.getAttribute('data-state')==='closed'){
-    const rect=el.getBoundingClientRect(),style=getComputedStyle(el),overlay=document.querySelector('[data-sheet-overlay][data-state="closed"]');
-    frames.push({height:rect.height,top:rect.top,opacity:Number(style.opacity),inert:(el as HTMLElement).inert,text:el.textContent,duration:style.animationDuration,overlayDuration:overlay?getComputedStyle(overlay).animationDuration:null,overlayOpacity:overlay?Number(getComputedStyle(overlay).opacity):null});
-   }
-   requestAnimationFrame(sample);
-  };requestAnimationFrame(sample);
+  const style=document.createElement('style');style.textContent='[role="dialog"][data-state="closed"],[data-sheet-overlay][data-state="closed"]{animation-duration:10s!important}';document.head.append(style);
+  const control={ready:Promise.resolve([] as unknown[]),animations:[] as Animation[]};Object.assign(window,{sheetExit:control});
+  const observer=new MutationObserver(()=>{
+   if(el.getAttribute('data-state')!=='closed')return;
+   observer.disconnect();const overlay=document.querySelector('[data-sheet-overlay][data-state="closed"]')!;
+   control.animations=[...el.getAnimations(),...overlay.getAnimations()];
+   control.ready=Promise.all(control.animations.map(animation=>{
+    animation.pause();return animation.ready.then(()=>{animation.currentTime=Number(animation.effect!.getTiming().duration)/2});
+   }));
+  });observer.observe(el,{attributes:true,attributeFilter:['data-state']});
  });
 }
 async function checkExit(page:Page,before:{height:number,y:number},text:string){
- await expect(page.locator('[role="dialog"]')).toHaveCount(0);
- const frames=await page.evaluate(()=>(window as unknown as {sheetExitFrames:{height:number,top:number,opacity:number,inert:boolean,text:string,duration:string,overlayDuration:string|null,overlayOpacity:number|null}[]}).sheetExitFrames);
- expect(frames.length).toBeGreaterThan(1);
- for(const frame of frames){
-  expect(Math.abs(frame.height-before.height)).toBeLessThan(1.1);expect(frame.text).toContain(text);expect(frame.opacity).toBe(1);expect(frame.inert).toBe(true);
-  if(frame.overlayDuration!==null)expect(frame.duration).toBe(frame.overlayDuration);
- }
- expect(frames.some(frame=>frame.top>before.y+20&&frame.top<844)).toBe(true);
- expect(frames.some(frame=>frame.overlayOpacity!==null&&frame.overlayOpacity>0&&frame.overlayOpacity<1)).toBe(true);
+ const closing=page.locator('[role="dialog"]');await expect(closing).toHaveAttribute('data-state','closed');
+ await page.evaluate(()=>(window as unknown as {sheetExit:{ready:Promise<unknown>}}).sheetExit.ready);
+ await expect.poll(()=>closing.evaluate(el=>el.getBoundingClientRect().top)).toBeGreaterThan(before.y+20);
+ const frame=await closing.evaluate(el=>{
+  const rect=el.getBoundingClientRect(),style=getComputedStyle(el),overlay=getComputedStyle(document.querySelector('[data-sheet-overlay][data-state="closed"]')!);
+  return {height:rect.height,opacity:Number(style.opacity),inert:(el as HTMLElement).inert,text:el.textContent,duration:style.animationDuration,overlayDuration:overlay.animationDuration,overlayOpacity:Number(overlay.opacity)};
+ });
+ expect(Math.abs(frame.height-before.height)).toBeLessThan(1.1);expect(frame.text).toContain(text);expect(frame.opacity).toBe(1);expect(frame.inert).toBe(true);
+ expect(frame.duration).toBe(frame.overlayDuration);expect(frame.overlayOpacity).toBeGreaterThan(0);expect(frame.overlayOpacity).toBeLessThan(1);
+ await page.evaluate(()=>(window as unknown as {sheetExit:{animations:Animation[]}}).sheetExit.animations.forEach(animation=>animation.finish()));
+ await expect(closing).toHaveCount(0);
 }
 
 test('Partner guide keeps its body and geometry throughout the exit',async({page})=>{
