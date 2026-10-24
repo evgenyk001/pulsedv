@@ -43,7 +43,7 @@ const idleDrag=()=>({pointerId:-1,startX:0,startY:0,lastY:0,lastT:0,velocity:0,o
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({side="right",className,children,style,onPointerDown,onPointerMove,onPointerUp,onPointerCancel,onLostPointerCapture,onOpenAutoFocus,...props},forwardedRef)=>{
+>(({side="right",className,children,style,onPointerDown,onPointerMove,onPointerUp,onPointerCancel,onLostPointerCapture,onOpenAutoFocus,onAnimationEnd,...props},forwardedRef)=>{
   const open=React.useContext(SheetOpenContext)
   // Owners often clear the selected record/form at the same time as open.
   // Keep the last committed view until the exit has finished, so the moving
@@ -55,6 +55,7 @@ const SheetContent = React.forwardRef<
   const drag=React.useRef(idleDrag())
   const [dragY,setDragY]=React.useState(0)
   const [dragging,setDragging]=React.useState(false)
+  const [keepMounted,setKeepMounted]=React.useState(open)
 
   const clearPointer=React.useCallback(()=>{
     const id=drag.current.pointerId
@@ -90,6 +91,21 @@ const SheetContent = React.forwardRef<
       contentRef.current.style.setProperty('--sheet-exit-height',`${contentRef.current.offsetHeight}px`)
     }
   },[open,side,clearPointer])
+
+  // Own the bottom sheet's exit lifetime. Portal and Content otherwise each
+  // infer presence from CSS animation events, which can race a quick dismissal.
+  React.useLayoutEffect(()=>{
+    if(side!=='bottom')return
+    if(open){setKeepMounted(true);return}
+    if(!keepMounted)return
+    const css=contentRef.current?getComputedStyle(contentRef.current):null
+    const duration=css&&css.animationName!=='none'?Math.max(...css.animationDuration.split(',').map(value=>parseFloat(value)*(value.trim().endsWith('ms')?1:1000))):0
+    if(!duration){setKeepMounted(false);return}
+    // Recover if a browser drops animationend (background tab or interrupted
+    // rendering). Normal dismissal completes from the animation event itself.
+    const timer=window.setTimeout(()=>setKeepMounted(false),duration+100)
+    return()=>window.clearTimeout(timer)
+  },[open,side,keepMounted])
 
   React.useLayoutEffect(()=>{
     if(!open||side!=="bottom")return
@@ -156,7 +172,9 @@ const SheetContent = React.forwardRef<
 
   const cancel=()=>{clearPointer();setDragging(false);setDragY(0)}
 
-  return <SheetPortal>
+  if(side==='bottom'&&!open&&!keepMounted)return null
+
+  return <SheetPortal forceMount={side==='bottom'?true:undefined}>
     <SheetOverlay />
     <SheetPrimitive.Content
       ref={setRef}
@@ -171,6 +189,10 @@ const SheetContent = React.forwardRef<
       onPointerUp={end}
       onPointerCancel={event=>{onPointerCancel?.(event);if(drag.current.pointerId===event.pointerId)cancel()}}
       onLostPointerCapture={event=>{onLostPointerCapture?.(event);if(event.target===event.currentTarget&&drag.current.pointerId===event.pointerId)cancel()}}
+      onAnimationEnd={event=>{
+        onAnimationEnd?.(event)
+        if(side==='bottom'&&!open&&event.target===event.currentTarget&&event.animationName===getComputedStyle(event.currentTarget).animationName)setKeepMounted(false)
+      }}
       {...props}
       inert={props.inert||(side==='bottom'&&!open)}
     >
