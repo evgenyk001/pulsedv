@@ -25,6 +25,7 @@ const SheetOverlay = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
+    data-sheet-overlay=""
     className={`${styles.overlay} ${className ?? ""}`}
     {...props}
     ref={ref}
@@ -44,6 +45,11 @@ const SheetContent = React.forwardRef<
   SheetContentProps
 >(({side="right",className,children,style,onPointerDown,onPointerMove,onPointerUp,onPointerCancel,onLostPointerCapture,onOpenAutoFocus,...props},forwardedRef)=>{
   const open=React.useContext(SheetOpenContext)
+  // Owners often clear the selected record/form at the same time as open.
+  // Keep the last committed view until the exit has finished, so the moving
+  // sheet does not collapse or turn blank before Radix removes its portal.
+  const lastOpenChildren=React.useRef(children)
+  React.useLayoutEffect(()=>{if(open)lastOpenChildren.current=children},[open,children])
   const contentRef=React.useRef<HTMLDivElement|null>(null)
   const closeRef=React.useRef<HTMLButtonElement|null>(null)
   const drag=React.useRef(idleDrag())
@@ -79,9 +85,11 @@ const SheetContent = React.forwardRef<
     setDragging(false)
     if(open){
       setDragY(0)
-      if(contentRef.current)contentRef.current.scrollTop=0
+      if(contentRef.current){contentRef.current.style.removeProperty('--sheet-exit-height');contentRef.current.scrollTop=0}
+    }else if(side==='bottom'&&contentRef.current){
+      contentRef.current.style.setProperty('--sheet-exit-height',`${contentRef.current.offsetHeight}px`)
     }
-  },[open,clearPointer])
+  },[open,side,clearPointer])
 
   React.useLayoutEffect(()=>{
     if(!open||side!=="bottom")return
@@ -164,9 +172,10 @@ const SheetContent = React.forwardRef<
       onPointerCancel={event=>{onPointerCancel?.(event);if(drag.current.pointerId===event.pointerId)cancel()}}
       onLostPointerCapture={event=>{onLostPointerCapture?.(event);if(event.target===event.currentTarget&&drag.current.pointerId===event.pointerId)cancel()}}
       {...props}
+      inert={props.inert||(side==='bottom'&&!open)}
     >
       {side==="bottom"&&<div className={styles.grabZone} data-sheet-handle="" aria-hidden="true"><span className={styles.grabber}/></div>}
-      {children}
+      {side==='bottom'&&!open?lastOpenChildren.current:children}
       <SheetPrimitive.Close ref={closeRef} aria-label="Закрыть" className={styles.close}>
         <X className={styles.closeIcon} />
       </SheetPrimitive.Close>

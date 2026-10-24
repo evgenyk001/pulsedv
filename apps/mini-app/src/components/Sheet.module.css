@@ -1,7 +1,7 @@
 @layer base {
   .overlay{position:fixed;inset:0;z-index:var(--z-overlay);background:rgba(17,24,39,.30);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px)}
   .overlay[data-state="open"]{animation:overlayIn .34s cubic-bezier(.2,.8,.2,1)}
-  .overlay[data-state="closed"]{animation:overlayOut .24s ease both}
+  .overlay[data-state="closed"]{animation:overlayOut .38s cubic-bezier(.32,0,.2,1) both;pointer-events:none}
 
   .content{position:fixed;z-index:var(--z-overlay);display:flex;flex-direction:column;min-width:0;overflow-x:hidden;overflow-wrap:anywhere;background:var(--popup);color:var(--popup-foreground);box-shadow:var(--shadow-lg);overscroll-behavior:contain;font-family:var(--font-family-base)}
   /* A scrolling column must keep its children's natural height. Otherwise flex
@@ -33,7 +33,7 @@
     will-change:transform,translate;
   }
   .bottom[data-state="open"]{animation:sheetIn .48s cubic-bezier(.22,1,.36,1)}
-  .bottom[data-state="closed"]{animation:sheetOut .28s cubic-bezier(.4,0,.8,.2) both}
+  .bottom[data-state="closed"]{height:var(--sheet-exit-height,auto);animation:sheetOut .38s cubic-bezier(.32,0,.2,1) both;pointer-events:none}
   .bottom.dragging{transition:none}
   .bottom>:not(.grabZone):not(.close){width:100%;max-width:420px;margin-left:auto;margin-right:auto}
 
@@ -58,8 +58,8 @@
 
   @keyframes overlayIn{from{opacity:0}to{opacity:1}}
   @keyframes overlayOut{from{opacity:1}to{opacity:0}}
-  @keyframes sheetIn{from{opacity:.72;transform:translate3d(0,calc(100% + 24px),0)}75%{opacity:1;transform:translate3d(0,-3px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
-  @keyframes sheetOut{from{opacity:1;transform:translate3d(0,0,0)}to{opacity:.72;transform:translate3d(0,108%,0)}}
+  @keyframes sheetIn{from{transform:translate3d(0,calc(100% + max(var(--pulse-safe-bottom),var(--sheet-viewport-bottom,0px)) + 24px),0)}75%{transform:translate3d(0,-3px,0)}to{transform:translate3d(0,0,0)}}
+  @keyframes sheetOut{from{transform:translate3d(0,0,0)}to{transform:translate3d(0,calc(100% + max(var(--pulse-safe-bottom),var(--sheet-viewport-bottom,0px)) + 24px),0)}}
 
   @media(max-width:640px){.left,.right{max-width:100%}}
   @media(prefers-reduced-motion:reduce){.overlay,.bottom,.grabber{animation:none!important;transition:none!important}}
