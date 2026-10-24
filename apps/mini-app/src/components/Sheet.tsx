@@ -5,7 +5,17 @@ import * as SheetPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
 import styles from "./Sheet.module.css"
 
-const Sheet = SheetPrimitive.Root
+const SheetOpenContext = React.createContext(false)
+
+function Sheet({open:controlledOpen,defaultOpen=false,onOpenChange,...props}:React.ComponentProps<typeof SheetPrimitive.Root>){
+  const [localOpen,setLocalOpen]=React.useState(defaultOpen)
+  const open=controlledOpen??localOpen
+  const change=(next:boolean)=>{
+    if(controlledOpen===undefined)setLocalOpen(next)
+    onOpenChange?.(next)
+  }
+  return <SheetOpenContext.Provider value={open}><SheetPrimitive.Root {...props} open={open} onOpenChange={change}/></SheetOpenContext.Provider>
+}
 const SheetTrigger = SheetPrimitive.Trigger
 const SheetClose = SheetPrimitive.Close
 const SheetPortal = SheetPrimitive.Portal
@@ -27,137 +37,135 @@ interface SheetContentProps
   side?: "top" | "bottom" | "left" | "right";
 }
 
+const idleDrag=()=>({pointerId:-1,startX:0,startY:0,lastY:0,lastT:0,velocity:0,offset:0,started:false,blocked:false})
+
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({
-  side = "right",
-  className,
-  children,
-  style,
-  onPointerDown,
-  onPointerMove,
-  onPointerUp,
-  onPointerCancel,
-  ...props
-}, forwardedRef) => {
+>(({side="right",className,children,style,onPointerDown,onPointerMove,onPointerUp,onPointerCancel,onLostPointerCapture,onOpenAutoFocus,...props},forwardedRef)=>{
+  const open=React.useContext(SheetOpenContext)
   const contentRef=React.useRef<HTMLDivElement|null>(null)
   const closeRef=React.useRef<HTMLButtonElement|null>(null)
-  const drag=React.useRef({
-    pointerId:-1,
-    startY:0,
-    lastY:0,
-    lastT:0,
-    velocity:0,
-    started:false,
-    blocked:false,
-  })
+  const drag=React.useRef(idleDrag())
   const [dragY,setDragY]=React.useState(0)
   const [dragging,setDragging]=React.useState(false)
 
+  const clearPointer=React.useCallback(()=>{
+    const id=drag.current.pointerId
+    drag.current=idleDrag()
+    const node=contentRef.current
+    if(id!==-1&&node?.hasPointerCapture(id))node.releasePointerCapture(id)
+  },[])
+
+  const syncViewport=React.useCallback(()=>{
+    const node=contentRef.current
+    if(!node)return
+    const viewport=window.visualViewport
+    node.style.setProperty('--sheet-viewport-height',`${viewport?.height??window.innerHeight}px`)
+    node.style.setProperty('--sheet-viewport-bottom',`${Math.max(0,window.innerHeight-(viewport?viewport.offsetTop+viewport.height:window.innerHeight))}px`)
+  },[])
+
   const setRef=React.useCallback((node:HTMLDivElement|null)=>{
     contentRef.current=node
+    if(node)syncViewport()
     if(typeof forwardedRef==="function")forwardedRef(node)
     else if(forwardedRef)forwardedRef.current=node
-  },[forwardedRef])
+  },[forwardedRef,syncViewport])
 
-  const isInteractive=(target:EventTarget|null)=>{
-    if(!(target instanceof Element))return false
-    return Boolean(target.closest("button,a,input,textarea,select,[role='slider'],[data-sheet-no-drag]"))
-  }
+  // SheetContent itself survives a portalled Dialog.Content unmount. Reset on
+  // every open, including a reopen which interrupts the exit animation.
+  React.useLayoutEffect(()=>{
+    clearPointer()
+    setDragging(false)
+    if(open){
+      setDragY(0)
+      if(contentRef.current)contentRef.current.scrollTop=0
+    }
+  },[open,clearPointer])
+
+  React.useLayoutEffect(()=>{
+    if(!open||side!=="bottom")return
+    let frame=0
+    const update=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(syncViewport)}
+    update()
+    const viewport=window.visualViewport
+    viewport?.addEventListener('resize',update)
+    viewport?.addEventListener('scroll',update)
+    window.addEventListener('resize',update)
+    return()=>{cancelAnimationFrame(frame);viewport?.removeEventListener('resize',update);viewport?.removeEventListener('scroll',update);window.removeEventListener('resize',update)}
+  },[open,side,syncViewport])
 
   const begin=(event:React.PointerEvent<HTMLDivElement>)=>{
     onPointerDown?.(event)
-    if(event.defaultPrevented||side!=="bottom"||event.button!==0)return
-    const node=contentRef.current
-    if(!node||node.scrollTop>1||isInteractive(event.target))return
-    drag.current={
-      pointerId:event.pointerId,
-      startY:event.clientY,
-      lastY:event.clientY,
-      lastT:performance.now(),
-      velocity:0,
-      started:false,
-      blocked:false,
-    }
+    if(event.defaultPrevented||!open||side!=="bottom"||event.button!==0||drag.current.pointerId!==-1)return
+    const target=event.target
+    if(!(target instanceof Element)||!contentRef.current?.contains(target))return
+    // A dedicated non-scrolling surface owns the gesture; forms keep native
+    // touch scrolling, selection and controls, even when scrolled to the top.
+    if(!target.closest('[data-sheet-handle],[data-sheet-header]')||target.closest("button,a,input,textarea,select,[role='slider'],[data-sheet-no-drag]"))return
+    event.preventDefault()
+    drag.current={...idleDrag(),pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,lastY:event.clientY,lastT:performance.now()}
+    event.currentTarget.setPointerCapture(event.pointerId)
   }
 
   const move=(event:React.PointerEvent<HTMLDivElement>)=>{
     onPointerMove?.(event)
-    if(side!=="bottom"||drag.current.pointerId!==event.pointerId||drag.current.blocked)return
-    const dy=event.clientY-drag.current.startY
-    if(!drag.current.started){
-      if(dy<-6){
-        drag.current.blocked=true
-        return
-      }
-      if(dy<=6)return
-      if((contentRef.current?.scrollTop??0)>1){
-        drag.current.blocked=true
-        return
-      }
-      drag.current.started=true
+    const gesture=drag.current
+    if(event.defaultPrevented||side!=="bottom"||gesture.pointerId!==event.pointerId||gesture.blocked)return
+    const dy=event.clientY-gesture.startY
+    if(!gesture.started){
+      if(Math.abs(event.clientX-gesture.startX)>Math.abs(dy)&&Math.abs(event.clientX-gesture.startX)>6){gesture.blocked=true;return}
+      if(Math.abs(dy)<=6)return
+      gesture.started=true
       setDragging(true)
-      event.currentTarget.setPointerCapture(event.pointerId)
     }
-    if(dy<0)return
     event.preventDefault()
     const now=performance.now()
-    const ddy=event.clientY-drag.current.lastY
-    const dt=Math.max(5,now-drag.current.lastT)
-    const instant=ddy/dt
-    drag.current.velocity=drag.current.velocity*.62+instant*.38
-    drag.current.lastY=event.clientY
-    drag.current.lastT=now
-    const softened=dy<180?dy:180+(dy-180)*.42
-    setDragY(softened)
+    const instant=(event.clientY-gesture.lastY)/Math.max(5,now-gesture.lastT)
+    gesture.velocity=gesture.velocity*.62+instant*.38
+    gesture.lastY=event.clientY
+    gesture.lastT=now
+    gesture.offset=dy<0?-Math.min(20,Math.sqrt(-dy)*1.8):dy<=160?dy*.88:140.8+(dy-160)*.38
+    setDragY(gesture.offset)
   }
 
   const end=(event:React.PointerEvent<HTMLDivElement>)=>{
     onPointerUp?.(event)
-    if(side!=="bottom"||drag.current.pointerId!==event.pointerId)return
-    if(drag.current.started&&event.currentTarget.hasPointerCapture(event.pointerId)){
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-    if(drag.current.started){
-      const height=contentRef.current?.getBoundingClientRect().height??500
-      const shouldClose=dragY>Math.min(132,height*.24)||drag.current.velocity>.62
-      if(shouldClose){
-        setDragging(false)
-        closeRef.current?.click()
-      }else{
-        setDragging(false)
-        setDragY(0)
-      }
-    }
-    drag.current.pointerId=-1
-    drag.current.started=false
-    drag.current.blocked=false
+    const gesture=drag.current
+    if(side!=="bottom"||gesture.pointerId!==event.pointerId)return
+    const height=contentRef.current?.getBoundingClientRect().height??500
+    const velocity=performance.now()-gesture.lastT<90?gesture.velocity:0
+    const shouldClose=!event.defaultPrevented&&gesture.started&&(gesture.offset>Math.min(132,height*.24)||(gesture.offset>24&&velocity>.75))
+    clearPointer()
+    setDragging(false)
+    if(shouldClose){
+      closeRef.current?.click()
+      // Controlled sheets may reject dismissal while saving. Return home if
+      // the owner keeps the sheet open rather than leaving its drag offset.
+      requestAnimationFrame(()=>{if(contentRef.current?.dataset.state==='open')setDragY(0)})
+    }else setDragY(0)
   }
 
-  const cancel=(event:React.PointerEvent<HTMLDivElement>)=>{
-    onPointerCancel?.(event)
-    if(side!=="bottom")return
-    setDragging(false)
-    setDragY(0)
-    drag.current.pointerId=-1
-    drag.current.started=false
-    drag.current.blocked=false
-  }
+  const cancel=()=>{clearPointer();setDragging(false);setDragY(0)}
 
   return <SheetPortal>
     <SheetOverlay />
     <SheetPrimitive.Content
       ref={setRef}
-      className={`${styles.content} ${styles[side]} ${dragging?styles.dragging:""} ${className ?? ""}`}
+      className={`${styles.content} ${styles[side]} ${dragging?styles.dragging:""} ${className??""}`}
       style={side==="bottom"?({...style,"--sheet-drag-y":`${dragY}px`} as React.CSSProperties):style}
+      onOpenAutoFocus={event=>{
+        onOpenAutoFocus?.(event)
+        if(side==='bottom'&&!event.defaultPrevented){event.preventDefault();contentRef.current?.focus({preventScroll:true})}
+      }}
       onPointerDown={begin}
       onPointerMove={move}
       onPointerUp={end}
-      onPointerCancel={cancel}
+      onPointerCancel={event=>{onPointerCancel?.(event);if(drag.current.pointerId===event.pointerId)cancel()}}
+      onLostPointerCapture={event=>{onLostPointerCapture?.(event);if(event.target===event.currentTarget&&drag.current.pointerId===event.pointerId)cancel()}}
       {...props}
     >
-      {side==="bottom"&&<div className={styles.grabZone} aria-hidden="true"><span className={styles.grabber}/></div>}
+      {side==="bottom"&&<div className={styles.grabZone} data-sheet-handle="" aria-hidden="true"><span className={styles.grabber}/></div>}
       {children}
       <SheetPrimitive.Close ref={closeRef} aria-label="Закрыть" className={styles.close}>
         <X className={styles.closeIcon} />
@@ -171,7 +179,7 @@ const SheetHeader = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={`${styles.header} ${className ?? ""}`} {...props} />
+  <div data-sheet-header="" className={`${styles.header} ${className ?? ""}`} {...props} />
 )
 SheetHeader.displayName = "SheetHeader"
 

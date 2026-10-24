@@ -14,10 +14,10 @@
   .bottom{
     left:max(8px,var(--pulse-safe-left));
     right:max(8px,var(--pulse-safe-right));
-    bottom:calc(8px + var(--pulse-safe-bottom));
+    bottom:calc(8px + max(var(--pulse-safe-bottom),var(--sheet-viewport-bottom,0px)));
     width:auto;
     height:auto;
-    max-height:min(82dvh,680px,calc(100dvh - var(--pulse-safe-top) - var(--pulse-safe-bottom) - 16px));
+    max-height:min(82dvh,680px,calc(var(--sheet-viewport-height,100dvh) - var(--pulse-safe-top) - var(--pulse-safe-bottom) - 16px));
     padding:var(--app-sheet-top) var(--app-sheet-inline) var(--app-sheet-bottom);
     border-radius:var(--app-radius-sheet)!important;
     overflow-y:auto;
@@ -27,18 +27,22 @@
     backdrop-filter:blur(32px) saturate(1.18);
     -webkit-backdrop-filter:blur(32px) saturate(1.18);
     touch-action:pan-y;
-    transform:translate3d(0,var(--sheet-drag-y,0px),0);
-    transition:transform .46s cubic-bezier(.18,.9,.22,1);
-    will-change:transform;
+    transform:translate3d(0,0,0);
+    translate:0 var(--sheet-drag-y,0px);
+    transition:translate .5s cubic-bezier(.2,1.3,.3,1);
+    will-change:transform,translate;
   }
-  .bottom[data-state="open"]{animation:sheetIn .48s cubic-bezier(.18,.92,.22,1.02)}
+  .bottom[data-state="open"]{animation:sheetIn .48s cubic-bezier(.22,1,.36,1)}
   .bottom[data-state="closed"]{animation:sheetOut .28s cubic-bezier(.4,0,.8,.2) both}
   .bottom.dragging{transition:none}
   .bottom>:not(.grabZone):not(.close){width:100%;max-width:420px;margin-left:auto;margin-right:auto}
 
-  .grabZone{position:absolute;z-index:4;left:0;right:0;top:0;height:30px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none}
+  .grabZone{position:absolute;z-index:4;left:0;right:0;top:0;height:30px;display:flex;align-items:center;justify-content:center;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
   .dragging .grabZone{cursor:grabbing}
-  .grabber{width:38px;height:5px;border-radius:var(--app-radius-pill);background:rgba(90,103,121,.24);box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}
+  .bottom [data-sheet-header]{touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab}
+  .dragging [data-sheet-header]{cursor:grabbing}
+  .dragging .grabber{width:46px;background:rgba(90,103,121,.4)}
+  .grabber{width:38px;height:5px;border-radius:var(--app-radius-pill);background:rgba(90,103,121,.24);transition:width .2s ease,background .2s ease;box-shadow:inset 0 1px 0 rgba(255,255,255,.55)}
 
   .close{position:absolute;top:16px;right:16px;display:flex;align-items:center;justify-content:center;width:var(--app-icon-compact);height:var(--app-icon-compact);border-radius:var(--radius-full);background-color:var(--muted);color:var(--muted-foreground);border:none;cursor:pointer;transition:background-color var(--animation-duration-fast) ease,transform var(--animation-duration-fast) ease}
   .bottom .close{display:none}
@@ -54,9 +58,9 @@
 
   @keyframes overlayIn{from{opacity:0}to{opacity:1}}
   @keyframes overlayOut{from{opacity:1}to{opacity:0}}
-  @keyframes sheetIn{from{opacity:.72;transform:translate3d(0,105%,0) scale(.985)}65%{opacity:1}to{opacity:1;transform:translate3d(0,0,0) scale(1)}}
-  @keyframes sheetOut{from{opacity:1;transform:translate3d(0,var(--sheet-drag-y,0px),0)}to{opacity:.72;transform:translate3d(0,108%,0)}}
+  @keyframes sheetIn{from{opacity:.72;transform:translate3d(0,calc(100% + 24px),0)}75%{opacity:1;transform:translate3d(0,-3px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+  @keyframes sheetOut{from{opacity:1;transform:translate3d(0,0,0)}to{opacity:.72;transform:translate3d(0,108%,0)}}
 
   @media(max-width:640px){.left,.right{max-width:100%}}
-  @media(prefers-reduced-motion:reduce){.overlay,.bottom{animation:none!important;transition:none!important}}
+  @media(prefers-reduced-motion:reduce){.overlay,.bottom,.grabber{animation:none!important;transition:none!important}}
 }
