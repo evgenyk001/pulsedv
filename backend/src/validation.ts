@@ -32,11 +32,15 @@ const property=z.object({
  id,name:text().min(1),city:text(100).min(1),district:text(100),address:nullableText(400),latitude:z.number().min(-90).max(90).nullable(),longitude:z.number().min(-180).max(180).nullable(),priceFrom:z.number().min(0).max(10000),delivery:text(100),className:text(100),status:z.enum(['draft','published','archived']),description:text(10000),developerName:text(),tags:z.array(text(100)).max(20),coverImageUrl:image,sortOrder:z.number().int(),
  images:z.array(z.object({id:id.optional(),url:https,alt:text(),sortOrder:z.number().int()})).max(50),
  features:z.array(z.object({id:id.optional(),label:text(),icon:text(50),sortOrder:z.number().int()})).max(30),
- floorplans:z.array(z.object({id:id.optional(),roomLabel:text(30).min(1),areaFrom:z.number().positive().nullable(),areaTo:z.number().positive().nullable(),priceFrom:z.number().positive().nullable(),finishType:finishTypeSchema.nullable().optional(),imageUrl:image,sortOrder:z.number().int()})).max(200)
+ floorplans:z.array(z.object({id:id.optional(),roomLabel:text(30).min(1),areaFrom:z.number().positive().nullable(),areaTo:z.number().positive().nullable(),priceFrom:z.number().positive().nullable(),finishType:finishTypeSchema.nullable().optional(),finishOptions:z.array(z.object({finishType:finishTypeSchema,priceFrom:z.number().positive().nullable()})).max(4).optional(),imageUrl:image,sortOrder:z.number().int()})).max(200)
 }).superRefine((p,ctx)=>{
  if(p.status==='published'&&(!p.coverImageUrl||!p.developerName||!p.delivery||p.priceFrom<=0))ctx.addIssue({code:'custom',message:'Для публикации нужны обложка, застройщик, срок сдачи и цена'});
  if((p.latitude===null)!==(p.longitude===null))ctx.addIssue({code:'custom',message:'Укажите обе координаты'});
- for(const plan of p.floorplans)if(plan.areaFrom&&plan.areaTo&&plan.areaFrom>plan.areaTo)ctx.addIssue({code:'custom',message:'Минимальная площадь больше максимальной'});
+ for(const plan of p.floorplans){
+  if(plan.areaFrom&&plan.areaTo&&plan.areaFrom>plan.areaTo)ctx.addIssue({code:'custom',message:'Минимальная площадь больше максимальной'});
+  const offers=plan.finishOptions??[];
+  if(new Set(offers.map(item=>item.finishType)).size!==offers.length)ctx.addIssue({code:'custom',message:'Варианты отделки в одной планировке не должны повторяться'});
+ }
 });
 const actionUrl=nullableText(2048).refine(value=>!value||(/^\/(?!\/)/.test(value))||value.startsWith('https://'),'Недопустимая ссылка');
 const banner=z.object({
@@ -124,7 +128,7 @@ export const catalogPropertySchema=z.object({
  sortOrder:z.number().int(),
  images:z.array(z.object({id:id.optional(),url:mediaUrl,alt:text(),sortOrder:z.number().int()})).max(100),
  features:z.array(z.object({id:id.optional(),label:text(),icon:text(50),sortOrder:z.number().int()})).max(50),
- floorplans:z.array(z.object({id:id.optional(),roomLabel:text(30).min(1),areaFrom:z.number().positive().nullable(),areaTo:z.number().positive().nullable(),priceFrom:z.number().positive().nullable(),finishType:finishTypeSchema.nullable().optional(),imageUrl:mediaUrl.nullable(),sortOrder:z.number().int()})).max(500),
+ floorplans:z.array(z.object({id:id.optional(),roomLabel:text(30).min(1),areaFrom:z.number().positive().nullable(),areaTo:z.number().positive().nullable(),priceFrom:z.number().positive().nullable(),finishType:finishTypeSchema.nullable().optional(),finishOptions:z.array(z.object({finishType:finishTypeSchema,priceFrom:z.number().positive().nullable()})).max(4).optional(),imageUrl:mediaUrl.nullable(),sortOrder:z.number().int()})).max(500),
  documents:z.array(z.object({
   id:id.optional(),kind:z.enum(['presentation','document']),name:text(300).min(1),url:mediaUrl,
   mimeType:nullableText(120),sizeBytes:z.number().int().nonnegative().nullable(),sortOrder:z.number().int()
@@ -132,7 +136,11 @@ export const catalogPropertySchema=z.object({
 }).superRefine((p,ctx)=>{
  if(p.status==='published'&&(!p.coverImageUrl||!p.developerName||!p.delivery||p.priceFrom<=0))ctx.addIssue({code:'custom',message:'Для публикации нужны обложка, застройщик, срок сдачи и цена'});
  if((p.latitude===null)!==(p.longitude===null))ctx.addIssue({code:'custom',message:'Укажите обе координаты'});
- for(const plan of p.floorplans)if(plan.areaFrom&&plan.areaTo&&plan.areaFrom>plan.areaTo)ctx.addIssue({code:'custom',message:'Минимальная площадь больше максимальной'});
+ for(const plan of p.floorplans){
+  if(plan.areaFrom&&plan.areaTo&&plan.areaFrom>plan.areaTo)ctx.addIssue({code:'custom',message:'Минимальная площадь больше максимальной'});
+  const offers=plan.finishOptions??[];
+  if(new Set(offers.map(item=>item.finishType)).size!==offers.length)ctx.addIssue({code:'custom',message:'Варианты отделки в одной планировке не должны повторяться'});
+ }
 });
 
 export const catalogImportSchema=z.object({

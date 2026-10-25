@@ -58,7 +58,7 @@ async function hydrate(sql:Sql,items:CatalogProperty[],view:CatalogView){
 
   const [features,floorplans]=await Promise.all([
     sql.query("select id,property_id,label,icon,sort_order from catalog_property_features where property_id=any($1::text[]) order by property_id,sort_order,id",[ids]),
-    sql.query("select id,property_id,room_label,area_from,area_to,price_from,image_url,sort_order from catalog_property_floorplans where property_id=any($1::text[]) order by property_id,sort_order,id",[ids]),
+    sql.query("select id,property_id,room_label,area_from,area_to,price_from,image_url,finish_type,finish_options,sort_order from catalog_property_floorplans where property_id=any($1::text[]) order by property_id,sort_order,id",[ids]),
   ]);
   for(const row of features.rows){
     byId.get(row.property_id)?.features.push({id:row.id,label:row.label,icon:row.icon,sortOrder:Number(row.sort_order)});
@@ -66,7 +66,8 @@ async function hydrate(sql:Sql,items:CatalogProperty[],view:CatalogView){
   for(const row of floorplans.rows){
     byId.get(row.property_id)?.floorplans.push({
       id:row.id,roomLabel:row.room_label,areaFrom:n(row.area_from),areaTo:n(row.area_to),
-      priceFrom:n(row.price_from),imageUrl:view==="full"?row.image_url:null,sortOrder:Number(row.sort_order),
+      priceFrom:n(row.price_from),imageUrl:view==="full"?row.image_url:null,
+       finishType:row.finish_type??null,finishOptions:Array.isArray(row.finish_options)?row.finish_options:[],sortOrder:Number(row.sort_order),
     });
   }
   if(view!=="full")return items;
@@ -203,8 +204,8 @@ export async function upsertCatalogProperty(sql:Sql,p:CatalogProperty){
 
   await sql.query("delete from catalog_property_floorplans where property_id=$1",[p.id]);
   for(const [index,plan] of (p.floorplans??[]).entries()){
-    await sql.query("insert into catalog_property_floorplans(id,property_id,room_label,area_from,area_to,price_from,image_url,sort_order) values($1,$2,$3,$4,$5,$6,$7,$8)",[
-      plan.id||randomUUID(),p.id,plan.roomLabel,plan.areaFrom,plan.areaTo,plan.priceFrom,plan.imageUrl,plan.sortOrder??index
+    await sql.query("insert into catalog_property_floorplans(id,property_id,room_label,area_from,area_to,price_from,image_url,finish_type,finish_options,sort_order) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",[
+      plan.id||randomUUID(),p.id,plan.roomLabel,plan.areaFrom,plan.areaTo,plan.priceFrom,plan.imageUrl,plan.finishType??null,JSON.stringify(plan.finishOptions??[]),plan.sortOrder??index
     ]);
   }
 

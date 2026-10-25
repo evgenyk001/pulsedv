@@ -23,6 +23,7 @@ export type PropertyFloorplan={
   priceFrom:number|null;
   imageUrl:string|null;
   finishType?:ApartmentFinish|null;
+  finishOptions?:{finishType:ApartmentFinish;priceFrom:number|null}[];
   sortOrder:number;
 };
 

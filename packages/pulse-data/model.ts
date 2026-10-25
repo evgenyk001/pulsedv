@@ -19,7 +19,7 @@ export type PulseProperty={
   tags:string[]; coverImageUrl:string|null; sortOrder:number;
   images:{id?:string;url:string;alt:string;sortOrder:number}[];
   features:{id?:string;label:string;icon:string;sortOrder:number}[];
-  floorplans:{id?:string;roomLabel:string;areaFrom:number|null;areaTo:number|null;priceFrom:number|null;imageUrl:string|null;finishType?:ApartmentFinish|null;sortOrder:number}[];
+  floorplans:{id?:string;roomLabel:string;areaFrom:number|null;areaTo:number|null;priceFrom:number|null;imageUrl:string|null;finishType?:ApartmentFinish|null;finishOptions?:{finishType:ApartmentFinish;priceFrom:number|null}[];sortOrder:number}[];
   documents?:{id?:string;kind:"presentation"|"document";name:string;url:string;mimeType:string|null;sizeBytes:number|null;sortOrder:number}[];
 };
 
