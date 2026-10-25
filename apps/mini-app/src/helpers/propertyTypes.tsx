@@ -1,3 +1,4 @@
+import type {ProjectDetails} from '../../../../packages/pulse-data/model';
 export type PropertyStatus="draft"|"published"|"archived";
 
 export type PropertyImage={
@@ -35,6 +36,7 @@ export type PropertyDocument={
 };
 
 export type PropertyRecord={
+  projectDetails?:ProjectDetails;
   id:string;
   name:string;
   city:string;

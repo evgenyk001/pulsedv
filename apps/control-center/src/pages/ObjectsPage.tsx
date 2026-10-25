@@ -1,3 +1,4 @@
+import {ProjectDetailsEditor} from '../components/ProjectDetailsEditor';
 import {CatalogFreshnessEditor,CatalogFreshnessBadge} from '../components/CatalogFreshnessEditor';
 import {CatalogPhotosEditor} from '../components/CatalogPhotosEditor';
 import {propertyPriceRub} from '../../../../packages/domain/propertyPresentation';
@@ -127,6 +128,7 @@ function PreviewObjectsPage(){
       </div>
 
       <CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} autoSave/>
+      <ProjectDetailsEditor key={p.id} value={p.projectDetails} onChange={projectDetails=>patch({projectDetails})}/>
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>Карточка и страница ЖК</small></div></div>
         <div className="formGrid">

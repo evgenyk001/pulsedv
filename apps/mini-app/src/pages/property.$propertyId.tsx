@@ -37,6 +37,12 @@ const featureIcon=(name:string)=>{
 
 const priceLabel=propertyPriceLabel;
 
+const formatProjectDate=(value:string|null|undefined)=>{
+ if(!value||!/^\d{4}-\d{2}-\d{2}$/.test(value))return null;
+ const date=new Date(value+'T00:00:00Z');
+ return Number.isFinite(date.getTime())&&date.toISOString().slice(0,10)===value?new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).format(date):null;
+};
+
 export default function PropertyPage(){
   const {propertyId=""}=useParams();
   const location=useLocation();
@@ -79,8 +85,19 @@ export default function PropertyPage(){
     .filter(plan=>!activeRoom||normalizeRoomLabel(plan.roomLabel)===activeRoom)
     .sort((a,b)=>(a.priceFrom??Infinity)-(b.priceFrom??Infinity)||a.sortOrder-b.sortOrder);
   const fromPulse=returnTo.startsWith("/selection");
-  const highlightFeature=[...p.features].sort((a,b)=>a.sortOrder-b.sortOrder)[0];
-  const HighlightIcon=highlightFeature?featureIcon(highlightFeature.icon):Sparkles;
+  const details=p.projectDetails;
+  const areaValues=p.floorplans.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]).filter((v):v is number=>typeof v==='number'&&v>0);
+  const minArea=areaValues.length?Math.min(...areaValues):null;
+  const commissioning=formatProjectDate(details?.commissioningDate);
+  const facts=[
+    {label:'Срок сдачи',value:p.delivery||'Уточняется',icon:CalendarDays},
+    ...(commissioning?[{label:'Плановый ввод дома',value:commissioning,icon:Building2}]:[]),
+    ...(details?.totalApartments!=null?[{label:'Всего квартир в ЖК',value:details.totalApartments.toLocaleString('ru-RU'),icon:LayoutGrid}]:[]),
+    ...(details?.availableApartments!=null?[{label:'Квартир в продаже',value:details.availableApartments.toLocaleString('ru-RU'),icon:Building2}]:[]),
+    ...(minArea!==null?[{label:'Площадь от',value:minArea.toLocaleString('ru-RU')+' м²',icon:Ruler}]:[]),
+    ...(p.className?[{label:'Класс жилья',value:p.className,icon:ShieldCheck}]:[]),
+  ];
+  if(facts.length<4&&roomOptions.length)facts.push({label:'Типы квартир',value:roomOptions.join(' · '),icon:LayoutGrid});
 
   const share=async()=>{
     try{
@@ -112,17 +129,13 @@ export default function PropertyPage(){
           {p.className&&<span>{p.className}</span>}
           {p.tags.slice(0,2).map(tag=><span key={tag}>{tag}</span>)}
         </div>
-        <h1>{p.name}</h1><PropertyFreshness id={p.id}/>
+        <h1>{p.name}</h1>{fromPulse&&<span className={styles.selectionBadge}>Из вашей подборки PULSE Select</span>}<PropertyFreshness id={p.id}/>
         <div className={styles.location}><MapPin size={14}/>{p.city} · {p.district}</div>
         <div className={styles.developerLine}><Building2 size={13}/>{developer||"Застройщик уточняется"}</div>
         {shareNotice&&<span className={styles.shareNotice} role="status">{shareNotice}</span>}
       </section>
 
-      <nav className={styles.sectionNav} aria-label="Разделы жилого комплекса">
-        {p.floorplans.length>0&&<button type="button" onClick={()=>jump('property-plans')}><LayoutGrid size={15}/>Планировки</button>}
-        <button type="button" onClick={()=>jump('property-location')}><MapPin size={15}/>Расположение</button>
-        {!!p.documents?.length&&<button type="button" onClick={()=>jump('property-materials')}><FileText size={15}/>Документы</button>}
-      </nav>
+
 
       <section className={styles.priceCard}>
         <div>
@@ -130,6 +143,7 @@ export default function PropertyPage(){
           <strong>{priceLabel(p.priceFrom)}</strong>
           <small>Стартовая цена. Стоимость зависит от планировки.</small>
         </div>
+        <div className={styles.projectFacts} role="region" aria-label="Ключевые характеристики">{facts.map(({label,value,icon:Icon})=><div key={label}><Icon size={16}/><span>{label}</span><strong>{value}</strong></div>)}</div>
         {minDown!==null&&mortgageRule&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
         <Link to={propertyMortgageLink(p)}>
           <WalletCards size={17}/>
@@ -139,33 +153,35 @@ export default function PropertyPage(){
         {p.floorplans.length>0&&<button type="button" className={styles.pricePlans} onClick={()=>jump('property-plans')}>Выбрать планировку и её цену <ArrowDown size={14}/></button>}
       </section>
 
-      <section className={styles.decisionCard} aria-label="Ключевые характеристики">
-        <div className={styles.decisionHead}>
-          <div><span>{fromPulse?"PULSE SELECT":"КЛЮЧЕВОЕ"}</span><h2>{fromPulse?"Почему PULSE показывает этот ЖК":"Почему стоит рассмотреть"}</h2></div>
-          {fromPulse&&<small><Sparkles size={12}/>Из вашей подборки</small>}
-        </div>
-        <div className={styles.decisionRows}>
-          <div><IconTile><CalendarDays size={17}/></IconTile><div><small>Срок сдачи</small><strong>{p.delivery||"Уточняется"}</strong></div></div>
-          <div><IconTile><MapPin size={17}/></IconTile><div><small>Локация</small><strong>{p.district||"Уточняется"}</strong></div></div>
-          <div><IconTile><HighlightIcon size={17}/></IconTile><div><small>Сильная сторона</small><strong>{highlightFeature?.label||p.className||"Параметры проекта"}</strong></div></div>
-          <div><IconTile><LayoutGrid size={17}/></IconTile><div><small>Планировки</small><strong>{p.floorplans.length?p.floorplans.length+" в каталоге":"Уточняются"}</strong></div></div>
-        </div>
-      </section>
+      <nav className={styles.sectionNav} aria-label="Разделы жилого комплекса">
+        {p.floorplans.length>0&&<button type="button" onClick={()=>jump('property-plans')}><LayoutGrid size={15}/>Планировки</button>}
+        <button type="button" onClick={()=>jump('property-location')}><MapPin size={15}/>Расположение</button>
+        {!!p.documents?.length&&<button type="button" onClick={()=>jump('property-materials')}><FileText size={15}/>Документы</button>}
+      </nav>
+
+      {roomOptions.length>0&&<section className={styles.apartmentSummary} aria-label="Квартиры в ЖК">
+        <div className={styles.sectionHead}><div><span>КВАРТИРЫ</span><h2>Найдите свой вариант</h2></div></div>
+        <p className={styles.sectionHint}>{details?.availableApartments!=null?'В продаже: '+details.availableApartments.toLocaleString('ru-RU')+' '+(details.availableApartments%100>=11&&details.availableApartments%100<=14?'квартир':details.availableApartments%10===1?'квартира':details.availableApartments%10>=2&&details.availableApartments%10<=4?'квартиры':'квартир')+'.':'Актуальное наличие уточним по запросу.'} Выберите комнатность, чтобы перейти к планировкам.</p>
+        <div className={styles.roomCards}>{roomOptions.map(room=>{
+          const plans=p.floorplans.filter(plan=>normalizeRoomLabel(plan.roomLabel)===room);
+          const prices=plans.flatMap(plan=>plan.priceFrom!==null?[plan.priceFrom]:[]);
+          const areas=plans.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]);
+          return <button type="button" key={room} aria-label={'Выбрать планировки: '+room} onClick={()=>{setSelectedRoom(room);requestAnimationFrame(()=>jump('property-plans'))}}><span>{room==='Студия'?'Студии':room+' комн.'}<ChevronRight size={15}/></span><strong>{prices.length?priceLabel(Math.min(...prices)):'Цена по запросу'}</strong><small>{areas.length?'от '+Math.min(...areas).toLocaleString('ru-RU')+' м² · ':''}Планировок: {plans.length}</small></button>;
+        })}</div>
+      </section>}
 
       <section className={styles.section}>
         <div className={styles.sectionHead}><div><span>О ПРОЕКТЕ</span><h2>Главное о {p.name}</h2></div></div>
         <p className={styles.desc}>{p.description||"Описание проекта уточняется."}</p>
-      </section>
-
-      {p.features.length>0&&<section className={styles.section}>
-        <div className={styles.sectionHead}><div><span>ПРЕИМУЩЕСТВА</span><h2>Что есть в проекте</h2></div><small>{p.features.length} пунктов</small></div>
+      {p.features.length>0&&<>
         <div className={styles.features}>
           {[...p.features].sort((a,b)=>a.sortOrder-b.sortOrder).map(feature=>{
             const Icon=featureIcon(feature.icon);
             return <div key={feature.id||feature.label}><IconTile><Icon size={18}/></IconTile><strong>{feature.label}</strong></div>;
           })}
         </div>
-      </section>}
+      </>}
+      </section>
 
       <section id="property-plans" className={styles.section} aria-label="Планировки ЖК">
         <div className={styles.sectionHead}>
@@ -199,17 +215,20 @@ export default function PropertyPage(){
         <Link className={styles.mapLink} to={'/catalog?'+new URLSearchParams({view:'map',city:p.city,q:p.name})}>Посмотреть ЖК на карте <ChevronRight size={16}/></Link>
       </section>
 
-      <section className={styles.section}>
-        <div className={styles.sectionHead}><div><span>ХАРАКТЕРИСТИКИ</span><h2>Детали проекта</h2></div></div>
+      <details className={styles.moreDetails}>
+        <summary>Все характеристики ЖК <ChevronRight size={18}/></summary>
         <div className={styles.specs}>
           <div><span>Адрес</span><strong>{p.address||p.city+" · "+p.district}</strong></div>
           <div><span>Застройщик</span><strong>{developer||"Уточняется"}</strong></div>
           <div><span>Класс</span><strong>{p.className||"Уточняется"}</strong></div>
           <div><span>Срок сдачи</span><strong>{p.delivery||"Уточняется"}</strong></div>
+          <div><span>Плановый ввод дома</span><strong>{commissioning||"Дата уточняется"}</strong></div>
+          {details?.totalApartments!=null&&<div><span>Всего квартир в ЖК</span><strong>{details.totalApartments.toLocaleString('ru-RU')}</strong></div>}
+          {details?.availableApartments!=null&&<div><span>Квартир в продаже</span><strong>{details.availableApartments.toLocaleString('ru-RU')}</strong></div>}
           <div><span>Цена от</span><strong>{priceLabel(p.priceFrom).replace("от ","")}</strong></div>
           <div><span>Типы квартир</span><strong>{roomOptions.length?roomOptions.join(" · "):"Уточняются"}</strong></div>
         </div>
-      </section>
+      </details>
 
       {(p.documents??[]).length>0&&<section id="property-materials" className={styles.section}>
         <div className={styles.sectionHead}><div><span>МАТЕРИАЛЫ</span><h2>Документы проекта</h2></div><small>{(p.documents??[]).length} файлов</small></div>
@@ -224,7 +243,7 @@ export default function PropertyPage(){
 
       <section className={styles.helpCard}><IconTile><MessageCircle size={22}/></IconTile><h2>Разберёмся в деталях вместе</h2><p>Уточним наличие, сравним планировки и подберём условия покупки именно для вас.</p><LeadSheet title="Задать вопрос по ЖК" project={p.name} propertyId={p.id} source="property"><button>Задать вопрос <ChevronRight size={16}/></button></LeadSheet></section>
 
-      <Sheet>
+      {developer&&<Sheet>
         <SheetTrigger asChild>
           <button className={styles.developer}>
             <IconTile as="div" className={styles.devIcon}><Building2 size={20}/></IconTile>
@@ -236,7 +255,7 @@ export default function PropertyPage(){
           <SheetHeader><SheetTitle>{developer||"О проекте"}</SheetTitle><SheetDescription>Перед бронированием менеджер PULSEDV.RU уточнит актуальные цены, наличие квартир и условия покупки.</SheetDescription></SheetHeader>
           <div className={styles.developerInfo}><ShieldCheck size={22}/><span><strong>Проверим перед сделкой</strong><small>Данные в приложении используются для подбора. Коммерческие условия могут меняться.</small></span></div>
         </SheetContent>
-      </Sheet>
+      </Sheet>}
     </main>
 
     <div className={styles.ctaBar} role="region" aria-label="Действия с ЖК">

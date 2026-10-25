@@ -1,3 +1,4 @@
+import {ProjectDetailsEditor} from '../components/ProjectDetailsEditor';
 import {CatalogFreshnessEditor,CatalogFreshnessBadge} from '../components/CatalogFreshnessEditor';
 import {CatalogPhotosEditor} from '../components/CatalogPhotosEditor';
 import {propertyPriceRub} from '../../../../packages/domain/propertyPresentation';
@@ -73,8 +74,8 @@ function downloadCsv(name:string,headers:string[],example:string[]){
 function downloadTemplates(){
   const files=[
     ["pulse-objects.csv",
-      ["id","name","city","district","address","developerName","delivery","className","priceFrom","description","tags","latitude","longitude","status","coverImageUrl","sortOrder"],
-      ["solnechniy","ЖК Солнечный","Владивосток","Патрокл","Владивосток, Патрокл","Застройщик","IV кв. 2026","Комфорт+","6.2","Описание ЖК","Вид на море|Семейный","","","draft","","10"]],
+      ["id","name","city","district","address","developerName","delivery","className","priceFrom","description","tags","latitude","longitude","status","coverImageUrl","sortOrder","commissioningDate","totalApartments","availableApartments"],
+      ["solnechniy","ЖК Солнечный","Владивосток","Патрокл","Владивосток, Патрокл","Застройщик","IV кв. 2026","Комфорт+","6.2","Описание ЖК","Вид на море|Семейный","","","draft","","10","","",""]],
     ["pulse-floorplans.csv",
       ["propertyId","id","roomLabel","areaFrom","areaTo","priceFrom","imageUrl","sortOrder"],
       ["solnechniy","2room-56","2","52","69","8.6","","1"]],
@@ -284,6 +285,7 @@ export function ServerObjectsPage(){
       const properties:PulseProperty[]=objectRows.map((row,index)=>({
         id:row.id||crypto.randomUUID(),name:row.name||"Новый ЖК",city:row.city||"Владивосток",district:row.district||"",
         address:row.address||null,latitude:numberOrNull(row.latitude),longitude:numberOrNull(row.longitude),
+        ...(['commissioningDate','totalApartments','availableApartments'].some(key=>key in row)?{projectDetails:{commissioningDate:row.commissioningDate||null,totalApartments:numberOrNull(row.totalApartments),availableApartments:numberOrNull(row.availableApartments)}}:{}),
         priceFrom:numberOr(row.priceFrom,0),delivery:row.delivery||"",className:row.className||"",
         status:row.status==="published"||row.status==="archived"?row.status:"draft",description:row.description||"",
         developerName:row.developerName||"",tags:(row.tags||"").split("|").map(x=>x.trim()).filter(Boolean),
@@ -399,6 +401,7 @@ export function ServerObjectsPage(){
       </div>
 
       <CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} disabled={busy}/>
+      <ProjectDetailsEditor key={p.id} value={p.projectDetails} onChange={projectDetails=>patch({projectDetails})}/>
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>То, что формирует карточку и страницу ЖК</small></div></div>
         <div className="formGrid">

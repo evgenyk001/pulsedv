@@ -19,8 +19,14 @@ export const financeSchema=z.object({commissionRub:money,agentPayoutRub:money,ex
  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Vladivostok',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
  if([v.receivedOn,v.agentPaidOn].some(d=>d&&d>today))ctx.addIssue({code:'custom',message:'Фактическая оплата не может быть в будущем'});
 });
+export const projectDetailsSchema=z.object({
+ commissioningDate:z.iso.date().nullable().default(null),
+ totalApartments:z.number().int().nonnegative().max(2_000_000).nullable().default(null),
+ availableApartments:z.number().int().nonnegative().max(2_000_000).nullable().default(null)
+}).strict().refine(v=>v.totalApartments===null||v.availableApartments===null||v.availableApartments<=v.totalApartments,'В продаже не может быть больше квартир, чем всего в ЖК');
 const property=z.object({
  freshness:freshnessSchema.optional(),
+ projectDetails:projectDetailsSchema.optional(),
  id,name:text().min(1),city:text(100).min(1),district:text(100),address:nullableText(400),latitude:z.number().min(-90).max(90).nullable(),longitude:z.number().min(-180).max(180).nullable(),priceFrom:z.number().min(0).max(10000),delivery:text(100),className:text(100),status:z.enum(['draft','published','archived']),description:text(10000),developerName:text(),tags:z.array(text(100)).max(20),coverImageUrl:image,sortOrder:z.number().int(),
  images:z.array(z.object({id:id.optional(),url:https,alt:text(),sortOrder:z.number().int()})).max(50),
  features:z.array(z.object({id:id.optional(),label:text(),icon:text(50),sortOrder:z.number().int()})).max(30),
@@ -97,6 +103,7 @@ const mediaUrl=z.string().max(2048).refine(value=>{
 
 export const catalogPropertySchema=z.object({
  freshness:freshnessSchema.optional(),
+ projectDetails:projectDetailsSchema.optional(),
  id,revision:z.number().int().positive().optional(),
  name:text().min(1),
  city:text(100).min(1),
