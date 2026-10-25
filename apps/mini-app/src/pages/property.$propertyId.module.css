@@ -252,3 +252,11 @@
   .roomCards button{padding:11px;min-height:105px}
   .roomCards strong{font-size:12px}
 }
+
+.priceFreshness{padding-top:2px}
+.priceFreshness summary{list-style:none;display:flex;align-items:center;gap:7px;font-size:10.5px;line-height:1.35;color:var(--muted-foreground);cursor:pointer}
+.priceFreshness summary::-webkit-details-marker{display:none}
+.priceFreshness summary>svg:first-child{flex:none}
+.priceFreshness summary>svg:last-child{flex:none;margin-left:auto;transition:transform .2s ease}
+.priceFreshness[open] summary>svg:last-child{transform:rotate(90deg)}
+.priceFreshness p{font-size:10.5px!important;line-height:1.45!important;margin:8px 0 0!important;color:var(--muted-foreground)!important}
