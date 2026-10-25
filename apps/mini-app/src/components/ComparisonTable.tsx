@@ -11,6 +11,24 @@ function readScenario(){
  return defaults;
 }
 
+// Keep the user's draft separate from the last valid calculation. In particular,
+// clearing an input must not coerce an empty string to 0 (or the minimum term).
+function ScenarioNumberInput({label,value,min,max,integer=false,onChange}:{label:string;value:number;min:number;max:number;integer?:boolean;onChange:(value:number)=>void}){
+ const [draft,setDraft]=React.useState(String(value).replace('.',','));
+ const edit=(text:string)=>{
+  if(!(integer?/^\d*$/:/^\d*(?:[.,]\d*)?$/).test(text))return;
+  setDraft(text);
+  const number=text.trim()===''?NaN:Number(text.replace(',','.'));
+  if(Number.isFinite(number)&&number>=min&&number<=max)onChange(number);
+ };
+ const commit=()=>{
+  const number=draft.trim()===''?NaN:Number(draft.replace(',','.'));
+  const next=Number.isFinite(number)?Math.min(max,Math.max(min,number)):value;
+  onChange(next);setDraft(String(next).replace('.',','));
+ };
+ return <input aria-label={label} type="text" inputMode={integer?'numeric':'decimal'} maxLength={12} value={draft} onChange={e=>edit(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur()}}/>;
+}
+
 export function ComparisonTable({properties,onReplace,onRemove}:{properties:PulseProperty[];onReplace?:(index:number)=>void;onRemove?:(index:number)=>void}){
  const location=useLocation();
  const [scenario,setScenario]=React.useState(readScenario);
@@ -66,9 +84,9 @@ export function ComparisonTable({properties,onReplace,onRemove}:{properties:Puls
   <section className={styles.scenario}>
    <div className={styles.scenarioHead}><span><SlidersHorizontal size={16}/></span><div><strong>Сценарий платежа</strong><small>Меняйте параметры — расчёт обновится сразу</small></div></div>
    <div className={styles.inputs}>
-    <label><span>Взнос</span><div><input aria-label="Взнос, %" type="number" min={0} max={100} value={down} onChange={e=>setDown(Math.min(100,Math.max(0,Number(e.target.value))))}/><b>%</b></div></label>
-    <label><span>Ставка</span><div><input aria-label="Ставка, %" type="number" min={0} max={50} step={0.1} value={rate} onChange={e=>setRate(Math.min(50,Math.max(0,Number(e.target.value))))}/><b>%</b></div></label>
-    <label><span>Срок</span><div><input aria-label="Срок, лет" type="number" min={1} max={30} value={years} onChange={e=>setYears(Math.min(30,Math.max(1,Number(e.target.value))))}/><b>лет</b></div></label>
+    <label><span>Взнос</span><div><ScenarioNumberInput label="Взнос, %" min={0} max={100} value={down} onChange={setDown}/><b>%</b></div></label>
+    <label><span>Ставка</span><div><ScenarioNumberInput label="Ставка, %" min={0} max={50} value={rate} onChange={setRate}/><b>%</b></div></label>
+    <label><span>Срок</span><div><ScenarioNumberInput label="Срок, лет" min={1} max={30} integer value={years} onChange={setYears}/><b>лет</b></div></label>
    </div>
   </section>
 
