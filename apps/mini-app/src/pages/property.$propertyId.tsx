@@ -18,10 +18,9 @@ import { Link, useParams, useLocation } from "react-router-dom";
 import {
   Heart, Share2, MapPin, CalendarDays, Building2, Waves, Trees, CarFront,
   Baby, ShieldCheck, ChevronRight, Send, Sparkles, MapPinned, LayoutGrid, Ruler,
-  WalletCards, FileText, ArrowDown, MessageCircle
+  WalletCards, FileText, MessageCircle
 } from "lucide-react";
 import { LeadSheet } from "../components/LeadSheet";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
 import { usePropertyDetail } from "../helpers/useCatalog";
 import { useFavoriteIds } from "../helpers/useFavoriteIds";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
@@ -92,9 +91,11 @@ export default function PropertyPage(){
   const gallery=propertyPhotos(p);
   const mortgageRule=control.mortgagePrograms.find(rule=>rule.id===savedScenario?.programId)??control.mortgagePrograms[0];
   const hasConfirmedFinishingPrices=p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>offer.priceFrom!==null));
-  const matchedPricedPlans=(selectedFinish?p.floorplans.map(plan=>({plan,price:planPriceForFinish(plan,selectedFinish)})):hasConfirmedFinishingPrices?p.floorplans.map(plan=>({plan,price:planStartingPrice(plan)})):[])
+  // A chosen room or finish must never inherit another apartment type's cheaper price.
+  const priceCandidates=selectedRoom?p.floorplans.filter(plan=>normalizeRoomLabel(plan.roomLabel)===selectedRoom):p.floorplans;
+  const matchedPricedPlans=(selectedFinish?priceCandidates.map(plan=>({plan,price:planPriceForFinish(plan,selectedFinish)})):(selectedRoom||hasConfirmedFinishingPrices)?priceCandidates.map(plan=>({plan,price:planStartingPrice(plan)})):[])
     .filter((offer):offer is {plan:typeof p.floorplans[number];price:number}=>offer.price!==null).sort((a,b)=>a.price-b.price);
-  const selectedPrice=selectedFinish?(matchedPricedPlans[0]?.price??null):(matchedPricedPlans[0]?.price??p.priceFrom);
+  const selectedPrice=selectedFinish||selectedRoom?(matchedPricedPlans[0]?.price??null):(matchedPricedPlans[0]?.price??p.priceFrom);
   const mortgagePrice=selectedPrice===null?null:propertyPriceRub(selectedPrice);
   const minDown=mortgageRule&&mortgagePrice!==null?calculateMortgageScenario({programs:control.mortgagePrograms,settings:{...savedScenario,programId:mortgageRule.id,propertyKind:'newbuild',largeArea:false},price:mortgagePrice,down:0})?.requiredDown??null:null;
   const presentation=p.documents?.find(doc=>doc.kind==="presentation");
@@ -115,15 +116,14 @@ export default function PropertyPage(){
   const areaValues=p.floorplans.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]).filter((v):v is number=>typeof v==='number'&&v>0);
   const minArea=areaValues.length?Math.min(...areaValues):null;
   const commissioning=formatProjectDate(details?.commissioningDate);
+  // Only a few key facts appear above apartment selection. The full spec is below.
   const facts=[
     {label:'Срок сдачи',value:p.delivery||'Уточняется',icon:CalendarDays},
-    ...(commissioning?[{label:'Плановый ввод дома',value:commissioning,icon:Building2}]:[]),
-    ...(details?.totalApartments!=null?[{label:'Всего квартир в ЖК',value:details.totalApartments.toLocaleString('ru-RU'),icon:LayoutGrid}]:[]),
-    ...(details?.availableApartments!=null?[{label:'Квартир в продаже',value:details.availableApartments.toLocaleString('ru-RU'),icon:Building2}]:[]),
     ...(minArea!==null?[{label:'Площадь от',value:minArea.toLocaleString('ru-RU')+' м²',icon:Ruler}]:[]),
+    ...(commissioning?[{label:'Ввод дома',value:commissioning,icon:Building2}]:[]),
+    ...(details?.availableApartments!=null?[{label:'В продаже',value:details.availableApartments.toLocaleString('ru-RU')+' кв.',icon:LayoutGrid}]:details?.totalApartments!=null?[{label:'Всего квартир',value:details.totalApartments.toLocaleString('ru-RU'),icon:LayoutGrid}]:[]),
     ...(p.className?[{label:'Класс жилья',value:p.className,icon:ShieldCheck}]:[]),
-  ];
-  if(facts.length<4&&roomOptions.length)facts.push({label:'Типы квартир',value:roomOptions.join(' · '),icon:LayoutGrid});
+  ].slice(0,4);
 
   const share=async()=>{
     try{
@@ -155,7 +155,7 @@ export default function PropertyPage(){
           {p.className&&<span>{p.className}</span>}
           {p.tags.slice(0,2).map(tag=><span key={tag}>{tag}</span>)}
         </div>
-        <h1>{p.name}</h1>{fromPulse&&<span className={styles.selectionBadge}>Из вашей подборки PULSE Select</span>}<PropertyFreshness id={p.id}/>
+        <h1>{p.name}</h1>{fromPulse&&<span className={styles.selectionBadge}>Из вашей подборки PULSE Select</span>}
         <div className={styles.location}><MapPin size={14}/>{p.city} · {p.district}</div>
         <div className={styles.developerLine}><Building2 size={13}/>{developer||"Застройщик уточняется"}</div>
         {shareNotice&&<span className={styles.shareNotice} role="status">{shareNotice}</span>}
@@ -163,47 +163,45 @@ export default function PropertyPage(){
 
 
 
-      <section className={styles.priceCard}>
-        <div>
-          <span>{selectedFinish?'Квартиры · '+apartmentFinishLabel(selectedFinish):'Стоимость квартиры'}</span>
+      <div className={styles.quickFacts} role="region" aria-label="Главное о жилом комплексе">
+        {facts.map(({label,value,icon:Icon})=><div key={label} className={styles.quickFact}><Icon size={17}/><span><small>{label}</small><strong>{value}</strong></span></div>)}
+      </div>
+
+      <section className={styles.priceCard} aria-label="Стоимость и ипотека">
+        <div className={styles.priceMain}>
+          <span>{selectedRoom?'ЦЕНА · '+(selectedRoom==='Студия'?'СТУДИЯ':selectedRoom+' КОМН.')+(selectedFinish?' · '+apartmentFinishLabel(selectedFinish):''):selectedFinish?'ЦЕНА С ОТДЕЛКОЙ · '+apartmentFinishLabel(selectedFinish):'ЦЕНА КВАРТИРЫ ОТ'}</span>
           <strong>{selectedPrice!==null?priceLabel(selectedPrice):'Цена уточняется'}</strong>
-          <small>{selectedFinish?'Цена зависит от выбранной планировки и отделки.':'Стартовая цена. Стоимость зависит от планировки.'}</small>
+          <small>{selectedFinish?'Цена зависит от планировки и выбранной отделки.':'Стоимость зависит от квартиры и отделки.'}</small>
         </div>
-        <div className={styles.finishSummary} role="group" aria-label="Варианты отделки">
-          <span className={styles.finishLabel}>ОТДЕЛКА КВАРТИР</span>
-          {finishTypes.length>0?<><div className={styles.finishPills}>
+        {minDown!==null&&mortgageRule&&mortgagePrice!==null&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
+        {selectedPrice!==null?<Link to={matchedPricedPlans[0]?propertyMortgageLink(p,matchedPricedPlans[0].plan,selectedFinish):propertyMortgageLink(p)}>
+          <WalletCards size={18}/>
+          <span>Рассчитать ипотеку</span>
+          <ChevronRight size={17}/>
+        </Link>:<div className={styles.pricePending}>Цена выбранной отделки пока не подтверждена. Уточним стоимость у застройщика.</div>}
+        <details className={styles.priceFreshness}>
+          <summary><ShieldCheck size={15}/>Цены и наличие подтвердим перед бронированием <ChevronRight size={15}/></summary>
+          <PropertyFreshness id={p.id}/>
+        </details>
+      </section>
+
+      {roomOptions.length>0&&<section id="property-plans" className={styles.apartmentSummary} aria-label="Квартиры и планировки ЖК">
+        <div className={styles.sectionHead}><div><span>ВЫБОР КВАРТИРЫ</span><h2>Квартиры и планировки</h2></div><small>{p.floorplans.length} планировок</small></div>
+        <p className={styles.sectionHint}>{details?.availableApartments!=null?'В продаже: '+details.availableApartments.toLocaleString('ru-RU')+' · ':''}Выберите комнатность, затем откройте понравившуюся планировку.</p>
+        {finishTypes.length>0&&<div className={styles.finishSummary} role="group" aria-label="Варианты отделки">
+          <div className={styles.finishTop}><span>Отделка</span><small>Меняет цену и доступные варианты</small></div>
+          <div className={styles.finishPills}>
             <button type="button" aria-pressed={selectedFinish===null} className={selectedFinish===null?styles.finishSelected:""} onClick={()=>selectFinish(null)}>Все варианты</button>
             {finishTypes.map(([value,label])=><button key={value} type="button" aria-pressed={selectedFinish===value} className={selectedFinish===value?styles.finishSelected:""} onClick={()=>selectFinish(value)}>{label}</button>)}
-          </div><small>Выберите отделку. Цены и доступные планировки зависят от варианта.</small>
+          </div>
           <details className={styles.finishHelp}><summary>Чем отличаются варианты отделки?</summary>
             <p><b>Черновая:</b> основные строительные работы без чистовой отделки.</p>
             <p><b>White Box:</b> предчистовая подготовка под финальные покрытия.</p>
             <p><b>Готовый ремонт:</b> квартира с выполненной чистовой отделкой.</p>
             <p><b>Без отделки:</b> без отделочных работ или с минимальной подготовкой.</p>
             <small>Точный состав работ различается у застройщиков и указан в договоре.</small>
-          </details></>:
-          <strong className={styles.finishUnknown}>Отделка уточняется</strong>}
-        </div>
-        <div className={styles.projectFacts} role="region" aria-label="Ключевые характеристики">{facts.map(({label,value,icon:Icon})=><div key={label}><Icon size={16}/><span>{label}</span><strong>{value}</strong></div>)}</div>
-        {minDown!==null&&mortgageRule&&mortgagePrice!==null&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
-        {selectedPrice!==null?<Link to={matchedPricedPlans[0]?propertyMortgageLink(p,matchedPricedPlans[0].plan,selectedFinish):propertyMortgageLink(p)}>
-          <WalletCards size={17}/>
-          <span>Рассчитать ипотеку</span>
-          <ChevronRight size={16}/>
-        </Link>:<div className={styles.pricePending}>Стоимость этой отделки ещё не подтверждена. Выберите другой вариант или уточните цену у менеджера.</div>}
-        {p.floorplans.length>0&&<button type="button" className={styles.pricePlans} onClick={()=>jump('property-plans')}>Выбрать планировку и её цену <ArrowDown size={14}/></button>}
-      </section>
-
-      <nav className={styles.sectionNav} aria-label="Разделы жилого комплекса">
-        {p.floorplans.length>0&&<button type="button" onClick={()=>jump('property-plans')}><LayoutGrid size={15}/>Планировки</button>}
-        <button type="button" onClick={()=>jump('property-location')}><MapPin size={15}/>Расположение</button>
-        {!!p.documents?.length&&<button type="button" onClick={()=>jump('property-materials')}><FileText size={15}/>Документы</button>}
-      </nav>
-
-      {roomOptions.length>0&&<section id="property-plans" className={styles.apartmentSummary} aria-label="Квартиры и планировки ЖК">
-        <div className={styles.sectionHead}><div><span>КВАРТИРЫ И ПЛАНИРОВКИ</span><h2>Найдите свой вариант</h2></div><small>{p.floorplans.length} планировок</small></div>
-        <p className={styles.sectionHint}>{details?.availableApartments!=null?'В продаже: '+details.availableApartments.toLocaleString('ru-RU')+' '+(details.availableApartments%100>=11&&details.availableApartments%100<=14?'квартир':details.availableApartments%10===1?'квартира':details.availableApartments%10>=2&&details.availableApartments%10<=4?'квартиры':'квартир')+'. ':'Актуальное наличие уточним по запросу. '}Нажмите на комнатность, чтобы посмотреть планировки и цены.</p>
-        {finishTypes.length>0&&<div className={styles.activeFinish}>Отделка: <strong>{selectedFinish?apartmentFinishLabel(selectedFinish):'все варианты'}</strong></div>}
+          </details>
+        </div>}
         <div className={styles.roomCards}>{roomOptions.map(room=>{
           const plans=p.floorplans.filter(plan=>normalizeRoomLabel(plan.roomLabel)===room);
           const matching=plans.filter(matchesFinish);
@@ -282,19 +280,7 @@ export default function PropertyPage(){
 
       <section className={styles.helpCard}><IconTile><MessageCircle size={22}/></IconTile><h2>Разберёмся в деталях вместе</h2><p>Уточним наличие, сравним планировки и подберём условия покупки именно для вас.</p><LeadSheet title="Задать вопрос по ЖК" project={p.name} propertyId={p.id} source="property"><button>Задать вопрос <ChevronRight size={16}/></button></LeadSheet></section>
 
-      {developer&&<Sheet>
-        <SheetTrigger asChild>
-          <button className={styles.developer}>
-            <IconTile as="div" className={styles.devIcon}><Building2 size={20}/></IconTile>
-            <div><span>Застройщик</span><strong>{developer||"Информация уточняется"}</strong><small><ShieldCheck size={12}/> Данные проекта в базе PULSEDV.RU</small></div>
-            <ChevronRight size={18}/>
-          </button>
-        </SheetTrigger>
-        <SheetContent side="bottom" className={styles.developerSheet}>
-          <SheetHeader><SheetTitle>{developer||"О проекте"}</SheetTitle><SheetDescription>Перед бронированием менеджер PULSEDV.RU уточнит актуальные цены, наличие квартир и условия покупки.</SheetDescription></SheetHeader>
-          <div className={styles.developerInfo}><ShieldCheck size={22}/><span><strong>Проверим перед сделкой</strong><small>Данные в приложении используются для подбора. Коммерческие условия могут меняться.</small></span></div>
-        </SheetContent>
-      </Sheet>}
+
     </main>
 
     <div className={styles.ctaBar} role="region" aria-label="Действия с ЖК">

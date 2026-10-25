@@ -70,8 +70,10 @@ for(const width of [320,390,430])test(`Property experience ${width}px: fullscree
  await expect(page.getByRole('combobox',{name:'Тип недвижимости'})).toHaveValue('newbuild');
  const context=page.getByRole('region',{name:'Расчёт выбранного ЖК'});await expect(context).toContainText('ЖК Приморский');
  await context.getByRole('button',{name:'Вернуться к ЖК'}).click();
- await page.getByRole('navigation',{name:'Разделы жилого комплекса'}).getByRole('button',{name:'Планировки',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Главное о жилом комплексе'})).toBeVisible();
+ await expect(page.getByRole('region',{name:'Квартиры и планировки ЖК'})).toBeVisible();
  await page.getByRole('button',{name:'Выбрать планировки: 2',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Стоимость и ипотека'})).toContainText('от '+rub(8765432)+' ₽');
  await page.getByRole('region',{name:'Квартиры и планировки ЖК'}).getByRole('link',{name:'Рассчитать платёж'}).click();
  await expect(page.getByRole('textbox',{name:'Стоимость недвижимости',exact:true})).toHaveValue(rub(8765432));
  await expect(page.getByRole('textbox',{name:'Первоначальный взнос',exact:true})).toHaveValue(rub(1761852));
