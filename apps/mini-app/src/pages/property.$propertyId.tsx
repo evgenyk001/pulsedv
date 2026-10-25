@@ -155,7 +155,6 @@ export default function PropertyPage(){
           <strong>{selectedPrice!==null?priceLabel(selectedPrice):'Цена уточняется'}</strong>
           <small>{selectedFinish?'Цена зависит от выбранной планировки и отделки.':'Стартовая цена. Стоимость зависит от планировки.'}</small>
         </div>
-        <div className={styles.projectFacts} role="region" aria-label="Ключевые характеристики">{facts.map(({label,value,icon:Icon})=><div key={label}><Icon size={16}/><span>{label}</span><strong>{value}</strong></div>)}</div>
         <div className={styles.finishSummary} role="group" aria-label="Варианты отделки">
           <span className={styles.finishLabel}>ОТДЕЛКА КВАРТИР</span>
           {finishTypes.length>0?<><div className={styles.finishPills}>
@@ -171,6 +170,7 @@ export default function PropertyPage(){
           </details></>:
           <strong className={styles.finishUnknown}>Отделка уточняется</strong>}
         </div>
+        <div className={styles.projectFacts} role="region" aria-label="Ключевые характеристики">{facts.map(({label,value,icon:Icon})=><div key={label}><Icon size={16}/><span>{label}</span><strong>{value}</strong></div>)}</div>
         {minDown!==null&&mortgageRule&&mortgagePrice!==null&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
         {selectedPrice!==null?<Link to={matchedPricedPlans[0]?propertyMortgageLink(p,matchedPricedPlans[0].plan,selectedFinish):propertyMortgageLink(p)}>
           <WalletCards size={17}/>
