@@ -1,72 +1,29 @@
 import {IconTile} from '../components/IconTile';
-import {ComparisonTable} from '../components/ComparisonTable';
-import React from "react";
 import { Link } from "react-router-dom";
-import { Heart, ChevronRight, Sparkles, GitCompareArrows, Check } from "lucide-react";
+import { Heart, ChevronRight, Sparkles, GitCompareArrows } from "lucide-react";
 import { PageHeader } from "../components/PageHeader";
 import { PropertyCard } from "../components/PropertyCard";
 import { useFavoriteProperties } from "../helpers/useCatalog";
 import { useFavoriteIds } from "../helpers/useFavoriteIds";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "../components/Sheet";
-import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./favorites.module.css";
 
 export default function Favorites(){
   const {ids,error:syncError,authenticated,pending,retry}=useFavoriteIds();
   const {data:saved=[],isLoading,error:catalogError,refetch}=useFavoriteProperties(ids);
-  const [compareIds,setCompareIds]=React.useState<string[]>(()=>{try{return JSON.parse(localStorage.getItem("pulse.compare.v1")||"[]").filter((x:unknown)=>typeof x==="string").slice(0,3)}catch{return []}});
-
-  React.useEffect(()=>{
-    setCompareIds(current=>current.filter(id=>ids.includes(id)));
-  },[ids.join("|")]);
-
-  React.useEffect(()=>{localStorage.setItem("pulse.compare.v1",JSON.stringify(compareIds))},[compareIds]);
-  const toggleCompare=(id:string)=>{
-    const removing=compareIds.includes(id);
-    if(!removing&&compareIds.length>=3)return;
-    recordPulseEvent({eventType:removing?"compare_remove":"compare_add",entityType:"property",entityId:id});
-    setCompareIds(current=>removing?current.filter(item=>item!==id):[...current,id]);
-  };
-
-  const compared=saved.filter(property=>compareIds.includes(property.id));
-
-  const compareButton=<button className={styles.compareCta} disabled={compareIds.length<2} onClick={()=>recordPulseEvent({eventType:"comparison_view",metadata:{propertyIds:compareIds.join(",")}})}>
-    <GitCompareArrows size={17}/>
-    Сравнить {compareIds.length>0?compareIds.length:""}
-  </button>;
-
   return <div className={styles.page}>
-    <PageHeader eyebrow="Ваш шорт-лист" title="Избранное" subtitle="Сохраняйте сильные варианты, отмечайте 2–3 проекта и сравнивайте их рядом."/>
+    <PageHeader eyebrow="Ваш шорт-лист" title="Избранное" subtitle="Сохраняйте понравившиеся ЖК и сравнивайте два варианта рядом."/>
 
     {syncError&&<p role="alert">{syncError} <button onClick={()=>void retry()}>Повторить синхронизацию</button></p>}
     {authenticated&&<p role="status">{pending?"Синхронизируем избранное…":"Избранное связано с вашим аккаунтом Telegram"}</p>}
     {catalogError&&<p role="alert">Не удалось загрузить сохранённые ЖК. <button onClick={()=>void refetch()}>Повторить</button></p>}
+    {saved.length>0&&<Link to="/compare" className={styles.compareEntry}>
+      <IconTile><GitCompareArrows size={21}/></IconTile>
+      <span><strong>Сравнить ЖК</strong><small>{saved.length===2?'Два сохранённых ЖК — сразу рядом':saved.length>2?'Выберите два ЖК и посмотрите различия':'Сохраните ещё один ЖК для сравнения'}</small></span><ChevronRight size={19}/>
+    </Link>}
     <div className={styles.list}>
-      {!isLoading&&saved.map(property=>{
-        const selected=compareIds.includes(property.id);
-        const disabled=!selected&&compareIds.length>=3;
-        return <div className={styles.savedItem} key={property.id}>
-          <PropertyCard property={property} compact/>
-          <button className={styles.compareToggle+" "+(selected?styles.compareSelected:"")} disabled={disabled} onClick={()=>toggleCompare(property.id)}>
-            <span>{selected?<Check size={14}/>:<GitCompareArrows size={14}/>}</span>
-            {selected?"В сравнении":"Добавить к сравнению"}
-          </button>
-        </div>;
-      })}
+      {!isLoading&&saved.map(property=><PropertyCard key={property.id} property={property} compact/>)}
       {!isLoading&&!catalogError&&saved.length===0&&<div className={styles.helper}><IconTile as="div"><Heart size={19}/></IconTile><span><strong>Пока ничего не сохранено</strong><small>Нажмите сердечко на карточке ЖК — объект появится здесь.</small></span></div>}
     </div>
-
-    {saved.length>0&&<div className={styles.compareBar}>
-      <div><GitCompareArrows size={17}/><span><strong>Сравнение</strong><small>{compareIds.length<2?"Выберите минимум 2 проекта":compareIds.length+" проекта выбрано"}</small></span></div>
-      {compareIds.length>=2?<Sheet>
-        <SheetTrigger asChild>{compareButton}</SheetTrigger>
-        <SheetContent side="bottom" className={styles.compareSheet}>
-          <SheetHeader><SheetTitle>Сравнение проектов</SheetTitle><SheetDescription>Сравните условия по одинаковым параметрам. Можно оставить только различия.</SheetDescription></SheetHeader>
-
-          <ComparisonTable properties={compared}/>
-        </SheetContent>
-      </Sheet>:compareButton}
-    </div>}
 
     <Link to="/selection" className={styles.helper}>
       <IconTile as="div"><Sparkles size={19}/></IconTile>

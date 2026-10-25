@@ -40,7 +40,7 @@ const priceLabel=propertyPriceLabel;
 export default function PropertyPage(){
   const {propertyId=""}=useParams();
   const location=useLocation();
-  const stateReturn=typeof location.state?.returnTo==="string"&&/^\/(catalog|favorites|selection|journey)?([?]|$)/.test(location.state.returnTo)?location.state.returnTo:null;
+  const stateReturn=typeof location.state?.returnTo==="string"&&/^\/(catalog|favorites|compare|selection|journey)?([?]|$)/.test(location.state.returnTo)?location.state.returnTo:null;
   const rememberedReturn=propertyReturn();
   const returnTo=stateReturn??rememberedReturn;
   const {data:p,isLoading,error,refetch}=usePropertyDetail(propertyId);

@@ -1,7 +1,8 @@
 import {FavoriteSync} from "../helpers/useFavoriteIds";
 import {attribution} from '../../../../packages/journey/attribution';
 import React from "react";
-import {NavigationMemory} from "../helpers/navigationMemory";
+import {BackLink} from './BackLink';
+import {NavigationMemory,useAppBack} from "../helpers/navigationMemory";
 import { useLocation } from "react-router-dom";
 import { BottomNav } from "./BottomNav";
 import { Onboarding } from "./Onboarding";
@@ -11,6 +12,12 @@ import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./AppShell.module.css";
 
 declare global { interface Window { Telegram?: { WebApp?: { ready?:()=>void; expand?:()=>void; disableVerticalSwipes?:()=>void; setHeaderColor?:(color:string)=>void; setBackgroundColor?:(color:string)=>void; HapticFeedback?:{impactOccurred?:(style:string)=>void} } } } }
+
+function ContextBack(){
+ const location=useLocation(),{canGoBack}=useAppBack();
+ const hasOwnBack=location.pathname.startsWith('/property/')||['/compare','/partners','/partner-offer','/partner-invite','/privacy','/personal-data-consent','/my-search','/journey'].includes(location.pathname);
+ return canGoBack&&!hasOwnBack&&location.pathname!=='/'&&!location.state?.tabRoot?<nav className={styles.contextBack} aria-label="Возврат"><BackLink to="/" aria-label="Назад к предыдущему экрану"/><span>Назад</span></nav>:null;
+}
 
 export function AppShell({children}:{children:React.ReactNode}){
   const location=useLocation();
@@ -76,12 +83,12 @@ export function AppShell({children}:{children:React.ReactNode}){
     recordPulseEvent({eventType:"page_view",entityType:"route",entityId:location.pathname,metadata:{search:location.search}});
   },[location.pathname,location.search]);
 
-  return <div className={styles.viewport}><NavigationMemory/><FavoriteSync/>
+  return <NavigationMemory><div className={styles.viewport}><FavoriteSync/>
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
     <main className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
-      <div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:propertyRoute?styles.propertyFrame:""}`}>{children}</div>
+      <ContextBack/><div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:propertyRoute?styles.propertyFrame:""}`}>{children}</div>
     </main>
     {!hideNav&&!storyOverlayOpen&&<BottomNav/>}
     {showOnboarding&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}
-  </div>
+  </div></NavigationMemory>
 }
