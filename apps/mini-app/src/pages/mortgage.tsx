@@ -436,6 +436,7 @@ function MortgageCalculator(){
         {ruleCards.map(item=><span key={item.sub}><b>{item.main}</b>{item.sub}</span>)}
       </div>
       <div className={styles.ruleHint}><Info size={14}/><span>{programHint()}</span></div>
+      <div className={styles.fieldMeta}>Взнос по программе — от {formatDownPercent(calculation.minDownPct)}. Итоговый взнос учитывает стоимость жилья и лимит кредита.</div>
       <div className={styles.fieldMeta}>Максимальный срок кредита — {maxYears} лет. {program==="family"&&calculation.familySubsidyYears!==null?"Льготная ставка — первые "+calculation.familySubsidyYears+" лет. ":""}Лимит кредита в этом сценарии — {formatRub(totalLimit)} ₽.</div>
 
       {propertyKind==="secondary"&&(program==="family"||program==="farEast")&&<div className={styles.contextWarning}>
