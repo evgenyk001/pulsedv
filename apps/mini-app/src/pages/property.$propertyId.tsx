@@ -153,7 +153,7 @@ export default function PropertyPage(){
           {p.className&&<span>{p.className}</span>}
           {p.tags.slice(0,2).map(tag=><span key={tag}>{tag}</span>)}
         </div>
-        <h1>{p.name}</h1>{fromPulse&&<span className={styles.selectionBadge}>Из вашей подборки PULSE Select</span>}<PropertyFreshness id={p.id}/>
+        <h1>{p.name}</h1>{fromPulse&&<span className={styles.selectionBadge}>Из вашей подборки PULSE Select</span>}
         <div className={styles.location}><MapPin size={14}/>{p.city} · {p.district}</div>
         <div className={styles.developerLine}><Building2 size={13}/>{developer||"Застройщик уточняется"}</div>
         {shareNotice&&<span className={styles.shareNotice} role="status">{shareNotice}</span>}
@@ -177,6 +177,10 @@ export default function PropertyPage(){
           <span>Рассчитать ипотеку</span>
           <ChevronRight size={17}/>
         </Link>:<div className={styles.pricePending}>Цена выбранной отделки пока не подтверждена. Уточним стоимость у застройщика.</div>}
+        <details className={styles.priceFreshness}>
+          <summary><ShieldCheck size={15}/>Цены и наличие подтвердим перед бронированием <ChevronRight size={15}/></summary>
+          <PropertyFreshness id={p.id}/>
+        </details>
       </section>
 
       {roomOptions.length>0&&<section id="property-plans" className={styles.apartmentSummary} aria-label="Квартиры и планировки ЖК">
