@@ -187,3 +187,5 @@
 .planCopy>small{font-size:10px;line-height:1.4;margin-top:10px;color:var(--muted-foreground)}
 @keyframes roomReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.planPanel{animation:none}}
+
+.pricePending{font-size:11px;line-height:1.5;color:var(--muted-foreground);padding:10px 12px;border-radius:14px;background:var(--muted)}

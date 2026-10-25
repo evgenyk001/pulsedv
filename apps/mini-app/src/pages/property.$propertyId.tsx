@@ -162,7 +162,7 @@ export default function PropertyPage(){
           </div><small>Выберите отделку. Цены и доступные планировки зависят от варианта.</small></>:
           <strong className={styles.finishUnknown}>Отделка уточняется</strong>}
         </div>
-        {minDown!==null&&mortgageRule&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
+        {minDown!==null&&mortgageRule&&mortgagePrice!==null&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
         {selectedPrice!==null?<Link to={selectedFinish&&matchedPricedPlans[0]?propertyMortgageLink(p,matchedPricedPlans[0].plan,selectedFinish):propertyMortgageLink(p)}>
           <WalletCards size={17}/>
           <span>Рассчитать ипотеку</span>
