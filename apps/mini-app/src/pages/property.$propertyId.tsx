@@ -159,7 +159,14 @@ export default function PropertyPage(){
           {finishTypes.length>0?<><div className={styles.finishPills}>
             <button type="button" aria-pressed={selectedFinish===null} className={selectedFinish===null?styles.finishSelected:""} onClick={()=>setSelectedFinish(null)}>Все варианты</button>
             {finishTypes.map(([value,label])=><button key={value} type="button" aria-pressed={selectedFinish===value} className={selectedFinish===value?styles.finishSelected:""} onClick={()=>setSelectedFinish(value)}>{label}</button>)}
-          </div><small>Выберите отделку. Цены и доступные планировки зависят от варианта.</small></>:
+          </div><small>Выберите отделку. Цены и доступные планировки зависят от варианта.</small>
+          <details className={styles.finishHelp}><summary>Чем отличаются варианты отделки?</summary>
+            <p><b>Черновая:</b> основные строительные работы без чистовой отделки.</p>
+            <p><b>White Box:</b> предчистовая подготовка под финальные покрытия.</p>
+            <p><b>Готовый ремонт:</b> квартира с выполненной чистовой отделкой.</p>
+            <p><b>Без отделки:</b> без отделочных работ или с минимальной подготовкой.</p>
+            <small>Точный состав работ различается у застройщиков и указан в договоре.</small>
+          </details></>:
           <strong className={styles.finishUnknown}>Отделка уточняется</strong>}
         </div>
         {minDown!==null&&mortgageRule&&mortgagePrice!==null&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
@@ -197,7 +204,7 @@ export default function PropertyPage(){
               const planPrice=priceForPlan(plan);
               const offers=planFinishOffers(plan);
               return <TrackedFloorplan property={p} plan={plan} className={styles.planCard} key={plan.id||plan.roomLabel+'-'+index}>
-                <div className={styles.planImage}><FloorplanViewer property={p} plan={plan} preferredFinish={selectedFinish}/></div>
+                <div className={plan.imageUrl?styles.planImage:styles.planImageMissing}><FloorplanViewer property={p} plan={plan} preferredFinish={selectedFinish}/></div>
                 <div className={styles.planCopy}>
                   <span>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'}</span>
                   <strong>{plan.areaFrom!==null?plan.areaFrom+(plan.areaTo&&plan.areaTo!==plan.areaFrom?'–'+plan.areaTo:'')+' м²':'Площадь уточняется'}</strong>
