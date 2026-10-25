@@ -93,7 +93,7 @@ export default function PropertyPage(){
   const hasConfirmedFinishingPrices=p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>offer.priceFrom!==null));
   // A chosen room or finish must never inherit another apartment type's cheaper price.
   const priceCandidates=selectedRoom?p.floorplans.filter(plan=>normalizeRoomLabel(plan.roomLabel)===selectedRoom):p.floorplans;
-  const matchedPricedPlans=(selectedFinish?priceCandidates.map(plan=>({plan,price:planPriceForFinish(plan,selectedFinish)})):hasConfirmedFinishingPrices?priceCandidates.map(plan=>({plan,price:planStartingPrice(plan)})):[])
+  const matchedPricedPlans=(selectedFinish?priceCandidates.map(plan=>({plan,price:planPriceForFinish(plan,selectedFinish)})):(selectedRoom||hasConfirmedFinishingPrices)?priceCandidates.map(plan=>({plan,price:planStartingPrice(plan)})):[])
     .filter((offer):offer is {plan:typeof p.floorplans[number];price:number}=>offer.price!==null).sort((a,b)=>a.price-b.price);
   const selectedPrice=selectedFinish||selectedRoom?(matchedPricedPlans[0]?.price??null):(matchedPricedPlans[0]?.price??p.priceFrom);
   const mortgagePrice=selectedPrice===null?null:propertyPriceRub(selectedPrice);
