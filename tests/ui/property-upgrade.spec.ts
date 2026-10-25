@@ -65,6 +65,6 @@ test('Finish selection changes the actual apartment offer, detailed view and mor
  await expect(detail.getByRole('link',{name:'Рассчитать эту планировку'})).toHaveCount(0);
  await detail.getByRole('button',{name:/White Box/}).click();
  await detail.getByRole('link',{name:'Рассчитать эту планировку'}).click();
- await expect(page.getByRole('textbox',{name:'Стоимость недвижимости',exact:true})).toHaveValue('8 250 000');
+ await expect(page.getByRole('textbox',{name:'Стоимость недвижимости',exact:true})).toHaveValue(/^8\s250\s000$/);
  await expect(page.getByRole('region',{name:'Расчёт выбранного ЖК'})).toContainText('White Box');
 });
