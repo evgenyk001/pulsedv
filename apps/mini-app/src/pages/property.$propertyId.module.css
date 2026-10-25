@@ -97,7 +97,7 @@
 .desc{font-size:12px;line-height:1.65;color:var(--muted-foreground);margin:12px 0 0}
 .features{display:flex;flex-direction:column;gap:11px;margin-top:17px}
 .features>div{display:flex;align-items:center;gap:9px;min-width:0}.features strong{font-size:12px;line-height:1.45;font-weight:600}
-.features [data-icon-tile]{width:30px;height:30px;flex:none}
+.features [data-icon-tile]{flex:none}
 .projectLocation{margin-top:20px;padding-top:18px;border-top:1px solid var(--border);scroll-margin-top:16px}
 .projectLocation h3{font-size:15px;margin:0;line-height:1.3}
 .addressCard{display:flex;align-items:center;gap:10px;padding:12px 0}
@@ -130,3 +130,5 @@
 @keyframes heroSettle{from{transform:scale(1.025);filter:saturate(.92)}to{transform:scale(1);filter:saturate(1)}}
 
 .projectFacts[data-count="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}.projectFacts[data-count="3"]>div{display:flex;flex-direction:column;gap:5px}.projectFacts[data-count="3"] svg{display:none}
+
+.financeSummary small{display:flex;flex-direction:column;gap:2px}
