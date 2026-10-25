@@ -5,15 +5,18 @@ import {monthlyMortgagePayment} from '../../../../packages/domain/propertyMatch'
 import type {PulseProperty} from '../../../../packages/pulse-data/model';
 import styles from './ComparisonTable.module.css';
 
+const MIN_DOWN=20.1;
+const MIN_RATE=2;
+
 function readScenario(){
  const defaults={different:false,down:30,rate:18,years:20};
- try{const v=JSON.parse(sessionStorage.getItem('pulse.compare.scenario.v1')||'null');if(v&&typeof v.different==='boolean'&&Number.isFinite(v.down)&&v.down>=0&&v.down<=100&&Number.isFinite(v.rate)&&v.rate>=0&&v.rate<=50&&Number.isFinite(v.years)&&v.years>=1&&v.years<=30)return v as typeof defaults}catch{}
+ try{const v=JSON.parse(sessionStorage.getItem('pulse.compare.scenario.v1')||'null');if(v&&typeof v.different==='boolean'&&Number.isFinite(v.down)&&v.down>=0&&v.down<=100&&Number.isFinite(v.rate)&&v.rate>=0&&v.rate<=50&&Number.isFinite(v.years)&&v.years>=1&&v.years<=30)return {...v,down:Math.max(MIN_DOWN,v.down),rate:Math.max(MIN_RATE,v.rate)} as typeof defaults}catch{}
  return defaults;
 }
 
 // Keep the user's draft separate from the last valid calculation. In particular,
 // clearing an input must not coerce an empty string to 0 (or the minimum term).
-function ScenarioNumberInput({label,value,min,max,integer=false,onChange}:{label:string;value:number;min:number;max:number;integer?:boolean;onChange:(value:number)=>void}){
+function ScenarioNumberInput({label,value,min,max,integer=false,descriptionId,onChange}:{descriptionId?:string;label:string;value:number;min:number;max:number;integer?:boolean;onChange:(value:number)=>void}){
  const [draft,setDraft]=React.useState(String(value).replace('.',','));
  const edit=(text:string)=>{
   if(!(integer?/^\d*$/:/^\d*(?:[.,]\d*)?$/).test(text))return;
@@ -26,7 +29,7 @@ function ScenarioNumberInput({label,value,min,max,integer=false,onChange}:{label
   const next=Number.isFinite(number)?Math.min(max,Math.max(min,number)):value;
   onChange(next);setDraft(String(next).replace('.',','));
  };
- return <input aria-label={label} type="text" inputMode={integer?'numeric':'decimal'} maxLength={12} value={draft} onChange={e=>edit(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur()}}/>;
+ return <input aria-label={label} aria-describedby={descriptionId} type="text" inputMode={integer?'numeric':'decimal'} maxLength={12} value={draft} onChange={e=>edit(e.target.value)} onBlur={commit} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur()}}/>;
 }
 
 export function ComparisonTable({properties,onReplace,onRemove}:{properties:PulseProperty[];onReplace?:(index:number)=>void;onRemove?:(index:number)=>void}){
@@ -84,8 +87,8 @@ export function ComparisonTable({properties,onReplace,onRemove}:{properties:Puls
   <section className={styles.scenario}>
    <div className={styles.scenarioHead}><span><SlidersHorizontal size={16}/></span><div><strong>Сценарий платежа</strong><small>Меняйте параметры — расчёт обновится сразу</small></div></div>
    <div className={styles.inputs}>
-    <label><span>Взнос</span><div><ScenarioNumberInput label="Взнос, %" min={0} max={100} value={down} onChange={setDown}/><b>%</b></div></label>
-    <label><span>Ставка</span><div><ScenarioNumberInput label="Ставка, %" min={0} max={50} value={rate} onChange={setRate}/><b>%</b></div></label>
+    <label><span>Взнос</span><div><ScenarioNumberInput label="Взнос, %" descriptionId="comparison-down-minimum" min={MIN_DOWN} max={100} value={down} onChange={setDown}/><b>%</b></div><small id="comparison-down-minimum">От 20,1%</small></label>
+    <label><span>Ставка</span><div><ScenarioNumberInput label="Ставка, %" descriptionId="comparison-rate-minimum" min={MIN_RATE} max={50} value={rate} onChange={setRate}/><b>%</b></div><small id="comparison-rate-minimum">От 2%</small></label>
     <label><span>Срок</span><div><ScenarioNumberInput label="Срок, лет" min={1} max={30} integer value={years} onChange={setYears}/><b>лет</b></div></label>
    </div>
   </section>

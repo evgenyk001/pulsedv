@@ -24,3 +24,5 @@
 .differenceToggle{position:relative;min-height:40px}.differenceToggle input{inset:0;margin:0;width:100%;height:100%;opacity:0;pointer-events:auto;cursor:pointer;z-index:1}.differenceToggle input:focus-visible+span{outline:2px solid var(--primary);outline-offset:3px}.differenceToggle>span{flex:none}
 
 .projectRail{top:calc(8px + var(--pulse-safe-top));background:var(--background);border-radius:var(--app-radius-card);padding:6px 0}.projectMedia>span{position:absolute;inset:0;display:grid;place-items:center}.projectMedia img{position:relative}.differenceToggle{font-size:11px}
+
+.inputs label>small{font-size:10px;line-height:1.3;color:var(--muted-foreground);padding-left:3px}

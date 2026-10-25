@@ -81,16 +81,24 @@ test('Failed bundle keeps branded screen and offers a working reload',async({pag
 });
 
 test('Comparison numeric drafts clear fully, accept decimal commas and commit limits on blur',async({page})=>{
- await seed(page,2);await page.goto('/pulsedv/mini-app/#/compare');
+ await seed(page,2);
+ await page.addInitScript(()=>{if(!sessionStorage.getItem('comparison-minimum-test')){sessionStorage.setItem('pulse.compare.scenario.v1',JSON.stringify({different:false,down:0,rate:0,years:20}));sessionStorage.setItem('comparison-minimum-test','1')}});
+ await page.goto('/pulsedv/mini-app/#/compare');
  await expect(page.getByRole('region',{name:'Сравнение ЖК'})).toBeVisible();
+ await expect(page.getByRole('textbox',{name:'Взнос, %',exact:true})).toHaveValue('20,1');
+ await expect(page.getByRole('textbox',{name:'Ставка, %',exact:true})).toHaveValue('2');
  for(const label of ['Взнос, %','Ставка, %','Срок, лет']){
   const field=page.getByRole('textbox',{name:label,exact:true});
   await field.fill('');await expect(field).toHaveValue('');
   await field.pressSequentially('2');await expect(field).toHaveValue('2');
-  await field.fill('');await field.blur();await expect(field).toHaveValue('2');
+  await field.fill('');await field.blur();await expect(field).toHaveValue(label==='Взнос, %'?'20,1':'2');
  }
  const rate=page.getByRole('textbox',{name:'Ставка, %',exact:true});
- await rate.fill('0');await rate.blur();await expect(rate).toHaveValue('0');
+ await expect(page.getByText('От 20,1%',{exact:true})).toBeVisible();
+ await expect(page.getByText('От 2%',{exact:true})).toBeVisible();
+ const deposit=page.getByRole('textbox',{name:'Взнос, %',exact:true});
+ await deposit.fill('20');await deposit.blur();await expect(deposit).toHaveValue('20,1');
+ await rate.fill('0');await rate.blur();await expect(rate).toHaveValue('2');
  await rate.fill('');await rate.pressSequentially('2,5');await expect(rate).toHaveValue('2,5');
  await expect(page.getByText(/Расчёт ориентировочный:/)).toContainText('ставка 2.5%');
  await rate.fill('2.75');await rate.blur();await expect(rate).toHaveValue('2,75');
