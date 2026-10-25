@@ -2,7 +2,7 @@ import {test,expect,type Page} from '@playwright/test';
 import {DEFAULT_STATE} from '../../packages/pulse-data/model';
 async function seed(page:Page,details=true){
  const state=structuredClone(DEFAULT_STATE),p=state.properties[0];
- p.projectDetails=details?{commissioningDate:'2027-12-31',totalApartments:420,availableApartments:77}:undefined;
+ p.projectDetails=details?{commissioningDate:'2027-12-31',totalApartments:420,availableApartments:77,finishes:['rough','white_box','finished']}:undefined;
  p.coverImageUrl='https://images.test/photo-0.svg';p.images=[0,1,2].map(i=>({url:`https://images.test/photo-${i}.svg`,alt:'Фото проекта '+(i+1),sortOrder:i}));
  await page.route('https://images.test/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#aec3d4"/><path d="M100 800V160h280v640m100 0V280h350v520" fill="#637c91"/></svg>'}));
  await page.route('https://telegram.org/js/telegram-web-app.js',route=>route.fulfill({body:''}));
@@ -12,10 +12,9 @@ for(const width of [320,390,430])test(`Project overview ${width}px: facts, real 
  await page.setViewportSize({width,height:844});await seed(page);await page.goto('/pulsedv/mini-app/#/property/primorskiy');
  const facts=page.getByRole('region',{name:'Ключевые характеристики'});await expect(facts).toContainText('31 декабря 2027');await expect(facts).toContainText('420');await expect(facts).toContainText('77');
  await page.screenshot({path:`test-results/property-assembled-${browserName}-${width}.png`,fullPage:true});
- await page.getByRole('button',{name:'Выбрать планировки: 2',exact:true}).click();await expect(page.getByRole('combobox',{name:'Комнатность планировок'})).toHaveValue('2');
- const plans=page.getByRole('region',{name:'Планировки ЖК'});await expect(plans).toBeInViewport();
- // The plans can already be partly visible; wait for the shortcut to reach them.
- await expect.poll(async()=>Math.abs((await plans.boundingBox())!.y-16)).toBeLessThan(2);
+ await page.getByRole('button',{name:'Выбрать планировки: 2',exact:true}).click();
+ const plans=page.getByRole('region',{name:'Квартиры и планировки ЖК'});await expect(plans).toContainText('2 комн.');
+ await expect(page.getByRole('button',{name:'Выбрать планировки: 2',exact:true})).toHaveAttribute('aria-expanded','true');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 test('Control project details reach the client, including zero availability and unknown dates',async({page})=>{
@@ -24,7 +23,7 @@ test('Control project details reach the client, including zero availability and 
  await editor.getByLabel('Плановая дата ввода дома',{exact:true}).fill('2028-03-31');await editor.getByLabel('Плановая дата ввода дома',{exact:true}).blur();
  await editor.getByLabel('Всего квартир в ЖК',{exact:true}).fill('120');await editor.getByLabel('Всего квартир в ЖК',{exact:true}).blur();
  await editor.getByLabel('Квартир в продаже',{exact:true}).fill('0');await editor.getByLabel('Квартир в продаже',{exact:true}).blur();await editor.getByRole('button',{name:'Готово',exact:true}).click();
- await page.goto('/pulsedv/mini-app/#/property/primorskiy');const facts=page.getByRole('region',{name:'Ключевые характеристики'});await expect(facts).toContainText('31 марта 2028');await expect(facts).toContainText('120');await expect(page.getByRole('region',{name:'Квартиры в ЖК'})).toContainText('В продаже: 0 квартир');
+ await page.goto('/pulsedv/mini-app/#/property/primorskiy');const facts=page.getByRole('region',{name:'Ключевые характеристики'});await expect(facts).toContainText('31 марта 2028');await expect(facts).toContainText('120');await expect(page.getByRole('region',{name:'Квартиры и планировки ЖК'})).toContainText('В продаже: 0 квартир');
 });
 test('Gallery: short drag returns, long drag flies to the selected cover, repeated closes restore focus',async({page})=>{
  await page.setViewportSize({width:390,height:844});await seed(page);await page.goto('/pulsedv/mini-app/#/property/primorskiy');

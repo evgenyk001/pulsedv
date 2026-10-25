@@ -25,6 +25,8 @@ import { MortgageStoryOnboarding, MORTGAGE_STORY_STORAGE, MORTGAGE_STORY_VERSION
 import { usePulseControlState } from "../helpers/usePulseControlState";
 import {usePropertyDetail} from "../helpers/useCatalog";
 import {propertyPlan,propertyPriceRub} from "../../../../packages/domain/propertyPresentation";
+import {apartmentFinishLabel,planPriceForFinish,planStartingPrice} from "../../../../packages/domain/propertyFinish";
+import type {ApartmentFinish} from "../../../../packages/pulse-data/model";
 import { recordPulseEvent, type MortgageProgramRule } from "../../../../packages/pulse-data";
 import {
   calculateMortgageScenario,
@@ -75,12 +77,15 @@ function MortgageCalculator(){
   const fromProperty=!!sourcePropertyId;
   const {data:sourceProperty,isLoading:sourceLoading,error:sourceError}=usePropertyDetail(sourcePropertyId);
   const sourcePlan=sourceProperty?propertyPlan(sourceProperty,params.get('floorplan')):undefined;
-  const sourcePrice=sourceProperty?propertyPriceRub(sourcePlan?.priceFrom??sourceProperty.priceFrom):null;
+  const finishParam=params.get('finish');
+  const chosenFinish=finishParam&&['rough','white_box','finished','unfinished'].includes(finishParam)?finishParam as ApartmentFinish:null;
+  const offerPrice=sourcePlan?(chosenFinish?planPriceForFinish(sourcePlan,chosenFinish):planStartingPrice(sourcePlan)):null;
+  const sourcePrice=sourceProperty?propertyPriceRub(offerPrice??(sourcePlan?planStartingPrice(sourcePlan)??sourceProperty.priceFrom:sourceProperty.priceFrom)):null;
   const sourceUnavailable=fromProperty&&!sourceLoading&&(!sourceProperty||!!sourceError);
   const requested=Number(params.get("price"));
   const control=usePulseControlState();
   const programs=control.mortgagePrograms;
-  const scenarioKey=fromProperty?MORTGAGE_SCENARIO_KEY+":property:"+sourcePropertyId+":"+(params.get("floorplan")||""):MORTGAGE_SCENARIO_KEY;
+  const scenarioKey=fromProperty?MORTGAGE_SCENARIO_KEY+":property:"+sourcePropertyId+":"+(params.get("floorplan")||"")+":"+(params.get("finish")||""):MORTGAGE_SCENARIO_KEY;
   const storedScenario=React.useMemo(()=>{
     const storage=typeof localStorage==="undefined"?null:localStorage;
     const own=readMortgageScenario(storage,scenarioKey);
@@ -381,7 +386,7 @@ function MortgageCalculator(){
     <div className={styles.freshness}><CircleCheck size={14}/><span>Правила проверены {RULES_UPDATED}</span></div>
 
     {fromProperty&&<section className={styles.propertyContext} aria-label="Расчёт выбранного ЖК">
-      {sourceProperty?<><div>{sourceProperty.coverImageUrl&&<img src={sourceProperty.coverImageUrl} alt=""/>}<span><small>{sourcePlan?'Выбранная планировка':'Расчёт по объекту'}</small><strong>{sourceProperty.name}</strong><em>{sourcePlan?[sourcePlan.roomLabel==='Студия'?'Студия':sourcePlan.roomLabel+' комн.',sourcePlan.areaFrom!==null?sourcePlan.areaFrom+(sourcePlan.areaTo&&sourcePlan.areaTo!==sourcePlan.areaFrom?'–'+sourcePlan.areaTo:'')+' м²':''].filter(Boolean).join(' · '):[sourceProperty.city,sourceProperty.district].filter(Boolean).join(' · ')}</em></span></div><p>{price===sourcePrice?'Цена подставлена из карточки. Взнос можно изменить.':'Вы изменили стоимость для своего расчёта.'}{params.has('floorplan')&&!sourcePlan?' Планировка больше не доступна; используем стартовую цену ЖК.':''}</p><button type="button" onClick={()=>{const target='/property/'+encodeURIComponent(sourceProperty.id);if(canGoBack&&previousPath.split('?')[0]===target)goBack();else navigate(target,{replace:true})}}><ChevronLeft size={15}/>Вернуться к ЖК</button></>:<p role={sourceUnavailable?'alert':undefined}>{sourceUnavailable?'Не удалось подтвердить актуальную карточку ЖК. Расчёт по указанной цене можно продолжить.':'Загружаем данные выбранного ЖК…'}</p>}
+      {sourceProperty?<><div>{sourceProperty.coverImageUrl&&<img src={sourceProperty.coverImageUrl} alt=""/>}<span><small>{sourcePlan?'Выбранная планировка':'Расчёт по объекту'}</small><strong>{sourceProperty.name}</strong><em>{sourcePlan?[sourcePlan.roomLabel==='Студия'?'Студия':sourcePlan.roomLabel+' комн.',sourcePlan.areaFrom!==null?sourcePlan.areaFrom+(sourcePlan.areaTo&&sourcePlan.areaTo!==sourcePlan.areaFrom?'–'+sourcePlan.areaTo:'')+' м²':'',chosenFinish&&offerPrice!==null?apartmentFinishLabel(chosenFinish):''].filter(Boolean).join(' · '):[sourceProperty.city,sourceProperty.district].filter(Boolean).join(' · ')}</em></span></div><p>{price===sourcePrice?'Цена подставлена из карточки. Взнос можно изменить.':'Вы изменили стоимость для своего расчёта.'}{params.has('floorplan')&&!sourcePlan?' Планировка больше не доступна; используем стартовую цену ЖК.':''}</p><button type="button" onClick={()=>{const target='/property/'+encodeURIComponent(sourceProperty.id);if(canGoBack&&previousPath.split('?')[0]===target)goBack();else navigate(target,{replace:true})}}><ChevronLeft size={15}/>Вернуться к ЖК</button></>:<p role={sourceUnavailable?'alert':undefined}>{sourceUnavailable?'Не удалось подтвердить актуальную карточку ЖК. Расчёт по указанной цене можно продолжить.':'Загружаем данные выбранного ЖК…'}</p>}
     </section>}
 
     <section className={styles.programSection}>
@@ -562,7 +567,7 @@ function MortgageCalculator(){
       source="mortgage"
       propertyId={sourceProperty?.id}
       project={sourceProperty?.name}
-      context={{program,propertyKind,price,down,years,rate:preferredRate,preferredRate,marketRate,payment:invalid?null:payment,status:calculation.status,blockReason:calculation.blockReason,childrenCount,hasYoungChild,largeArea,futureRate:futureRate??null,projection:calculation.projection,scenarioVersion:1,subsidizedLimit,marketPrincipal,policyVersion:MORTGAGE_POLICY_VERSION,...(sourcePlan?{floorplanId:sourcePlan.id,rooms:sourcePlan.roomLabel,areaFrom:sourcePlan.areaFrom,areaTo:sourcePlan.areaTo}:{})}}
+      context={{program,propertyKind,price,down,years,rate:preferredRate,preferredRate,marketRate,payment:invalid?null:payment,status:calculation.status,blockReason:calculation.blockReason,childrenCount,hasYoungChild,largeArea,futureRate:futureRate??null,projection:calculation.projection,scenarioVersion:1,subsidizedLimit,marketPrincipal,policyVersion:MORTGAGE_POLICY_VERSION,...(sourcePlan?{floorplanId:sourcePlan.id,rooms:sourcePlan.roomLabel,areaFrom:sourcePlan.areaFrom,areaTo:sourcePlan.areaTo,finishType:chosenFinish&&offerPrice!==null?chosenFinish:null}:{})}}
     >
       <button className={styles.cta}>Получить точный расчёт <ChevronRight size={18}/></button>
     </LeadSheet>
