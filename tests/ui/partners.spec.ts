@@ -45,7 +45,7 @@ test('Buyer can decline referral sharing and normal consultation has no partner'
  await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Без рекомендации');await page.getByRole('textbox',{name:'Телефон',exact:true}).fill('+79995550303');await page.getByRole('checkbox',{name:/Я даю согласие/}).check();await page.getByRole('button',{name:'Отправить заявку',exact:true}).click();await expect(page.getByRole('heading',{name:'Обращение создано'})).toBeVisible();await restorePartner(page,partnerIdentity);await page.goto('/pulsedv/control-center/#/partners');await expect(page.locator('.partnersGrid.leadRowButton')).toHaveCount(0);await page.goto('/pulsedv/control-center/#/leads');await expect(page.locator('.leadRowButton').filter({hasText:'Без рекомендации'})).toBeVisible();
 });
 
-for(const width of [320,390,430])test(`Partner design ${width}px: bright managed banner, left navigation and mobile Control`,async({page,browserName})=>{
+for(const width of [320,390,430])test(`Partner design ${width}px: bright managed banner, contextual back and mobile Control`,async({page,browserName})=>{
  await page.setViewportSize({width,height:844});await page.emulateMedia({reducedMotion:'reduce'});await seed(page);
  await page.goto('/pulsedv/mini-app/');
  const campaign=page.getByRole('link',{name:'Зарабатывайте с PULSE',exact:true});await expect(campaign).toBeVisible();
@@ -54,9 +54,13 @@ for(const width of [320,390,430])test(`Partner design ${width}px: bright managed
  const geometry=await campaign.evaluate(el=>{const title=el.querySelector('h1')!.getBoundingClientRect(),article=el.querySelector('article')!.getBoundingClientRect();return{right:title.right,edge:article.right,background:getComputedStyle(el.querySelector('article')!).backgroundColor}});
  expect(geometry.right).toBeLessThan(geometry.edge);expect(geometry.background).toBe('rgb(242, 13, 29)');
  await page.screenshot({path:`test-results/partner-home-${browserName}-${width}.png`,animations:'disabled'});
+ const homeUrl=page.url();
  await campaign.click();await expect(page.getByRole('heading',{name:'Рекомендуйте PULSE',exact:true})).toBeVisible();
- const back=page.getByRole('link',{name:'Вернуться в профиль',exact:true});const box=await back.boundingBox();expect(box!.x+box!.width).toBeLessThan(width/2);
- await back.click();await expect(page).toHaveURL(/#\/profile$/);
+ const back=page.getByRole('link',{name:'Назад к предыдущему экрану',exact:true});const box=await back.boundingBox();expect(box!.x+box!.width).toBeLessThan(width/2);
+ await back.click();await expect(page).toHaveURL(homeUrl);
+ // The same control returns to Profile when that was the actual entry point.
+ await page.goto('/pulsedv/mini-app/#/profile');await page.getByRole('link',{name:/Партнёрская программа/}).click();
+ const profileBack=page.getByRole('link',{name:'Вернуться в профиль',exact:true});await profileBack.click();await expect(page).toHaveURL(/#\/profile$/);
  await page.goto('/pulsedv/control-center/#/content');
  // Find the managed campaign by its persisted title value, which is editable rather than static text.
  const cards=page.locator('.bannerCampaignCard');let campaignIndex=-1;for(let i=0;i<await cards.count();i++)if(await cards.nth(i).getByRole('textbox',{name:'Заголовок',exact:true}).inputValue()==='Зарабатывайте с PULSE')campaignIndex=i;
