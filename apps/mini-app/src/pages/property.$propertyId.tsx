@@ -77,6 +77,8 @@ export default function PropertyPage(){
   const developer=p.developerName&&!/^Партнёр (PULSE\.DV|PULSEDV\.RU)$/.test(p.developerName)?p.developerName:"";
   const gallery=propertyPhotos(p);
   const mortgageRule=control.mortgagePrograms.find(rule=>rule.id===savedScenario?.programId)??control.mortgagePrograms[0];
+  const matchedPricedPlans=selectedFinish?p.floorplans.map(plan=>({plan,price:planPriceForFinish(plan,selectedFinish)})).filter((offer):offer is {plan:typeof p.floorplans[number];price:number}=>offer.price!==null).sort((a,b)=>a.price-b.price):[];
+  const selectedPrice=selectedFinish?(matchedPricedPlans[0]?.price??null):p.priceFrom;
   const mortgagePrice=selectedPrice===null?null:propertyPriceRub(selectedPrice);
   const minDown=mortgageRule&&mortgagePrice!==null?calculateMortgageScenario({programs:control.mortgagePrograms,settings:{...savedScenario,programId:mortgageRule.id,propertyKind:'newbuild',largeArea:false},price:mortgagePrice,down:0})?.requiredDown??null:null;
   const presentation=p.documents?.find(doc=>doc.kind==="presentation");
@@ -93,8 +95,6 @@ export default function PropertyPage(){
   const visiblePlans=p.floorplans
     .filter(plan=>activeRoom&&normalizeRoomLabel(plan.roomLabel)===activeRoom&&matchesFinish(plan))
     .sort((a,b)=>(priceForPlan(a)??Infinity)-(priceForPlan(b)??Infinity)||a.sortOrder-b.sortOrder);
-  const matchedPricedPlans=selectedFinish?p.floorplans.map(plan=>({plan,price:planPriceForFinish(plan,selectedFinish)})).filter((offer):offer is {plan:typeof p.floorplans[number];price:number}=>offer.price!==null).sort((a,b)=>a.price-b.price):[];
-  const selectedPrice=selectedFinish?(matchedPricedPlans[0]?.price??null):p.priceFrom;
   const fromPulse=returnTo.startsWith("/selection");
   const areaValues=p.floorplans.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]).filter((v):v is number=>typeof v==='number'&&v>0);
   const minArea=areaValues.length?Math.min(...areaValues):null;
