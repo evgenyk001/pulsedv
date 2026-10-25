@@ -204,8 +204,11 @@ export async function upsertCatalogProperty(sql:Sql,p:CatalogProperty){
 
   await sql.query("delete from catalog_property_floorplans where property_id=$1",[p.id]);
   for(const [index,plan] of (p.floorplans??[]).entries()){
+    // Keep catalog filtering consistent with confirmed finish prices.
+    const offerPrices=(plan.finishOptions??[]).map(offer=>offer.priceFrom).filter((price):price is number=>price!==null&&price>0);
+    const effectivePlanPrice=plan.finishOptions?.length?(offerPrices.length?Math.min(...offerPrices):null):plan.priceFrom;
     await sql.query("insert into catalog_property_floorplans(id,property_id,room_label,area_from,area_to,price_from,image_url,finish_type,finish_options,sort_order) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",[
-      plan.id||randomUUID(),p.id,plan.roomLabel,plan.areaFrom,plan.areaTo,plan.priceFrom,plan.imageUrl,plan.finishType??null,JSON.stringify(plan.finishOptions??[]),plan.sortOrder??index
+      plan.id||randomUUID(),p.id,plan.roomLabel,plan.areaFrom,plan.areaTo,effectivePlanPrice,plan.imageUrl,plan.finishType??null,JSON.stringify(plan.finishOptions??[]),plan.sortOrder??index
     ]);
   }
 

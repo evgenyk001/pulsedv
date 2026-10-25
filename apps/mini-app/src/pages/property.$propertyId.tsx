@@ -77,8 +77,10 @@ export default function PropertyPage(){
   const developer=p.developerName&&!/^Партнёр (PULSE\.DV|PULSEDV\.RU)$/.test(p.developerName)?p.developerName:"";
   const gallery=propertyPhotos(p);
   const mortgageRule=control.mortgagePrograms.find(rule=>rule.id===savedScenario?.programId)??control.mortgagePrograms[0];
-  const matchedPricedPlans=selectedFinish?p.floorplans.map(plan=>({plan,price:planPriceForFinish(plan,selectedFinish)})).filter((offer):offer is {plan:typeof p.floorplans[number];price:number}=>offer.price!==null).sort((a,b)=>a.price-b.price):[];
-  const selectedPrice=selectedFinish?(matchedPricedPlans[0]?.price??null):p.priceFrom;
+  const hasConfirmedFinishingPrices=p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>offer.priceFrom!==null));
+  const matchedPricedPlans=(selectedFinish?p.floorplans.map(plan=>({plan,price:planPriceForFinish(plan,selectedFinish)})):hasConfirmedFinishingPrices?p.floorplans.map(plan=>({plan,price:planStartingPrice(plan)})):[])
+    .filter((offer):offer is {plan:typeof p.floorplans[number];price:number}=>offer.price!==null).sort((a,b)=>a.price-b.price);
+  const selectedPrice=selectedFinish?(matchedPricedPlans[0]?.price??null):(matchedPricedPlans[0]?.price??p.priceFrom);
   const mortgagePrice=selectedPrice===null?null:propertyPriceRub(selectedPrice);
   const minDown=mortgageRule&&mortgagePrice!==null?calculateMortgageScenario({programs:control.mortgagePrograms,settings:{...savedScenario,programId:mortgageRule.id,propertyKind:'newbuild',largeArea:false},price:mortgagePrice,down:0})?.requiredDown??null:null;
   const presentation=p.documents?.find(doc=>doc.kind==="presentation");
@@ -170,7 +172,7 @@ export default function PropertyPage(){
           <strong className={styles.finishUnknown}>Отделка уточняется</strong>}
         </div>
         {minDown!==null&&mortgageRule&&mortgagePrice!==null&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
-        {selectedPrice!==null?<Link to={selectedFinish&&matchedPricedPlans[0]?propertyMortgageLink(p,matchedPricedPlans[0].plan,selectedFinish):propertyMortgageLink(p)}>
+        {selectedPrice!==null?<Link to={matchedPricedPlans[0]?propertyMortgageLink(p,matchedPricedPlans[0].plan,selectedFinish):propertyMortgageLink(p)}>
           <WalletCards size={17}/>
           <span>Рассчитать ипотеку</span>
           <ChevronRight size={16}/>

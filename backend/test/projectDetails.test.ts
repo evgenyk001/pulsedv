@@ -32,6 +32,10 @@ test('Apartment finish options persist and do not alter unknown finish prices',a
   await db.transaction(sql=>upsertCatalogProperty(sql,withOffers));
   const restored=await getCatalogProperty(db,'finished-fixture','any');
   assert.deepEqual(restored?.floorplans[0].finishOptions,withOffers.floorplans[0].finishOptions);
+  assert.equal(restored?.floorplans[0].priceFrom,7.8);
+  const changed={...withOffers,floorplans:[{...withOffers.floorplans[0],finishOptions:[{finishType:'rough' as const,priceFrom:8.4},{finishType:'white_box' as const,priceFrom:8.25},{finishType:'finished' as const,priceFrom:null}]}]};
+  await db.transaction(sql=>upsertCatalogProperty(sql,changed));
+  assert.equal((await getCatalogProperty(db,'finished-fixture','any'))?.floorplans[0].priceFrom,8.25);
   assert.deepEqual(restored?.projectDetails?.finishes,['rough','white_box','finished']);
  }finally{await db.close()}
 });
