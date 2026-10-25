@@ -11,11 +11,13 @@ async function seed(page:Page,details=true){
 }
 for(const width of [320,390,430])test(`Project overview ${width}px: facts, real inventory and room shortcuts`,async({page,browserName})=>{
  await page.setViewportSize({width,height:844});await seed(page);await page.goto('/pulsedv/mini-app/#/property/primorskiy');
- const facts=page.getByRole('region',{name:'Ключевые характеристики'});await expect(facts).toContainText('31 декабря 2027');await expect(facts).toContainText('420');await expect(facts).toContainText('77');
+ const facts=page.getByRole('region',{name:'Ключевые характеристики'});await expect(facts).toContainText('31 декабря 2027');await expect(page.getByRole('region',{name:'Квартиры и планировки ЖК'})).toContainText('77 квартир из 420');
+ await expect(page.locator('#pulse-launch')).toHaveCount(0);
  await page.screenshot({path:`test-results/property-assembled-${browserName}-${width}.png`,fullPage:true});
  await page.getByRole('button',{name:'Выбрать планировки: 2',exact:true}).click();
  const plans=page.getByRole('region',{name:'Квартиры и планировки ЖК'});await expect(plans).toContainText('2 комн.');
  await expect(page.getByRole('button',{name:'Выбрать планировки: 2',exact:true})).toHaveAttribute('aria-expanded','true');
+ await expect(plans.getByRole('link',{name:'Рассчитать ипотеку',exact:true})).toHaveAttribute('href',/price=9400000.*floorplan=index-1/);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 test('Control project details reach the client, including zero availability and unknown dates',async({page})=>{
@@ -24,7 +26,7 @@ test('Control project details reach the client, including zero availability and 
  await editor.getByLabel('Плановая дата ввода дома',{exact:true}).fill('2028-03-31');await editor.getByLabel('Плановая дата ввода дома',{exact:true}).blur();
  await editor.getByLabel('Всего квартир в ЖК',{exact:true}).fill('120');await editor.getByLabel('Всего квартир в ЖК',{exact:true}).blur();
  await editor.getByLabel('Квартир в продаже',{exact:true}).fill('0');await editor.getByLabel('Квартир в продаже',{exact:true}).blur();await editor.getByRole('button',{name:'Готово',exact:true}).click();
- await page.goto('/pulsedv/mini-app/#/property/primorskiy');const facts=page.getByRole('region',{name:'Ключевые характеристики'});await expect(facts).toContainText('31 марта 2028');await expect(facts).toContainText('120');await expect(page.getByRole('region',{name:'Квартиры и планировки ЖК'})).toContainText('В продаже: 0 квартир');
+ await page.goto('/pulsedv/mini-app/#/property/primorskiy');const facts=page.getByRole('region',{name:'Ключевые характеристики'});await expect(facts).toContainText('31 марта 2028');await expect(page.getByRole('region',{name:'Квартиры и планировки ЖК'})).toContainText('из 120');await expect(page.getByRole('region',{name:'Квартиры и планировки ЖК'})).toContainText('В продаже: 0 квартир');
 });
 test('Gallery: short drag returns, long drag flies to the selected cover, repeated closes restore focus',async({page})=>{
  await page.setViewportSize({width:390,height:844});await seed(page);await page.goto('/pulsedv/mini-app/#/property/primorskiy');
