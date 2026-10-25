@@ -1,3 +1,4 @@
+import {useAppBack} from '../helpers/navigationMemory';
 import {IconTile} from '../components/IconTile';
 import React from "react";
 import {NativeSelect} from "../components/NativeSelect";
@@ -61,11 +62,13 @@ const propertyLabels:Record<PropertyKind,string>={
 };
 
 export default function MortgagePage(){
+
   const [params]=useSearchParams();
   return <MortgageCalculator key={params.toString()}/>;
 }
 
 function MortgageCalculator(){
+ const {back:goBack,canGoBack,previousPath}=useAppBack();
   const navigate=useNavigate();
   const [params]=useSearchParams();
   const sourcePropertyId=params.get('property')||'';
@@ -358,7 +361,7 @@ function MortgageCalculator(){
     <div className={styles.freshness}><CircleCheck size={14}/><span>Правила проверены {RULES_UPDATED}</span></div>
 
     {fromProperty&&<section className={styles.propertyContext} aria-label="Расчёт выбранного ЖК">
-      {sourceProperty?<><div>{sourceProperty.coverImageUrl&&<img src={sourceProperty.coverImageUrl} alt=""/>}<span><small>{sourcePlan?'Выбранная планировка':'Расчёт по объекту'}</small><strong>{sourceProperty.name}</strong><em>{sourcePlan?[sourcePlan.roomLabel==='Студия'?'Студия':sourcePlan.roomLabel+' комн.',sourcePlan.areaFrom!==null?sourcePlan.areaFrom+(sourcePlan.areaTo&&sourcePlan.areaTo!==sourcePlan.areaFrom?'–'+sourcePlan.areaTo:'')+' м²':''].filter(Boolean).join(' · '):[sourceProperty.city,sourceProperty.district].filter(Boolean).join(' · ')}</em></span></div><p>{price===sourcePrice?'Цена подставлена из карточки. Взнос можно изменить.':'Вы изменили стоимость для своего расчёта.'}{params.has('floorplan')&&!sourcePlan?' Планировка больше не доступна; используем стартовую цену ЖК.':''}</p><button type="button" onClick={()=>navigate('/property/'+encodeURIComponent(sourceProperty.id))}><ChevronLeft size={15}/>Вернуться к ЖК</button></>:<p role={sourceUnavailable?'alert':undefined}>{sourceUnavailable?'Не удалось подтвердить актуальную карточку ЖК. Расчёт по указанной цене можно продолжить.':'Загружаем данные выбранного ЖК…'}</p>}
+      {sourceProperty?<><div>{sourceProperty.coverImageUrl&&<img src={sourceProperty.coverImageUrl} alt=""/>}<span><small>{sourcePlan?'Выбранная планировка':'Расчёт по объекту'}</small><strong>{sourceProperty.name}</strong><em>{sourcePlan?[sourcePlan.roomLabel==='Студия'?'Студия':sourcePlan.roomLabel+' комн.',sourcePlan.areaFrom!==null?sourcePlan.areaFrom+(sourcePlan.areaTo&&sourcePlan.areaTo!==sourcePlan.areaFrom?'–'+sourcePlan.areaTo:'')+' м²':''].filter(Boolean).join(' · '):[sourceProperty.city,sourceProperty.district].filter(Boolean).join(' · ')}</em></span></div><p>{price===sourcePrice?'Цена подставлена из карточки. Взнос можно изменить.':'Вы изменили стоимость для своего расчёта.'}{params.has('floorplan')&&!sourcePlan?' Планировка больше не доступна; используем стартовую цену ЖК.':''}</p><button type="button" onClick={()=>{const target='/property/'+encodeURIComponent(sourceProperty.id);if(canGoBack&&previousPath.split('?')[0]===target)goBack();else navigate(target,{replace:true})}}><ChevronLeft size={15}/>Вернуться к ЖК</button></>:<p role={sourceUnavailable?'alert':undefined}>{sourceUnavailable?'Не удалось подтвердить актуальную карточку ЖК. Расчёт по указанной цене можно продолжить.':'Загружаем данные выбранного ЖК…'}</p>}
     </section>}
 
     <section className={styles.programSection}>
@@ -495,7 +498,7 @@ function MortgageCalculator(){
       </>:<div className={styles.incomeNote}>{invalid?'Сначала исправьте условия основного расчёта.':'Укажите ставку, чтобы увидеть остаток долга, следующий платёж и общую переплату.'}</div>}
     </section>}
 
-    {params.get("from")==="select"&&<button type="button" className={styles.returnSelect} onClick={()=>navigate("/selection")}>
+    {params.get("from")==="select"&&<button type="button" className={styles.returnSelect} onClick={()=>{if(canGoBack&&previousPath.split("?")[0]==="/selection")goBack();else navigate("/selection",{replace:true})}}>
       <ChevronLeft size={17}/> Использовать этот сценарий в PULSE Select
     </button>}
 

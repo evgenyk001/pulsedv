@@ -24,7 +24,7 @@ export function PropertyCard({property,compact=false,returnTo}:PropertyCardProps
       value="/catalog"+(search?"?"+search:"");
     }else if(!returnTo){
       const hash=window.location.hash.replace(/^#/,'');
-      if(/^\/(catalog|favorites|selection|journey|my-search)([?]|$)/.test(hash))value=hash;
+      if(/^\/(catalog|favorites|compare|selection|journey|my-search)([?]|$)/.test(hash))value=hash;
     }
     return value;
   };

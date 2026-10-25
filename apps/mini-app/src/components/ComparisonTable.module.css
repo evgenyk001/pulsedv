@@ -12,3 +12,15 @@
 .same{padding:24px;text-align:center;border-radius:var(--app-radius-control);background:var(--muted);font-size:10px;color:var(--muted-foreground)}
 .disclaimer{display:flex;align-items:flex-start;gap:7px;margin:0;padding:12px 13px;border-radius:var(--app-radius-control);background:rgba(237,242,247,.74);color:var(--muted-foreground);font-size:8.5px;line-height:1.45}.disclaimer svg{flex:none;margin-top:1px}
 @media(max-width:360px){.projectRail{grid-auto-columns:84%}.inputs{gap:5px}.inputs label>div{padding:0 7px}.compareHead{align-items:flex-end}.differenceToggle{font-size:8px}}
+
+/* Two stable columns keep every value under its project, without sideways swipes. */
+.projectRail{position:sticky;top:-16px;z-index:5;grid-auto-flow:row;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-columns:auto;overflow:visible;background:var(--popup);padding:8px 0;margin:0;align-items:stretch}
+.project{min-width:0;display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:10px}.projectMedia{width:100%;height:76px;border-radius:14px}.projectCopy strong{white-space:normal;overflow:visible;overflow-wrap:anywhere;font-size:12px}.projectCopy small{white-space:normal;font-size:10px;line-height:1.4}.projectCopy b{font-size:11px}.project>a{align-self:flex-end;margin-top:auto;min-width:36px;min-height:36px}
+.values{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.values>div{grid-template-columns:18px minmax(0,1fr);align-items:start;border-top:0;padding-top:0;min-width:0;gap:6px}.values>div+div{border-left:1px solid var(--border);padding-left:10px}.values span{overflow-wrap:anywhere;font-size:11px}.values i{width:18px;height:18px}.row h3{font-size:11px}.scenarioHead small{font-size:10px}.disclaimer{font-size:10px}
+
+.projectActions{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-top:auto}.projectActions button{min-height:36px;padding:0 8px;border:1px solid var(--border);border-radius:12px;background:var(--muted);color:var(--foreground);font:inherit;font-size:10px}.project>a{align-self:flex-end}
+
+.project>a{display:flex;gap:3px;width:auto;padding:0 9px;border-radius:12px;font-size:10px}
+.differenceToggle{position:relative;min-height:40px}.differenceToggle input{inset:0;margin:0;width:100%;height:100%;opacity:0;pointer-events:auto;cursor:pointer;z-index:1}.differenceToggle input:focus-visible+span{outline:2px solid var(--primary);outline-offset:3px}.differenceToggle>span{flex:none}
+
+.projectRail{top:calc(8px + var(--pulse-safe-top));background:var(--background);border-radius:var(--app-radius-card);padding:6px 0}.projectMedia>span{position:absolute;inset:0;display:grid;place-items:center}.projectMedia img{position:relative}.differenceToggle{font-size:11px}
