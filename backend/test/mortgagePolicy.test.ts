@@ -1,13 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_MORTGAGE_PROGRAMS } from "../../packages/pulse-data/model";
+import { DEFAULT_MORTGAGE_PROGRAMS, DEFAULT_STATE } from "../../packages/pulse-data/model";
 import {
   calculateMortgageScenario,
   MORTGAGE_POLICY_VERSION,
   minimumMortgageDown,
+  newbuildHasIncreasedLimit,
   readMortgageScenario,
 } from "../../packages/domain/mortgagePolicy";
-import { bestMortgageFit } from "../../packages/domain/propertyMatch";
+import { bestMortgageFit, selectionMatch } from "../../packages/domain/propertyMatch";
 import { safeMetadata } from "../src/validation";
 
 test("shared mortgage policy: family scale and 50% rule stay deterministic",()=>{
@@ -186,7 +187,7 @@ test("saved mortgage scenario restores exact cash and discards malformed optiona
 });
 
 test('two-period mortgage uses remaining principal, explicit future rate and unchanged market tranche',()=>{
- const base={programs:DEFAULT_MORTGAGE_PROGRAMS,price:12_000_000,down:3_000_000,years:30,settings:{programId:'family' as const,propertyKind:'newbuild' as const,childrenCount:2 as const,hasYoungChild:true,marketRate:15.7}};
+ const base={programs:DEFAULT_MORTGAGE_PROGRAMS,price:12_000_000,down:3_000_000,years:30,settings:{programId:'family' as const,propertyKind:'newbuild' as const,childrenCount:2 as const,hasYoungChild:true,marketRate:15.7,allowBlended:true}};
  const unknown=calculateMortgageScenario(base)!;assert.equal(unknown.projection,null);assert.equal(unknown.totalKnown,false);
  const scenario=calculateMortgageScenario({...base,settings:{...base.settings,futureRate:18}})!;
  assert.equal(scenario.payment,unknown.payment);assert.equal(scenario.totalKnown,false);assert.ok(scenario.projection);
@@ -220,4 +221,62 @@ test('required cash deposit covers the hard credit ceiling and the program perce
  }
  const configured=DEFAULT_MORTGAGE_PROGRAMS.map(rule=>rule.id==='farEast'?{...rule,subsidizedLimit:5_000_000,totalLimit:8_000_000}:rule);
  assert.equal(calculateMortgageScenario({...base,programs:configured,down:0})!.requiredDown,5_000_000);
+});
+
+
+test('all program deposits cover the selected loan ceiling; blending requires explicit consent',()=>{
+ const programs=DEFAULT_MORTGAGE_PROGRAMS;
+ for(const [programId,childrenCount,allowBlended,price,limit,required] of [
+  ['family',1,false,12_800_000,6_000_000,6_800_000],
+  ['family',2,false,12_800_000,8_000_000,4_800_000],
+  ['family',3,false,12_800_000,10_000_000,2_800_000],
+  ['family',4,false,12_800_000,10_000_000,2_800_000],
+  ['family',5,false,12_800_000,10_000_000,2_800_000],
+  ['family',1,true,12_800_000,15_000_000,2_572_800],
+  ['it',1,false,12_800_000,9_000_000,3_800_000],
+  ['it',1,true,12_800_000,18_000_000,2_572_800],
+  ['farEast',1,true,12_800_000,6_000_000,6_800_000],
+ ] as const){
+  const settings={programId,propertyKind:'newbuild' as const,childrenCount,hasYoungChild:true,allowBlended};
+  const quote=calculateMortgageScenario({programs,settings,price,down:0})!;
+  assert.equal(quote.totalLimit,limit);assert.equal(quote.requiredDown,required);
+  const valid=calculateMortgageScenario({programs,settings,price,down:required})!;
+  assert.equal(valid.invalid,false);assert.equal(valid.loan,price-required);
+  assert.ok(Math.abs(valid.subsidizedPrincipal+valid.marketPrincipal-valid.loan)<.001);
+  assert.equal(calculateMortgageScenario({programs,settings,price,down:required-1})!.invalid,true);
+  const fit=bestMortgageFit(price,required,valid.payment+1,programs,programId,settings);
+  assert.equal(fit.payment,valid.payment);assert.equal(fit.fits,true);
+ }
+ for(const area of [null,0,60,64])assert.equal(newbuildHasIncreasedLimit({areaFrom:area}),false);
+ for(const area of [64.01,78])assert.equal(newbuildHasIncreasedLimit({areaFrom:area}),true);
+ const noProduct=programs.map(rule=>rule.id==='family'?{...rule,blended:false}:rule);
+ assert.equal(calculateMortgageScenario({programs:noProduct,settings:{programId:'family',propertyKind:'newbuild',allowBlended:true},price:12_800_000,down:0})!.requiredDown,6_800_000);
+ assert.equal(readMortgageScenario({getItem:()=>JSON.stringify({programId:'family',propertyKind:'newbuild'})})!.allowBlended,false);
+ assert.equal(readMortgageScenario({getItem:()=>JSON.stringify({programId:'family',propertyKind:'newbuild',allowBlended:true})})!.allowBlended,true);
+});
+
+test('term caps, construction subsidy duration and configured market ceiling are enforced',()=>{
+ const programs=DEFAULT_MORTGAGE_PROGRAMS.map(rule=>({...rule,maxYears:40,...(rule.id==='standard'?{totalLimit:5_000_000}:{})}));
+ for(const programId of ['family','farEast','it','standard'] as const){
+  const c=calculateMortgageScenario({programs,settings:{programId,propertyKind:'newbuild'},price:7_500_000,down:3_000_000,years:40})!;
+  assert.equal(c.maxYears,programId==='farEast'?20:30);
+  assert.equal(c.totalKnown,programId!=='family');
+  if(programId==='standard')assert.equal(c.requiredDown,2_500_000);
+ }
+ const construction=calculateMortgageScenario({programs,settings:{programId:'family',propertyKind:'house',childrenCount:2,hasYoungChild:true},price:9_000_000,down:2_000_000,years:30})!;
+ assert.equal(construction.preferredRate,6);assert.equal(construction.totalKnown,true);assert.equal(construction.familySubsidyYears,null);assert.equal(construction.projection,null);
+ const savedLower=DEFAULT_MORTGAGE_PROGRAMS.map(rule=>({...rule,maxYears:10,minDownPct:10}));
+ const limited=calculateMortgageScenario({programs:savedLower,settings:{programId:'family',propertyKind:'newbuild'},price:7_500_000,down:1_507_500,years:30})!;
+ assert.equal(limited.maxYears,10);assert.equal(limited.minDownPct,20.1);
+});
+
+
+test('selection uses the candidate plan area for both new and restored Far East scenarios',()=>{
+ const property=structuredClone(DEFAULT_STATE.properties[0]);
+ const criteria={city:'Все',rooms:'3+',delivery:'Любой',purchaseMode:'mortgage' as const,min:0,max:30_000_000,downPayment:3_800_000,monthlyPayment:100_000,preferences:[],mortgageProgram:'farEast' as const};
+ for(const mortgageScenario of [null,{programId:'farEast' as const,propertyKind:'newbuild' as const,largeArea:false}]){
+  assert.equal(selectionMatch(property,{...criteria,mortgageScenario},DEFAULT_MORTGAGE_PROGRAMS,DEFAULT_STATE.select.weights).eligible,true);
+ }
+ const small={...property,floorplans:[{...property.floorplans[2],areaFrom:56,areaTo:78}]};
+ assert.equal(selectionMatch(small,{...criteria,mortgageScenario:{programId:'farEast',propertyKind:'newbuild',largeArea:true}},DEFAULT_MORTGAGE_PROGRAMS,DEFAULT_STATE.select.weights).eligible,false);
 });

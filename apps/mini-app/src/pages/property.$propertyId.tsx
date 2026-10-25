@@ -12,7 +12,7 @@ import type {ApartmentFinish} from "../../../../packages/pulse-data/model";
 import {PropertyGallery} from "../components/PropertyGallery";
 import {usePulseControlState} from "../helpers/usePulseControlState";
 import {propertyPhotos,propertyMortgageLink,propertyPriceLabel,propertyPriceRub} from "../../../../packages/domain/propertyPresentation";
-import {calculateMortgageScenario,readMortgageScenario} from "../../../../packages/domain/mortgagePolicy";
+import {calculateMortgageScenario,readMortgageScenario,newbuildHasIncreasedLimit} from "../../../../packages/domain/mortgagePolicy";
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
 import { Link, useParams, useLocation } from "react-router-dom";
 import {
@@ -99,7 +99,9 @@ export default function PropertyPage(){
     .filter((offer):offer is {plan:typeof p.floorplans[number];price:number}=>offer.price!==null).sort((a,b)=>a.price-b.price);
   const selectedPrice=usesPlanPrice?(matchedPricedPlans[0]?.price??null):p.priceFrom;
   const mortgagePrice=selectedPrice===null?null:propertyPriceRub(selectedPrice);
-  const minDown=mortgageRule&&mortgagePrice!==null?calculateMortgageScenario({programs:control.mortgagePrograms,settings:{...savedScenario,programId:mortgageRule.id,propertyKind:'newbuild',largeArea:false},price:mortgagePrice,down:0})?.requiredDown??null:null;
+  const mortgagePlan=matchedPricedPlans[0]?.plan??p.floorplans.find(plan=>planStartingPrice(plan)!==null&&propertyPriceRub(planStartingPrice(plan)!)===mortgagePrice);
+  const mortgageQuote=mortgageRule&&mortgagePrice!==null?calculateMortgageScenario({programs:control.mortgagePrograms,settings:{...savedScenario,programId:mortgageRule.id,propertyKind:'newbuild',largeArea:newbuildHasIncreasedLimit(mortgagePlan)},price:mortgagePrice,down:0}):null;
+  const minDown=mortgageQuote?.requiredDown??null;
   const presentation=p.documents?.find(doc=>doc.kind==="presentation");
 
   const details=p.projectDetails;
@@ -209,8 +211,8 @@ export default function PropertyPage(){
           </div>:<div className={styles.emptyPlans}>Для этой комнатности пока нет подтверждённых вариантов с выбранной отделкой.</div>}
         </div>}
         <div className={styles.financeSummary}>
-          {selectedPrice!==null?<Link aria-label="Рассчитать ипотеку" aria-describedby="property-mortgage-hint" to={matchedPricedPlans[0]?propertyMortgageLink(p,matchedPricedPlans[0].plan,selectedFinish):propertyMortgageLink(p)}>
-            <WalletCards size={20}/><span><strong>Рассчитать ипотеку</strong><small id="property-mortgage-hint">{minDown!==null&&mortgagePrice!==null&&mortgagePrice>0?<><span>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</span><span>{minDown.toLocaleString('ru-RU')} ₽{mortgageRule?' · '+mortgageRule.label:''}{activeRoom?' · '+(activeRoom==='Студия'?'студия':activeRoom+' комн.'):''}</span></>:'Для выбранной стоимости'}</small></span><ChevronRight size={17}/>
+          {selectedPrice!==null?<Link aria-label="Рассчитать ипотеку" aria-describedby="property-mortgage-hint" to={propertyMortgageLink(p,mortgagePlan,selectedFinish)}>
+            <WalletCards size={20}/><span><strong>Рассчитать ипотеку</strong><small id="property-mortgage-hint">{minDown!==null&&mortgagePrice!==null&&mortgagePrice>0?<><span>Первоначальный взнос от {(minDown/mortgagePrice*100).toLocaleString('ru-RU',{maximumFractionDigits:3})}%</span><span>{minDown.toLocaleString('ru-RU')} ₽{mortgageRule?' · '+mortgageRule.label:''}{savedScenario?.allowBlended&&mortgageRule?.blended?' · комбинированная':''}{activeRoom?' · '+(activeRoom==='Студия'?'студия':activeRoom+' комн.'):''}</span>{mortgageQuote&&minDown>mortgageQuote.minDown&&<span>С учётом лимита кредита {mortgageQuote.totalLimit.toLocaleString('ru-RU')} ₽</span>}</>:'Для выбранной стоимости'}</small></span><ChevronRight size={17}/>
           </Link>:<p>Цена выбранного варианта уточняется. Менеджер поможет с расчётом.</p>}
         </div>
       </section>

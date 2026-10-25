@@ -1,5 +1,5 @@
 import type { MortgageProgramRule, PulseProperty, PulseSelectConfig } from '../pulse-data/model';
-import { calculateMortgageScenario, type MortgageScenarioSettings } from './mortgagePolicy';
+import { calculateMortgageScenario, newbuildHasIncreasedLimit, type MortgageScenarioSettings } from './mortgagePolicy';
 
 export type Criteria={city:string;rooms:string;min:number;max:number;delivery:string;sea:boolean};
 export type PurchaseMode='cash'|'mortgage';
@@ -159,7 +159,9 @@ export function selectionMatch(
   if(price!==null&&criteria.purchaseMode==='cash'){
     financeOk=price>=criteria.min&&price<=criteria.max;
   }else if(price!==null){
-    const fit=bestMortgageFit(price,criteria.downPayment,criteria.monthlyPayment,programs,criteria.mortgageProgram,criteria.mortgageScenario);
+    const plan=roomPlans(property,criteria.rooms).find(plan=>plan.priceFrom!==null&&Math.round(plan.priceFrom*1_000_000)===price);
+    const scenario={...criteria.mortgageScenario,programId:criteria.mortgageProgram??'standard',propertyKind:'newbuild' as const,largeArea:newbuildHasIncreasedLimit(plan)};
+    const fit=bestMortgageFit(price,criteria.downPayment,criteria.monthlyPayment,programs,criteria.mortgageProgram,scenario);
     financeOk=fit.fits;
     mortgagePayment=fit.payment;
     mortgageProgram=fit.program;

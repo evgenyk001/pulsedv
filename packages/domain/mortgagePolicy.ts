@@ -11,6 +11,8 @@ export type MortgageScenarioSettings={
   hasYoungChild?:boolean;
   disabledChild?:boolean;
   largeArea?:boolean;
+  // A bank offering a blended product is not the borrower choosing it.
+  allowBlended?:boolean;
   marketRate?:number;
   futureRate?:number;
   years?:number;
@@ -48,7 +50,7 @@ export type MortgageCalculation={
   policyVersion:string;
 };
 
-export const MORTGAGE_POLICY_VERSION="2026-10-01";
+export const MORTGAGE_POLICY_VERSION="2026-10-26";
 export const MORTGAGE_SCENARIO_KEY="pulse_mortgage_scenario_v1";
 export const FAMILY_SUBSIDY_YEARS=15;
 
@@ -104,6 +106,10 @@ export function mortgageProgram(programs:MortgageProgramRule[],id:MortgageProgra
   return programs.find(item=>item.id===id)??null;
 }
 
+export function newbuildHasIncreasedLimit(plan:{areaFrom:number|null}|null|undefined){
+  return typeof plan?.areaFrom==="number"&&plan.areaFrom>64;
+}
+
 export function calculateMortgageScenario(input:{
   programs:MortgageProgramRule[];
   settings:MortgageScenarioSettings;
@@ -115,7 +121,9 @@ export function calculateMortgageScenario(input:{
   if(!rule)return null;
 
   const propertyKind=input.settings.propertyKind;
-  const years=Math.max(1,Math.min(input.years??input.settings.years??rule.maxYears,rule.maxYears));
+  const maxYears=Math.max(1,Math.min(Math.trunc(rule.maxYears),rule.id==="farEast"?20:30));
+  const years=Math.max(1,Math.min(input.years??input.settings.years??maxYears,maxYears));
+  const allowBlended=rule.blended&&input.settings.allowBlended===true&&(rule.id==="family"||rule.id==="it");
   const marketRate=input.settings.marketRate??defaultMarketRate(input.programs,propertyKind);
   const downPercent=input.price>0?input.down/input.price*100:0;
   const familyChildren=input.settings.childrenCount??1;
@@ -133,8 +141,8 @@ export function calculateMortgageScenario(input:{
       ?6
       :(input.settings.disabledChild===true||downPercent>=50?Math.min(6,family.rate):family.rate);
     subsidizedLimit=family.limit;
-    totalLimit=Math.max(subsidizedLimit,rule.totalLimit);
-    familySubsidyYears=FAMILY_SUBSIDY_YEARS;
+    totalLimit=allowBlended?Math.max(subsidizedLimit,rule.totalLimit):subsidizedLimit;
+    familySubsidyYears=propertyKind==="house"?null:FAMILY_SUBSIDY_YEARS;
     if(input.settings.hasYoungChild===false&&input.settings.disabledChild!==true){
       status="blocked";
       blockReason="Не подтверждено базовое право на Семейную ипотеку";
@@ -146,6 +154,7 @@ export function calculateMortgageScenario(input:{
     totalLimit=subsidizedLimit;
     status="needs_confirmation";
   }else if(rule.id==="it"){
+    totalLimit=allowBlended?Math.max(subsidizedLimit,rule.totalLimit):subsidizedLimit;
     if(propertyKind==="secondary"){
       status="blocked";
       blockReason="Обычная вторичка не подходит под IT-ипотеку";
@@ -154,15 +163,15 @@ export function calculateMortgageScenario(input:{
     }
   }else{
     preferredRate=marketRate;
-    subsidizedLimit=100_000_000;
-    totalLimit=100_000_000;
+    subsidizedLimit=rule.totalLimit;
+    totalLimit=rule.totalLimit;
     status="eligible";
   }
 
-  const minDownPct=rule.minDownPct;
+  const minDownPct=Math.max(20.1,rule.minDownPct);
   const minDown=minimumMortgageDown(input.price,minDownPct);
   const loan=Math.max(input.price-input.down,0);
-  const exceedsHardLimit=rule.id!=="standard"&&loan>totalLimit;
+  const exceedsHardLimit=loan>totalLimit;
   if(exceedsHardLimit){
     status="blocked";
     blockReason="Сумма кредита выше доступного лимита";
@@ -172,13 +181,13 @@ export function calculateMortgageScenario(input:{
   const subsidizedPrincipal=rule.id==="standard"?0:Math.min(loan,subsidizedLimit);
   const marketPrincipal=rule.id==="standard"
     ?loan
-    :(rule.blended?Math.max(0,loan-subsidizedLimit):0);
+    :(allowBlended?Math.max(0,loan-subsidizedLimit):0);
 
   const months=years*12;
   const preferredPayment=rule.id==="standard"?0:annuityPayment(subsidizedPrincipal,preferredRate,months);
   const marketPayment=annuityPayment(marketPrincipal,marketRate,months);
   const payment=invalid?0:(rule.id==="standard"?marketPayment:preferredPayment+marketPayment);
-  const totalKnown=!(rule.id==="family"&&years>FAMILY_SUBSIDY_YEARS);
+  const totalKnown=familySubsidyYears===null||years<=familySubsidyYears;
   const total=totalKnown?payment*months:0;
   const overpayment=totalKnown?Math.max(total-loan,0):0;
   const requiredDown=Math.ceil(Math.max(minDown,input.price-totalLimit));
@@ -202,7 +211,7 @@ export function calculateMortgageScenario(input:{
     marketRate,
     subsidizedLimit,
     totalLimit,
-    maxYears:rule.maxYears,
+    maxYears,
     minDownPct,
     minDown,
     loan,
@@ -238,6 +247,7 @@ export function readMortgageScenario(storage:Pick<Storage,"getItem">|null|undefi
       hasYoungChild:typeof raw.hasYoungChild==="boolean"?raw.hasYoungChild:undefined,
       disabledChild:typeof raw.disabledChild==="boolean"?raw.disabledChild:undefined,
       largeArea:typeof raw.largeArea==="boolean"?raw.largeArea:undefined,
+      allowBlended:raw.allowBlended===true,
       marketRate:finite(raw.marketRate,.1,40),
       futureRate:finite(raw.futureRate,0,40),
       years:finite(raw.years,1,30),
