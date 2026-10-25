@@ -29,6 +29,7 @@ const normalizeBase=(row:any):CatalogProperty=>({
   id:String(row.id),
   freshness:{source:row.freshness?.source??"",responsible:row.freshness?.responsible??"",verifiedAt:row.freshness?.verifiedAt??null,reviewDueOn:row.freshness?.reviewDueOn??null},
   revision:Number(row.revision??1),
+  projectDetails:row.project_details??row.projectDetails??undefined,
   name:String(row.name??""),
   city:String(row.city??""),
   district:String(row.district??""),
@@ -132,7 +133,7 @@ export async function listCatalog(sql:Sql,options:CatalogListOptions={}){
   const total=Number(totalResult.rows[0]?.total??0);
   const listValues=[...values,limit,(page-1)*limit];
   const view=options.view??"card";
-  const columns=view==="full"?"p.*":`p.id,p.revision,p.freshness,p.name,p.city,p.district,p.address,p.latitude,p.longitude,p.price_from,p.delivery,p.class_name,p.status,p.description,p.developer_name,p.tags,p.cover_image_url,p.sort_order`;
+  const columns=view==="full"?"p.*":`p.id,p.revision,p.freshness,p.project_details,p.name,p.city,p.district,p.address,p.latitude,p.longitude,p.price_from,p.delivery,p.class_name,p.status,p.description,p.developer_name,p.tags,p.cover_image_url,p.sort_order`;
   const rows=(await sql.query(
     "select "+columns+" from catalog_properties p"+clause+" order by "+order+" limit $"+(values.length+1)+" offset $"+(values.length+2),
     listValues
@@ -176,14 +177,14 @@ export async function catalogMeta(sql:Sql,status:"published"|"all"="published"){
 
 export async function upsertCatalogProperty(sql:Sql,p:CatalogProperty){
   await sql.query(`insert into catalog_properties(
-    id,name,city,district,address,latitude,longitude,price_from,delivery,class_name,status,description,developer_name,tags,cover_image_url,sort_order,freshness
-  ) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb,$15,$16,$17::jsonb)
+    id,name,city,district,address,latitude,longitude,price_from,delivery,class_name,status,description,developer_name,tags,cover_image_url,sort_order,freshness,project_details
+  ) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb,$15,$16,$17::jsonb,$18::jsonb)
   on conflict(id) do update set
     name=excluded.name,city=excluded.city,district=excluded.district,address=excluded.address,latitude=excluded.latitude,longitude=excluded.longitude,
     price_from=excluded.price_from,delivery=excluded.delivery,class_name=excluded.class_name,status=excluded.status,description=excluded.description,
-    developer_name=excluded.developer_name,tags=excluded.tags,cover_image_url=excluded.cover_image_url,sort_order=excluded.sort_order,freshness=excluded.freshness`,[
+    developer_name=excluded.developer_name,tags=excluded.tags,cover_image_url=excluded.cover_image_url,sort_order=excluded.sort_order,freshness=excluded.freshness,project_details=excluded.project_details`,[
     p.id,p.name,p.city,p.district,p.address,p.latitude,p.longitude,p.priceFrom,p.delivery,p.className,p.status,p.description,p.developerName,
-    JSON.stringify(p.tags??[]),p.coverImageUrl,p.sortOrder,JSON.stringify(p.freshness??{})
+    JSON.stringify(p.tags??[]),p.coverImageUrl,p.sortOrder,JSON.stringify(p.freshness??{}),JSON.stringify(p.projectDetails??{})
   ]);
 
   await sql.query("delete from catalog_property_images where property_id=$1",[p.id]);

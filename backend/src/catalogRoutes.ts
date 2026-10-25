@@ -124,10 +124,10 @@ export async function registerCatalogRoutes(
     if(property.id!==id)return reply.code(400).send({error:"ID объекта нельзя менять этим запросом"});
     if(!property.revision)return reply.code(409).send({error:"Откройте карточку заново перед сохранением: версия не указана"});
     await db.transaction(async sql=>{
-      const current=(await sql.query("select revision,freshness from catalog_properties where id=$1 for update",[id])).rows[0];
+      const current=(await sql.query("select revision,freshness,project_details from catalog_properties where id=$1 for update",[id])).rows[0];
       if(!current)throw Object.assign(new Error("Объект не найден"),{statusCode:404});
       if(Number(current.revision)!==property.revision)throw Object.assign(new Error("Карточка изменена другим сотрудником. Ваши правки сохранены в форме. Сверьте их с актуальной версией перед повторным редактированием."),{statusCode:409});
-      await upsertCatalogProperty(sql,{...property,freshness:property.freshness??current.freshness});
+      await upsertCatalogProperty(sql,{...property,freshness:property.freshness??current.freshness,projectDetails:property.projectDetails??current.project_details});
       await audit(sql,request.member!.id,"catalog.update",id,{status:property.status});
     });
     return {property:await getCatalogProperty(db,id,"any")};
@@ -143,6 +143,7 @@ export async function registerCatalogRoutes(
         const property=exists?{
           ...incoming,
           freshness:incoming.freshness??exists.freshness,
+          projectDetails:incoming.projectDetails??exists.projectDetails,
           images:input.replace.images?incoming.images:exists.images,
           features:input.replace.features?incoming.features:exists.features,
           floorplans:input.replace.floorplans?incoming.floorplans:exists.floorplans,

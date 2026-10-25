@@ -55,6 +55,7 @@ test('SQL/API: заявки между устройствами, дедупли�
   assert.equal((await app.inject({method:'PUT',url:'/api/v1/control/state',headers,cookies:managerCookie,payload:{state:doc,version:2}})).statusCode,403);
 
   const properties=DEFAULT_STATE.properties.map(p=>({...p,documents:[]}));
+  properties[1].projectDetails={commissioningDate:'2027-12-31',totalApartments:420,availableApartments:77};
   const imported=await app.inject({method:'POST',url:'/api/v1/control/catalog/import',headers,cookies:ownerCookie,payload:{properties,replace:{images:true,features:true,floorplans:true,documents:true}}});
   assert.equal(imported.statusCode,200,imported.body);assert.equal(imported.json().created,properties.length);
 
@@ -62,6 +63,15 @@ test('SQL/API: заявки между устройствами, дедупли�
   assert.equal(page1.json().items.length,2);assert.equal(page1.json().total,properties.length);assert.equal(page1.json().hasMore,true);
   const page2=await app.inject('/api/v1/public/catalog?page=2&limit=2&view=card');assert.equal(page2.json().items.length,2);
   const detail=await app.inject('/api/v1/public/catalog/solnechniy');assert.equal(detail.statusCode,200,detail.body);assert.ok(detail.json().property.floorplans.length>0);
+  assert.deepEqual(detail.json().property.projectDetails,properties[1].projectDetails);
+  assert.deepEqual(page1.json().items.find((p:any)=>p.id==='solnechniy').projectDetails,properties[1].projectDetails);
+  const oldClient={...detail.json().property};delete oldClient.projectDetails;
+  const oldSave=await app.inject({method:'PUT',url:'/api/v1/control/catalog/solnechniy',headers,cookies:ownerCookie,payload:oldClient});
+  assert.equal(oldSave.statusCode,200,oldSave.body);assert.deepEqual(oldSave.json().property.projectDetails,properties[1].projectDetails);
+  const oldImport=await app.inject({method:'POST',url:'/api/v1/control/catalog/import',headers,cookies:ownerCookie,payload:{properties:[oldClient]}});
+  assert.equal(oldImport.statusCode,200,oldImport.body);
+  assert.deepEqual((await app.inject('/api/v1/public/catalog/solnechniy')).json().property.projectDetails,properties[1].projectDetails);
+
   assert.equal((await app.inject({url:'/api/v1/control/catalog',cookies:managerCookie})).statusCode,403);
  });
 

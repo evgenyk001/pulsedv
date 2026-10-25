@@ -6,7 +6,10 @@ export type PropertyStatus="draft"|"published"|"archived";
 export type CatalogFreshness={source:string;responsible:string;verifiedAt:string|null;reviewDueOn:string|null};
 export type DealFinance={commissionRub:number|null;agentPayoutRub:number|null;expectedPaymentOn:string|null;receivedOn:string|null;agentPaidOn:string|null};
 
+export type ProjectDetails={commissioningDate:string|null;totalApartments:number|null;availableApartments:number|null};
+
 export type PulseProperty={
+  projectDetails?:ProjectDetails;
   freshness?:CatalogFreshness;
   revision?:number;
   id:string; name:string; city:string; district:string; address:string|null;
