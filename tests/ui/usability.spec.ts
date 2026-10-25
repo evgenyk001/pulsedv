@@ -24,10 +24,10 @@ for(const width of [320,390,430])test(`Comparison ${width}px: explicit two slots
  await expect(page.getByRole('button',{name:'Выбрать '+projects[1].name,exact:true})).toBeDisabled();
  await page.getByRole('button',{name:'Выбрать '+projects[2].name,exact:true}).click();await expect(page.locator('[role="dialog"]')).toHaveCount(0);
  await expect(headers.nth(0)).toContainText(projects[2].name);await expect(headers).toHaveCount(2);
- await page.getByRole('checkbox',{name:'Только различия',exact:true}).check();await page.getByRole('spinbutton',{name:'Взнос, %',exact:true}).fill('40');
+ await page.getByRole('checkbox',{name:'Только различия',exact:true}).check();await page.getByRole('textbox',{name:'Взнос, %',exact:true}).fill('40');
  const compareUrl=page.url();await page.getByRole('link',{name:'Открыть '+projects[2].name,exact:true}).click();await expect(page.getByRole('heading',{name:projects[2].name,exact:true})).toBeVisible();
  await page.getByRole('link',{name:'Назад',exact:true}).click();await expect(page).toHaveURL(compareUrl);
- await expect(page.getByRole('checkbox',{name:'Только различия',exact:true})).toBeChecked();await expect(page.getByRole('spinbutton',{name:'Взнос, %',exact:true})).toHaveValue('40');
+ await expect(page.getByRole('checkbox',{name:'Только различия',exact:true})).toBeChecked();await expect(page.getByRole('textbox',{name:'Взнос, %',exact:true})).toHaveValue('40');
  expect(await page.evaluate(()=>JSON.parse(localStorage.getItem('pulse.compare.v1')!).length)).toBe(2);await noOverflow(page);
  await page.screenshot({path:`test-results/comparison-two-${width}.png`,fullPage:true});
 });
@@ -78,4 +78,27 @@ test('Failed bundle keeps branded screen and offers a working reload',async({pag
  await expect(page.getByRole('button',{name:'Повторить загрузку',exact:true})).toBeVisible({timeout:20000});
  await page.unroute('**/assets/index-*.js');await page.getByRole('button',{name:'Повторить загрузку',exact:true}).click();
  await expect(page.getByRole('heading',{name:'Стоит посмотреть',exact:true})).toBeVisible();await expect(page.locator('#pulse-launch')).toHaveCount(0);
+});
+
+test('Comparison numeric drafts clear fully, accept decimal commas and commit limits on blur',async({page})=>{
+ await seed(page,2);await page.goto('/pulsedv/mini-app/#/compare');
+ await expect(page.getByRole('region',{name:'Сравнение ЖК'})).toBeVisible();
+ for(const label of ['Взнос, %','Ставка, %','Срок, лет']){
+  const field=page.getByRole('textbox',{name:label,exact:true});
+  await field.fill('');await expect(field).toHaveValue('');
+  await field.pressSequentially('2');await expect(field).toHaveValue('2');
+  await field.fill('');await field.blur();await expect(field).toHaveValue('2');
+ }
+ const rate=page.getByRole('textbox',{name:'Ставка, %',exact:true});
+ await rate.fill('0');await rate.blur();await expect(rate).toHaveValue('0');
+ await rate.fill('');await rate.pressSequentially('2,5');await expect(rate).toHaveValue('2,5');
+ await expect(page.getByText(/Расчёт ориентировочный:/)).toContainText('ставка 2.5%');
+ await rate.fill('2.75');await rate.blur();await expect(rate).toHaveValue('2,75');
+ await rate.fill('75');await expect(rate).toHaveValue('75');await rate.blur();await expect(rate).toHaveValue('50');
+ const term=page.getByRole('textbox',{name:'Срок, лет',exact:true});
+ await term.fill('0');await expect(term).toHaveValue('0');await term.blur();await expect(term).toHaveValue('1');
+ await term.fill('40');await term.press('Enter');await expect(term).toHaveValue('30');
+ await rate.fill('');await rate.pressSequentially('2');await rate.blur();await expect(rate).toHaveValue('2');
+ await page.reload();await expect(page.getByRole('textbox',{name:'Ставка, %',exact:true})).toHaveValue('2');
+ await expect(page.getByRole('textbox',{name:'Срок, лет',exact:true})).toHaveValue('30');
 });

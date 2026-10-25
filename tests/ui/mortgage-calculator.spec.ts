@@ -24,10 +24,12 @@ for(const width of [320,390,430]){
   await slider.focus();await page.keyboard.press('ArrowRight');
   await expect(down).toHaveValue(rub(1515000));
   await page.keyboard.press('Home');await expect(down).toHaveValue(rub(1507500));
-  await price.fill('7543219');await price.blur();
+  await price.fill('');await expect(price).toHaveValue('');
+  await price.pressSequentially('7543219');await price.blur();
   await expect(price).toHaveValue(rub(7543219));
   await expect(down).toHaveValue(rub(1516188));
-  await down.fill('2123456');await down.blur();
+  await down.fill('');await expect(down).toHaveValue('');
+  await down.pressSequentially('2123456');await down.blur();
   await expect(down).toHaveValue(rub(2123456));
   await price.fill('6500000');await price.blur();
   await expect(down).toHaveValue(rub(2123456));
