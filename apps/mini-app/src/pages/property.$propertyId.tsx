@@ -4,9 +4,11 @@ import {usePropertyHeroMotion} from "../helpers/usePropertyHeroMotion";
 import {IconTile} from '../components/IconTile';
 import { PropertyFreshness } from '../components/PropertyFreshness';
 import React from "react";
-import {NativeSelect} from "../components/NativeSelect";
+
 import {propertyReturn} from "../helpers/navigationMemory";
 import {FloorplanViewer} from "../components/FloorplanViewer";
+import {APARTMENT_FINISHES,planFinishOffers,planPriceForFinish,planStartingPrice,apartmentFinishLabel} from "../../../../packages/domain/propertyFinish";
+import type {ApartmentFinish} from "../../../../packages/pulse-data/model";
 import {PropertyGallery} from "../components/PropertyGallery";
 import {usePulseControlState} from "../helpers/usePulseControlState";
 import {propertyPhotos,propertyMortgageLink,propertyPriceLabel,propertyPriceRub} from "../../../../packages/domain/propertyPresentation";
@@ -56,9 +58,10 @@ export default function PropertyPage(){
   const {toggle,isFavorite}=useFavoriteIds();
   const [photoIndex,setPhotoIndex]=React.useState(0);
   const [selectedRoom,setSelectedRoom]=React.useState("");
+  const [selectedFinish,setSelectedFinish]=React.useState<ApartmentFinish|null>(null);
   const [shareNotice,setShareNotice]=React.useState("");
 
-  React.useEffect(()=>{setPhotoIndex(0);setSelectedRoom("");setShareNotice("")},[propertyId]);
+  React.useEffect(()=>{setPhotoIndex(0);setSelectedRoom("");setSelectedFinish(null);setShareNotice("")},[propertyId]);
 
   React.useEffect(()=>{
     if(!p)return;
@@ -80,12 +83,17 @@ export default function PropertyPage(){
   const jump=(id:string)=>document.getElementById(id)?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
 
   const roomOptions=sortRoomLabels(p.floorplans.map(plan=>plan.roomLabel));
-  const activeRoom=selectedRoom&&roomOptions.includes(selectedRoom)?selectedRoom:(roomOptions[0]||"");
-  const visiblePlans=p.floorplans
-    .filter(plan=>!activeRoom||normalizeRoomLabel(plan.roomLabel)===activeRoom)
-    .sort((a,b)=>(a.priceFrom??Infinity)-(b.priceFrom??Infinity)||a.sortOrder-b.sortOrder);
-  const fromPulse=returnTo.startsWith("/selection");
+  const activeRoom=selectedRoom&&roomOptions.includes(selectedRoom)?selectedRoom:"";
   const details=p.projectDetails;
+  const finishTypes=APARTMENT_FINISHES.filter(([value])=>
+    (details?.finishes??[]).includes(value)||p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>offer.finishType===value))
+  );
+  const priceForPlan=(plan:typeof p.floorplans[number])=>selectedFinish?planPriceForFinish(plan,selectedFinish):planStartingPrice(plan);
+  const matchesFinish=(plan:typeof p.floorplans[number])=>!selectedFinish||planFinishOffers(plan).some(offer=>offer.finishType===selectedFinish);
+  const visiblePlans=p.floorplans
+    .filter(plan=>activeRoom&&normalizeRoomLabel(plan.roomLabel)===activeRoom&&matchesFinish(plan))
+    .sort((a,b)=>(priceForPlan(a)??Infinity)-(priceForPlan(b)??Infinity)||a.sortOrder-b.sortOrder);
+  const fromPulse=returnTo.startsWith("/selection");
   const areaValues=p.floorplans.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]).filter((v):v is number=>typeof v==='number'&&v>0);
   const minArea=areaValues.length?Math.min(...areaValues):null;
   const commissioning=formatProjectDate(details?.commissioningDate);
@@ -144,6 +152,14 @@ export default function PropertyPage(){
           <small>Стартовая цена. Стоимость зависит от планировки.</small>
         </div>
         <div className={styles.projectFacts} role="region" aria-label="Ключевые характеристики">{facts.map(({label,value,icon:Icon})=><div key={label}><Icon size={16}/><span>{label}</span><strong>{value}</strong></div>)}</div>
+        <div className={styles.finishSummary} role="group" aria-label="Варианты отделки">
+          <span className={styles.finishLabel}>ОТДЕЛКА КВАРТИР</span>
+          {finishTypes.length>0?<><div className={styles.finishPills}>
+            <button type="button" aria-pressed={selectedFinish===null} className={selectedFinish===null?styles.finishSelected:""} onClick={()=>setSelectedFinish(null)}>Все варианты</button>
+            {finishTypes.map(([value,label])=><button key={value} type="button" aria-pressed={selectedFinish===value} className={selectedFinish===value?styles.finishSelected:""} onClick={()=>setSelectedFinish(value)}>{label}</button>)}
+          </div><small>Выберите отделку. Цены и доступные планировки зависят от варианта.</small></>:
+          <strong className={styles.finishUnknown}>Отделка уточняется</strong>}
+        </div>
         {minDown!==null&&mortgageRule&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
         <Link to={propertyMortgageLink(p)}>
           <WalletCards size={17}/>
@@ -159,15 +175,38 @@ export default function PropertyPage(){
         {!!p.documents?.length&&<button type="button" onClick={()=>jump('property-materials')}><FileText size={15}/>Документы</button>}
       </nav>
 
-      {roomOptions.length>0&&<section className={styles.apartmentSummary} aria-label="Квартиры в ЖК">
-        <div className={styles.sectionHead}><div><span>КВАРТИРЫ</span><h2>Найдите свой вариант</h2></div></div>
-        <p className={styles.sectionHint}>{details?.availableApartments!=null?'В продаже: '+details.availableApartments.toLocaleString('ru-RU')+' '+(details.availableApartments%100>=11&&details.availableApartments%100<=14?'квартир':details.availableApartments%10===1?'квартира':details.availableApartments%10>=2&&details.availableApartments%10<=4?'квартиры':'квартир')+'.':'Актуальное наличие уточним по запросу.'} Выберите комнатность, чтобы перейти к планировкам.</p>
+      {roomOptions.length>0&&<section id="property-plans" className={styles.apartmentSummary} aria-label="Квартиры и планировки ЖК">
+        <div className={styles.sectionHead}><div><span>КВАРТИРЫ И ПЛАНИРОВКИ</span><h2>Найдите свой вариант</h2></div><small>{p.floorplans.length} планировок</small></div>
+        <p className={styles.sectionHint}>{details?.availableApartments!=null?'В продаже: '+details.availableApartments.toLocaleString('ru-RU')+' '+(details.availableApartments%100>=11&&details.availableApartments%100<=14?'квартир':details.availableApartments%10===1?'квартира':details.availableApartments%10>=2&&details.availableApartments%10<=4?'квартиры':'квартир')+'. ':'Актуальное наличие уточним по запросу. '}Нажмите на комнатность, чтобы посмотреть планировки и цены.</p>
+        {finishTypes.length>0&&<div className={styles.activeFinish}>Отделка: <strong>{selectedFinish?apartmentFinishLabel(selectedFinish):'все варианты'}</strong></div>}
         <div className={styles.roomCards}>{roomOptions.map(room=>{
           const plans=p.floorplans.filter(plan=>normalizeRoomLabel(plan.roomLabel)===room);
-          const prices=plans.flatMap(plan=>plan.priceFrom!==null?[plan.priceFrom]:[]);
-          const areas=plans.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]);
-          return <button type="button" key={room} aria-label={'Выбрать планировки: '+room} onClick={()=>{setSelectedRoom(room);requestAnimationFrame(()=>jump('property-plans'))}}><span>{room==='Студия'?'Студии':room+' комн.'}<ChevronRight size={15}/></span><strong>{prices.length?priceLabel(Math.min(...prices)):'Цена по запросу'}</strong><small>{areas.length?'от '+Math.min(...areas).toLocaleString('ru-RU')+' м² · ':''}Планировок: {plans.length}</small></button>;
+          const matching=plans.filter(matchesFinish);
+          const prices=matching.map(priceForPlan).filter((price):price is number=>price!==null);
+          const areas=matching.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]);
+          const disabled=matching.length===0;
+          const open=activeRoom===room;
+          return <button type="button" key={room} aria-label={'Выбрать планировки: '+room} aria-expanded={open} aria-controls="room-plan-options" disabled={disabled} className={open?styles.selectedRoom:''} onClick={()=>setSelectedRoom(open?'':room)}><span>{room==='Студия'?'Студии':room+' комн.'}<ChevronRight size={15}/></span><strong>{disabled?'Нет вариантов':prices.length?priceLabel(Math.min(...prices)):'Цена уточняется'}</strong><small>{disabled?'В выбранной отделке':(areas.length?'от '+Math.min(...areas).toLocaleString('ru-RU')+' м² · ':'')+'Планировок: '+matching.length}</small></button>;
         })}</div>
+        {activeRoom&&<div id="room-plan-options" className={styles.planPanel}>
+          <div className={styles.planPanelHeader}><div><span>ПЛАНИРОВКИ</span><h3>{activeRoom==='Студия'?'Студии':activeRoom+' комн.'}</h3></div><button type="button" aria-label="Скрыть планировки" onClick={()=>setSelectedRoom('')}>Свернуть <ChevronRight size={15}/></button></div>
+          {visiblePlans.length?<div className={styles.planRail}>
+            {visiblePlans.map((plan,index)=>{
+              const planPrice=priceForPlan(plan);
+              const offers=planFinishOffers(plan);
+              return <TrackedFloorplan property={p} plan={plan} className={styles.planCard} key={plan.id||plan.roomLabel+'-'+index}>
+                <div className={styles.planImage}><FloorplanViewer property={p} plan={plan} preferredFinish={selectedFinish}/></div>
+                <div className={styles.planCopy}>
+                  <span>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'}</span>
+                  <strong>{plan.areaFrom!==null?plan.areaFrom+(plan.areaTo&&plan.areaTo!==plan.areaFrom?'–'+plan.areaTo:'')+' м²':'Площадь уточняется'}</strong>
+                  {offers.length>0&&<span className={styles.planFinishes}>{selectedFinish?apartmentFinishLabel(selectedFinish):offers.map(offer=>apartmentFinishLabel(offer.finishType)).join(' · ')}</span>}
+                  <b>{planPrice!==null?priceLabel(planPrice):'Цена уточняется'}</b>
+                  {planPrice!==null?<Link to={propertyMortgageLink(p,plan,selectedFinish)}>Рассчитать платёж <ChevronRight size={14}/></Link>:<small>Уточните стоимость у менеджера</small>}
+                </div>
+              </TrackedFloorplan>;
+            })}
+          </div>:<div className={styles.emptyPlans}>Для этой комнатности пока нет подтверждённых вариантов с выбранной отделкой.</div>}
+        </div>}
       </section>}
 
       <section className={styles.section}>
@@ -181,32 +220,6 @@ export default function PropertyPage(){
           })}
         </div>
       </>}
-      </section>
-
-      <section id="property-plans" className={styles.section} aria-label="Планировки ЖК">
-        <div className={styles.sectionHead}>
-          <div><span>ПЛАНИРОВКИ</span><h2>Выберите квартиру</h2></div>
-          {p.floorplans.length>0&&<small>{p.floorplans.length} планировок</small>}
-        </div>
-        <p className={styles.sectionHint}>Откройте планировку, посмотрите её подробнее и рассчитайте платёж по выбранной цене.</p>
-
-        {roomOptions.length>0&&<NativeSelect aria-label="Комнатность планировок" value={activeRoom} onChange={e=>setSelectedRoom(e.target.value)}>{roomOptions.map(room=><option key={room} value={room}>{room}</option>)}</NativeSelect>}
-
-        {visiblePlans.length?<div className={styles.planRail}>
-          {visiblePlans.map((plan,index)=><TrackedFloorplan property={p} plan={plan} className={styles.planCard} key={plan.id||plan.roomLabel+"-"+index}>
-            <div className={styles.planImage}>
-              <FloorplanViewer property={p} plan={plan}/>
-            </div>
-            <div className={styles.planCopy}>
-              <span>{plan.roomLabel==="Студия"?"Студия":plan.roomLabel+" комн."}</span>
-              <strong>{plan.areaFrom!==null
-                ?plan.areaFrom+(plan.areaTo&&plan.areaTo!==plan.areaFrom?"–"+plan.areaTo:"")+" м²"
-                :"Площадь уточняется"}</strong>
-              <b>{plan.priceFrom!==null?priceLabel(plan.priceFrom):"Цена уточняется"}</b>
-              {plan.priceFrom!==null&&<Link to={propertyMortgageLink(p,plan)}>Рассчитать платёж <ChevronRight size={14}/></Link>}
-            </div>
-          </TrackedFloorplan>)}
-        </div>:<div className={styles.emptyPlans}>Планировки появятся после загрузки данных по проекту.</div>}
       </section>
 
       <section id="property-location" className={styles.section} aria-label="Расположение ЖК">
@@ -227,6 +240,7 @@ export default function PropertyPage(){
           {details?.availableApartments!=null&&<div><span>Квартир в продаже</span><strong>{details.availableApartments.toLocaleString('ru-RU')}</strong></div>}
           <div><span>Цена от</span><strong>{priceLabel(p.priceFrom).replace("от ","")}</strong></div>
           <div><span>Типы квартир</span><strong>{roomOptions.length?roomOptions.join(" · "):"Уточняются"}</strong></div>
+          <div><span>Отделка</span><strong>{finishTypes.length?finishTypes.map(([,label])=>label).join(" · "):"Уточняется"}</strong></div>
         </div>
       </details>
 
