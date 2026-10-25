@@ -209,8 +209,8 @@ export default function PropertyPage(){
           </div>:<div className={styles.emptyPlans}>Для этой комнатности пока нет подтверждённых вариантов с выбранной отделкой.</div>}
         </div>}
         <div className={styles.financeSummary}>
-          {selectedPrice!==null?<Link aria-label="Рассчитать ипотеку" to={matchedPricedPlans[0]?propertyMortgageLink(p,matchedPricedPlans[0].plan,selectedFinish):propertyMortgageLink(p)}>
-            <WalletCards size={20}/><span><strong>Рассчитать ипотеку</strong><small>{minDown!==null?'Взнос от '+minDown.toLocaleString('ru-RU')+' ₽':'Для выбранной стоимости'}{mortgageRule?' · '+mortgageRule.label:''}{activeRoom?' · '+(activeRoom==='Студия'?'студия':activeRoom+' комн.'):''}</small></span><ChevronRight size={17}/>
+          {selectedPrice!==null?<Link aria-label="Рассчитать ипотеку" aria-describedby="property-mortgage-hint" to={matchedPricedPlans[0]?propertyMortgageLink(p,matchedPricedPlans[0].plan,selectedFinish):propertyMortgageLink(p)}>
+            <WalletCards size={20}/><span><strong>Рассчитать ипотеку</strong><small id="property-mortgage-hint">{minDown!==null&&mortgagePrice!==null&&mortgagePrice>0?<><span>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</span><span>{minDown.toLocaleString('ru-RU')} ₽{mortgageRule?' · '+mortgageRule.label:''}{activeRoom?' · '+(activeRoom==='Студия'?'студия':activeRoom+' комн.'):''}</span></>:'Для выбранной стоимости'}</small></span><ChevronRight size={17}/>
           </Link>:<p>Цена выбранного варианта уточняется. Менеджер поможет с расчётом.</p>}
         </div>
       </section>
