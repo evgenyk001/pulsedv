@@ -23,8 +23,10 @@ for(const width of [320,390,430])test(`Native pickers ${width}px: draft/apply/re
  await page.getByRole('combobox',{name:'Количество детей'}).selectOption('2');await page.getByRole('combobox',{name:'Тип недвижимости'}).selectOption('house');await page.getByRole('combobox',{name:'Ипотечная программа'}).selectOption('farEast');await expect(page.getByRole('combobox',{name:'Тип недвижимости'})).toHaveValue('house');await noOverflow();
  await page.screenshot({path:`test-results/native-mortgage-${browserName}-${width}.png`,fullPage:true});
  await page.getByRole('combobox',{name:'Ипотечная программа'}).selectOption('family');await expect(page.getByRole('combobox',{name:'Количество детей'})).toHaveValue('2');
- await page.goto('/pulsedv/mini-app/#/property/'+DEFAULT_STATE.properties[0].id);const rooms=page.getByRole('combobox',{name:'Комнатность планировок'});await expect(rooms).toHaveJSProperty('tagName','SELECT');
- const options=await rooms.locator('option').allTextContents();if(options.length>1){await rooms.selectOption({label:options[1]});await expect(rooms).toHaveValue(options[1]);}
+  await page.goto('/pulsedv/mini-app/#/property/'+DEFAULT_STATE.properties[0].id);
+  const room=page.getByRole('button',{name:'Выбрать планировки: 2',exact:true});
+  await room.click();await expect(room).toHaveAttribute('aria-expanded','true');
+  await expect(page.getByRole('region',{name:'Квартиры и планировки ЖК'})).toContainText('2 комн.');
  await noOverflow();expect(errors).toEqual([]);
 });
 
