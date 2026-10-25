@@ -195,3 +195,60 @@
 .finishHelp p{margin:7px 0}.finishHelp b{color:var(--foreground)}
 .planImageMissing{height:116px;background:var(--muted);display:grid;place-items:center;border-bottom:1px solid var(--border)}
 .planImageMissing .pulsePlanTrigger{min-height:100%;display:flex;align-items:center;justify-content:center;font-size:11px}
+
+
+/* Property v2: compact reading flow, from project facts to price to actual apartments. */
+.content{gap:14px;padding-top:22px}
+.intro h1{font-size:29px;line-height:1.09}
+.tags{margin-bottom:9px}
+.location{margin-top:8px}
+.developerLine{margin-top:3px}
+.quickFacts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 5px;padding:7px;border-radius:19px;background:var(--muted);border:1px solid var(--app-card-border)}
+.quickFact{display:flex;align-items:flex-start;gap:9px;min-width:0;padding:10px 8px}
+.quickFact>svg{flex:none;color:var(--muted-foreground);margin-top:3px}
+.quickFact>span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.quickFact small{font-size:10px;line-height:1.3;color:var(--muted-foreground)}
+.quickFact strong{font-size:13px;line-height:1.25;letter-spacing:-.015em;overflow-wrap:anywhere}
+.priceCard{padding:17px 16px;gap:13px;border-radius:23px;box-shadow:none}
+.priceCard .priceMain{display:flex;flex-direction:column}
+.priceCard .priceMain>span{font-size:10px;line-height:1.3;letter-spacing:.07em;font-weight:750}
+.priceCard .priceMain>strong{font-size:30px;letter-spacing:-.048em;line-height:1.16;margin-top:6px}
+.priceCard .priceMain>small{margin-top:4px;font-size:11px;line-height:1.45}
+.priceCard .downSummary{padding-top:12px;border-top:1px solid var(--border);gap:8px;align-items:center}
+.priceCard .downSummary small{font-size:10px;line-height:1.42}
+.downSummary>small{max-width:43%;text-align:right}
+.downSummary b{font-size:17px}
+.priceCard>a{height:46px;font-size:12px;padding:0 15px}
+.apartmentSummary{padding:17px 15px;scroll-margin-top:12px;border-radius:23px;box-shadow:none}
+.apartmentSummary .sectionHead{align-items:center}
+.apartmentSummary .sectionHead h2{font-size:19px}
+.apartmentSummary .sectionHint{font-size:11px;line-height:1.55;margin:8px 0 13px}
+.apartmentSummary .finishSummary{margin:0 0 14px;padding:12px;border-radius:16px;background:var(--muted);gap:9px}
+.finishTop{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.finishTop>span{font-size:12px;font-weight:780;color:var(--foreground)}
+.finishTop small{font-size:10px;color:var(--muted-foreground)}
+.apartmentSummary .finishPills{gap:6px}
+.apartmentSummary .finishPills button{min-height:35px;padding:7px 11px;font-size:11px;background:var(--app-card);border-color:var(--app-card-border)}
+.apartmentSummary .finishPills button.finishSelected{background:var(--foreground);color:#fff;border-color:var(--foreground)}
+.apartmentSummary .finishHelp{padding-top:6px;border-top:0}
+.apartmentSummary .finishHelp summary{font-size:10px;color:var(--muted-foreground)}
+.roomCards{gap:8px}
+.roomCards button{padding:12px;gap:7px;border-radius:16px;background:var(--app-card);min-height:107px}
+.roomCards button>span{font-size:12px}
+.roomCards strong{font-size:14px;line-height:1.24}
+.roomCards small{font-size:10px;line-height:1.35}
+.roomCards button.selectedRoom{background:var(--brand-soft)}
+.planPanel{margin-top:14px;padding-top:13px}
+.planRail{margin-top:11px}
+.section,.moreDetails{box-shadow:none}
+@media(max-width:360px){
+  .intro h1{font-size:27px}
+  .quickFacts{padding:5px}
+  .quickFact{gap:7px;padding:9px 6px}
+  .quickFact strong{font-size:12px}
+  .priceCard{padding:15px}
+  .priceCard .priceMain>strong{font-size:27px}
+  .apartmentSummary{padding:15px 13px}
+  .roomCards button{padding:11px;min-height:105px}
+  .roomCards strong{font-size:12px}
+}
