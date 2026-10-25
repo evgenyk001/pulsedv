@@ -19,6 +19,7 @@ for(const width of [320,390,430])test(`Comparison ${width}px: explicit two slots
  await page.getByRole('button',{name:'Выбрать '+projects[1].name,exact:true}).click();await expect(page.locator('[role="dialog"]')).toHaveCount(0);
  const comparison=page.getByRole('region',{name:'Сравнение ЖК'});await expect(comparison).toBeVisible();
  const headers=comparison.locator('article');await expect(headers).toHaveCount(2);
+ const inputTops=await Promise.all(['Взнос, %','Ставка, %','Срок, лет'].map(async name=>(await page.getByRole('textbox',{name,exact:true}).boundingBox())!.y));expect(Math.max(...inputTops)-Math.min(...inputTops)).toBeLessThanOrEqual(1);
  const first=(await headers.nth(0).boundingBox())!,second=(await headers.nth(1).boundingBox())!;expect(first.x+first.width).toBeLessThanOrEqual(second.x);await noOverflow(page);
  await page.getByRole('button',{name:'Заменить '+projects[0].name,exact:true}).click();
  await expect(page.getByRole('button',{name:'Выбрать '+projects[1].name,exact:true})).toBeDisabled();
