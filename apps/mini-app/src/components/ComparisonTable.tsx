@@ -1,7 +1,8 @@
 import React from 'react';
 import {Link,useLocation} from 'react-router-dom';
 import {Building2, Check, ChevronRight, MapPin, SlidersHorizontal, WalletCards, X} from 'lucide-react';
-import {monthlyMortgagePayment} from '../../../../packages/domain/propertyMatch';
+import {calculateMortgageScenario} from '../../../../packages/domain/mortgagePolicy';
+import {usePulseControlState} from '../helpers/usePulseControlState';
 import type {PulseProperty} from '../../../../packages/pulse-data/model';
 import styles from './ComparisonTable.module.css';
 
@@ -34,6 +35,7 @@ function ScenarioNumberInput({label,value,min,max,integer=false,descriptionId,on
 
 export function ComparisonTable({properties,onReplace,onRemove}:{properties:PulseProperty[];onReplace?:(index:number)=>void;onRemove?:(index:number)=>void}){
  const location=useLocation();
+ const {mortgagePrograms}=usePulseControlState();
  const [scenario,setScenario]=React.useState(readScenario);
  const {different,down,rate,years}=scenario;
  const setDifferent=(different:boolean)=>setScenario(v=>({...v,different}));
@@ -49,7 +51,11 @@ export function ComparisonTable({properties,onReplace,onRemove}:{properties:Puls
   {name:'Класс',value:p=>p.className||'Уточняется'},
   {name:'Комнатность',value:p=>p.floorplans.map(f=>f.roomLabel).join(', ')||'Уточняется'},
   {name:'Отделка',value:p=>p.features.filter(f=>/отдел|ремонт/i.test(f.label)).map(f=>f.label).join(', ')||'Не указана'},
-  {name:'Платёж по сценарию',value:p=>Math.round(monthlyMortgagePayment(p.priceFrom*1e6*(1-down/100),rate,years)).toLocaleString('ru-RU')+' ₽/мес'},
+  {name:'Платёж по сценарию',value:p=>{
+   const price=Math.round(p.priceFrom*1e6);
+   const calculation=calculateMortgageScenario({programs:mortgagePrograms,settings:{programId:'standard',propertyKind:'newbuild',marketRate:rate},price,down:Math.ceil(price*down/100),years});
+   return !calculation||calculation.invalid?'Не подходит по условиям':Math.round(calculation.payment).toLocaleString('ru-RU')+' ₽/мес';
+  }},
  ];
  const displayed=rows.filter(r=>!different||new Set(properties.map(r.value)).size>1);
  return <section className={styles.compare} aria-label="Сравнение ЖК">
@@ -93,6 +99,6 @@ export function ComparisonTable({properties,onReplace,onRemove}:{properties:Puls
    </div>
   </section>
 
-  <p className={styles.disclaimer}><WalletCards size={14}/>Расчёт ориентировочный: минимальная цена ЖК, взнос {down}%, ставка {rate}%, срок {years} лет. Условия банка и наличие квартир уточняются отдельно.</p>
+  <p className={styles.disclaimer}><WalletCards size={14}/>Расчёт ориентировочный: свободный сценарий без льготной программы, минимальная цена ЖК, взнос {down}%, ставка {rate}%, срок {years} лет. Условия банка и наличие квартир уточняются отдельно.</p>
  </section>;
 }

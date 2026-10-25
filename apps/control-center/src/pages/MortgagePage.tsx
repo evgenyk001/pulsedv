@@ -30,7 +30,7 @@ export function MortgagePage(){
   return <PageFrame eyebrow="FINANCE" title="Ипотека" description="Управляйте параметрами общего ипотечного движка. Mini App и PULSE Select используют одну и ту же конфигурацию.">
     <section className="mortgageIntro panel">
       <div className="mortgageIntroIcon"><Landmark size={20}/></div>
-      <div><span className="kicker">POLICY {MORTGAGE_POLICY_VERSION}</span><h2>Один источник ипотечных правил</h2><p>ПВ, сроки, банковские лимиты и редактируемые ставки идут в общий domain engine. Для Семейной шкала 2–10% и лимиты 6–10 млн ₽ зафиксированы policy-версией и не подменяются одним числом.</p></div>
+      <div><span className="kicker">POLICY {MORTGAGE_POLICY_VERSION}</span><h2>Один источник ипотечных правил</h2><p>ПВ, сроки, банковские лимиты и редактируемые ставки идут в общий domain engine. Для Семейной шкала 2–10% и лимиты 6–10 млн ₽ зафиксированы policy-версией и не подменяются одним числом. ПВ учитывает также кредитный лимит. Комбинированный кредит клиент включает отдельно; доступность продукта не означает его автоматический выбор. Для квартиры Семейная: до 30 лет кредита, первые 15 лет льготной ставки; для строительства дома — до 30 лет льготной ставки.</p></div>
       <div className="mortgageSyncState"><i/><span>Синхронизация активна</span></div>
     </section>
 
@@ -61,12 +61,12 @@ export function MortgagePage(){
                 <label className="controlField"><span>Дом / ИЖС, %</span><input aria-label="Базовая — дом, %" type="number" step=".1" value={marketRate(program,"house")} onChange={e=>patchMarketRate(program,"house",Number(e.target.value))}/></label>
               </>
               :<label className="controlField"><span>Ставка, %</span><input aria-label={program.label+" — ставка, %"} type="number" step=".1" value={program.rate} onChange={e=>patch(program.id,{rate:Number(e.target.value)})}/></label>}
-          <label className="controlField"><span>Макс. срок, лет</span><input aria-label={program.label+" — максимальный срок, лет"} type="number" value={program.maxYears} onChange={e=>patch(program.id,{maxYears:Number(e.target.value)})}/></label>
-          <label className="controlField"><span>Первоначальный взнос от, %</span><input aria-label={program.label+" — первоначальный взнос, %"} type="number" step=".1" value={program.minDownPct} onChange={e=>patch(program.id,{minDownPct:Number(e.target.value)})}/></label>
+          <label className="controlField"><span>Макс. срок, лет</span><input aria-label={program.label+" — максимальный срок, лет"} type="number" min={1} max={program.id==="farEast"?20:30} value={program.maxYears} onChange={e=>patch(program.id,{maxYears:Number(e.target.value)})}/></label>
+          <label className="controlField"><span>Первоначальный взнос от, %</span><input aria-label={program.label+" — первоначальный взнос, %"} type="number" min={20.1} max={99} step=".1" value={program.minDownPct} onChange={e=>patch(program.id,{minDownPct:Number(e.target.value)})}/></label>
           {program.id==="family"
             ?<label className="controlField"><span>Льготный лимит</span><input aria-label="Семейная — лимит по policy" type="text" disabled value="6–10 млн ₽ · по детям"/></label>
             :<label className="controlField"><span>Льготный лимит, ₽</span><input aria-label={program.label+" — льготный лимит, ₽"} type="number" value={program.subsidizedLimit} onChange={e=>patch(program.id,{subsidizedLimit:Number(e.target.value)})}/></label>}
-          <label className="controlField"><span>Максимальный лимит, ₽</span><input aria-label={program.label+" — максимальный лимит, ₽"} type="number" value={program.totalLimit} onChange={e=>patch(program.id,{totalLimit:Number(e.target.value)})}/></label>
+          <label className="controlField"><span>{program.id==="family"||program.id==="it"?"Лимит комбинированного кредита, ₽":program.id==="farEast"?"Повышенный лимит по площади, ₽":"Максимальный кредит, ₽"}</span><input aria-label={program.label+" — максимальный лимит, ₽"} type="number" value={program.totalLimit} onChange={e=>patch(program.id,{totalLimit:Number(e.target.value)})}/></label>
           <label className="controlField wide mortgageHintField"><span>Подсказка клиенту</span><div className="mortgageHintInput"><Info size={15}/><input aria-label={program.label+" — подсказка клиенту"} value={program.hint} onChange={e=>patch(program.id,{hint:e.target.value})}/></div></label>
         </div>
       </section>)}

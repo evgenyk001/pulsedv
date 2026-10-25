@@ -137,3 +137,84 @@ test('Property entry and linked calculator show the same limit-aware deposit',as
  await page.getByRole('link',{name:/Рассчитать ипотеку/}).first().click();
  await expect(page.getByRole('textbox',{name:'Первоначальный взнос',exact:true})).toHaveValue(rub(4_000_000));
 });
+
+for(const width of [320,390,430])test(`All program ceilings require enough cash and preserve explicit combo choice at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:844});
+ await page.route('https://telegram.org/js/telegram-web-app.js',route=>route.fulfill({body:''}));
+ await page.addInitScript(()=>localStorage.setItem('pulse_mortgage_intro_version','mortgage_intro_v5'));
+ await page.goto('/pulsedv/mini-app/#/mortgage?price=12800000');
+ const down=page.getByRole('textbox',{name:'Первоначальный взнос',exact:true});
+ const program=page.getByRole('combobox',{name:'Ипотечная программа'});
+ const children=page.getByRole('combobox',{name:'Количество детей'});
+ const combo=page.getByRole('switch',{name:'Комбинированная ипотека',exact:true});
+ const term=page.getByRole('slider',{name:'Срок кредита, лет',exact:true});
+ await expect(combo).not.toBeChecked();await expect(down).toHaveValue(rub(6_800_000));
+ for(const [count,cash] of [['2',4_800_000],['3',2_800_000],['4',2_800_000],['5',2_800_000]] as const){
+  await children.selectOption(count);await expect(down).toHaveValue(rub(cash));
+ }
+ await children.selectOption('1');await expect(down).toHaveValue(rub(6_800_000));
+ await expect(page.getByText('Минимальный взнос: 53,125% · 6 800 000 ₽',{exact:true})).toBeVisible();
+ await combo.check();await expect(down).toHaveValue(rub(2_572_800));
+ await expect(page.getByText(/Рыночная часть:.*₽\/мес/)).toBeVisible();
+ await page.reload();await expect(combo).toBeChecked();await expect(down).toHaveValue(rub(2_572_800));
+ await combo.uncheck();await expect(down).toHaveValue(rub(6_800_000));
+ await term.focus();await term.press('End');await expect(term).toHaveAttribute('aria-valuenow','30');
+ await expect(page.getByRole('region',{name:'Расчёт после льготного периода'})).toBeVisible();
+ await page.getByRole('combobox',{name:'Тип недвижимости'}).selectOption('house');
+ await expect(page.getByRole('region',{name:'Расчёт после льготного периода'})).toHaveCount(0);
+ await page.getByRole('combobox',{name:'Тип недвижимости'}).selectOption('newbuild');
+ await program.selectOption('it');await expect(down).toHaveValue(rub(3_800_000));
+ await expect(term).toHaveAttribute('aria-valuemax','30');
+ await program.selectOption('farEast');await expect(down).toHaveValue(rub(6_800_000));
+ await expect(term).toHaveAttribute('aria-valuemax','20');await expect(term).toHaveAttribute('aria-valuenow','20');
+ await page.getByRole('switch',{name:'Повышенный лимит по площади'}).check();await expect(down).toHaveValue(rub(3_800_000));
+ await program.selectOption('standard');await expect(down).toHaveValue(rub(2_572_800));
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test('Family property quote uses the selected room, children and explicit combo consistently',async({page})=>{
+ await page.route('https://telegram.org/js/telegram-web-app.js',route=>route.fulfill({body:''}));
+ await page.addInitScript(state=>{
+  if(!localStorage.getItem('mortgage-family-property-seeded')){
+   localStorage.setItem('mortgage-family-property-seeded','1');
+   localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state));
+   localStorage.setItem('pulse_mortgage_scenario_v1',JSON.stringify({programId:'family',propertyKind:'newbuild',childrenCount:1,hasYoungChild:true,years:40}));
+   localStorage.setItem('pulse_mortgage_scenario_v1:property:primorskiy:index-2:',JSON.stringify({programId:'farEast',propertyKind:'newbuild',largeArea:true,years:20}));
+  }
+  localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion);
+  localStorage.setItem('pulse_mortgage_intro_version','mortgage_intro_v5');
+ },DEFAULT_STATE);
+ await page.goto('/pulsedv/mini-app/#/property/primorskiy');
+ await page.getByRole('button',{name:'Выбрать планировки: 3+',exact:true}).click();
+ const section=page.getByRole('region',{name:'Квартиры и планировки ЖК'});
+ await expect(section).toContainText('6 800 000 ₽');await expect(section).toContainText('С учётом лимита кредита 6 000 000 ₽');
+ await section.getByRole('link',{name:'Рассчитать ипотеку',exact:true}).click();
+ const down=page.getByRole('textbox',{name:'Первоначальный взнос',exact:true});
+ await expect(down).toHaveValue(rub(6_800_000));
+ await page.getByRole('combobox',{name:'Количество детей'}).selectOption('2');await expect(down).toHaveValue(rub(4_800_000));
+ await page.getByRole('button',{name:'Вернуться к ЖК',exact:true}).click();
+ await expect(section).toContainText('4 800 000 ₽');
+ await section.getByRole('link',{name:'Рассчитать ипотеку',exact:true}).click();
+ await page.getByRole('switch',{name:'Комбинированная ипотека',exact:true}).check();await expect(down).toHaveValue(rub(2_572_800));
+ await page.getByRole('button',{name:'Вернуться к ЖК',exact:true}).click();await expect(section).toContainText('комбинированная');await expect(section).toContainText('2 572 800 ₽');
+});
+
+test('Far East property quote derives increased limit from the selected plan rather than another saved object',async({page})=>{
+ await page.route('https://telegram.org/js/telegram-web-app.js',route=>route.fulfill({body:''}));
+ await page.addInitScript(state=>{
+  localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state));localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion);
+  localStorage.setItem('pulse_mortgage_intro_version','mortgage_intro_v5');
+  localStorage.setItem('pulse_mortgage_scenario_v1',JSON.stringify({programId:'farEast',propertyKind:'newbuild',largeArea:true,years:20}));
+ },DEFAULT_STATE);
+ await page.goto('/pulsedv/mini-app/#/property/primorskiy');
+ const section=page.getByRole('region',{name:'Квартиры и планировки ЖК'});
+ await page.getByRole('button',{name:'Выбрать планировки: 3+',exact:true}).click();await expect(section).toContainText('3 800 000 ₽');
+ await section.getByRole('link',{name:'Рассчитать ипотеку',exact:true}).click();
+ await expect(page.getByRole('textbox',{name:'Первоначальный взнос',exact:true})).toHaveValue(rub(3_800_000));
+ await expect(page.getByRole('switch',{name:'Повышенный лимит по площади'})).toBeChecked();
+ await page.getByRole('button',{name:'Вернуться к ЖК',exact:true}).click();
+ await page.getByRole('button',{name:'Выбрать планировки: 1',exact:true}).click();await expect(section).toContainText('1 800 000 ₽');
+ await section.getByRole('link',{name:'Рассчитать ипотеку',exact:true}).click();
+ await expect(page.getByRole('switch',{name:'Повышенный лимит по площади'})).not.toBeChecked();
+ await expect(page.getByRole('textbox',{name:'Первоначальный взнос',exact:true})).toHaveValue(rub(1_800_000));
+});

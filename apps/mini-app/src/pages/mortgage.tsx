@@ -36,6 +36,7 @@ import {
   MORTGAGE_SCENARIO_KEY,
   readMortgageScenario,
   minimumMortgageDown,
+  newbuildHasIncreasedLimit,
   type FamilyChildren,
   type MortgagePropertyKind,
   type MortgageScenarioSettings,
@@ -48,10 +49,11 @@ type PropertyKind=MortgagePropertyKind;
 const MONEY_STEP=100_000;
 const PRICE_MIN=3_000_000;
 const PRICE_MAX=45_000_000;
-const RULES_UPDATED="02.10.2026";
+const RULES_UPDATED="26.10.2026";
 
 const formatRub=(value:number)=>new Intl.NumberFormat("ru-RU").format(Math.round(value));
 const formatRate=(value:number)=>String(Math.round(value*10)/10).replace(".",",")+"%";
+const formatDownPercent=(value:number)=>value.toLocaleString("ru-RU",{maximumFractionDigits:3})+"%";
 const formatYears=(value:number)=>value+" "+(value%100>=11&&value%100<=14?"лет":value%10===1?"год":value%10>=2&&value%10<=4?"года":"лет");
 const parseNumber=(value:string)=>Number(value.replace(/[^0-9.,]/g,"").replace(",","."));
 const clamp=(value:number,min:number,max:number)=>Math.min(max,Math.max(min,value));
@@ -89,10 +91,11 @@ function MortgageCalculator(){
   const storedScenario=React.useMemo(()=>{
     const storage=typeof localStorage==="undefined"?null:localStorage;
     const own=readMortgageScenario(storage,scenarioKey);
-    if(own||!fromProperty)return own;
+    if(!fromProperty)return own;
     const shared=readMortgageScenario(storage);
-    // Inherit the chosen program, not another property's price or cash deposit.
-    return shared?{...shared,price:undefined,down:undefined}:null;
+    // The property page quotes the shared program preferences. An older per-plan
+    // calculation may restore its cash amount, but must not silently change programs.
+    return shared?{...shared,price:own?.price,down:own?.programId===shared.programId?own?.down:undefined}:own;
   },[scenarioKey,fromProperty]);
   const requestedProgram=params.get("program");
   const storedProgram=storedScenario&&programs.some(item=>item.id===storedScenario.programId)?storedScenario.programId:null;
@@ -105,7 +108,7 @@ function MortgageCalculator(){
     :typeof savedPrice==="number"&&Number.isFinite(savedPrice)
       ?clamp(Math.round(savedPrice),PRICE_MIN,PRICE_MAX):9_000_000;
   const initialKind:PropertyKind=fromProperty||params.get("from")==="select"?"newbuild":storedScenario?.propertyKind??"newbuild";
-  const initialLargeArea=fromProperty?false:storedScenario?.largeArea??false;
+  const initialLargeArea=fromProperty?newbuildHasIncreasedLimit(sourcePlan):storedScenario?.largeArea??false;
   const initialMin=calculateMortgageScenario({programs,settings:{...storedScenario,programId:initialProgram,propertyKind:initialKind,largeArea:initialLargeArea},price:initialPrice,down:0})?.requiredDown??minimumMortgageDown(initialPrice,20.1);
   const savedDown=storedScenario?.down;
   const initialDown=(fromProperty||params.get('down')!=='min')&&typeof savedDown==="number"&&Number.isFinite(savedDown)
@@ -128,6 +131,7 @@ function MortgageCalculator(){
   const [hasYoungChild,setHasYoungChild]=React.useState(storedScenario?.hasYoungChild??true);
   const [disabledChild,setDisabledChild]=React.useState(storedScenario?.disabledChild??false);
   const [largeArea,setLargeArea]=React.useState(initialLargeArea);
+  const [allowBlended,setAllowBlended]=React.useState(storedScenario?.allowBlended===true);
   const [priceDraft,setPriceDraft]=React.useState(formatRub(initialPrice));
   const [downDraft,setDownDraft]=React.useState(formatRub(initialDown));
   const [interacted,setInteracted]=React.useState(false);
@@ -149,6 +153,7 @@ function MortgageCalculator(){
     hasYoungChild:program==="family"?hasYoungChild:undefined,
     disabledChild:program==="family"?disabledChild:undefined,
     largeArea:program==="farEast"?largeArea:undefined,
+    allowBlended,
     marketRate,
     futureRate,
     years,
@@ -197,7 +202,7 @@ function MortgageCalculator(){
     ?[
       {main:formatRate(preferredRate),sub:"ставка сейчас"},
       {main:formatRub(subsidizedLimit)+" ₽",sub:"льготный лимит"},
-      {main:FAMILY_SUBSIDY_YEARS+" лет",sub:"субсидирование"},
+      {main:(calculation.familySubsidyYears??maxYears)+" лет",sub:calculation.familySubsidyYears===null?"льготный срок":"льготная ставка"},
     ]
     :program==="farEast"
       ?[
@@ -209,7 +214,7 @@ function MortgageCalculator(){
         ?[
           {main:formatRate(preferredRate),sub:"льготная ставка"},
           {main:formatRub(subsidizedLimit)+" ₽",sub:"льготная часть"},
-          {main:formatRub(totalLimit)+" ₽",sub:"с увеличением"},
+          {main:maxYears+" лет",sub:"макс. срок"},
         ]
         :[
           {main:formatRate(marketRate),sub:"ориентир ставки"},
@@ -229,7 +234,9 @@ function MortgageCalculator(){
     if(!fromProperty||!sourcePrice||sourcePrice<=1||appliedSource.current)return;
     appliedSource.current=true;
     if(priceTouched.current)return;
-    const nextMin=minimumForPrice(sourcePrice);
+    const sourceLargeArea=newbuildHasIncreasedLimit(sourcePlan);
+    setLargeArea(sourceLargeArea);
+    const nextMin=minimumForPrice(sourcePrice,{...settings,largeArea:sourceLargeArea});
     setPrice(sourcePrice);setPriceDraft(formatRub(sourcePrice));
     const nextDown=typeof savedDown==="number"?clamp(savedDown,nextMin,sourcePrice-1):nextMin;
     setDown(nextDown);setDownDraft(formatRub(nextDown));
@@ -261,7 +268,7 @@ function MortgageCalculator(){
       updatedAt:new Date().toISOString(),
     };
     try{localStorage.setItem(MORTGAGE_SCENARIO_KEY,JSON.stringify(shared));if(fromProperty)localStorage.setItem(scenarioKey,JSON.stringify(shared));}catch{}
-  },[program,propertyKind,childrenCount,hasYoungChild,disabledChild,largeArea,marketRate,futureRate,years,price,down]);
+  },[program,propertyKind,childrenCount,hasYoungChild,disabledChild,largeArea,allowBlended,marketRate,futureRate,years,price,down]);
 
   React.useEffect(()=>{
     if(!interacted||invalid)return;
@@ -413,18 +420,23 @@ function MortgageCalculator(){
         </div>
       </div>}
 
-      {program==="farEast"&&propertyKind!=="house"&&<div className={styles.optionRow}>
+      {program==="farEast"&&<div className={styles.optionRow}>
         <div>
-          <strong>{propertyKind==="newbuild"?"Площадь квартиры свыше 64 м²":"Площадь свыше 60 м² и подходящий моногород"}</strong>
+          <strong>{propertyKind==="newbuild"?"Площадь квартиры свыше 64 м²":propertyKind==="house"?"Площадь дома свыше 60 м²":"Площадь свыше 60 м² и подходящий моногород"}</strong>
           <span>При выполнении условий программы доступен повышенный лимит кредита</span>
         </div>
         <Switch aria-label="Повышенный лимит по площади" checked={largeArea} onCheckedChange={value=>{setInteracted(true);setLargeArea(value)}}/>
       </div>}
 
+      {(program==="family"||program==="it")&&rule.blended&&<div className={styles.optionRow}>
+        <div><strong>Добавить кредит по рыночной ставке</strong><span>Комбинированная ипотека: сверх льготного лимита — под {formatRate(marketRate)}. Доступность подтверждает банк.</span></div>
+        <Switch aria-label="Комбинированная ипотека" checked={allowBlended} onCheckedChange={value=>{setInteracted(true);setAllowBlended(value)}}/>
+      </div>}
       <div className={styles.ruleStrip}>
         {ruleCards.map(item=><span key={item.sub}><b>{item.main}</b>{item.sub}</span>)}
       </div>
       <div className={styles.ruleHint}><Info size={14}/><span>{programHint()}</span></div>
+      <div className={styles.fieldMeta}>Максимальный срок кредита — {maxYears} лет. {program==="family"&&calculation.familySubsidyYears!==null?"Льготная ставка — первые "+calculation.familySubsidyYears+" лет. ":""}Лимит кредита в этом сценарии — {formatRub(totalLimit)} ₽.</div>
 
       {propertyKind==="secondary"&&(program==="family"||program==="farEast")&&<div className={styles.contextWarning}>
         <Info size={15}/><span>Вторичка по этой программе доступна не везде. Перед подачей нужно проверить населённый пункт и сам объект по действующему перечню и условиям банка.</span>
@@ -442,13 +454,13 @@ function MortgageCalculator(){
       </div>
 
       <div className={styles.field}>
-        <div className={styles.label}><span>Первоначальный взнос</span><b>{downPercent.toFixed(1).replace(".",",")}% · {formatRub(down)} ₽</b></div>
+        <div className={styles.label}><span>Первоначальный взнос</span><b>{formatDownPercent(downPercent)} · {formatRub(down)} ₽</b></div>
         <div className={styles.moneyInput}>
           <Input aria-label="Первоначальный взнос" inputMode="numeric" value={downDraft} onChange={e=>{priceTouched.current=true;setDownDraft(e.target.value.replace(/[^0-9 ]/g,""))}} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
           <span>₽</span>
         </div>
         <Slider aria-label="Первоначальный взнос, %" min={minDownPercent} max={100} step={0.1} value={[downPercent]} onValueChange={values=>updateDownPercent(values[0]??downPercent)}/>
-        <div className={styles.fieldMeta}>Минимальный взнос: {formatRate(minDownPercent)} · {formatRub(minDown)} ₽</div>
+        <div className={styles.fieldMeta}>Минимальный взнос: {formatDownPercent(minDownPercent)} · {formatRub(minDown)} ₽</div>
         {minDown>calculation.minDown&&<div className={styles.fieldMeta}>Взнос увеличен, чтобы кредит не превышал {formatRub(totalLimit)} ₽.</div>}
         {program==="family"&&downPercent>=50&&<div className={styles.inlineSuccess}><CircleCheck size={13}/>Взнос 50%+: для подходящей семьи ставка не выше 6%</div>}
       </div>
@@ -535,8 +547,8 @@ function MortgageCalculator(){
           <p><b>Новые договоры с 1 октября 2026.</b> В Приморье: 1 ребёнок — 10% / до 6 млн ₽; 2 — 8% / до 8 млн ₽; 3 — 6% / до 10 млн ₽; 4 — 4% / до 10 млн ₽; 5+ — 2% / до 10 млн ₽.</p>
           <p>Хотя бы один ребёнок должен быть младше 7 лет. Для ребёнка с инвалидностью до 18 лет сохраняется ставка не выше 6%.</p>
           <p>При первоначальном взносе 50% и более ставка для подходящей семьи — не выше 6%. На строительство частного дома — 6% независимо от числа детей.</p>
-          <p>Субсидирование — максимум 15 лет. Кредит может быть длиннее, но ставка после льготного периода меняется по правилам программы.</p>
-          <p>Если сумма кредита выше льготного лимита, расчёт объединяет льготную и рыночную части в пределах максимального лимита программы. Доступность увеличенного лимита и его тариф подтверждает банк.</p>
+          <p>Для квартиры льготная ставка действует первые 15 лет; максимальный срок кредита — до 30 лет. Ставку после льготного периода нужно уточнить у банка. Для строительства дома льготная ставка сохраняется до 30 лет.</p>
+          <p>По умолчанию кредит ограничен льготным лимитом. Комбинированный расчёт включается отдельно: превышение считается по рыночной ставке. Доступность увеличенного лимита и его тариф подтверждает банк.</p>
           <p>Для вторичного жилья действует отдельный перечень населённых пунктов и требования к дому — поэтому объект нужно проверять отдельно.</p>
         </>}
         {program==="farEast"&&<>
@@ -544,7 +556,7 @@ function MortgageCalculator(){
           <p>Доступность зависит от категории заёмщика, территории и самого объекта. Банк подтверждает право на программу.</p>
         </>}
         {program==="it"&&<>
-          <p><b>IT-ипотека.</b> Расчёт учитывает льготную ставку, льготный лимит и максимальную сумму кредита. Часть сверх льготного лимита считается по рыночной ставке.</p>
+          <p><b>IT-ипотека.</b> Расчёт учитывает льготную ставку, льготный лимит и максимальную сумму кредита. Часть сверх льготного лимита считается по рыночной ставке только при включённом комбинированном расчёте.</p>
           <p>Обычная вторичная квартира не является стандартным объектом IT-ипотеки.</p>
         </>}
         {program==="standard"&&<>
@@ -567,7 +579,7 @@ function MortgageCalculator(){
       source="mortgage"
       propertyId={sourceProperty?.id}
       project={sourceProperty?.name}
-      context={{program,propertyKind,price,down,years,rate:preferredRate,preferredRate,marketRate,payment:invalid?null:payment,status:calculation.status,blockReason:calculation.blockReason,childrenCount,hasYoungChild,largeArea,futureRate:futureRate??null,projection:calculation.projection,scenarioVersion:1,subsidizedLimit,marketPrincipal,policyVersion:MORTGAGE_POLICY_VERSION,...(sourcePlan?{floorplanId:sourcePlan.id,rooms:sourcePlan.roomLabel,areaFrom:sourcePlan.areaFrom,areaTo:sourcePlan.areaTo,finishType:chosenFinish&&offerPrice!==null?chosenFinish:null}:{})}}
+      context={{program,propertyKind,price,down,years,rate:preferredRate,preferredRate,marketRate,payment:invalid?null:payment,status:calculation.status,blockReason:calculation.blockReason,childrenCount,hasYoungChild,largeArea,allowBlended,futureRate:futureRate??null,projection:calculation.projection,scenarioVersion:1,subsidizedLimit,marketPrincipal,policyVersion:MORTGAGE_POLICY_VERSION,...(sourcePlan?{floorplanId:sourcePlan.id,rooms:sourcePlan.roomLabel,areaFrom:sourcePlan.areaFrom,areaTo:sourcePlan.areaTo,finishType:chosenFinish&&offerPrice!==null?chosenFinish:null}:{})}}
     >
       <button className={styles.cta}>Получить точный расчёт <ChevronRight size={18}/></button>
     </LeadSheet>
