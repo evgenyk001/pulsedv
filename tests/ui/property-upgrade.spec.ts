@@ -11,11 +11,12 @@ async function seed(page:Page,details=true){
 for(const width of [320,390,430])test(`Project overview ${width}px: facts, real inventory and room shortcuts`,async({page,browserName})=>{
  await page.setViewportSize({width,height:844});await seed(page);await page.goto('/pulsedv/mini-app/#/property/primorskiy');
  const facts=page.getByRole('region',{name:'Ключевые характеристики'});await expect(facts).toContainText('31 декабря 2027');await expect(facts).toContainText('420');await expect(facts).toContainText('77');
- await page.getByRole('button',{name:'Выбрать планировки: 2',exact:true}).click();await expect(page.getByRole('combobox',{name:'Комнатность планировок'})).toHaveValue('2');
- await expect(page.getByRole('region',{name:'Планировки ЖК'})).toBeInViewport();
- expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await page.evaluate(()=>window.scrollTo({top:0,behavior:'instant'}));await expect.poll(()=>page.evaluate(()=>window.scrollY)).toBe(0);
  await page.screenshot({path:`test-results/property-assembled-${browserName}-${width}.png`,fullPage:true});
+ await page.getByRole('button',{name:'Выбрать планировки: 2',exact:true}).click();await expect(page.getByRole('combobox',{name:'Комнатность планировок'})).toHaveValue('2');
+ const plans=page.getByRole('region',{name:'Планировки ЖК'});await expect(plans).toBeInViewport();
+ // The plans can already be partly visible; wait for the shortcut to reach them.
+ await expect.poll(async()=>Math.abs((await plans.boundingBox())!.y-16)).toBeLessThan(2);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 test('Control project details reach the client, including zero availability and unknown dates',async({page})=>{
  await seed(page,false);await page.goto('/pulsedv/control-center/#/objects');await page.locator('.catalogObjectCard').filter({hasText:'ЖК Приморский'}).click();
