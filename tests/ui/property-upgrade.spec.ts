@@ -45,7 +45,8 @@ test('Gallery preserves pinch intent and supports reduced motion',async({page})=
  await page.emulateMedia({reducedMotion:'reduce'});await dialog.getByRole('button',{name:'Закрыть фотографии'}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('[data-gallery-return]')).toHaveCount(0);
 });
 
-test('Finish selection changes the actual apartment offer, detailed view and mortgage price',async({page})=>{
+test('Finish selection changes the offer and mortgage price, and survives Back without leaking to a new visit',async({page})=>{
+ test.setTimeout(60000);
  await page.setViewportSize({width:390,height:844});await seed(page);
  await page.goto('/pulsedv/mini-app/#/property/primorskiy');
  const finishes=page.getByRole('group',{name:'Варианты отделки'});
@@ -67,4 +68,11 @@ test('Finish selection changes the actual apartment offer, detailed view and mor
  await detail.getByRole('link',{name:'Рассчитать эту планировку'}).click();
  await expect(page.getByRole('textbox',{name:'Стоимость недвижимости',exact:true})).toHaveValue(/^8\s250\s000$/);
  await expect(page.getByRole('region',{name:'Расчёт выбранного ЖК'})).toContainText('White Box');
+ await page.getByRole('button',{name:'Вернуться к ЖК',exact:true}).click();
+ await expect(page.getByRole('group',{name:'Варианты отделки'}).getByRole('button',{name:'White Box',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect(page.getByRole('button',{name:'Выбрать планировки: 1',exact:true})).toHaveAttribute('aria-expanded','true');
+ await page.getByRole('link',{name:'Назад',exact:true}).click();
+ await page.getByRole('link',{name:'Открыть ЖК Приморский',exact:true}).click();
+ await expect(page.getByRole('group',{name:'Варианты отделки'}).getByRole('button',{name:'Все варианты',exact:true})).toHaveAttribute('aria-pressed','true');
+ await expect(page.getByRole('button',{name:'Выбрать планировки: 1',exact:true})).toHaveAttribute('aria-expanded','false');
 });

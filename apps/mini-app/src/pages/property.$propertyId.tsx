@@ -39,6 +39,10 @@ const featureIcon=(name:string)=>{
 
 const priceLabel=propertyPriceLabel;
 
+// Restore this history entry's choices on Back, without carrying them into a new visit.
+type PropertySelection={room:string;finish:ApartmentFinish|null};
+const propertySelections=new Map<string,PropertySelection>();
+
 const formatProjectDate=(value:string|null|undefined)=>{
  if(!value||!/^\d{4}-\d{2}-\d{2}$/.test(value))return null;
  const date=new Date(value+'T00:00:00Z');
@@ -57,11 +61,21 @@ export default function PropertyPage(){
   const savedScenario=React.useMemo(()=>readMortgageScenario(localStorage),[]);
   const {toggle,isFavorite}=useFavoriteIds();
   const [photoIndex,setPhotoIndex]=React.useState(0);
-  const [selectedRoom,setSelectedRoom]=React.useState("");
-  const [selectedFinish,setSelectedFinish]=React.useState<ApartmentFinish|null>(null);
+  const selectionKey=location.key+':'+propertyId;
+  const [selectedRoom,setSelectedRoom]=React.useState(()=>propertySelections.get(selectionKey)?.room??"");
+  const [selectedFinish,setSelectedFinish]=React.useState<ApartmentFinish|null>(()=>propertySelections.get(selectionKey)?.finish??null);
   const [shareNotice,setShareNotice]=React.useState("");
 
-  React.useEffect(()=>{setPhotoIndex(0);setSelectedRoom("");setSelectedFinish(null);setShareNotice("")},[propertyId]);
+  const rememberSelection=(value:PropertySelection)=>{
+    propertySelections.delete(selectionKey);propertySelections.set(selectionKey,value);
+    if(propertySelections.size>60)propertySelections.delete(propertySelections.keys().next().value!);
+  };
+  const selectRoom=(room:string)=>{setSelectedRoom(room);rememberSelection({room,finish:selectedFinish})};
+  const selectFinish=(finish:ApartmentFinish|null)=>{setSelectedFinish(finish);rememberSelection({room:selectedRoom,finish})};
+  React.useLayoutEffect(()=>{
+    const saved=propertySelections.get(selectionKey);
+    setPhotoIndex(0);setSelectedRoom(saved?.room??"");setSelectedFinish(saved?.finish??null);setShareNotice("");
+  },[selectionKey]);
 
   React.useEffect(()=>{
     if(!p)return;
@@ -158,8 +172,8 @@ export default function PropertyPage(){
         <div className={styles.finishSummary} role="group" aria-label="Варианты отделки">
           <span className={styles.finishLabel}>ОТДЕЛКА КВАРТИР</span>
           {finishTypes.length>0?<><div className={styles.finishPills}>
-            <button type="button" aria-pressed={selectedFinish===null} className={selectedFinish===null?styles.finishSelected:""} onClick={()=>setSelectedFinish(null)}>Все варианты</button>
-            {finishTypes.map(([value,label])=><button key={value} type="button" aria-pressed={selectedFinish===value} className={selectedFinish===value?styles.finishSelected:""} onClick={()=>setSelectedFinish(value)}>{label}</button>)}
+            <button type="button" aria-pressed={selectedFinish===null} className={selectedFinish===null?styles.finishSelected:""} onClick={()=>selectFinish(null)}>Все варианты</button>
+            {finishTypes.map(([value,label])=><button key={value} type="button" aria-pressed={selectedFinish===value} className={selectedFinish===value?styles.finishSelected:""} onClick={()=>selectFinish(value)}>{label}</button>)}
           </div><small>Выберите отделку. Цены и доступные планировки зависят от варианта.</small>
           <details className={styles.finishHelp}><summary>Чем отличаются варианты отделки?</summary>
             <p><b>Черновая:</b> основные строительные работы без чистовой отделки.</p>
@@ -197,10 +211,10 @@ export default function PropertyPage(){
           const areas=matching.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]);
           const disabled=matching.length===0;
           const open=activeRoom===room;
-          return <button type="button" key={room} aria-label={'Выбрать планировки: '+room} aria-expanded={open} aria-controls="room-plan-options" disabled={disabled} className={open?styles.selectedRoom:''} onClick={()=>setSelectedRoom(open?'':room)}><span>{room==='Студия'?'Студии':room+' комн.'}<ChevronRight size={15}/></span><strong>{disabled?'Нет вариантов':prices.length?priceLabel(Math.min(...prices)):'Цена уточняется'}</strong><small>{disabled?'В выбранной отделке':(areas.length?'от '+Math.min(...areas).toLocaleString('ru-RU')+' м² · ':'')+'Планировок: '+matching.length}</small></button>;
+          return <button type="button" key={room} aria-label={'Выбрать планировки: '+room} aria-expanded={open} aria-controls="room-plan-options" disabled={disabled} className={open?styles.selectedRoom:''} onClick={()=>selectRoom(open?'':room)}><span>{room==='Студия'?'Студии':room+' комн.'}<ChevronRight size={15}/></span><strong>{disabled?'Нет вариантов':prices.length?priceLabel(Math.min(...prices)):'Цена уточняется'}</strong><small>{disabled?'В выбранной отделке':(areas.length?'от '+Math.min(...areas).toLocaleString('ru-RU')+' м² · ':'')+'Планировок: '+matching.length}</small></button>;
         })}</div>
         {activeRoom&&<div id="room-plan-options" className={styles.planPanel}>
-          <div className={styles.planPanelHeader}><div><span>ПЛАНИРОВКИ</span><h3>{activeRoom==='Студия'?'Студии':activeRoom+' комн.'}</h3></div><button type="button" aria-label="Скрыть планировки" onClick={()=>setSelectedRoom('')}>Свернуть <ChevronRight size={15}/></button></div>
+          <div className={styles.planPanelHeader}><div><span>ПЛАНИРОВКИ</span><h3>{activeRoom==='Студия'?'Студии':activeRoom+' комн.'}</h3></div><button type="button" aria-label="Скрыть планировки" onClick={()=>selectRoom('')}>Свернуть <ChevronRight size={15}/></button></div>
           {visiblePlans.length?<div className={styles.planRail}>
             {visiblePlans.map((plan,index)=>{
               const planPrice=priceForPlan(plan);
