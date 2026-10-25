@@ -25,7 +25,7 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await firstProperty.click();
  await expect(page.getByLabel(/Фотографии /)).toBeVisible();
  await expect(page.getByLabel('Ключевые характеристики')).toBeVisible();
- await expect(page.getByRole('heading',{name:'Найдите свой вариант',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Квартиры и цены',exact:true})).toBeVisible();
  const specs=page.locator('details').filter({has:page.getByText('Все характеристики ЖК',{exact:true})});
  await expect(specs).not.toHaveAttribute('open','');await page.getByText('Все характеристики ЖК',{exact:true}).click();
  await expect(specs).toHaveAttribute('open','');await expect(specs.getByText('Адрес',{exact:true})).toBeVisible();
