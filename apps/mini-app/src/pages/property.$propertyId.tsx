@@ -77,8 +77,8 @@ export default function PropertyPage(){
   const developer=p.developerName&&!/^Партнёр (PULSE\.DV|PULSEDV\.RU)$/.test(p.developerName)?p.developerName:"";
   const gallery=propertyPhotos(p);
   const mortgageRule=control.mortgagePrograms.find(rule=>rule.id===savedScenario?.programId)??control.mortgagePrograms[0];
-  const mortgagePrice=propertyPriceRub(p.priceFrom);
-  const minDown=mortgageRule?calculateMortgageScenario({programs:control.mortgagePrograms,settings:{...savedScenario,programId:mortgageRule.id,propertyKind:'newbuild',largeArea:false},price:mortgagePrice,down:0})?.requiredDown??null:null;
+  const mortgagePrice=selectedPrice===null?null:propertyPriceRub(selectedPrice);
+  const minDown=mortgageRule&&mortgagePrice!==null?calculateMortgageScenario({programs:control.mortgagePrograms,settings:{...savedScenario,programId:mortgageRule.id,propertyKind:'newbuild',largeArea:false},price:mortgagePrice,down:0})?.requiredDown??null:null;
   const presentation=p.documents?.find(doc=>doc.kind==="presentation");
   const jump=(id:string)=>document.getElementById(id)?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
 
@@ -93,6 +93,8 @@ export default function PropertyPage(){
   const visiblePlans=p.floorplans
     .filter(plan=>activeRoom&&normalizeRoomLabel(plan.roomLabel)===activeRoom&&matchesFinish(plan))
     .sort((a,b)=>(priceForPlan(a)??Infinity)-(priceForPlan(b)??Infinity)||a.sortOrder-b.sortOrder);
+  const matchedPricedPlans=selectedFinish?p.floorplans.map(plan=>({plan,price:planPriceForFinish(plan,selectedFinish)})).filter((offer):offer is {plan:typeof p.floorplans[number];price:number}=>offer.price!==null).sort((a,b)=>a.price-b.price):[];
+  const selectedPrice=selectedFinish?(matchedPricedPlans[0]?.price??null):p.priceFrom;
   const fromPulse=returnTo.startsWith("/selection");
   const areaValues=p.floorplans.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]).filter((v):v is number=>typeof v==='number'&&v>0);
   const minArea=areaValues.length?Math.min(...areaValues):null;
@@ -147,9 +149,9 @@ export default function PropertyPage(){
 
       <section className={styles.priceCard}>
         <div>
-          <span>Стоимость квартиры</span>
-          <strong>{priceLabel(p.priceFrom)}</strong>
-          <small>Стартовая цена. Стоимость зависит от планировки.</small>
+          <span>{selectedFinish?'Квартиры · '+apartmentFinishLabel(selectedFinish):'Стоимость квартиры'}</span>
+          <strong>{selectedPrice!==null?priceLabel(selectedPrice):'Цена уточняется'}</strong>
+          <small>{selectedFinish?'Цена зависит от выбранной планировки и отделки.':'Стартовая цена. Стоимость зависит от планировки.'}</small>
         </div>
         <div className={styles.projectFacts} role="region" aria-label="Ключевые характеристики">{facts.map(({label,value,icon:Icon})=><div key={label}><Icon size={16}/><span>{label}</span><strong>{value}</strong></div>)}</div>
         <div className={styles.finishSummary} role="group" aria-label="Варианты отделки">
@@ -161,11 +163,11 @@ export default function PropertyPage(){
           <strong className={styles.finishUnknown}>Отделка уточняется</strong>}
         </div>
         {minDown!==null&&mortgageRule&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
-        <Link to={propertyMortgageLink(p)}>
+        {selectedPrice!==null?<Link to={selectedFinish&&matchedPricedPlans[0]?propertyMortgageLink(p,matchedPricedPlans[0].plan,selectedFinish):propertyMortgageLink(p)}>
           <WalletCards size={17}/>
           <span>Рассчитать ипотеку</span>
           <ChevronRight size={16}/>
-        </Link>
+        </Link>:<div className={styles.pricePending}>Стоимость этой отделки ещё не подтверждена. Выберите другой вариант или уточните цену у менеджера.</div>}
         {p.floorplans.length>0&&<button type="button" className={styles.pricePlans} onClick={()=>jump('property-plans')}>Выбрать планировку и её цену <ArrowDown size={14}/></button>}
       </section>
 
