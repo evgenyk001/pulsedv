@@ -119,7 +119,7 @@ export default function PropertyPage(){
     {label:'Срок сдачи',value:p.delivery||'Уточняется',icon:CalendarDays},
     ...(minArea!==null?[{label:'Площадь от',value:minArea.toLocaleString('ru-RU')+' м²',icon:Ruler}]:[]),
     ...(commissioning?[{label:'Ввод дома',value:commissioning,icon:Building2}]:[]),
-    ...(details?.availableApartments!=null?[{label:'В продаже',value:details.availableApartments.toLocaleString('ru-RU')+' кв.',icon:LayoutGrid}]:[]),
+    ...(details?.availableApartments!=null?[{label:'В продаже',value:details.availableApartments.toLocaleString('ru-RU')+' кв.',icon:LayoutGrid}]:details?.totalApartments!=null?[{label:'Всего квартир',value:details.totalApartments.toLocaleString('ru-RU'),icon:LayoutGrid}]:[]),
     ...(p.className?[{label:'Класс жилья',value:p.className,icon:ShieldCheck}]:[]),
   ].slice(0,4);
 
