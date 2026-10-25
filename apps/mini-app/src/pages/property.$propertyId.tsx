@@ -91,9 +91,11 @@ export default function PropertyPage(){
   const gallery=propertyPhotos(p);
   const mortgageRule=control.mortgagePrograms.find(rule=>rule.id===savedScenario?.programId)??control.mortgagePrograms[0];
   const hasConfirmedFinishingPrices=p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>offer.priceFrom!==null));
-  const matchedPricedPlans=(selectedFinish?p.floorplans.map(plan=>({plan,price:planPriceForFinish(plan,selectedFinish)})):hasConfirmedFinishingPrices?p.floorplans.map(plan=>({plan,price:planStartingPrice(plan)})):[])
+  // A chosen room or finish must never inherit another apartment type's cheaper price.
+  const priceCandidates=selectedRoom?p.floorplans.filter(plan=>normalizeRoomLabel(plan.roomLabel)===selectedRoom):p.floorplans;
+  const matchedPricedPlans=(selectedFinish?priceCandidates.map(plan=>({plan,price:planPriceForFinish(plan,selectedFinish)})):hasConfirmedFinishingPrices?priceCandidates.map(plan=>({plan,price:planStartingPrice(plan)})):[])
     .filter((offer):offer is {plan:typeof p.floorplans[number];price:number}=>offer.price!==null).sort((a,b)=>a.price-b.price);
-  const selectedPrice=selectedFinish?(matchedPricedPlans[0]?.price??null):(matchedPricedPlans[0]?.price??p.priceFrom);
+  const selectedPrice=selectedFinish||selectedRoom?(matchedPricedPlans[0]?.price??null):(matchedPricedPlans[0]?.price??p.priceFrom);
   const mortgagePrice=selectedPrice===null?null:propertyPriceRub(selectedPrice);
   const minDown=mortgageRule&&mortgagePrice!==null?calculateMortgageScenario({programs:control.mortgagePrograms,settings:{...savedScenario,programId:mortgageRule.id,propertyKind:'newbuild',largeArea:false},price:mortgagePrice,down:0})?.requiredDown??null:null;
   const presentation=p.documents?.find(doc=>doc.kind==="presentation");
@@ -167,7 +169,7 @@ export default function PropertyPage(){
 
       <section className={styles.priceCard} aria-label="Стоимость и ипотека">
         <div className={styles.priceMain}>
-          <span>{selectedFinish?'ЦЕНА С ОТДЕЛКОЙ · '+apartmentFinishLabel(selectedFinish):'ЦЕНА КВАРТИРЫ ОТ'}</span>
+          <span>{selectedRoom?'ЦЕНА · '+(selectedRoom==='Студия'?'СТУДИЯ':selectedRoom+' КОМН.')+(selectedFinish?' · '+apartmentFinishLabel(selectedFinish):''):selectedFinish?'ЦЕНА С ОТДЕЛКОЙ · '+apartmentFinishLabel(selectedFinish):'ЦЕНА КВАРТИРЫ ОТ'}</span>
           <strong>{selectedPrice!==null?priceLabel(selectedPrice):'Цена уточняется'}</strong>
           <small>{selectedFinish?'Цена зависит от планировки и выбранной отделки.':'Стоимость зависит от квартиры и отделки.'}</small>
         </div>
