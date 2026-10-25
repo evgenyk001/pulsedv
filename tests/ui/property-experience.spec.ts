@@ -71,7 +71,8 @@ for(const width of [320,390,430])test(`Property experience ${width}px: fullscree
  const context=page.getByRole('region',{name:'Расчёт выбранного ЖК'});await expect(context).toContainText('ЖК Приморский');
  await context.getByRole('button',{name:'Вернуться к ЖК'}).click();
  await page.getByRole('navigation',{name:'Разделы жилого комплекса'}).getByRole('button',{name:'Планировки',exact:true}).click();
- await page.getByRole('region',{name:'Планировки ЖК'}).getByRole('link',{name:'Рассчитать платёж'}).click();
+ await page.getByRole('button',{name:'Выбрать планировки: 2',exact:true}).click();
+ await page.getByRole('region',{name:'Квартиры и планировки ЖК'}).getByRole('link',{name:'Рассчитать платёж'}).click();
  await expect(page.getByRole('textbox',{name:'Стоимость недвижимости',exact:true})).toHaveValue(rub(8765432));
  await expect(page.getByRole('textbox',{name:'Первоначальный взнос',exact:true})).toHaveValue(rub(1761852));
  await expect(context).toContainText('2 комн. · 62 м²');
@@ -97,6 +98,7 @@ test('Control changes exact ruble prices, gallery order and captions used in Min
 
 test('Open floorplan shows whole-ruble price and opens its mortgage calculation',async({page})=>{
  await seed(page);await page.goto('/pulsedv/mini-app/#/property/primorskiy');
+ await page.getByRole('button',{name:'Выбрать планировки: 2',exact:true}).click();
  await page.getByRole('button',{name:'Открыть планировку 2',exact:true}).click();
  const plan=page.getByRole('dialog',{name:'ЖК Приморский · 2 комн.',exact:true});
  await expect(plan).toContainText('от '+rub(8765432)+' ₽');

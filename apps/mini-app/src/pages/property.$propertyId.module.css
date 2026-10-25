@@ -164,3 +164,34 @@
 .specs strong{font-size:12px}.specs span{font-size:11px}.features strong{font-size:11px;line-height:1.4}.addressCard strong{font-size:13px}.mapLink{font-size:12px;min-height:46px}
 @media(max-width:360px){.priceCard{padding:15px}.projectFacts strong{font-size:12px}.roomCards button{padding:13px 10px}.roomCards strong{font-size:12px}.priceCard .downSummary{gap:8px}.downSummary>small{max-width:100px}}
 .moreDetails{padding:17px;border:1px solid var(--app-card-border);border-radius:var(--app-radius-card);background:var(--app-card);box-shadow:var(--app-card-shadow)}.moreDetails summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;font-weight:750;cursor:pointer;min-height:24px}.moreDetails summary::-webkit-details-marker{display:none}.moreDetails summary svg{transition:transform .2s ease;color:var(--muted-foreground)}.moreDetails[open] summary svg{transform:rotate(90deg)}.moreDetails .specs{margin-top:15px}.section .features{margin-top:17px}
+
+/* Compact, connected apartment selection with verified per-finish pricing. */
+.finishSummary{display:flex;flex-direction:column;gap:9px;min-width:0}
+.priceCard .finishSummary>.finishLabel{font-size:10px;color:var(--muted-foreground);font-weight:750;letter-spacing:.07em}
+.finishPills{display:flex;flex-wrap:wrap;gap:7px}
+.finishPills button{min-height:36px;padding:7px 12px;border:1px solid var(--app-card-border);border-radius:999px;background:var(--muted);color:var(--foreground);font:inherit;font-weight:700;font-size:11px;cursor:pointer}
+.finishPills button.finishSelected{background:var(--foreground);border-color:var(--foreground);color:var(--app-card)}
+.finishUnknown{font-size:12px!important;margin:0!important;font-weight:650!important}
+.activeFinish{font-size:11px;color:var(--muted-foreground);margin:-4px 0 12px}.activeFinish strong{color:var(--foreground)}
+.apartmentSummary{scroll-margin-top:16px}
+.roomCards button.selectedRoom{background:var(--brand-soft);border-color:var(--primary)}
+.roomCards button.selectedRoom svg{transform:rotate(90deg)}
+.roomCards button:disabled{opacity:.48;cursor:not-allowed}
+.planPanel{border-top:1px solid var(--border);margin-top:18px;padding-top:15px;animation:roomReveal .22s ease-out}
+.planPanelHeader{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.planPanelHeader span{font-size:9px;color:var(--muted-foreground);font-weight:750;letter-spacing:.1em}
+.planPanelHeader h3{font-size:17px;margin:4px 0 0}
+.planPanelHeader button{display:flex;align-items:center;gap:5px;padding:8px;border:0;background:transparent;color:var(--muted-foreground);font:inherit;font-size:10px;cursor:pointer}
+.planPanelHeader button svg{transform:rotate(-90deg)}
+.planCopy .planFinishes{font-size:10px;color:var(--muted-foreground);line-height:1.4;margin-top:6px}
+.planCopy>small{font-size:10px;line-height:1.4;margin-top:10px;color:var(--muted-foreground)}
+@keyframes roomReveal{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.planPanel{animation:none}}
+
+.pricePending{font-size:11px;line-height:1.5;color:var(--muted-foreground);padding:10px 12px;border-radius:14px;background:var(--muted)}
+
+.finishHelp{font-size:10.5px;line-height:1.5;color:var(--muted-foreground);border-top:1px solid var(--border);padding-top:8px}
+.finishHelp summary{font-size:11px;font-weight:650;cursor:pointer;color:var(--foreground);list-style:revert}
+.finishHelp p{margin:7px 0}.finishHelp b{color:var(--foreground)}
+.planImageMissing{height:116px;background:var(--muted);display:grid;place-items:center;border-bottom:1px solid var(--border)}
+.planImageMissing .pulsePlanTrigger{min-height:100%;display:flex;align-items:center;justify-content:center;font-size:11px}

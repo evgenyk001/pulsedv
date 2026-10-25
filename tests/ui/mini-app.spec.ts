@@ -25,7 +25,7 @@ for(const width of [320,390,430])test(`Mini App ${width}px: icons, pill geometry
  await firstProperty.click();
  await expect(page.getByLabel(/Фотографии /)).toBeVisible();
  await expect(page.getByLabel('Ключевые характеристики')).toBeVisible();
- await expect(page.getByRole('heading',{name:'Выберите квартиру',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'Найдите свой вариант',exact:true})).toBeVisible();
  const specs=page.locator('details').filter({has:page.getByText('Все характеристики ЖК',{exact:true})});
  await expect(specs).not.toHaveAttribute('open','');await page.getByText('Все характеристики ЖК',{exact:true}).click();
  await expect(specs).toHaveAttribute('open','');await expect(specs.getByText('Адрес',{exact:true})).toBeVisible();
@@ -574,9 +574,10 @@ test('Клиент: конкретная планировка, переход п
  await page.setViewportSize({width:390,height:844});
  await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:'Пропустить онбординг'}).click();
  await page.getByRole('link',{name:'Открыть ЖК Приморский'}).click();
- await page.getByRole('button',{name:'Открыть планировку 1',exact:true}).click();
+ await page.getByRole('button',{name:'Выбрать планировки: 1',exact:true}).click();
+  await page.getByRole('button',{name:'Открыть планировку 1',exact:true}).click();
  await expect(page.getByRole('heading',{name:'ЖК Приморский · 1 комн.'})).toBeVisible();
- await page.getByRole('button',{name:'Интересует эта планировка',exact:true}).click();
+ await page.getByRole('button',{name:'Уточнить наличие и цену',exact:true}).click();
  await page.getByRole('textbox',{name:'Как к вам обращаться'}).fill('Тест планировки');
  await page.getByRole('textbox',{name:'Телефон'}).fill('+79990000005');
  await page.getByRole('checkbox',{name:/Я даю согласие/}).check();

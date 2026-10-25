@@ -1,4 +1,4 @@
-import type {ProjectDetails} from '../../../../packages/pulse-data/model';
+import type {ProjectDetails,ApartmentFinish} from '../../../../packages/pulse-data/model';
 export type PropertyStatus="draft"|"published"|"archived";
 
 export type PropertyImage={
@@ -22,6 +22,8 @@ export type PropertyFloorplan={
   areaTo:number|null;
   priceFrom:number|null;
   imageUrl:string|null;
+  finishType?:ApartmentFinish|null;
+  finishOptions?:{finishType:ApartmentFinish;priceFrom:number|null}[];
   sortOrder:number;
 };
 

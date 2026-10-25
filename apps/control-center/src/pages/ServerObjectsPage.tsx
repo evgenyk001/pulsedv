@@ -1,4 +1,5 @@
 import {ProjectDetailsEditor} from '../components/ProjectDetailsEditor';
+import {PlanFinishOptionsEditor} from '../components/PlanFinishOptionsEditor';
 import {CatalogFreshnessEditor,CatalogFreshnessBadge} from '../components/CatalogFreshnessEditor';
 import {CatalogPhotosEditor} from '../components/CatalogPhotosEditor';
 import {propertyPriceRub} from '../../../../packages/domain/propertyPresentation';
@@ -426,11 +427,12 @@ export function ServerObjectsPage(){
       </section>
 
       <section className="catalogEditorSection">
-        <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:"1",areaFrom:null,areaTo:null,priceFrom:null,imageUrl:null,sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
+        <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:"1",areaFrom:null,areaTo:null,priceFrom:null,imageUrl:null,finishType:null,finishOptions:[],sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
         <div className="catalogEditorStack">{p.floorplans.map((plan,i)=><div className="editorRow floorplanEditor" key={plan.id||i}>
           <div className="formGrid">
             {([["roomLabel","Комнатность"],["areaFrom","Площадь от, м²"],["areaTo","Площадь до, м²"],["priceFrom","Цена от, ₽"],["imageUrl","Изображение · URL"]] as const).map(([key,label])=><label className="controlField" key={key}><span>{label}</span><input type={["roomLabel","imageUrl"].includes(key)?"text":"number"} step={key==='priceFrom'?'1':'any'} value={(key==='priceFrom'&&plan.priceFrom!==null?propertyPriceRub(plan.priceFrom):(plan as any)[key])??""} onChange={e=>patch({floorplans:p.floorplans.map((x,j)=>j!==i?x:{...x,[key]:["roomLabel","imageUrl"].includes(key)?e.target.value||null:e.target.value===""?null:key==='priceFrom'?Math.round(Number(e.target.value))/1_000_000:Number(e.target.value)})})}/></label>)}
           </div>
+          <PlanFinishOptionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/>
           <div className="rowActions">
             <label className="secondaryAction fileButton"><Upload size={14}/>Фото планировки<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>void uploadFloorplan(e.target.files?.[0],plan.id)}/></label>
             {plan.imageUrl&&plan.id&&plan.imageUrl.startsWith("/media/")&&<button className="textDanger" onClick={()=>void removeMedia(plan.id,"floorplan")}>Удалить фото</button>}

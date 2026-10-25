@@ -1,4 +1,5 @@
-import type {PulseProperty} from '../pulse-data/model';
+import type {ApartmentFinish,PulseProperty} from '../pulse-data/model';
+import {planPriceForFinish,planStartingPrice} from './propertyFinish';
 
 export type PropertyPhoto={url:string;alt:string};
 export const propertyPriceRub=(price:number)=>Math.round(price*1_000_000);
@@ -22,10 +23,11 @@ export function propertyPlan(property:PulseProperty,key:string|null){
  if(byId)return byId;
  return /^index-\d+$/.test(key)?property.floorplans[Number(key.slice(6))]:undefined;
 }
-export function propertyMortgageLink(property:PulseProperty,plan?:PulseProperty['floorplans'][number]){
- const price=plan?.priceFrom??property.priceFrom;
- const query=new URLSearchParams({price:String(propertyPriceRub(price)),property:property.id,from:'property',down:'min'});
+export function propertyMortgageLink(property:PulseProperty,plan?:PulseProperty['floorplans'][number],finish?:ApartmentFinish|null){
+ const price=plan?(finish?planPriceForFinish(plan,finish):planStartingPrice(plan)):property.priceFrom;
+ const query=new URLSearchParams({price:String(propertyPriceRub(price??property.priceFrom)),property:property.id,from:'property',down:'min'});
  if(plan)query.set('floorplan',propertyPlanKey(property,plan));
+ if(finish&&plan&&planPriceForFinish(plan,finish)!==null)query.set('finish',finish);
  return '/mortgage?'+query;
 }
 
