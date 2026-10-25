@@ -3,6 +3,7 @@ import {DEFAULT_STATE} from '../../packages/pulse-data/model';
 async function seed(page:Page,details=true){
  const state=structuredClone(DEFAULT_STATE),p=state.properties[0];
  p.projectDetails=details?{commissioningDate:'2027-12-31',totalApartments:420,availableApartments:77,finishes:['rough','white_box','finished']}:undefined;
+ p.floorplans[0].finishOptions=[{finishType:'rough',priceFrom:7.8},{finishType:'white_box',priceFrom:8.25},{finishType:'finished',priceFrom:null}];
  p.coverImageUrl='https://images.test/photo-0.svg';p.images=[0,1,2].map(i=>({url:`https://images.test/photo-${i}.svg`,alt:'Фото проекта '+(i+1),sortOrder:i}));
  await page.route('https://images.test/**',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800"><rect width="1200" height="800" fill="#aec3d4"/><path d="M100 800V160h280v640m100 0V280h350v520" fill="#637c91"/></svg>'}));
  await page.route('https://telegram.org/js/telegram-web-app.js',route=>route.fulfill({body:''}));
@@ -42,4 +43,28 @@ test('Gallery preserves pinch intent and supports reduced motion',async({page})=
  await rail.dispatchEvent('pointerdown',{pointerId:21,pointerType:'touch',button:0,clientX:120,clientY:200});await rail.dispatchEvent('pointerdown',{pointerId:22,pointerType:'touch',button:0,clientX:200,clientY:200});
  await rail.dispatchEvent('pointermove',{pointerId:21,pointerType:'touch',clientX:120,clientY:500});await rail.dispatchEvent('pointerup',{pointerId:21,pointerType:'touch'});await rail.dispatchEvent('pointerup',{pointerId:22,pointerType:'touch'});await expect(dialog).toBeVisible();
  await page.emulateMedia({reducedMotion:'reduce'});await dialog.getByRole('button',{name:'Закрыть фотографии'}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('[data-gallery-return]')).toHaveCount(0);
+});
+
+test('Finish selection changes the actual apartment offer, detailed view and mortgage price',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await seed(page);
+ await page.goto('/pulsedv/mini-app/#/property/primorskiy');
+ const finishes=page.getByRole('group',{name:'Варианты отделки'});
+ await expect(finishes).toContainText('Черновая');
+ await expect(finishes).toContainText('White Box');
+ await expect(finishes).toContainText('Готовый ремонт');
+ await finishes.getByRole('button',{name:'White Box'}).click();
+ await page.getByRole('button',{name:'Выбрать планировки: 1',exact:true}).click();
+ const plans=page.getByRole('region',{name:'Квартиры и планировки ЖК'});
+ await expect(plans).toContainText('8 250 000');
+ await page.getByRole('button',{name:'Открыть планировку 1',exact:true}).click();
+ const detail=page.getByRole('dialog',{name:'ЖК Приморский · 1 комн.',exact:true});
+ await expect(detail).toContainText('White Box');
+ await expect(detail).toContainText('8 250 000');
+ await detail.getByRole('button',{name:/Готовый ремонт/}).click();
+ await expect(detail).toContainText('Цена уточняется');
+ await expect(detail.getByRole('link',{name:'Рассчитать эту планировку'})).toHaveCount(0);
+ await detail.getByRole('button',{name:/White Box/}).click();
+ await detail.getByRole('link',{name:'Рассчитать эту планировку'}).click();
+ await expect(page.getByRole('textbox',{name:'Стоимость недвижимости',exact:true})).toHaveValue('8 250 000');
+ await expect(page.getByRole('region',{name:'Расчёт выбранного ЖК'})).toContainText('White Box');
 });
