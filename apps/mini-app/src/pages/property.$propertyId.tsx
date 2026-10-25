@@ -10,7 +10,7 @@ import {FloorplanViewer} from "../components/FloorplanViewer";
 import {PropertyGallery} from "../components/PropertyGallery";
 import {usePulseControlState} from "../helpers/usePulseControlState";
 import {propertyPhotos,propertyMortgageLink,propertyPriceLabel,propertyPriceRub} from "../../../../packages/domain/propertyPresentation";
-import {minimumMortgageDown,readMortgageScenario} from "../../../../packages/domain/mortgagePolicy";
+import {calculateMortgageScenario,readMortgageScenario} from "../../../../packages/domain/mortgagePolicy";
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
 import { Link, useParams, useLocation } from "react-router-dom";
 import {
@@ -68,7 +68,8 @@ export default function PropertyPage(){
   const developer=p.developerName&&!/^Партнёр (PULSE\.DV|PULSEDV\.RU)$/.test(p.developerName)?p.developerName:"";
   const gallery=propertyPhotos(p);
   const mortgageRule=control.mortgagePrograms.find(rule=>rule.id===savedScenario?.programId)??control.mortgagePrograms[0];
-  const minDown=mortgageRule?minimumMortgageDown(propertyPriceRub(p.priceFrom),mortgageRule.minDownPct):null;
+  const mortgagePrice=propertyPriceRub(p.priceFrom);
+  const minDown=mortgageRule?calculateMortgageScenario({programs:control.mortgagePrograms,settings:{...savedScenario,programId:mortgageRule.id,propertyKind:'newbuild',largeArea:false},price:mortgagePrice,down:0})?.requiredDown??null:null;
   const presentation=p.documents?.find(doc=>doc.kind==="presentation");
   const jump=(id:string)=>document.getElementById(id)?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});
 
@@ -129,7 +130,7 @@ export default function PropertyPage(){
           <strong>{priceLabel(p.priceFrom)}</strong>
           <small>Стартовая цена. Стоимость зависит от планировки.</small>
         </div>
-        {minDown!==null&&mortgageRule&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(mortgageRule.minDownPct).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
+        {minDown!==null&&mortgageRule&&<div className={styles.downSummary}><span><small>Первоначальный взнос от {String(Math.round(minDown/mortgagePrice*1000)/10).replace('.',',')}%</small><b>{minDown.toLocaleString('ru-RU')} ₽</b></span><small>{mortgageRule.label}<br/>Право на программу проверим</small></div>}
         <Link to={propertyMortgageLink(p)}>
           <WalletCards size={17}/>
           <span>Рассчитать ипотеку</span>

@@ -81,7 +81,14 @@ function MortgageCalculator(){
   const control=usePulseControlState();
   const programs=control.mortgagePrograms;
   const scenarioKey=fromProperty?MORTGAGE_SCENARIO_KEY+":property:"+sourcePropertyId+":"+(params.get("floorplan")||""):MORTGAGE_SCENARIO_KEY;
-  const storedScenario=React.useMemo(()=>readMortgageScenario(typeof localStorage==="undefined"?null:localStorage,scenarioKey),[scenarioKey]);
+  const storedScenario=React.useMemo(()=>{
+    const storage=typeof localStorage==="undefined"?null:localStorage;
+    const own=readMortgageScenario(storage,scenarioKey);
+    if(own||!fromProperty)return own;
+    const shared=readMortgageScenario(storage);
+    // Inherit the chosen program, not another property's price or cash deposit.
+    return shared?{...shared,price:undefined,down:undefined}:null;
+  },[scenarioKey,fromProperty]);
   const requestedProgram=params.get("program");
   const storedProgram=storedScenario&&programs.some(item=>item.id===storedScenario.programId)?storedScenario.programId:null;
   const initialProgram:ProgramId=programs.some(item=>item.id===requestedProgram)
@@ -92,11 +99,12 @@ function MortgageCalculator(){
     ?fromProperty?Math.min(10_000_000_000,Math.round(requested)):clamp(Math.round(requested),PRICE_MIN,PRICE_MAX)
     :typeof savedPrice==="number"&&Number.isFinite(savedPrice)
       ?clamp(Math.round(savedPrice),PRICE_MIN,PRICE_MAX):9_000_000;
-  const initialMin=minimumMortgageDown(initialPrice,programs.find(item=>item.id===initialProgram)?.minDownPct??20.1);
+  const initialKind:PropertyKind=fromProperty||params.get("from")==="select"?"newbuild":storedScenario?.propertyKind??"newbuild";
+  const initialLargeArea=fromProperty?false:storedScenario?.largeArea??false;
+  const initialMin=calculateMortgageScenario({programs,settings:{...storedScenario,programId:initialProgram,propertyKind:initialKind,largeArea:initialLargeArea},price:initialPrice,down:0})?.requiredDown??minimumMortgageDown(initialPrice,20.1);
   const savedDown=storedScenario?.down;
   const initialDown=(fromProperty||params.get('down')!=='min')&&typeof savedDown==="number"&&Number.isFinite(savedDown)
     ?clamp(Math.round(savedDown),initialMin,initialPrice-1):initialMin;
-  const initialKind:PropertyKind=fromProperty||params.get("from")==="select"?"newbuild":storedScenario?.propertyKind??"newbuild";
   const initialMarketRate=storedScenario?.propertyKind===initialKind&&storedScenario.marketRate
     ?storedScenario.marketRate
     :defaultMarketRate(programs,initialKind);
@@ -114,7 +122,7 @@ function MortgageCalculator(){
   const [childrenCount,setChildrenCount]=React.useState<FamilyChildren>(storedScenario?.childrenCount??1);
   const [hasYoungChild,setHasYoungChild]=React.useState(storedScenario?.hasYoungChild??true);
   const [disabledChild,setDisabledChild]=React.useState(storedScenario?.disabledChild??false);
-  const [largeArea,setLargeArea]=React.useState(fromProperty?false:storedScenario?.largeArea??false);
+  const [largeArea,setLargeArea]=React.useState(initialLargeArea);
   const [priceDraft,setPriceDraft]=React.useState(formatRub(initialPrice));
   const [downDraft,setDownDraft]=React.useState(formatRub(initialDown));
   const [interacted,setInteracted]=React.useState(false);
@@ -149,7 +157,10 @@ function MortgageCalculator(){
   const subsidizedLimit=calculation.subsidizedLimit;
   const totalLimit=calculation.totalLimit;
   const maxYears=calculation.maxYears;
-  const minDown=calculation.minDown;
+  const minDown=calculation.requiredDown;
+  const minDownPercent=price>0?minDown/price*100:calculation.minDownPct;
+  const previousMinDown=React.useRef(minDown);
+  const minimumForPrice=(value:number,nextSettings:MortgageScenarioSettings=settings)=>calculateMortgageScenario({programs,settings:nextSettings,price:value,down:0})?.requiredDown??minimumMortgageDown(value,rule.minDownPct);
   const maxDown=Math.max(minDown,price-1);
   const priceMin=fromProperty?Math.min(PRICE_MIN,initialPrice,sourcePrice??PRICE_MIN):PRICE_MIN;
   const priceMax=fromProperty?Math.max(PRICE_MAX,initialPrice,sourcePrice??PRICE_MAX):PRICE_MAX;
@@ -213,14 +224,16 @@ function MortgageCalculator(){
     if(!fromProperty||!sourcePrice||sourcePrice<=1||appliedSource.current)return;
     appliedSource.current=true;
     if(priceTouched.current)return;
-    const nextMin=minimumMortgageDown(sourcePrice,rule.minDownPct);
+    const nextMin=minimumForPrice(sourcePrice);
     setPrice(sourcePrice);setPriceDraft(formatRub(sourcePrice));
     const nextDown=typeof savedDown==="number"?clamp(savedDown,nextMin,sourcePrice-1):nextMin;
     setDown(nextDown);setDownDraft(formatRub(nextDown));
-  },[fromProperty,sourcePrice,rule.minDownPct]);
+  },[fromProperty,sourcePrice,rule.minDownPct,totalLimit]);
 
   React.useEffect(()=>{
-    const next=clamp(down,minDown,maxDown);
+    // A user at the minimum follows a changed limit; an exact cash entry is kept.
+    const next=clamp(down===previousMinDown.current?minDown:down,minDown,maxDown);
+    previousMinDown.current=minDown;
     if(next!==down){setDown(next);setDownDraft(formatRub(next))}
   },[minDown,maxDown,down]);
 
@@ -270,7 +283,7 @@ function MortgageCalculator(){
     setInteracted(true);
     const next=programs.find(item=>item.id===id);
     if(!next)return;
-    const nextMin=minimumMortgageDown(price,next.minDownPct);
+    const nextMin=minimumForPrice(price,{...settings,programId:id,largeArea:id==="farEast"?largeArea:false});
     const nextDown=clamp(down===minDown?nextMin:down,nextMin,price-1);
     setDown(nextDown);
     setDownDraft(formatRub(nextDown));
@@ -284,7 +297,7 @@ function MortgageCalculator(){
     setInteracted(true);
     priceTouched.current=true;
     const next=clamp(fromSlider?snap(value,MONEY_STEP):Math.round(value),priceMin,priceMax);
-    const nextMin=minimumMortgageDown(next,rule.minDownPct);
+    const nextMin=minimumForPrice(next);
     // Keep a minimum-position slider at the minimum; otherwise preserve exact cash.
     const nextDown=clamp(down===minDown?nextMin:down,nextMin,next-1);
     setDown(nextDown);
@@ -299,6 +312,13 @@ function MortgageCalculator(){
     const next=clamp(Math.round(value),minDown,maxDown);
     setDown(next);
     setDownDraft(formatRub(next));
+  };
+
+  const updateDownPercent=(value:number)=>{
+    // Radix rounds a fractional percentage minimum to the step's precision.
+    // Keep that first step at the exact cash boundary, including Home/drag-left.
+    const firstStep=Math.max(minDownPercent,Math.round(minDownPercent*10)/10);
+    updateDown(value<=firstStep?minDown:price*value/100);
   };
 
   const commitMoney=(kind:"price"|"down")=>{
@@ -393,7 +413,7 @@ function MortgageCalculator(){
           <strong>{propertyKind==="newbuild"?"Площадь квартиры свыше 64 м²":"Площадь свыше 60 м² и подходящий моногород"}</strong>
           <span>При выполнении условий программы доступен повышенный лимит кредита</span>
         </div>
-        <Switch checked={largeArea} onCheckedChange={value=>{setInteracted(true);setLargeArea(value)}}/>
+        <Switch aria-label="Повышенный лимит по площади" checked={largeArea} onCheckedChange={value=>{setInteracted(true);setLargeArea(value)}}/>
       </div>}
 
       <div className={styles.ruleStrip}>
@@ -422,8 +442,9 @@ function MortgageCalculator(){
           <Input aria-label="Первоначальный взнос" inputMode="numeric" value={downDraft} onChange={e=>{priceTouched.current=true;setDownDraft(e.target.value.replace(/[^0-9 ]/g,""))}} onBlur={()=>commitMoney("down")} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/>
           <span>₽</span>
         </div>
-        <Slider aria-label="Первоначальный взнос, %" min={calculation.minDownPct} max={100} step={0.1} value={[downPercent]} onValueChange={values=>updateDown(price*(values[0]??downPercent)/100)}/>
-        <div className={styles.fieldMeta}>Минимальный взнос: {String(rule.minDownPct).replace(".",",")}% · {formatRub(minDown)} ₽</div>
+        <Slider aria-label="Первоначальный взнос, %" min={minDownPercent} max={100} step={0.1} value={[downPercent]} onValueChange={values=>updateDownPercent(values[0]??downPercent)}/>
+        <div className={styles.fieldMeta}>Минимальный взнос: {formatRate(minDownPercent)} · {formatRub(minDown)} ₽</div>
+        {minDown>calculation.minDown&&<div className={styles.fieldMeta}>Взнос увеличен, чтобы кредит не превышал {formatRub(totalLimit)} ₽.</div>}
         {program==="family"&&downPercent>=50&&<div className={styles.inlineSuccess}><CircleCheck size={13}/>Взнос 50%+: для подходящей семьи ставка не выше 6%</div>}
       </div>
 

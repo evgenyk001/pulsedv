@@ -208,3 +208,16 @@ test('two-period mortgage uses remaining principal, explicit future rate and unc
  assert.equal(calculateMortgageScenario({...base,down:1,settings:{...base.settings,futureRate:18}})!.projection,null);
  const saved=readMortgageScenario({getItem:()=>JSON.stringify({...base.settings,futureRate:0})});assert.equal(saved?.futureRate,0);
 });
+
+test('required cash deposit covers the hard credit ceiling and the program percentage',()=>{
+ const base={programs:DEFAULT_MORTGAGE_PROGRAMS,settings:{programId:'farEast' as const,propertyKind:'newbuild' as const},price:10_000_000};
+ for(const [price,largeArea,required] of [[10_000_000,false,4_000_000],[10_000_000,true,2_010_000],[12_000_000,true,3_000_000],[7_500_000,false,1_507_500]] as const){
+  const blocked=calculateMortgageScenario({...base,price,settings:{...base.settings,largeArea},down:0})!;
+  assert.equal(blocked.requiredDown,required);
+  const valid=calculateMortgageScenario({...base,price,settings:{...base.settings,largeArea},down:required})!;
+  assert.equal(valid.invalid,false);assert.ok(valid.loan<=valid.totalLimit);
+  assert.equal(calculateMortgageScenario({...base,price,settings:{...base.settings,largeArea},down:required-1})!.invalid,true);
+ }
+ const configured=DEFAULT_MORTGAGE_PROGRAMS.map(rule=>rule.id==='farEast'?{...rule,subsidizedLimit:5_000_000,totalLimit:8_000_000}:rule);
+ assert.equal(calculateMortgageScenario({...base,programs:configured,down:0})!.requiredDown,5_000_000);
+});
