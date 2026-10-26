@@ -1,3 +1,4 @@
+import {prepareTelegramWindow} from '../helpers/telegramWindow';
 import {FavoriteSync} from "../helpers/useFavoriteIds";
 import {attribution} from '../../../../packages/journey/attribution';
 import React from "react";
@@ -16,7 +17,7 @@ declare global { interface Window { Telegram?: { WebApp?: { ready?:()=>void; exp
 function ContextBack(){
  const location=useLocation(),{canGoBack}=useAppBack();
  const hasOwnBack=location.pathname.startsWith('/property/')||['/compare','/partners','/partner-offer','/partner-invite','/privacy','/personal-data-consent','/my-search','/journey'].includes(location.pathname);
- return canGoBack&&!hasOwnBack&&location.pathname!=='/'&&!location.state?.tabRoot?<nav className={styles.contextBack} aria-label="Возврат"><BackLink to="/" aria-label="Назад к предыдущему экрану"/><span>Назад</span></nav>:null;
+ return canGoBack&&!hasOwnBack&&location.pathname!=='/'&&!location.state?.tabRoot?<nav data-app-back-row className={styles.contextBack} aria-label="Возврат"><BackLink to="/" aria-label="Назад к предыдущему экрану"/><span>Назад</span></nav>:null;
 }
 
 export function AppShell({children}:{children:React.ReactNode}){
@@ -59,7 +60,7 @@ export function AppShell({children}:{children:React.ReactNode}){
   React.useEffect(()=>{
     if(!sessionStorage.getItem("pulse.attribution.v1")){recordPulseEvent({eventType:"attribution",metadata:attribution(window.location.search||window.location.hash.split("?")[1]||"",document.referrer,window.location.origin)});sessionStorage.setItem("pulse.attribution.v1","1");}
     const tg=window.Telegram?.WebApp;
-    tg?.ready?.(); tg?.expand?.(); tg?.disableVerticalSwipes?.(); tg?.setHeaderColor?.("#F3F5F8"); tg?.setBackgroundColor?.("#F3F5F8");
+    prepareTelegramWindow(tg);
   },[]);
 
   React.useEffect(()=>{

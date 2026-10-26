@@ -220,3 +220,6 @@ html{scroll-padding-bottom:calc(108px + var(--pulse-safe-bottom))}
   --pulse-safe-left: calc(max(env(safe-area-inset-left, 0px), var(--tg-safe-area-inset-left, 0px)) + var(--tg-content-safe-area-inset-left, 0px));
   --pulse-safe-right: calc(max(env(safe-area-inset-right, 0px), var(--tg-safe-area-inset-right, 0px)) + var(--tg-content-safe-area-inset-right, 0px));
 }
+
+/* Telegram owns back navigation; keep the browser fallback wired but out of layout. */
+html[data-native-back] [data-back-link],html[data-native-back] [data-app-back-row]{display:none!important}
