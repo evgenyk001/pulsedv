@@ -1,3 +1,4 @@
+import {runTelegramBot} from './telegramBot';
 import {refreshStoredScores} from './refreshScores';
 import {scanSearchProfiles} from './searchRoutes';
 import {scheduleShowingReminders} from './showingReminders';
@@ -10,6 +11,7 @@ import { outboxRepository } from './outboxRepository';
 import { runSecurityMaintenance } from './maintenance';
 const config=readConfig();const db=postgresDatabase(config.DATABASE_URL);const abort=new AbortController();let nextMaintenance=0,nextReminders=0,nextSearch=0,nextDelivery=0,searchCursor='';
 process.on('SIGTERM',()=>abort.abort());process.on('SIGINT',()=>abort.abort());
+const bot=runTelegramBot(db,config,abort.signal);
 try{
  while(!abort.signal.aborted){
   try{
@@ -23,4 +25,4 @@ try{
   }catch{console.error('Notification batch failed; will retry');}
   await setTimeout(5000,undefined,{signal:abort.signal}).catch(()=>{});
  }
-}finally{await db.close();}
+}finally{abort.abort();await bot;await db.close();}
