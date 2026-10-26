@@ -33,7 +33,7 @@ test('Bot requests consent, rejects foreign/forwarded contacts and binds own pho
   assert.equal(sent.at(-1).reply_markup.inline_keyboard[0][0].web_app.url,'https://pulsedv.ru/pulsedv/mini-app/');
   const count=sent.length;await handleBotUpdate(db,config,call,message({text:'/start'}));
   assert.equal(sent.length,count+2);assert.equal(sent[count].reply_markup.remove_keyboard,true);
-  assert.equal((await db.query('select count(*) from app_users')).rows[0].count,1);
+  assert.equal(Number((await db.query('select count(*) from app_users')).rows[0].count),1);
  }finally{await db.close()}
 });
 test('Bot ignores groups and requires a recent consent prompt; skip does not save a phone',async()=>{
@@ -52,7 +52,7 @@ test('Polling persists cursor only after handling and retries failed updates',as
  const db=await testDatabase();try{
   await migrate(db);let fail=true;let offset=0;
   const call=async(method:string,body:any)=>{if(method==='getUpdates'){offset=body.offset;return [message({text:'/start'})]}if(fail)throw Error('offline');return {}};
-  await assert.rejects(pollBotUpdates(db,config,call));assert.equal((await db.query('select next_update_id from telegram_bot_cursor')).rows[0].next_update_id,0);
+  await assert.rejects(pollBotUpdates(db,config,call));assert.equal(Number((await db.query('select next_update_id from telegram_bot_cursor')).rows[0].next_update_id),0);
   fail=false;await pollBotUpdates(db,config,call);assert.equal(offset,0);
   assert.equal(Number((await db.query('select next_update_id from telegram_bot_cursor')).rows[0].next_update_id),2);
  }finally{await db.close()}
