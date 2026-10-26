@@ -49,7 +49,7 @@ for(const width of [320,390])test(`Partner security ${width}px: native cancellat
  };
  await page.goto(origin+'/pulsedv/mini-app/#/partners');const gate=page.getByRole('region',{name:'Защита партнёрского кабинета'});
  await expect(gate).toBeVisible();expect(reads).toBe(0);
- await gate.getByRole('button',{name:'Войти по Face ID или отпечатку'}).click();await expect(gate.getByRole('alert')).toContainText('Проверка не завершена');expect(reads).toBe(0);expect(checks).toBe(0);
+ await expect(gate.getByRole('alert')).toContainText('Проверка не завершена');expect(reads).toBe(0);expect(checks).toBe(0);
  await page.evaluate(()=>{(window as any).testBioAllow=true;(window as any).testBioHold=true});await gate.getByRole('button',{name:'Войти по Face ID или отпечатку'}).click();
  await expect.poll(()=>page.evaluate(()=>typeof (window as any).testBioCallback)).toBe('function');
  await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));(window as any).testBioCallback(true,'device-secret');Object.defineProperty(document,'visibilityState',{configurable:true,value:'visible'});document.dispatchEvent(new Event('visibilitychange'));(window as any).testBioHold=false});await expect(gate.getByRole('alert')).toContainText('Вход отменён');expect(checks).toBe(0);

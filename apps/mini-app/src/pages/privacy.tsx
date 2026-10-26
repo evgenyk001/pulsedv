@@ -7,7 +7,7 @@ import styles from "./legal.module.css";
 
 export default function PrivacyPage(){
   return <div className={styles.page}>
-    <header className={styles.topbar}>
+    <header data-app-back-row className={styles.topbar}>
       <BackLink to="/profile" aria-label="Назад в профиль"/>
       <span>Персональные данные</span>
     </header>

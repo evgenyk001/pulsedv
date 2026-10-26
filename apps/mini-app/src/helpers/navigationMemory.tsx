@@ -1,3 +1,4 @@
+import {nativeBackButton,topAppDialog,closeTopAppDialog} from './nativeBack';
 import React from 'react';
 import {useLocation,useNavigate,useNavigationType} from 'react-router-dom';
 const positions=new Map<string,number>();
@@ -29,11 +30,16 @@ export function NavigationMemory({children}:{children:React.ReactNode}){
  },[history,location.key,path,kind]);
  React.useLayoutEffect(()=>{setHistory(current);try{sessionStorage.setItem(key,JSON.stringify(current))}catch{}},[current]);
  const canGoBack=current.index>0;
- React.useEffect(()=>{
-  const tg=(window.Telegram?.WebApp as unknown as {BackButton?:{show:()=>void;hide:()=>void;onClick:(fn:()=>void)=>void;offClick:(fn:()=>void)=>void}})?.BackButton;
-  if(!tg)return;const back=()=>{const dialogs=document.querySelectorAll<HTMLElement>('[role="dialog"][data-state="open"]');const dialog=dialogs[dialogs.length-1];if(dialog)dialog.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));else navigate(-1)};canGoBack?tg.show():tg.hide();if(canGoBack)tg.onClick(back);
-  return()=>{tg.offClick(back);tg.hide()};
- },[canGoBack,navigate]);
+ React.useLayoutEffect(()=>{
+  const tg=nativeBackButton();if(!tg)return;
+  document.documentElement.dataset.nativeBack='true';
+  const update=()=>{(canGoBack||document.querySelector('[data-back-link]')||topAppDialog())?tg.show():tg.hide()};
+  const back=()=>{if(closeTopAppDialog())return;if(canGoBack)navigate(-1);else document.querySelector<HTMLAnchorElement>('[data-back-link]')?.click()};
+  const observer=new MutationObserver(update);
+  observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['open','data-state']});
+  update();tg.onClick(back);
+  return()=>{observer.disconnect();tg.offClick(back);tg.hide();delete document.documentElement.dataset.nativeBack};
+ },[canGoBack,navigate,path]);
  React.useLayoutEffect(()=>{
   if(!location.pathname.startsWith('/property/')){try{sessionStorage.setItem('pulse.property.return',path)}catch{}}
   const entryKey=location.key;

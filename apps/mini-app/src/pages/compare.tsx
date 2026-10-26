@@ -38,7 +38,7 @@ export default function ComparePage(){
  React.useEffect(()=>{const value=pair.join(',');if(complete&&lastViewed.current!==value){lastViewed.current=value;recordPulseEvent({eventType:'comparison_view',metadata:{propertyIds:value}})}},[complete?.id,pair.join('|')]);
  const filtered=saved.filter(p=>(p.name+' '+p.city+' '+p.district).toLocaleLowerCase('ru-RU').includes(query.trim().toLocaleLowerCase('ru-RU')));
  return <div className={styles.page}>
-  <nav className={styles.back}><BackLink to="/favorites" aria-label="Назад в избранное"/><span>Сравнение</span></nav>
+  <nav data-app-back-row className={styles.back}><BackLink to="/favorites" aria-label="Назад в избранное"/><span>Сравнение</span></nav>
   <PageHeader title={complete?'Сравнение двух ЖК':'Какие ЖК сравним?'} subtitle={complete?'Каждый параметр — рядом. Сразу видно, чем отличаются два варианта.':'Выберите первый и второй ЖК из избранного.'}/>
   {syncError&&<p role="alert">{syncError} <button onClick={()=>void retry()}>Повторить синхронизацию</button></p>}
   {error&&<p role="alert">Не удалось загрузить ЖК. <button onClick={()=>void refetch()}>Повторить</button></p>}

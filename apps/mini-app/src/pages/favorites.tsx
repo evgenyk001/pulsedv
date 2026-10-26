@@ -8,13 +8,13 @@ import { useFavoriteIds } from "../helpers/useFavoriteIds";
 import styles from "./favorites.module.css";
 
 export default function Favorites(){
-  const {ids,error:syncError,authenticated,pending,retry}=useFavoriteIds();
+  const {ids,error:syncError,pending,retry}=useFavoriteIds();
   const {data:saved=[],isLoading,error:catalogError,refetch}=useFavoriteProperties(ids);
   return <div className={styles.page}>
     <PageHeader eyebrow="Ваш шорт-лист" title="Избранное" subtitle="Сохраняйте понравившиеся ЖК и сравнивайте два варианта рядом."/>
 
     {syncError&&<p role="alert">{syncError} <button onClick={()=>void retry()}>Повторить синхронизацию</button></p>}
-    {authenticated&&<p role="status">{pending?"Синхронизируем избранное…":"Избранное связано с вашим аккаунтом Telegram"}</p>}
+    {pending&&<p role="status">Синхронизируем избранное…</p>}
     {catalogError&&<p role="alert">Не удалось загрузить сохранённые ЖК. <button onClick={()=>void refetch()}>Повторить</button></p>}
     {saved.length>0&&<Link to="/compare" className={styles.compareEntry}>
       <IconTile><GitCompareArrows size={21}/></IconTile>
