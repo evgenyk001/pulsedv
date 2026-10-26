@@ -1,3 +1,4 @@
+import {RegisteredClients} from '../components/RegisteredClients';
 import { useDialog } from "../components/useDialog";
 import React from 'react';
 import { Flame, UserRound, Search, X, ArrowUpRight } from 'lucide-react';
@@ -17,6 +18,7 @@ export function UsersPage(){
  useDialog(!!profile,close);
  const visible=profiles.filter(p=>(!hotOnly||['hot','urgent'].includes(p.priority))&&[p.sessionId,p.city,propertyName(p.topPropertyId)].join(' ').toLowerCase().includes(query.toLowerCase())).sort((a,b)=>b.score-a.score);
  return <PageFrame eyebrow="АНАЛИТИКА КЛИЕНТА" title="Посетители и интерес" description="От первого просмотра до заявки: что искал человек и какие объекты его заинтересовали.">
+  <RegisteredClients/>
   <div className="toolbar"><div className="segmented">{[['all','Все посетители'],['hot','Горячий интерес']].map(([key,label])=><button key={key} className={(hotOnly?'hot':'all')===key?'active':''} onClick={()=>setParams(key==='hot'?{filter:'hot'}:{})}>{label}</button>)}</div><label className="controlSearch"><Search size={17}/><input aria-label="Поиск посетителя" placeholder="Город, ЖК, номер посетителя" value={query} onChange={e=>setQuery(e.target.value)}/></label></div>
   <section className="tableCard liveTable"><div className="tableHead profilesGrid"><span>Посетитель</span><span>Интерес</span><span>Что выбирает</span><span>Следующий шаг</span><span>Последнее действие</span></div>
    {!visible.length?<div className="emptyState"><UserRound size={26}/><strong>Посетители не найдены</strong><span>Измените поиск или дождитесь первых действий в приложении.</span></div>:visible.map(p=>{const latest=[...events].filter(e=>e.sessionId===p.sessionId).sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt))[0];return <button className="tableRow profilesGrid leadRowButton" key={p.id} onClick={()=>open(p.sessionId)}><span className="leadName"><b><UserRound size={14}/>Посетитель {p.sessionId.slice(0,8)}</b><small>{p.city||'Город пока не указан'}</small></span><span className={'scoreBadge '+p.priority}>{p.priority==='urgent'&&<Flame size={13}/>}<b>{p.score}</b><small>{priorityName(p.priority)}</small></span><span><b>{propertyName(p.topPropertyId)}</b><small className="blockNote">{mortgageNames[p.mortgageProgram||'']||'Программа не выбрана'}</small></span><span className="nextAction"><b>{p.nextAction}</b><small>{p.eventCount} действий</small></span><span className="nextAction"><b>{latest?describeEvent(latest,state).title:'Пока нет действий'}</b><small>{new Date(p.lastSeenAt).toLocaleString('ru-RU')}</small></span></button>})}

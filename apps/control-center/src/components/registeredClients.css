@@ -1,0 +1,1 @@
+.registeredClients{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px;margin-top:18px}.registeredClients article{display:grid;gap:8px;padding:16px;border:1px solid var(--border);border-radius:18px;min-width:0;overflow-wrap:anywhere}.registeredClients a{color:inherit}.registeredClients small{color:var(--muted-foreground)}
