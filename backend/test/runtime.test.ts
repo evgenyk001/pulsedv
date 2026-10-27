@@ -55,7 +55,7 @@ test('SQL/API: заявки между устройствами, дедупли�
   assert.equal((await app.inject({method:'PUT',url:'/api/v1/control/state',headers,cookies:managerCookie,payload:{state:doc,version:2}})).statusCode,403);
 
   const properties=DEFAULT_STATE.properties.map(p=>({...p,documents:[]}));
-  properties[1].projectDetails={commissioningDate:'2027-12-31',totalApartments:420,availableApartments:77};
+  properties[1].projectDetails={commissioningDate:'2027-12-31',totalApartments:420,availableApartments:77,parkingSpaces:250,floorsFrom:10,floorsTo:24,areaFrom:23.4,areaTo:106.8};
   const imported=await app.inject({method:'POST',url:'/api/v1/control/catalog/import',headers,cookies:ownerCookie,payload:{properties,replace:{images:true,features:true,floorplans:true,documents:true}}});
   assert.equal(imported.statusCode,200,imported.body);assert.equal(imported.json().created,properties.length);
 

@@ -24,8 +24,15 @@ export const projectDetailsSchema=z.object({
  commissioningDate:z.iso.date().nullable().default(null),
  totalApartments:z.number().int().nonnegative().max(2_000_000).nullable().default(null),
  availableApartments:z.number().int().nonnegative().max(2_000_000).nullable().default(null),
+ parkingSpaces:z.number().int().nonnegative().max(2_000_000).nullable().optional(),
+ floorsFrom:z.number().int().min(1).max(200).nullable().optional(),
+ floorsTo:z.number().int().min(1).max(200).nullable().optional(),
+ areaFrom:z.number().positive().max(10000).nullable().optional(),
+ areaTo:z.number().positive().max(10000).nullable().optional(),
  finishes:z.array(finishTypeSchema).max(4).refine(values=>new Set(values).size===values.length,'Укажите каждый тип отделки один раз').optional()
-}).strict().refine(v=>v.totalApartments===null||v.availableApartments===null||v.availableApartments<=v.totalApartments,'В продаже не может быть больше квартир, чем всего в ЖК');
+}).strict().refine(v=>v.totalApartments===null||v.availableApartments===null||v.availableApartments<=v.totalApartments,'В продаже не может быть больше квартир, чем всего в ЖК')
+ .refine(v=>v.floorsFrom==null||v.floorsTo==null||v.floorsFrom<=v.floorsTo,'Этажность от не может превышать этажность до')
+ .refine(v=>v.areaFrom==null||v.areaTo==null||v.areaFrom<=v.areaTo,'Площадь от не может превышать площадь до');
 const property=z.object({
  freshness:freshnessSchema.optional(),
  projectDetails:projectDetailsSchema.optional(),

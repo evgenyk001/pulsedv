@@ -1,3 +1,4 @@
+import {propertyAreaRange,dimensionRange} from '../../../../packages/domain/propertyDimensions';
 import {LoadRecovery} from '../components/LoadRecovery';
 import {sortRoomLabels,normalizeRoomLabel} from '../../../../packages/domain/catalogFacets';
 import {BackLink} from "../components/BackLink";
@@ -115,8 +116,9 @@ export default function PropertyPage(){
     .filter(plan=>activeRoom&&normalizeRoomLabel(plan.roomLabel)===activeRoom&&matchesFinish(plan))
     .sort((a,b)=>(priceForPlan(a)??Infinity)-(priceForPlan(b)??Infinity)||a.sortOrder-b.sortOrder);
   const fromPulse=returnTo.startsWith("/selection");
-  const areaValues=p.floorplans.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]).filter((v):v is number=>typeof v==='number'&&v>0);
-  const minArea=areaValues.length?Math.min(...areaValues):null;
+  const area=propertyAreaRange(p);
+  const areaLabel=dimensionRange(area.from,area.to);
+  const floorsLabel=dimensionRange(details?.floorsFrom,details?.floorsTo);
   const commissioning=formatProjectDate(details?.commissioningDate);
   const inventory=details?.availableApartments!=null
     ?'В продаже: '+counted(details.availableApartments,'квартира','квартиры','квартир')+(details.totalApartments!=null?' из '+details.totalApartments.toLocaleString('ru-RU'):'')+'.'
@@ -124,7 +126,7 @@ export default function PropertyPage(){
   const facts=[
     {label:'Срок сдачи',value:p.delivery||'Уточняется',icon:CalendarDays},
     ...(commissioning?[{label:'Плановый ввод дома',value:commissioning,icon:Building2}]:[]),
-    ...(minArea!==null?[{label:'Площадь от',value:minArea.toLocaleString('ru-RU')+' м²',icon:Ruler}]:[]),
+    ...(areaLabel?[{label:'Площадь квартир',value:areaLabel+' м²',icon:Ruler}]:[]),
     ...(p.className?[{label:'Класс жилья',value:p.className,icon:ShieldCheck}]:[]),
   ];
 
@@ -243,6 +245,9 @@ export default function PropertyPage(){
           <div><span>Класс</span><strong>{p.className||"Уточняется"}</strong></div>
           <div><span>Срок сдачи</span><strong>{p.delivery||"Уточняется"}</strong></div>
           <div><span>Плановый ввод дома</span><strong>{commissioning||"Дата уточняется"}</strong></div>
+          {floorsLabel&&<div><span>Этажность</span><strong>{floorsLabel}</strong></div>}
+          {areaLabel&&<div><span>Площадь квартир</span><strong>{areaLabel} м²</strong></div>}
+          {details?.parkingSpaces!=null&&<div><span>Парковочных мест</span><strong>{details.parkingSpaces.toLocaleString('ru-RU')}</strong></div>}
           {details?.totalApartments!=null&&<div><span>Всего квартир в ЖК</span><strong>{details.totalApartments.toLocaleString('ru-RU')}</strong></div>}
           {details?.availableApartments!=null&&<div><span>Квартир в продаже</span><strong>{details.availableApartments.toLocaleString('ru-RU')}</strong></div>}
           <div><span>Стартовая цена ЖК</span><strong>{priceLabel(p.priceFrom).replace("от ","")}</strong></div>
