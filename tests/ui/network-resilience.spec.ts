@@ -84,7 +84,7 @@ test('Startup recovers after a failed read without exposing server diagnostics',
  await expect(page.getByRole('button',{name:'Попробовать снова'})).toBeVisible();
  await expect(page.getByText(/SQLSTATE|stack trace|Нет связи/)).toHaveCount(0);
  control.failBoot(false);await page.evaluate(()=>window.dispatchEvent(new Event('online')));
- await expect(page.getByRole('link',{name:'Каталог',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Каталог',exact:true})).toBeVisible();
 });
 test('Failed lead submission keeps the form and never reports success or exposes raw errors',async({page})=>{
  const control=setupApi();control.failActions(true);
