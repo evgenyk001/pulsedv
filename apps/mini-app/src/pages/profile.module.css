@@ -11,6 +11,10 @@
 .about{margin-top:20px;padding:16px;border-radius:var(--list-radius);background:var(--list-surface);display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
 .about svg{color:var(--icon-ink)}
 .about p{margin:0;font-size:13px;line-height:1.6;color:var(--muted-foreground)}
+.aboutContent{display:grid;gap:20px;margin-top:12px}
+.aboutSection h2{margin:0 0 8px;font-size:17px;line-height:1.25;letter-spacing:-.025em}
+.aboutSection p{margin:0;font-size:13px;line-height:1.65;color:var(--muted-foreground)}
+.aboutEyebrow{display:block;margin-bottom:8px;font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--muted-foreground)}
 
 
 .page>header{align-items:flex-start;gap:14px}
