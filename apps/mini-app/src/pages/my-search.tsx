@@ -31,7 +31,7 @@ export default function MySearchPage(){
   if(!open||!facets.isSuccess)return;
   setDraft(d=>{const rooms=facets.rooms.includes(d.rooms)?d.rooms:'Все',delivery=facets.deliveries.includes(d.delivery)?d.delivery:'Любой';return rooms===d.rooms&&delivery===d.delivery?d:{...d,rooms,delivery}});
  },[open,facets.isSuccess,facets.rooms,facets.deliveries]);
- const update=async(next:SearchSettings)=>{setNotice('');try{await save.mutateAsync(next);setNotice('Сохранено')}catch{}};
+ const update=async(next:SearchSettings)=>{setNotice('');try{await save.mutateAsync(next)}catch{}};
  const valid=!!minText&&!!maxText&&Number(minText)>=0&&Number(maxText)>0&&Number(minText)<=Number(maxText)&&Number(maxText)<=1e10;
  const submit=async(e:React.FormEvent)=>{e.preventDefault();if(!valid)return;try{await save.mutateAsync({...settings,criteria:{...draft,min:Number(minText),max:Number(maxText)}});setOpen(false);setParams({}, {replace:true});setNotice('Поиск сохранён. Будем отслеживать новые подходящие варианты.')}catch{}};
  return <div className={styles.page}>

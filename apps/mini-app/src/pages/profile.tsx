@@ -65,7 +65,15 @@ export default function ProfilePage(){
       <MenuLink to="/privacy" icon={<ShieldCheck/>} title="Персональные данные"/>
       <Sheet>
         <SheetTrigger asChild><MenuButton icon={<Info/>} title="О сервисе PULSEDV.RU"/></SheetTrigger>
-        <SheetContent side="bottom" className={styles.infoSheet}><SheetHeader><SheetTitle>О PULSEDV.RU</SheetTitle><SheetDescription>Мы помогаем сравнить новостройки, условия покупки и ипотечные сценарии в одном процессе.</SheetDescription></SheetHeader><div className={styles.about}><ShieldCheck size={20}/><p>Информация в приложении — отправная точка для подбора. Перед сделкой менеджер уточняет актуальные условия по выбранному проекту.</p></div></SheetContent>
+        <SheetContent side="bottom" className={styles.infoSheet}>
+          <SheetHeader><SheetTitle>О PULSEDV.RU</SheetTitle><SheetDescription>Новостройки Приморья и помощь с покупкой квартиры — от первого выбора до сделки.</SheetDescription></SheetHeader>
+          <div className={styles.aboutContent}>
+            <section className={styles.aboutSection}><span className={styles.aboutEyebrow}>ОСНОВАТЕЛЬНИЦА</span><h2>Диана Козменко</h2><p>Основательница PULSE.DV — агентства недвижимости в Приморском крае. PULSEDV.RU объединяет каталог новостроек и работу с командой агентства в одном приложении.</p></section>
+            <section className={styles.aboutSection}><h2>Помогаем выбрать своё</h2><p>Сравниваем жилые комплексы, планировки и варианты отделки с учётом вашего бюджета и планов. Помогаем разобраться в ипотечных программах, первоначальном взносе и ежемесячном платеже.</p></section>
+            <section className={styles.aboutSection}><h2>Рядом на каждом этапе</h2><p>Консультируем, организуем показы и сопровождаем покупку. Подборки, переписка с менеджером и договорённости о встречах остаются под рукой.</p></section>
+          </div>
+          <div className={styles.about}><ShieldCheck size={20}/><p>Перед бронированием менеджер уточнит наличие квартиры, актуальную цену и условия покупки у застройщика.</p></div>
+        </SheetContent>
       </Sheet>
       <MenuButton onClick={()=>window.dispatchEvent(new Event("pulse:show-onboarding"))} icon={<PlayCircle/>} title="Показать знакомство"/>
     </GroupedMenu>
