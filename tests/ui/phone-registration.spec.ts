@@ -26,7 +26,7 @@ test.beforeAll(async()=>{
 test.afterAll(async()=>{if(server){server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()))}if(root)await rm(root,{recursive:true,force:true})});
 test('Mandatory phone blocks direct routes, cancellation and forged client success; consent documents stay accessible',async({page})=>{
  test.setTimeout(60000);await page.addInitScript(version=>localStorage.setItem('pulse_onboarding_version',version),DEFAULT_STATE.content.onboardingVersion);let verified=false,requests=0,privateReads=0;
- await page.route('https://telegram.org/js/telegram-web-app.js**',r=>r.fulfill({contentType:'text/javascript',body:`window.Telegram={WebApp:{initData:'signed-test-data',ready(){},expand(){},requestContact(cb){window.contactCallback=cb}}};`}));
+ await page.route('https://telegram.org/js/telegram-web-app.js**',r=>r.fulfill({contentType:'text/javascript',body:`window.Telegram={WebApp:{initData:'signed-test-data',ready(){},expand(){},requestContact(cb){window.contactCallback=ok=>{delete window.contactCallback;cb(ok)}}}};`}));
  apiHandler=(request,payload)=>{
   const path=new URL(request.url!,origin).pathname.replace('/api/v1','');
   if(path==='/public/state')return {state:DEFAULT_STATE,version:1,requiresPhone:true,consentVersion:'test'};
@@ -45,10 +45,10 @@ test('Mandatory phone blocks direct routes, cancellation and forged client succe
  await expect(button).toBeDisabled();await expect(page.getByRole('heading',{name:'Избранное',exact:true})).toHaveCount(0);expect(privateReads).toBe(0);
  await page.getByRole('link',{name:'Политика конфиденциальности'}).click();await expect(page.getByRole('heading',{name:'Политика обработки персональных данных',exact:true})).toBeVisible();
  await page.evaluate(()=>location.hash='/catalog');await expect(button).toBeVisible();
- await page.getByRole('checkbox').check();await button.click();await expect.poll(()=>requests).toBe(1);
+ await page.getByRole('checkbox').check();await button.click();await expect.poll(()=>requests).toBe(1);await expect.poll(()=>page.evaluate(()=>typeof (window as any).contactCallback)).toBe('function');
  await page.evaluate(()=>(window as any).contactCallback(false));await expect(page.getByRole('alert')).toContainText('Без передачи');
  await expect(page.getByRole('heading',{name:'Каталог',exact:true})).toHaveCount(0);
- await button.click();await expect.poll(()=>requests).toBe(2);
+ await button.click();await expect.poll(()=>requests).toBe(2);await expect.poll(()=>page.evaluate(()=>typeof (window as any).contactCallback)).toBe('function');
  verified=true;await page.evaluate(()=>(window as any).contactCallback(true));
  await expect(button).toHaveCount(0);await expect(page.getByRole('heading',{name:'Новостройки',exact:true})).toBeVisible();
 });
