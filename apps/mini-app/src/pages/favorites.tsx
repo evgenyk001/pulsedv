@@ -1,3 +1,4 @@
+import {LoadRecovery} from '../components/LoadRecovery';
 import {IconTile} from '../components/IconTile';
 import { Link } from "react-router-dom";
 import { Heart, ChevronRight, Sparkles, GitCompareArrows } from "lucide-react";
@@ -8,14 +9,13 @@ import { useFavoriteIds } from "../helpers/useFavoriteIds";
 import styles from "./favorites.module.css";
 
 export default function Favorites(){
-  const {ids,error:syncError,pending,retry}=useFavoriteIds();
+  const {ids,notice}=useFavoriteIds();
   const {data:saved=[],isLoading,error:catalogError,refetch}=useFavoriteProperties(ids);
   return <div className={styles.page}>
     <PageHeader eyebrow="Ваш шорт-лист" title="Избранное" subtitle="Сохраняйте понравившиеся ЖК и сравнивайте два варианта рядом."/>
 
-    {syncError&&<p role="alert">{syncError} <button onClick={()=>void retry()}>Повторить синхронизацию</button></p>}
-    {pending>0&&<p role="status">Синхронизируем избранное…</p>}
-    {catalogError&&<p role="alert">Не удалось загрузить сохранённые ЖК. <button onClick={()=>void refetch()}>Повторить</button></p>}
+    {notice&&<p role="status">{notice}</p>}
+    {catalogError&&!saved.length&&<LoadRecovery label="Обновить избранное" onRetry={()=>void refetch()}/>}
     {saved.length>0&&<Link to="/compare" className={styles.compareEntry}>
       <IconTile><GitCompareArrows size={21}/></IconTile>
       <span><strong>Сравнить ЖК</strong><small>{saved.length===2?'Два сохранённых ЖК — сразу рядом':saved.length>2?'Выберите два ЖК и посмотрите различия':'Сохраните ещё один ЖК для сравнения'}</small></span><ChevronRight size={19}/>

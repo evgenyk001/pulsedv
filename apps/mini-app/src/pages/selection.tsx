@@ -1,3 +1,4 @@
+import {LoadRecovery} from '../components/LoadRecovery';
 import {publishedCatalogFacets,roomChoiceLabel} from '../../../../packages/domain/catalogFacets';
 import {IconTile} from '../components/IconTile';
 import React from "react";
@@ -667,7 +668,7 @@ export default function SelectionPage(){
         {delivery!=="Не важно"&&<span>{delivery==="Сдан"?"Сдан":delivery}</span>}
         {preferences.slice(0,2).map(id=><span key={id}>{preferenceLabel(id)}</span>)}
       </div>
-      {catalog.isError&&<div className={styles.catalogIssue}>Не удалось обновить каталог. Проверьте соединение и повторите позже.</div>}
+      {catalog.isError&&!catalog.data?.length&&<LoadRecovery label="Обновить подбор" onRetry={()=>void catalog.refetch()}/>}
     </section>
 
     </section>

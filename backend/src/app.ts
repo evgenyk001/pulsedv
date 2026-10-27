@@ -1,3 +1,4 @@
+import {ensureAnnouncementSubscription} from './announcementSubscriptions';
 import {controlProfileSelect} from './controlProfiles';
 import {registerAccountRoutes,registeredPhone} from './accountRoutes';
 import {registerPartnerBiometricRoutes} from './partnerBiometrics';
@@ -118,6 +119,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const current=(await sql.query('select u.telegram_user_id from sessions s left join app_users u on u.id=s.user_id where s.id=$1',[request.visitor!.sessionId])).rows[0];
    if(current?.telegram_user_id&&String(current.telegram_user_id)!==String(user.id))throw new HttpError(409,'Эта сессия уже принадлежит другому пользователю');
    const row=(await sql.query('insert into app_users(telegram_user_id,telegram_username,first_name,last_name) values($1,$2,$3,$4) on conflict(telegram_user_id) do update set telegram_username=excluded.telegram_username,first_name=excluded.first_name,last_name=excluded.last_name,last_seen_at=now() returning id',[user.id,user.username??null,user.first_name,user.last_name??null])).rows[0];
+   await ensureAnnouncementSubscription(sql,row.id);
    await mergeFavorites(sql,request.visitor!.sessionId,row.id);
    await mergeSearch(sql,request.visitor!.sessionId,row.id);
    await mergeNotificationReads(sql,request.visitor!.sessionId,row.id);

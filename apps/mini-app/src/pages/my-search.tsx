@@ -1,3 +1,4 @@
+import {LoadRecovery} from '../components/LoadRecovery';
 import {usePulseControlState} from '../helpers/usePulseControlState';
 import {useCatalogFacets} from '../helpers/useCatalog';
 import {BackLink} from "../components/BackLink";
@@ -36,7 +37,7 @@ export default function MySearchPage(){
  return <div className={styles.page}>
   <BackLink to="/profile" aria-label="Назад в профиль"/>
   <PageHeader eyebrow='Ваши предпочтения' title='Мой поиск' subtitle='Сохраните запрос — возвращайтесь к подходящим ЖК и изменениям в избранном.'/>
-  {isLoading?<div className={styles.card} role='status'>Загружаем ваш поиск…</div>:error?<div className={styles.card} role='alert'>Не удалось загрузить поиск.<button className={styles.secondary} onClick={()=>void refetch()}>Попробовать снова</button></div>:<>
+  {isLoading?<div className={styles.card} role='status'>Загружаем ваш поиск…</div>:error&&!data?<LoadRecovery label="Обновить мой поиск" onRetry={()=>void refetch()}/>:<>
   <section className={styles.card} aria-label='Сохранённый поиск'>
    <div className={styles.heading}><IconTile className={styles.icon}><Search size={21}/></IconTile><div><h2>{c?'Ваш запрос сохранён':'Квартира под ваши планы'}</h2><p>{c?'Следим за новыми совпадениями в каталоге':'Один раз задайте параметры — продолжайте выбор в удобное время'}</p></div></div>
    {c&&<><div className={styles.chips}><span>{c.city==='Все'?'Все города':c.city}</span><span>{c.rooms==='Все'?'Любая комнатность':c.rooms==='Студия'?'Студия':c.rooms+' комн.'}</span>{c.delivery!=='Любой'&&<span>{c.delivery}</span>}{c.sea&&<span>У моря</span>}</div><strong className={styles.budget}>{money(c.min)} — {money(c.max)}</strong><p>{modes[c.purchaseMode]}{c.q?' · '+c.q:''}</p><Link className={styles.primary} to={searchUrl(c)}>Смотреть подходящие ЖК<ChevronRight size={17}/></Link></>}

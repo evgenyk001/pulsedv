@@ -1,7 +1,7 @@
 import {dismissLaunchScreen} from './helpers/launchScreen';
 import {BrandLoading} from './components/BrandLoading';
 import {PartnerSecurityGate} from './components/PartnerSecurity';
-import { configureRuntime } from "../../../packages/pulse-data/runtime";
+import { ApiError,configureRuntime } from "../../../packages/pulse-data/runtime";
 import { RuntimeGate } from "./components/RuntimeGate";
 import React from "react";
 import ReactDOM from "react-dom/client";
@@ -37,13 +37,13 @@ const referral=referralCodeFromStart(start);
 if(referral)window.location.hash="/partner-invite?code="+encodeURIComponent(referral);
 else if(start==="partners")window.location.hash="/partners";
 
-const queryClient=new QueryClient({defaultOptions:{queries:{retry:false}}});
+const queryClient=new QueryClient({defaultOptions:{queries:{retry:(count,error)=>count<1&&(!(error instanceof ApiError)||error.status===0||error.status>=500),retryDelay:1000}}});
 
 class ScreenBoundary extends React.Component<{children:React.ReactNode},{failed:boolean}>{
  state={failed:false};
  componentDidCatch(){dismissLaunchScreen()}
  static getDerivedStateFromError(){return {failed:true}}
- render(){return this.state.failed?<div className="screenLoadState" role="alert"><strong>Не удалось открыть раздел</strong><p>Проверьте соединение и попробуйте снова.</p><button onClick={()=>window.location.reload()}>Обновить приложение</button></div>:this.props.children}
+ render(){return this.state.failed?<div className="screenLoadState" role="alert"><strong>Не удалось открыть раздел</strong><button onClick={()=>window.location.reload()}>Обновить приложение</button></div>:this.props.children}
 }
 function ScreenContent({children}:{children:React.ReactNode}){
  const location=useLocation();

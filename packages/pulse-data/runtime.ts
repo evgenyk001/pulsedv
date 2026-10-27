@@ -26,9 +26,9 @@ export function runtimeError(error:unknown){runtime.error=error instanceof Error
 export class ApiError extends Error{constructor(public status:number,message:string){super(message);}}
 export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
  let response:Response;
- try{response=await fetch(runtime.base+path,{...options,credentials:'same-origin',headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers},signal:typeof AbortSignal.any==='function'?AbortSignal.any([options.signal??AbortSignal.timeout(12000),pageRequestSignal()]):options.signal??AbortSignal.timeout(12000)});}catch(error){throw new ApiError(0,error instanceof Error&&error.name==='TimeoutError'?'Сервер не успел ответить. Проверьте данные и повторите попытку':error instanceof Error&&error.name==='AbortError'?'Запрос отменён':'Нет связи с сервером. Проверьте соединение и повторите попытку');}
+ try{response=await fetch(runtime.base+path,{...options,credentials:'same-origin',headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers},signal:typeof AbortSignal.any==='function'?AbortSignal.any([options.signal??AbortSignal.timeout(12000),pageRequestSignal()]):options.signal??AbortSignal.timeout(12000)});}catch(error){throw new ApiError(0,runtime.role==='public'?'Не получилось выполнить действие. Попробуйте ещё раз.':error instanceof Error&&error.name==='TimeoutError'?'Сервер не успел ответить. Проверьте данные и повторите попытку':error instanceof Error&&error.name==='AbortError'?'Запрос отменён':'Нет связи с сервером. Проверьте соединение и повторите попытку');}
  const body=await response.json().catch(()=>({}));
- if(!response.ok)throw new ApiError(response.status,body.error||'Не удалось выполнить запрос');return body;
+ if(!response.ok)throw new ApiError(response.status,runtime.role==='public'&&response.status>=500?'Не получилось выполнить действие. Попробуйте ещё раз.':body.error||'Не удалось выполнить запрос');return body;
 }
 type Session={sessionId:string;accessToken:string;expiresAt:string};
 let sessionPromise:Promise<Session>|null=null;

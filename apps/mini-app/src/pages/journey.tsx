@@ -1,3 +1,4 @@
+import {LoadRecovery} from '../components/LoadRecovery';
 import {BackLink} from "../components/BackLink";
 import {IconTile} from '../components/IconTile';
 import React from 'react';
@@ -23,7 +24,7 @@ export default function JourneyPage(){
  return <div className={styles.page}>
   <nav className={styles.navigation} aria-label="Навигация по обращениям"><BackLink to="/" aria-label="На главную"/><Link className={styles.iconButton} to="/profile" aria-label="Профиль"><UserRound size={20}/></Link></nav>
   <header className={styles.pageHeader}><span>НА СВЯЗИ С PULSEDV.RU</span><div><h1>Мои подборки<br/>и показы</h1><button className={styles.iconButton} aria-label="Обновить обращения" disabled={query.isFetching} onClick={()=>void query.refetch()}><RefreshCw size={19}/></button></div><p>Ваши диалоги, варианты квартир и встречи — в одном месте.</p></header>
-  {query.isLoading?<div className={styles.loading} role="status">Загружаем обращения…</div>:query.error?<div className={styles.empty}><MessageCircle size={32}/><h2>Не удалось загрузить диалоги</h2><p>Проверьте подключение. Ваши сообщения сохраняются в обращении.</p><button className={styles.secondary} onClick={()=>void query.refetch()}>Попробовать ещё раз</button></div>:leadId?<div className={styles.empty}><MessageCircle size={32}/><h2>Обращение недоступно</h2><p>Возможно, оно создано в другом браузере или аккаунте.</p><Link className={styles.primary} to="/journey">Все мои обращения</Link></div>:!items.length?<section className={styles.empty}>
+  {query.isLoading?<div className={styles.loading} role="status">Загружаем обращения…</div>:query.error&&!query.data?<LoadRecovery label="Обновить обращения" onRetry={()=>void query.refetch()}/>:leadId?<div className={styles.empty}><MessageCircle size={32}/><h2>Обращение недоступно</h2><p>Возможно, оно создано в другом браузере или аккаунте.</p><Link className={styles.primary} to="/journey">Все мои обращения</Link></div>:!items.length?<section className={styles.empty}>
    <IconTile className={styles.emptyIcon}><MessageCircle size={30}/></IconTile><h2>Найдём квартиру вместе</h2><p>Начните диалог с командой. Поможем сравнить варианты и организовать просмотр.</p>
    <div className={styles.benefits}><span><Sparkles size={18}/><b>Подборки под вас</b><small>Сохраняйте подходящие варианты</small></span><span><MessageCircle size={18}/><b>Личная переписка</b><small>Вопросы и ответы всегда рядом</small></span><span><CalendarDays size={18}/><b>Удобные показы</b><small>Выбирайте время вместе с менеджером</small></span></div>
 
