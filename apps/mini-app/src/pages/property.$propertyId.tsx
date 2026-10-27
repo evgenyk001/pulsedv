@@ -13,7 +13,7 @@ import {APARTMENT_FINISHES,planFinishOffers,planPriceForFinish,planStartingPrice
 import type {ApartmentFinish} from "../../../../packages/pulse-data/model";
 import {PropertyGallery} from "../components/PropertyGallery";
 import {usePulseControlState} from "../helpers/usePulseControlState";
-import {propertyPhotos,propertyMortgageLink,propertyPriceLabel,propertyPriceRub} from "../../../../packages/domain/propertyPresentation";
+import {propertyPhotos,propertyMortgageLink,propertyPriceLabel,planPriceLabel,propertyPriceRub} from "../../../../packages/domain/propertyPresentation";
 import {calculateMortgageScenario,readMortgageScenario,newbuildHasIncreasedLimit} from "../../../../packages/domain/mortgagePolicy";
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
 import { Link, useParams, useLocation } from "react-router-dom";
@@ -206,7 +206,7 @@ export default function PropertyPage(){
                   <span>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'}</span>
                   <strong>{plan.areaFrom!==null?plan.areaFrom+(plan.areaTo&&plan.areaTo!==plan.areaFrom?'–'+plan.areaTo:'')+' м²':'Площадь уточняется'}</strong>
                   {offers.length>0&&<span className={styles.planFinishes}>{selectedFinish?apartmentFinishLabel(selectedFinish):offers.map(offer=>apartmentFinishLabel(offer.finishType)).join(' · ')}</span>}
-                  <b>{planPrice!==null?priceLabel(planPrice):'Цена уточняется'}</b>
+                  <b>{planPriceLabel(plan,selectedFinish)}</b>
                   {planPrice!==null?<Link to={propertyMortgageLink(p,plan,selectedFinish)}>Рассчитать платёж <ChevronRight size={14}/></Link>:<small>Уточните стоимость у менеджера</small>}
                 </div>
               </TrackedFloorplan>;

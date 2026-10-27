@@ -1,9 +1,16 @@
 import type {ApartmentFinish,PulseProperty} from '../pulse-data/model';
-import {planPriceForFinish,planStartingPrice} from './propertyFinish';
+import {planPriceForFinish,planStartingPrice,planPriceRange,type FinishablePlan} from './propertyFinish';
 
 export type PropertyPhoto={url:string;alt:string};
 export const propertyPriceRub=(price:number)=>Math.round(price*1_000_000);
 export const propertyPriceLabel=(price:number)=>'от '+propertyPriceRub(price).toLocaleString('ru-RU')+' ₽';
+export function planPriceLabel(plan:FinishablePlan,finish?:ApartmentFinish|null){
+ const {from,to}=planPriceRange(plan,finish);
+ if(from==null)return 'Цена уточняется';
+ const format=(value:number)=>propertyPriceRub(value).toLocaleString('ru-RU');
+ return to==null?'от '+format(from)+' ₽':from===to?format(from)+' ₽':format(from)+'–'+format(to)+' ₽';
+}
+
 
 export function propertyPhotos(property:PulseProperty):PropertyPhoto[]{
  const photos:PropertyPhoto[]=[];

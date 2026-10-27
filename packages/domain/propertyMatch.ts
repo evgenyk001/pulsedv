@@ -49,7 +49,7 @@ export function roomMatches(label:string,rooms:string){
 }
 
 export function matchingPlans(property:PulseProperty,c:Pick<Criteria,'rooms'|'min'|'max'>){
-  return property.floorplans.filter(p=>roomMatches(p.roomLabel,c.rooms)&&p.priceFrom!==null&&p.priceFrom*1_000_000>=c.min&&p.priceFrom*1_000_000<=c.max);
+  return property.floorplans.filter(p=>roomMatches(p.roomLabel,c.rooms)&&p.priceFrom!==null&&(p.priceTo??p.priceFrom)*1_000_000>=c.min&&p.priceFrom*1_000_000<=c.max);
 }
 
 export function matchesBudgetAndRooms(property:PulseProperty,c:Pick<Criteria,'rooms'|'min'|'max'>){
@@ -150,7 +150,7 @@ export function selectionMatch(
 ):SelectionMatch{
   const cityOk=criteria.city==='Все'||criteria.city==='Не важно'||property.city===criteria.city;
   const inBudget=criteria.purchaseMode==='cash'?matchingPlans(property,{rooms:criteria.rooms,min:criteria.min,max:criteria.max}):[];
-  const price=inBudget.length?Math.min(...inBudget.map(p=>p.priceFrom!*1_000_000)):representativePrice(property,criteria.rooms);
+  const price=inBudget.length?Math.max(criteria.min,Math.min(...inBudget.map(p=>p.priceFrom!*1_000_000))):representativePrice(property,criteria.rooms);
   const roomsOk=price!==null;
 
   let financeOk=false;

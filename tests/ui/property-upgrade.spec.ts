@@ -104,3 +104,32 @@ test('Finish selection changes the offer and mortgage price, and survives Back w
  await editor.getByText('Координаты вручную',{exact:true}).click();await expect(editor.getByLabel('Широта',{exact:true})).toHaveValue('43.987654');
  await editor.getByRole('button',{name:'Убрать точку',exact:true}).click();await expect(editor.getByLabel('Широта',{exact:true})).toHaveValue('');await expect(editor.getByLabel('Долгота',{exact:true})).toHaveValue('');
  });
+
+test('Control adds individual layouts and price ranges without mixing exact and starting prices',async({page})=>{
+ await seed(page,false);await page.goto('/pulsedv/control-center/#/objects');
+ await page.locator('.catalogObjectCard').filter({hasText:'ЖК Приморский'}).click();
+ const editor=page.getByRole('dialog',{name:'Редактор объекта'});
+ await editor.getByRole('button',{name:'Добавить',exact:true}).first().click();
+ const exact=editor.locator('.floorplanEditor').last();
+ await expect(exact.getByLabel('Что добавляем',{exact:true})).toHaveValue('exact');
+ await exact.getByLabel('Площадь, м²',{exact:true}).fill('47.52');
+ await exact.getByLabel('Цена, ₽',{exact:true}).fill('3330000');
+ await exact.getByLabel('Изображение · URL',{exact:true}).fill('https://images.test/photo-0.svg');
+ await expect(exact.getByLabel('Цена до, ₽',{exact:true})).toHaveCount(0);
+ await editor.getByRole('button',{name:'Добавить',exact:true}).first().click();
+ const range=editor.locator('.floorplanEditor').last();
+ await range.getByLabel('Что добавляем',{exact:true}).selectOption('range');
+ await range.getByLabel('Площадь от, м²',{exact:true}).fill('48');await range.getByLabel('Площадь до, м²',{exact:true}).fill('70');
+ await range.getByLabel('Цена от, ₽',{exact:true}).fill('4000000');await range.getByLabel('Цена до, ₽',{exact:true}).fill('6000000');
+ await editor.getByRole('button',{name:'Готово',exact:true}).click();
+ await page.goto('/pulsedv/mini-app/#/property/primorskiy');
+ await page.getByRole('button',{name:'Выбрать планировки: 1',exact:true}).click();
+ const plans=page.getByRole('region',{name:'Квартиры и планировки ЖК'});
+ const card=plans.locator('article').filter({hasText:'47.52 м²'});
+ await expect(card.getByText('3 330 000 ₽',{exact:true})).toBeVisible();
+ await expect(card.getByRole('link',{name:'Рассчитать платёж'})).toHaveAttribute('href',/price=3330000/);
+ await expect(plans.getByText('4 000 000–6 000 000 ₽',{exact:true})).toBeVisible();
+ await card.getByRole('button',{name:'Открыть планировку 1',exact:true}).click();
+ const detail=page.getByRole('dialog',{name:'ЖК Приморский · 1 комн.',exact:true});
+ await expect(detail).toContainText('3 330 000 ₽');await expect(detail).not.toContainText('от 3 330 000 ₽');
+});

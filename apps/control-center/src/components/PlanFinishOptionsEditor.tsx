@@ -8,9 +8,9 @@ export function PlanFinishOptionsEditor({plan,onChange}:{plan:Floorplan;onChange
  const offers=plan.finishOptions??[];
  const add=()=>{
   const free=APARTMENT_FINISHES.find(([key])=>!offers.some(offer=>offer.finishType===key));
-  if(free)onChange({...plan,finishType:null,finishOptions:[...offers,{finishType:free[0],priceFrom:null}]});
+  if(free)onChange({...plan,finishType:null,finishOptions:[...offers,{finishType:free[0],priceFrom:null,priceTo:null}]});
  };
- const update=(index:number,next:{finishType:ApartmentFinish;priceFrom:number|null})=>onChange({...plan,finishOptions:offers.map((option,i)=>i===index?next:option)});
+ const update=(index:number,next:{finishType:ApartmentFinish;priceFrom:number|null;priceTo?:number|null})=>onChange({...plan,finishOptions:offers.map((option,i)=>i===index?next:option)});
  return <div style={{gridColumn:'1/-1',marginTop:10}}>
   <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,flexWrap:'wrap'}}>
    <strong style={{fontSize:12}}>Отделка и цена</strong>
@@ -23,9 +23,10 @@ export function PlanFinishOptionsEditor({plan,onChange}:{plan:Floorplan;onChange
      {APARTMENT_FINISHES.filter(([key])=>key===offer.finishType||!offers.some((item,i)=>i!==index&&item.finishType===key)).map(([key,label])=><option key={key} value={key}>{label}</option>)}
     </select>
    </label>
-   <label className="controlField"><span>Цена от, ₽ для этой отделки</span>
-    <input aria-label={'Цена отделки варианта '+(index+1)} type="number" min="1" step="1" placeholder="Уточняется" value={offer.priceFrom===null?'':propertyPriceRub(offer.priceFrom)} onChange={e=>update(index,{...offer,priceFrom:e.target.value===''?null:Math.round(Number(e.target.value))/1_000_000})}/>
+   <label className="controlField"><span>{plan.isExact?'Цена, ₽ для этой отделки':'Цена от, ₽ для этой отделки'}</span>
+    <input aria-label={'Цена отделки варианта '+(index+1)} type="number" min="1" step="1" placeholder="Уточняется" value={offer.priceFrom===null?'':propertyPriceRub(offer.priceFrom)} onChange={e=>{const price=e.target.value===''?null:Math.round(Number(e.target.value))/1_000_000;update(index,{...offer,priceFrom:price,...(plan.isExact?{priceTo:price}:{})})}}/>
    </label>
+   {!plan.isExact&&<label className="controlField"><span>Цена до, ₽ для этой отделки</span><input aria-label={'Цена до отделки варианта '+(index+1)} type="number" min="1" step="1" placeholder="Не указана" value={offer.priceTo==null?'':propertyPriceRub(offer.priceTo)} onChange={e=>update(index,{...offer,priceTo:e.target.value===''?null:Math.round(Number(e.target.value))/1_000_000})}/></label>}
    <button type="button" className="textDanger" onClick={()=>onChange({...plan,finishOptions:offers.filter((_,i)=>i!==index)})}>Удалить вариант отделки</button>
   </div>)}
  </div>;

@@ -1,3 +1,4 @@
+import {PlanDimensionsEditor} from '../components/PlanDimensionsEditor';
 import {PropertyLocationEditor} from '../components/PropertyLocationEditor';
 import {ProjectDetailsEditor} from '../components/ProjectDetailsEditor';
 import {PlanFinishOptionsEditor} from '../components/PlanFinishOptionsEditor';
@@ -79,8 +80,8 @@ function downloadTemplates(){
       ["id","name","city","district","address","developerName","delivery","className","priceFrom","description","tags","latitude","longitude","status","coverImageUrl","sortOrder","commissioningDate","totalApartments","availableApartments","parkingSpaces","floorsFrom","floorsTo","areaFrom","areaTo"],
       ["solnechniy","ЖК Солнечный","Владивосток","Патрокл","Владивосток, Патрокл","Застройщик","IV кв. 2026","Комфорт+","6.2","Описание ЖК","Вид на море|Семейный","","","draft","","10","","","","","","","",""]],
     ["pulse-floorplans.csv",
-      ["propertyId","id","roomLabel","areaFrom","areaTo","priceFrom","imageUrl","sortOrder"],
-      ["solnechniy","2room-56","2","52","69","8.6","","1"]],
+      ["propertyId","id","roomLabel","areaFrom","areaTo","priceFrom","priceTo","isExact","imageUrl","sortOrder"],
+      ["solnechniy","2room-56","2","52","69","8.6","10.2","false","","1"]],
     ["pulse-features.csv",
       ["propertyId","id","label","icon","sortOrder"],
       ["solnechniy","","Вид на море","waves","1"]],
@@ -261,7 +262,7 @@ export function ServerObjectsPage(){
       for(const row of parsed.get("floorplans")??[]){
         if(!row.propertyId)continue;
         const list=floorplansBy.get(row.propertyId)??[];
-        list.push({id:row.id||crypto.randomUUID(),roomLabel:row.roomLabel||"1",areaFrom:numberOrNull(row.areaFrom),areaTo:numberOrNull(row.areaTo),priceFrom:numberOrNull(row.priceFrom),imageUrl:row.imageUrl||null,sortOrder:numberOr(row.sortOrder,list.length)});
+        list.push({id:row.id||crypto.randomUUID(),roomLabel:row.roomLabel||"1",areaFrom:numberOrNull(row.areaFrom),areaTo:numberOrNull(row.areaTo||(row.isExact==="true"?row.areaFrom:undefined)),priceFrom:numberOrNull(row.priceFrom),priceTo:numberOrNull(row.priceTo||(row.isExact==="true"?row.priceFrom:undefined)),isExact:row.isExact==="true",imageUrl:row.imageUrl||null,sortOrder:numberOr(row.sortOrder,list.length)});
         floorplansBy.set(row.propertyId,list);
       }
       const featuresBy=new Map<string,any[]>();
@@ -431,11 +432,9 @@ export function ServerObjectsPage(){
       </section>
 
       <section className="catalogEditorSection">
-        <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:"1",areaFrom:null,areaTo:null,priceFrom:null,imageUrl:null,finishType:null,finishOptions:[],sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
+        <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:"1",areaFrom:null,areaTo:null,priceFrom:null,priceTo:null,isExact:true,imageUrl:null,finishType:null,finishOptions:[],sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
         <div className="catalogEditorStack">{p.floorplans.map((plan,i)=><div className="editorRow floorplanEditor" key={plan.id||i}>
-          <div className="formGrid">
-            {([["roomLabel","Комнатность"],["areaFrom","Площадь от, м²"],["areaTo","Площадь до, м²"],["priceFrom","Цена от, ₽"],["imageUrl","Изображение · URL"]] as const).map(([key,label])=><label className="controlField" key={key}><span>{label}</span><input type={["roomLabel","imageUrl"].includes(key)?"text":"number"} step={key==='priceFrom'?'1':'any'} value={(key==='priceFrom'&&plan.priceFrom!==null?propertyPriceRub(plan.priceFrom):(plan as any)[key])??""} onChange={e=>patch({floorplans:p.floorplans.map((x,j)=>j!==i?x:{...x,[key]:["roomLabel","imageUrl"].includes(key)?e.target.value||null:e.target.value===""?null:key==='priceFrom'?Math.round(Number(e.target.value))/1_000_000:Number(e.target.value)})})}/></label>)}
-          </div>
+          <PlanDimensionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/>
           <PlanFinishOptionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/>
           <div className="rowActions">
             <label className="secondaryAction fileButton"><Upload size={14}/>Фото планировки<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>void uploadFloorplan(e.target.files?.[0],plan.id)}/></label>
