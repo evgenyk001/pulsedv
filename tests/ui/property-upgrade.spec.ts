@@ -27,6 +27,9 @@ test('Control project details reach the client, including zero availability and 
  await editor.getByLabel('Всего квартир в ЖК',{exact:true}).fill('120');await editor.getByLabel('Всего квартир в ЖК',{exact:true}).blur();
  await editor.getByLabel('Квартир в продаже',{exact:true}).fill('0');await editor.getByLabel('Квартир в продаже',{exact:true}).blur();
  for(const [label,value] of [['Парковочных мест','0'],['Этажность от','9'],['Этажность до','25'],['Площадь квартир от, м²','23.4'],['Площадь квартир до, м²','106.8']]){await editor.getByLabel(label,{exact:true}).fill(value);await editor.getByLabel(label,{exact:true}).blur()}
+ await editor.getByLabel('Этажность от',{exact:true}).fill('30');await editor.getByLabel('Этажность от',{exact:true}).blur();
+ await expect(editor.getByRole('button',{name:'Готово',exact:true})).toBeDisabled();
+ await editor.getByLabel('Этажность от',{exact:true}).fill('9');await editor.getByLabel('Этажность от',{exact:true}).blur();
  await editor.getByRole('button',{name:'Готово',exact:true}).click();
  await page.goto('/pulsedv/mini-app/#/property/primorskiy');const facts=page.getByRole('region',{name:'Ключевые характеристики'});await expect(facts).toContainText('31 марта 2028');await expect(facts).toContainText('23,4–106,8 м²');await page.getByText('Все характеристики ЖК',{exact:true}).click();await expect(page.locator('details').filter({hasText:'Все характеристики ЖК'})).toContainText('9–25');await expect(page.locator('details').filter({hasText:'Все характеристики ЖК'})).toContainText('Парковочных мест0');await expect(page.getByRole('region',{name:'Квартиры и планировки ЖК'})).toContainText('из 120');await expect(page.getByRole('region',{name:'Квартиры и планировки ЖК'})).toContainText('В продаже: 0 квартир');
 });

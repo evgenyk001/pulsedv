@@ -166,6 +166,7 @@ export function ServerObjectsPage(){
 
   const save=async()=>{
     if(!selected)return null;
+    if(!detailsValid){setError('Исправьте значения в характеристиках ЖК перед сохранением.');return null}
     setBusy(true);setError("");
     try{
       const next=await saveAdminProperty({...selected,documents:selected.documents??[]});
