@@ -21,8 +21,8 @@ test('Bot requests consent, rejects foreign/forwarded contacts and binds own pho
  try{
   await migrate(db);const sent:any[]=[];const call=async(method:string,body:any)=>{sent.push({method,...body});return []};
   await handleBotUpdate(db,config,call,message({text:'/start'}));
-  assert.equal(sent[0].reply_markup.keyboard[0][0].request_contact,true);
-  assert.match(sent[0].text,/#\/personal-data-consent/);
+  assert.ok(sent[0].reply_markup.inline_keyboard[0][0].web_app);assert.doesNotMatch(sent[0].text,/https?:|без передачи/);
+  assert.match(sent[0].reply_markup.inline_keyboard[1][0].web_app.url,/#\/personal-data-consent/);
   const user=(await db.query('select * from app_users where telegram_user_id=123')).rows[0];
   assert.equal(user.phone,null);
   for(const extra of [{contact:{user_id:555,phone_number:'79991234567'}},{contact:{user_id:123,phone_number:'79991234567'},forward_origin:{type:'user'}},{contact:{phone_number:'79991234567'}}])await handleBotUpdate(db,config,call,message(extra));

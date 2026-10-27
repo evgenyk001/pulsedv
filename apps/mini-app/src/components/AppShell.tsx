@@ -90,6 +90,6 @@ export function AppShell({children}:{children:React.ReactNode}){
       <ContextBack/><div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:propertyRoute?styles.propertyFrame:""}`}>{children}</div>
     </main>
     {!hideNav&&!storyOverlayOpen&&<BottomNav/>}
-    {showOnboarding&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}
+    {showOnboarding&&!['/privacy','/personal-data-consent'].includes(location.pathname)&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}
   </div></NavigationMemory>
 }

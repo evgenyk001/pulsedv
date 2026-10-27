@@ -25,7 +25,7 @@ export async function handleBotUpdate(sql:Sql,config:BotConfig,call:BotCall,upda
   await call('sendMessage',{chat_id:m.chat.id,text:'Каталог, избранное, подбор и расчёт ипотеки — в одном приложении.',reply_markup:{inline_keyboard:[[{text:'Открыть PULSEDV.RU',web_app:{url}}]]}});
  };
  const requestPhone=async()=>{
-  await call('sendMessage',{chat_id:m.chat.id,text:'Добро пожаловать в PULSEDV.RU!\n\nПоможем найти квартиру в новостройках Приморья. Поделитесь своим номером, чтобы мы могли связаться с вами по вашему обращению.\n\nНажимая «Поделиться номером», вы соглашаетесь на обработку номера для связи по вашим обращениям. Согласие: '+url+'#/personal-data-consent\nПолитика: '+url+'#/privacy\n\nКаталог можно смотреть и без передачи номера.',reply_markup:{keyboard:[[{text:'Поделиться номером',request_contact:true}],[{text:'Продолжить без номера'}]],resize_keyboard:true,one_time_keyboard:true}});
+  await call('sendMessage',{chat_id:m.chat.id,text:'Добро пожаловать в PULSEDV.RU!\n\nНовостройки Приморья, планировки, избранное и расчёт ипотеки — в одном приложении.\n\nДля входа подтвердите свой номер телефона в Telegram.',link_preview_options:{is_disabled:true},reply_markup:{inline_keyboard:[[{text:'Войти и подтвердить номер',web_app:{url}}],[{text:'Согласие на обработку данных',web_app:{url:url+'#/personal-data-consent'}}],[{text:'Политика конфиденциальности',web_app:{url:url+'#/privacy'}}]]}});
  };
  if(/^\/(start|help)(?:@\w+)?(?:\s|$)/.test(m.text??'')){
   const user=(await sql.query('insert into app_users(telegram_user_id,telegram_username,first_name,last_name) values($1,$2,$3,$4) on conflict(telegram_user_id) do update set telegram_username=excluded.telegram_username,first_name=excluded.first_name,last_name=excluded.last_name,last_seen_at=now() returning id,phone',[u.id,u.username??null,u.first_name,u.last_name??null])).rows[0];
@@ -40,10 +40,10 @@ export async function handleBotUpdate(sql:Sql,config:BotConfig,call:BotCall,upda
   }
   const accepted=await sql.query('update telegram_contact_consent c set accepted_at=now() from app_users u where c.user_id=u.id and u.telegram_user_id=$1 and c.consent_version=$2 and c.requested_at>now()-interval \'24 hours\' returning u.id',[u.id,config.CONSENT_VERSION]);
   if(!accepted.rows[0]){await call('sendMessage',{chat_id:m.chat.id,text:'Для подключения номера нажмите /start и ознакомьтесь с условиями.'});return;}
-  await sql.query('update app_users set phone=$2,updated_at=now() where id=$1',[accepted.rows[0].id,phone]);
+  await sql.query('update app_users set phone=$2,first_name=$3,last_name=$4,telegram_username=$5,updated_at=now() where id=$1',[accepted.rows[0].id,phone,u.first_name,u.last_name??null,u.username??null]);
   await open('Спасибо! Ваш номер сохранён в аккаунте PULSEDV.RU.');return;
  }
- if(m.text==='Продолжить без номера'){await open('Можно начать с просмотра квартир.');return;}
+ if(m.text==='Продолжить без номера'){await requestPhone();return;}
  if(m.text)await call('sendMessage',{chat_id:m.chat.id,text:'Нажмите /start, чтобы открыть приложение или подключить свой номер. Обращения менеджеру доступны в приложении.'});
 }
 

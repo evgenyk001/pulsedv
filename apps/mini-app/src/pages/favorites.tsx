@@ -14,7 +14,7 @@ export default function Favorites(){
     <PageHeader eyebrow="Ваш шорт-лист" title="Избранное" subtitle="Сохраняйте понравившиеся ЖК и сравнивайте два варианта рядом."/>
 
     {syncError&&<p role="alert">{syncError} <button onClick={()=>void retry()}>Повторить синхронизацию</button></p>}
-    {pending&&<p role="status">Синхронизируем избранное…</p>}
+    {pending>0&&<p role="status">Синхронизируем избранное…</p>}
     {catalogError&&<p role="alert">Не удалось загрузить сохранённые ЖК. <button onClick={()=>void refetch()}>Повторить</button></p>}
     {saved.length>0&&<Link to="/compare" className={styles.compareEntry}>
       <IconTile><GitCompareArrows size={21}/></IconTile>

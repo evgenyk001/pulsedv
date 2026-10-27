@@ -1,3 +1,4 @@
+import {registerAccountRoutes,registeredPhone} from './accountRoutes';
 import {registerPartnerBiometricRoutes} from './partnerBiometrics';
 import {registerAcquisitionRoutes,linkAcquisition} from './acquisitionRoutes';
 import {registerBroadcastRoutes} from './broadcastRoutes';
@@ -78,6 +79,8 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const token=request.headers.authorization?.replace(/^Bearer /,'')||request.cookies.pulse_visitor;if(!token)throw new HttpError(401,'Сессия не создана');
   const row=(await db.query("select s.id,s.user_id from auth_tokens t join sessions s on s.id=t.session_id where t.token_hash=$1 and t.kind='visitor' and t.expires_at>now()",[tokenHash(token)])).rows[0];
   if(!row)throw new HttpError(401,'Сессия истекла');request.visitor={sessionId:row.id,userId:row.user_id};
+  const route=request.routeOptions.url||'';
+  if(config.REQUIRE_TELEGRAM_PHONE&&((route.startsWith('/api/v1/me/')&&!route.startsWith('/api/v1/me/account')&&route!=='/api/v1/me/acquisition')||route==='/api/v1/leads')&&!await registeredPhone(db,row.user_id))throw new HttpError(403,'Для входа поделитесь своим номером в Telegram');
   await observeVisitor(db,request,row.id);
   await db.query("update sessions set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.id]);
   if(row.user_id)await db.query("update app_users set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.user_id]);
@@ -85,10 +88,11 @@ export async function createApp(db:Database,config:RuntimeConfig){
  const sessionLock=async(sql:Sql,id:string)=>{await sql.query('select id from sessions where id=$1 for update',[id]);};
  const cookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1/control',maxAge:8*3600};
  const visitorCookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1',maxAge:30*86400};
+ registerAccountRoutes(app,db,config,visitor,editor);
  registerAcquisitionRoutes(app,db,config,visitor,control);
  app.get('/health',async()=>({status:'ok'}));
  app.get('/ready',async()=>{if(!await migrationsApplied(db))throw new HttpError(503,'Примените миграции перед запуском');await readState(db);return {status:'ready'};});
- app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);const now=Date.now();const banners=state.banners.filter(b=>b.enabled&&(!b.startsAt||Date.parse(b.startsAt)<=now)&&(!b.endsAt||Date.parse(b.endsAt)>now));const {leadEngine:_privateLeadEngine,...publicState}=state;return {version,consentVersion:config.CONSENT_VERSION,state:{...publicState,properties:[],banners}};});
+ app.get('/api/v1/public/state',async()=>{const {state,version}=await readState(db);const now=Date.now();const banners=state.banners.filter(b=>b.enabled&&(!b.startsAt||Date.parse(b.startsAt)<=now)&&(!b.endsAt||Date.parse(b.endsAt)>now));const {leadEngine:_privateLeadEngine,...publicState}=state;return {version,requiresPhone:config.REQUIRE_TELEGRAM_PHONE,consentVersion:config.CONSENT_VERSION,state:{...publicState,properties:[],banners}};});
  app.get('/api/v1/public/legal',async()=>({name:config.LEGAL_OPERATOR_NAME,inn:config.LEGAL_OPERATOR_INN,email:config.LEGAL_CONTACT_EMAIL,address:config.LEGAL_OPERATOR_ADDRESS,version:config.CONSENT_VERSION}));
  app.get('/api/v1/public/map',async()=>{const map=configuredMap({yandex:config.MAP_YANDEX_KEY,twoGis:config.MAP_2GIS_KEY});if(!map)throw new HttpError(503,'Карта временно недоступна');return map;});
  app.post('/api/v1/auth/session',{config:{rateLimit:{max:12,timeWindow:'1 minute'}}},async(request,reply)=>{
