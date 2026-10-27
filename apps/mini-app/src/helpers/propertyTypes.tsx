@@ -21,9 +21,11 @@ export type PropertyFloorplan={
   areaFrom:number|null;
   areaTo:number|null;
   priceFrom:number|null;
+  priceTo?:number|null;
+  isExact?:boolean;
   imageUrl:string|null;
   finishType?:ApartmentFinish|null;
-  finishOptions?:{finishType:ApartmentFinish;priceFrom:number|null}[];
+  finishOptions?:{finishType:ApartmentFinish;priceFrom:number|null;priceTo?:number|null}[];
   sortOrder:number;
 };
 

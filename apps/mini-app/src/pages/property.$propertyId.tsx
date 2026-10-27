@@ -1,3 +1,4 @@
+import {propertyAreaRange,dimensionRange} from '../../../../packages/domain/propertyDimensions';
 import {LoadRecovery} from '../components/LoadRecovery';
 import {sortRoomLabels,normalizeRoomLabel} from '../../../../packages/domain/catalogFacets';
 import {BackLink} from "../components/BackLink";
@@ -8,11 +9,11 @@ import React from "react";
 
 import {propertyReturn} from "../helpers/navigationMemory";
 import {FloorplanViewer} from "../components/FloorplanViewer";
-import {APARTMENT_FINISHES,planFinishOffers,planPriceForFinish,planStartingPrice,apartmentFinishLabel} from "../../../../packages/domain/propertyFinish";
+import {APARTMENT_FINISHES,canonicalApartmentFinish,planFinishOffers,planPriceForFinish,planStartingPrice,apartmentFinishLabel} from "../../../../packages/domain/propertyFinish";
 import type {ApartmentFinish} from "../../../../packages/pulse-data/model";
 import {PropertyGallery} from "../components/PropertyGallery";
 import {usePulseControlState} from "../helpers/usePulseControlState";
-import {propertyPhotos,propertyMortgageLink,propertyPriceLabel,propertyPriceRub} from "../../../../packages/domain/propertyPresentation";
+import {propertyPhotos,propertyMortgageLink,propertyPriceLabel,planPriceLabel,propertyPriceRub} from "../../../../packages/domain/propertyPresentation";
 import {calculateMortgageScenario,readMortgageScenario,newbuildHasIncreasedLimit} from "../../../../packages/domain/mortgagePolicy";
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
 import { Link, useParams, useLocation } from "react-router-dom";
@@ -107,16 +108,17 @@ export default function PropertyPage(){
 
   const details=p.projectDetails;
   const finishTypes=APARTMENT_FINISHES.filter(([value])=>
-    (details?.finishes??[]).includes(value)||p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>offer.finishType===value))
+    (details?.finishes??[]).some(finish=>canonicalApartmentFinish(finish)===value)||p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>canonicalApartmentFinish(offer.finishType)===value))
   );
   const priceForPlan=(plan:typeof p.floorplans[number])=>selectedFinish?planPriceForFinish(plan,selectedFinish):planStartingPrice(plan);
-  const matchesFinish=(plan:typeof p.floorplans[number])=>!selectedFinish||planFinishOffers(plan).some(offer=>offer.finishType===selectedFinish);
+  const matchesFinish=(plan:typeof p.floorplans[number])=>!selectedFinish||planFinishOffers(plan).some(offer=>canonicalApartmentFinish(offer.finishType)===canonicalApartmentFinish(selectedFinish));
   const visiblePlans=p.floorplans
     .filter(plan=>activeRoom&&normalizeRoomLabel(plan.roomLabel)===activeRoom&&matchesFinish(plan))
     .sort((a,b)=>(priceForPlan(a)??Infinity)-(priceForPlan(b)??Infinity)||a.sortOrder-b.sortOrder);
   const fromPulse=returnTo.startsWith("/selection");
-  const areaValues=p.floorplans.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]).filter((v):v is number=>typeof v==='number'&&v>0);
-  const minArea=areaValues.length?Math.min(...areaValues):null;
+  const area=propertyAreaRange(p);
+  const areaLabel=dimensionRange(area.from,area.to);
+  const floorsLabel=dimensionRange(details?.floorsFrom,details?.floorsTo);
   const commissioning=formatProjectDate(details?.commissioningDate);
   const inventory=details?.availableApartments!=null
     ?'В продаже: '+counted(details.availableApartments,'квартира','квартиры','квартир')+(details.totalApartments!=null?' из '+details.totalApartments.toLocaleString('ru-RU'):'')+'.'
@@ -124,7 +126,7 @@ export default function PropertyPage(){
   const facts=[
     {label:'Срок сдачи',value:p.delivery||'Уточняется',icon:CalendarDays},
     ...(commissioning?[{label:'Плановый ввод дома',value:commissioning,icon:Building2}]:[]),
-    ...(minArea!==null?[{label:'Площадь от',value:minArea.toLocaleString('ru-RU')+' м²',icon:Ruler}]:[]),
+    ...(areaLabel?[{label:'Площадь квартир',value:areaLabel+' м²',icon:Ruler}]:[]),
     ...(p.className?[{label:'Класс жилья',value:p.className,icon:ShieldCheck}]:[]),
   ];
 
@@ -177,7 +179,6 @@ export default function PropertyPage(){
             <p><b>Черновая:</b> основные строительные работы без чистовой отделки.</p>
             <p><b>White Box:</b> предчистовая подготовка под финальные покрытия.</p>
             <p><b>Готовый ремонт:</b> квартира с выполненной чистовой отделкой.</p>
-            <p><b>Без отделки:</b> без отделочных работ или с минимальной подготовкой.</p>
             <small>Точный состав работ различается у застройщиков и указан в договоре.</small>
           </details></>:
           <strong className={styles.finishUnknown}>Уточняется</strong>}
@@ -203,8 +204,8 @@ export default function PropertyPage(){
                 <div className={styles.planCopy}>
                   <span>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'}</span>
                   <strong>{plan.areaFrom!==null?plan.areaFrom+(plan.areaTo&&plan.areaTo!==plan.areaFrom?'–'+plan.areaTo:'')+' м²':'Площадь уточняется'}</strong>
-                  {offers.length>0&&<span className={styles.planFinishes}>{selectedFinish?apartmentFinishLabel(selectedFinish):offers.map(offer=>apartmentFinishLabel(offer.finishType)).join(' · ')}</span>}
-                  <b>{planPrice!==null?priceLabel(planPrice):'Цена уточняется'}</b>
+                  {offers.length>0&&<span className={styles.planFinishes}>{selectedFinish?apartmentFinishLabel(selectedFinish):[...new Set(offers.map(offer=>apartmentFinishLabel(offer.finishType)))].join(' · ')}</span>}
+                  <b>{planPriceLabel(plan,selectedFinish)}</b>
                   {planPrice!==null?<Link to={propertyMortgageLink(p,plan,selectedFinish)}>Рассчитать платёж <ChevronRight size={14}/></Link>:<small>Уточните стоимость у менеджера</small>}
                 </div>
               </TrackedFloorplan>;
@@ -243,6 +244,9 @@ export default function PropertyPage(){
           <div><span>Класс</span><strong>{p.className||"Уточняется"}</strong></div>
           <div><span>Срок сдачи</span><strong>{p.delivery||"Уточняется"}</strong></div>
           <div><span>Плановый ввод дома</span><strong>{commissioning||"Дата уточняется"}</strong></div>
+          {floorsLabel&&<div><span>Этажность</span><strong>{floorsLabel}</strong></div>}
+          {areaLabel&&<div><span>Площадь квартир</span><strong>{areaLabel} м²</strong></div>}
+          {details?.parkingSpaces!=null&&<div><span>Парковочных мест</span><strong>{details.parkingSpaces.toLocaleString('ru-RU')}</strong></div>}
           {details?.totalApartments!=null&&<div><span>Всего квартир в ЖК</span><strong>{details.totalApartments.toLocaleString('ru-RU')}</strong></div>}
           {details?.availableApartments!=null&&<div><span>Квартир в продаже</span><strong>{details.availableApartments.toLocaleString('ru-RU')}</strong></div>}
           <div><span>Стартовая цена ЖК</span><strong>{priceLabel(p.priceFrom).replace("от ","")}</strong></div>

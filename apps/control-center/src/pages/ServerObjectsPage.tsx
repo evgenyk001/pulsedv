@@ -1,3 +1,5 @@
+import {PlanDimensionsEditor} from '../components/PlanDimensionsEditor';
+import {PropertyLocationEditor} from '../components/PropertyLocationEditor';
 import {ProjectDetailsEditor} from '../components/ProjectDetailsEditor';
 import {PlanFinishOptionsEditor} from '../components/PlanFinishOptionsEditor';
 import {CatalogFreshnessEditor,CatalogFreshnessBadge} from '../components/CatalogFreshnessEditor';
@@ -75,11 +77,11 @@ function downloadCsv(name:string,headers:string[],example:string[]){
 function downloadTemplates(){
   const files=[
     ["pulse-objects.csv",
-      ["id","name","city","district","address","developerName","delivery","className","priceFrom","description","tags","latitude","longitude","status","coverImageUrl","sortOrder","commissioningDate","totalApartments","availableApartments"],
-      ["solnechniy","ЖК Солнечный","Владивосток","Патрокл","Владивосток, Патрокл","Застройщик","IV кв. 2026","Комфорт+","6.2","Описание ЖК","Вид на море|Семейный","","","draft","","10","","",""]],
+      ["id","name","city","district","address","developerName","delivery","className","priceFrom","description","tags","latitude","longitude","status","coverImageUrl","sortOrder","commissioningDate","totalApartments","availableApartments","parkingSpaces","floorsFrom","floorsTo","areaFrom","areaTo"],
+      ["solnechniy","ЖК Солнечный","Владивосток","Патрокл","Владивосток, Патрокл","Застройщик","IV кв. 2026","Комфорт+","6.2","Описание ЖК","Вид на море|Семейный","","","draft","","10","","","","","","","",""]],
     ["pulse-floorplans.csv",
-      ["propertyId","id","roomLabel","areaFrom","areaTo","priceFrom","imageUrl","sortOrder"],
-      ["solnechniy","2room-56","2","52","69","8.6","","1"]],
+      ["propertyId","id","roomLabel","areaFrom","areaTo","priceFrom","priceTo","isExact","imageUrl","sortOrder"],
+      ["solnechniy","2room-56","2","52","69","8.6","10.2","false","","1"]],
     ["pulse-features.csv",
       ["propertyId","id","label","icon","sortOrder"],
       ["solnechniy","","Вид на море","waves","1"]],
@@ -118,6 +120,7 @@ export function ServerObjectsPage(){
   const [loading,setLoading]=React.useState(true);
   const [busy,setBusy]=React.useState(false);
   const [error,setError]=React.useState("");
+  const [detailsValid,setDetailsValid]=React.useState(true);
   const [notice,setNotice]=React.useState("");
 
   useDialog(!!selected,()=>{if(!busy&&(!dirty||window.confirm("Закрыть карточку без сохранения правок?")))setSelected(null)});
@@ -164,6 +167,7 @@ export function ServerObjectsPage(){
 
   const save=async()=>{
     if(!selected)return null;
+    if(!detailsValid){setError('Исправьте значения в характеристиках ЖК перед сохранением.');return null}
     setBusy(true);setError("");
     try{
       const next=await saveAdminProperty({...selected,documents:selected.documents??[]});
@@ -258,7 +262,7 @@ export function ServerObjectsPage(){
       for(const row of parsed.get("floorplans")??[]){
         if(!row.propertyId)continue;
         const list=floorplansBy.get(row.propertyId)??[];
-        list.push({id:row.id||crypto.randomUUID(),roomLabel:row.roomLabel||"1",areaFrom:numberOrNull(row.areaFrom),areaTo:numberOrNull(row.areaTo),priceFrom:numberOrNull(row.priceFrom),imageUrl:row.imageUrl||null,sortOrder:numberOr(row.sortOrder,list.length)});
+        list.push({id:row.id||crypto.randomUUID(),roomLabel:row.roomLabel||"1",areaFrom:numberOrNull(row.areaFrom),areaTo:numberOrNull(row.areaTo||(row.isExact==="true"?row.areaFrom:undefined)),priceFrom:numberOrNull(row.priceFrom),priceTo:numberOrNull(row.priceTo||(row.isExact==="true"?row.priceFrom:undefined)),isExact:row.isExact==="true",imageUrl:row.imageUrl||null,sortOrder:numberOr(row.sortOrder,list.length)});
         floorplansBy.set(row.propertyId,list);
       }
       const featuresBy=new Map<string,any[]>();
@@ -286,7 +290,7 @@ export function ServerObjectsPage(){
       const properties:PulseProperty[]=objectRows.map((row,index)=>({
         id:row.id||crypto.randomUUID(),name:row.name||"Новый ЖК",city:row.city||"Владивосток",district:row.district||"",
         address:row.address||null,latitude:numberOrNull(row.latitude),longitude:numberOrNull(row.longitude),
-        ...(['commissioningDate','totalApartments','availableApartments'].some(key=>key in row)?{projectDetails:{commissioningDate:row.commissioningDate||null,totalApartments:numberOrNull(row.totalApartments),availableApartments:numberOrNull(row.availableApartments)}}:{}),
+        ...(['commissioningDate','totalApartments','availableApartments','parkingSpaces','floorsFrom','floorsTo','areaFrom','areaTo'].some(key=>key in row)?{projectDetails:{commissioningDate:row.commissioningDate||null,totalApartments:numberOrNull(row.totalApartments),availableApartments:numberOrNull(row.availableApartments),...Object.fromEntries(['parkingSpaces','floorsFrom','floorsTo','areaFrom','areaTo'].filter(key=>key in row).map(key=>[key,numberOrNull(row[key])]))}}:{}),
         priceFrom:numberOr(row.priceFrom,0),delivery:row.delivery||"",className:row.className||"",
         status:row.status==="published"||row.status==="archived"?row.status:"draft",description:row.description||"",
         developerName:row.developerName||"",tags:(row.tags||"").split("|").map(x=>x.trim()).filter(Boolean),
@@ -398,22 +402,23 @@ export function ServerObjectsPage(){
 
       <div className="editorStickyActions">
         <span>{dirty?"Есть несохранённые изменения":"Все изменения сохранены"}</span>
-        <button className="primaryAction" disabled={!dirty||busy} onClick={()=>void save()}><Save size={15}/>{busy?"Сохраняем…":"Сохранить"}</button>
+        <button className="primaryAction" disabled={!dirty||busy||!detailsValid} onClick={()=>void save()}><Save size={15}/>{busy?"Сохраняем…":"Сохранить"}</button>
       </div>
 
       <CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} disabled={busy}/>
-      <ProjectDetailsEditor key={p.id} value={p.projectDetails} onChange={projectDetails=>patch({projectDetails})}/>
+      <ProjectDetailsEditor key={p.id} value={p.projectDetails} onValidityChange={setDetailsValid} onChange={projectDetails=>patch({projectDetails})}/>
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>То, что формирует карточку и страницу ЖК</small></div></div>
         <div className="formGrid">
           {([["name","Название"],["city","Город"],["district","Район"],["address","Адрес"],["developerName","Застройщик"],["delivery","Срок сдачи"],["className","Класс"],["coverImageUrl","Обложка · URL"]] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input value={(p as any)[key]||""} onChange={e=>patch({[key]:e.target.value||(["address","coverImageUrl"].includes(key)?null:"")} as any)}/></label>)}
-          {([["priceFrom","Цена от, ₽"],["latitude","Широта"],["longitude","Долгота"],["sortOrder","Порядок"]] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input type="number" step={key==='priceFrom'?'1':'any'} value={(key==='priceFrom'?propertyPriceRub(p.priceFrom):(p as any)[key])??""} onChange={e=>patch({[key]:e.target.value===""&&["latitude","longitude"].includes(key)?null:key==='priceFrom'?Math.round(Number(e.target.value))/1_000_000:Number(e.target.value)} as any)}/></label>)}
+          {([["priceFrom","Цена от, ₽"],["sortOrder","Порядок"]] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input type="number" step={key==='priceFrom'?'1':'any'} value={(key==='priceFrom'?propertyPriceRub(p.priceFrom):(p as any)[key])??""} onChange={e=>patch({[key]:key==='priceFrom'?Math.round(Number(e.target.value))/1_000_000:Number(e.target.value)} as any)}/></label>)}
           <label className="controlField"><span>Статус</span><select value={p.status} onChange={e=>patch({status:e.target.value as PulseProperty["status"]})}><option value="draft">Черновик</option><option value="published">Опубликован</option><option value="archived">Архив</option></select></label>
           <label className="controlField"><span>Теги через запятую</span><input value={p.tags.join(", ")} onChange={e=>patch({tags:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})}/></label>
           <label className="controlField wide"><span>Описание</span><textarea rows={5} value={p.description} onChange={e=>patch({description:e.target.value})}/></label>
         </div>
       </section>
 
+      <PropertyLocationEditor key={p.id} property={p} onChange={patch}/>
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Images size={16}/></span><div><b>Фото объекта</b><small>Обложка + галерея для страницы ЖК</small></div></div>
         <div className="mediaUploader">
@@ -427,11 +432,9 @@ export function ServerObjectsPage(){
       </section>
 
       <section className="catalogEditorSection">
-        <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:"1",areaFrom:null,areaTo:null,priceFrom:null,imageUrl:null,finishType:null,finishOptions:[],sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
+        <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:"1",areaFrom:null,areaTo:null,priceFrom:null,priceTo:null,isExact:true,imageUrl:null,finishType:null,finishOptions:[],sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
         <div className="catalogEditorStack">{p.floorplans.map((plan,i)=><div className="editorRow floorplanEditor" key={plan.id||i}>
-          <div className="formGrid">
-            {([["roomLabel","Комнатность"],["areaFrom","Площадь от, м²"],["areaTo","Площадь до, м²"],["priceFrom","Цена от, ₽"],["imageUrl","Изображение · URL"]] as const).map(([key,label])=><label className="controlField" key={key}><span>{label}</span><input type={["roomLabel","imageUrl"].includes(key)?"text":"number"} step={key==='priceFrom'?'1':'any'} value={(key==='priceFrom'&&plan.priceFrom!==null?propertyPriceRub(plan.priceFrom):(plan as any)[key])??""} onChange={e=>patch({floorplans:p.floorplans.map((x,j)=>j!==i?x:{...x,[key]:["roomLabel","imageUrl"].includes(key)?e.target.value||null:e.target.value===""?null:key==='priceFrom'?Math.round(Number(e.target.value))/1_000_000:Number(e.target.value)})})}/></label>)}
-          </div>
+          <PlanDimensionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/>
           <PlanFinishOptionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/>
           <div className="rowActions">
             <label className="secondaryAction fileButton"><Upload size={14}/>Фото планировки<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>void uploadFloorplan(e.target.files?.[0],plan.id)}/></label>
@@ -460,7 +463,7 @@ export function ServerObjectsPage(){
         {!p.documents?.length&&<div className="catalogEditorEmpty">Презентаций пока нет.</div>}
       </section>
 
-      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Изменения появятся в каталоге после сохранения</span></div><button className="primaryAction" disabled={!dirty||busy} onClick={()=>void save()}><Save size={16}/>Сохранить объект</button></div>
+      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Изменения появятся в каталоге после сохранения</span></div><button className="primaryAction" disabled={!dirty||busy||!detailsValid} onClick={()=>void save()}><Save size={16}/>Сохранить объект</button></div>
     </fieldset></section></div>}
   </PageFrame>;
 }

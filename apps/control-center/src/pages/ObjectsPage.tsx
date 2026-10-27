@@ -1,3 +1,5 @@
+import {PlanDimensionsEditor} from '../components/PlanDimensionsEditor';
+import {PropertyLocationEditor} from '../components/PropertyLocationEditor';
 import {ProjectDetailsEditor} from '../components/ProjectDetailsEditor';
 import {PlanFinishOptionsEditor} from '../components/PlanFinishOptionsEditor';
 import {CatalogFreshnessEditor,CatalogFreshnessBadge} from '../components/CatalogFreshnessEditor';
@@ -33,6 +35,7 @@ function PreviewObjectsPage(){
   const [query,setQuery]=React.useState('');
   const [reviewOnly,setReviewOnly]=React.useState(false);
   const [status,setStatus]=React.useState<'all'|'published'|'draft'|'archived'>('all');
+  const [detailsValid,setDetailsValid]=React.useState(true);
   const [notice,setNotice]=React.useState('');
   const p=state.properties.find(x=>x.id===selected);
 
@@ -129,23 +132,24 @@ function PreviewObjectsPage(){
       </div>
 
       <CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} autoSave/>
-      <ProjectDetailsEditor key={p.id} value={p.projectDetails} onChange={projectDetails=>patch({projectDetails})}/>
+      <ProjectDetailsEditor key={p.id} value={p.projectDetails} onValidityChange={setDetailsValid} onChange={projectDetails=>patch({projectDetails})}/>
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>Карточка и страница ЖК</small></div></div>
         <div className="formGrid">
           {([['name','Название'],['city','Город'],['district','Район'],['address','Адрес'],['developerName','Застройщик'],['delivery','Срок сдачи'],['className','Класс'],['coverImageUrl','Обложка · HTTPS URL']] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input value={(p as any)[key]||''} onChange={e=>patch({[key]:e.target.value||(['address','coverImageUrl'].includes(key)?null:'')} as any)}/></label>)}
-          {([['priceFrom','Цена от, ₽'],['latitude','Широта'],['longitude','Долгота'],['sortOrder','Порядок']] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input type="number" step={key==='priceFrom'?'1':'any'} value={(key==='priceFrom'?propertyPriceRub(p.priceFrom):(p as any)[key])??''} onChange={e=>patch({[key]:e.target.value===''&&['latitude','longitude'].includes(key)?null:key==='priceFrom'?Math.round(Number(e.target.value))/1_000_000:Number(e.target.value)} as any)}/></label>)}
+          {([['priceFrom','Цена от, ₽'],['sortOrder','Порядок']] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input type="number" step={key==='priceFrom'?'1':'any'} value={(key==='priceFrom'?propertyPriceRub(p.priceFrom):(p as any)[key])??''} onChange={e=>patch({[key]:key==='priceFrom'?Math.round(Number(e.target.value))/1_000_000:Number(e.target.value)} as any)}/></label>)}
           <label className="controlField"><span>Статус</span><select value={p.status} onChange={e=>patch({status:e.target.value as PulseProperty['status']})}><option value="draft">Черновик</option><option value="published">Опубликован</option><option value="archived">Архив</option></select></label>
           <label className="controlField"><span>Теги через запятую</span><input value={p.tags.join(', ')} onChange={e=>patch({tags:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})}/></label>
           <label className="controlField wide"><span>Описание</span><textarea rows={5} value={p.description} onChange={e=>patch({description:e.target.value})}/></label>
         </div>
       </section>
 
+      <PropertyLocationEditor key={p.id} property={p} onChange={patch}/>
       <section className="catalogEditorSection"><div className="catalogEditorSectionHead"><span><Images size={16}/></span><div><b>Фото объекта</b><small>Галерея, порядок и подписи</small></div></div><CatalogPhotosEditor key={p.id} property={p} onChange={images=>patch({images})} onRemove={index=>patch({images:p.images.filter((_,i)=>i!==index)})}/></section>
 
       <section className="catalogEditorSection">
-        <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:'1',areaFrom:null,areaTo:null,priceFrom:null,imageUrl:null,finishType:null,finishOptions:[],sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
-        <div className="catalogEditorStack">{p.floorplans.map((plan,i)=><div className="editorRow floorplanEditor" key={plan.id||i}><div className="formGrid">{([['roomLabel','Комнатность'],['areaFrom','Площадь от, м²'],['areaTo','Площадь до, м²'],['priceFrom','Цена от, ₽'],['imageUrl','Изображение · HTTPS URL']] as const).map(([key,label])=><label className="controlField" key={key}><span>{label}</span><input type={['roomLabel','imageUrl'].includes(key)?'text':'number'} step={key==='priceFrom'?'1':'any'} value={(key==='priceFrom'&&plan.priceFrom!==null?propertyPriceRub(plan.priceFrom):(plan as any)[key])??''} onChange={e=>patch({floorplans:p.floorplans.map((x,j)=>j!==i?x:{...x,[key]:['roomLabel','imageUrl'].includes(key)?e.target.value||null:e.target.value===''?null:key==='priceFrom'?Math.round(Number(e.target.value))/1_000_000:Number(e.target.value)})})}/></label>)}</div><PlanFinishOptionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/><button className="textDanger" onClick={()=>patch({floorplans:p.floorplans.filter((_,j)=>i!==j)})}>Удалить планировку</button></div>)}
+        <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:'1',areaFrom:null,areaTo:null,priceFrom:null,priceTo:null,isExact:true,imageUrl:null,finishType:null,finishOptions:[],sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
+        <div className="catalogEditorStack">{p.floorplans.map((plan,i)=><div className="editorRow floorplanEditor" key={plan.id||i}><PlanDimensionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/><PlanFinishOptionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/><button className="textDanger" onClick={()=>patch({floorplans:p.floorplans.filter((_,j)=>i!==j)})}>Удалить планировку</button></div>)}
         {!p.floorplans.length&&<div className="catalogEditorEmpty">Планировок пока нет.</div>}</div>
       </section>
 
@@ -155,7 +159,7 @@ function PreviewObjectsPage(){
         {!p.features.length&&<div className="catalogEditorEmpty">Добавьте преимущества ЖК.</div>}</div>
       </section>
 
-      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Preview · сохранение в браузере</span></div><button className="primaryAction" onClick={()=>setSelected(null)}><Save size={16}/>Готово</button></div>
+      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Preview · сохранение в браузере</span></div><button className="primaryAction" disabled={!detailsValid} onClick={()=>setSelected(null)}><Save size={16}/>Готово</button></div>
     </section></div>}
   </PageFrame>;
 }

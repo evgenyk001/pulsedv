@@ -63,7 +63,7 @@ export async function getCatalogPage(filters:CatalogFilters={}):Promise<CatalogP
 export async function getCatalogMeta():Promise<CatalogMeta>{
   if(!runtime.enabled){
     const items=getPulseState().properties.filter(property=>property.status==="published");
-    const prices=items.flatMap(property=>[property.priceFrom,...property.floorplans.map(plan=>plan.priceFrom).filter((price):price is number=>price!==null)]).map(price=>price*1_000_000).filter(Number.isFinite);
+    const prices=items.flatMap(property=>[property.priceFrom,...property.floorplans.flatMap(plan=>[plan.priceFrom,plan.priceTo]).filter((price):price is number=>price!=null)]).map(price=>price*1_000_000).filter(Number.isFinite);
     const counts=new Map<string,number>();
     for(const property of items)counts.set(property.city,(counts.get(property.city)||0)+1);
     return{

@@ -55,7 +55,7 @@ test('SQL/API: заявки между устройствами, дедупли�
   assert.equal((await app.inject({method:'PUT',url:'/api/v1/control/state',headers,cookies:managerCookie,payload:{state:doc,version:2}})).statusCode,403);
 
   const properties=DEFAULT_STATE.properties.map(p=>({...p,documents:[]}));
-  properties[1].projectDetails={commissioningDate:'2027-12-31',totalApartments:420,availableApartments:77};
+  properties[1].projectDetails={commissioningDate:'2027-12-31',totalApartments:420,availableApartments:77,parkingSpaces:250,floorsFrom:10,floorsTo:24,areaFrom:23.4,areaTo:106.8};
   const imported=await app.inject({method:'POST',url:'/api/v1/control/catalog/import',headers,cookies:ownerCookie,payload:{properties,replace:{images:true,features:true,floorplans:true,documents:true}}});
   assert.equal(imported.statusCode,200,imported.body);assert.equal(imported.json().created,properties.length);
 
@@ -68,6 +68,13 @@ test('SQL/API: заявки между устройствами, дедупли�
   const oldClient={...detail.json().property};delete oldClient.projectDetails;
   const oldSave=await app.inject({method:'PUT',url:'/api/v1/control/catalog/solnechniy',headers,cookies:ownerCookie,payload:oldClient});
   assert.equal(oldSave.statusCode,200,oldSave.body);assert.deepEqual(oldSave.json().property.projectDetails,properties[1].projectDetails);
+  const legacyDetails={commissioningDate:'2027-12-31',totalApartments:420,availableApartments:77};
+  const partialImport=await app.inject({method:'POST',url:'/api/v1/control/catalog/import',headers,cookies:ownerCookie,payload:{properties:[{...oldClient,projectDetails:legacyDetails}]}});
+  assert.equal(partialImport.statusCode,200,partialImport.body);
+  const afterLegacy=(await app.inject('/api/v1/public/catalog/solnechniy')).json().property;
+  assert.deepEqual(afterLegacy.projectDetails,properties[1].projectDetails);
+  const partialSave=await app.inject({method:'PUT',url:'/api/v1/control/catalog/solnechniy',headers,cookies:ownerCookie,payload:{...afterLegacy,projectDetails:legacyDetails}});
+  assert.equal(partialSave.statusCode,200,partialSave.body);assert.deepEqual(partialSave.json().property.projectDetails,properties[1].projectDetails);
   const oldImport=await app.inject({method:'POST',url:'/api/v1/control/catalog/import',headers,cookies:ownerCookie,payload:{properties:[oldClient]}});
   assert.equal(oldImport.statusCode,200,oldImport.body);
   assert.deepEqual((await app.inject('/api/v1/public/catalog/solnechniy')).json().property.projectDetails,properties[1].projectDetails);

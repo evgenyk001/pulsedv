@@ -5,9 +5,21 @@ import {migrate} from '../src/migrate';
 import {upsertCatalogProperty,getCatalogProperty,listCatalog} from '../src/catalogRepository';
 import {projectDetailsSchema,catalogPropertySchema} from '../src/validation';
 import {DEFAULT_STATE,type ApartmentFinish} from '../../packages/pulse-data/model';
+import {propertyAreaRange,dimensionRange} from '../../packages/domain/propertyDimensions';
+
+test('Building dimensions validate ranges, retain zero parking and fall back to floorplans',()=>{
+ const base={commissioningDate:null,totalApartments:null,availableApartments:null};
+ const dimensions={...base,parkingSpaces:0,floorsFrom:9,floorsTo:25,areaFrom:23.4,areaTo:106.8};
+ assert.deepEqual(projectDetailsSchema.parse(dimensions),dimensions);
+ for(const invalid of [{parkingSpaces:-1},{parkingSpaces:1.5},{floorsFrom:0},{floorsTo:201},{floorsFrom:12,floorsTo:9},{areaFrom:80,areaTo:60},{areaTo:0}])assert.equal(projectDetailsSchema.safeParse({...base,...invalid}).success,false);
+ assert.deepEqual(propertyAreaRange({...DEFAULT_STATE.properties[0],projectDetails:dimensions}),{from:23.4,to:106.8});
+ assert.deepEqual(propertyAreaRange({...DEFAULT_STATE.properties[0],projectDetails:base}),{from:38,to:102});
+ assert.deepEqual(propertyAreaRange({floorplans:[],projectDetails:base}),{from:null,to:null});
+ assert.equal(dimensionRange(9,25),'9–25');assert.equal(dimensionRange(9,9),'9');assert.equal(dimensionRange(null,25),'до 25');
+});
 
 test('Project dates and inventory are optional, validated and persist in catalog views',async()=>{
- const details={commissioningDate:'2027-12-31',totalApartments:420,availableApartments:77};
+ const details={commissioningDate:'2027-12-31',totalApartments:420,availableApartments:77,parkingSpaces:0,floorsFrom:9,floorsTo:25,areaFrom:23.4,areaTo:106.8};
  assert.deepEqual(projectDetailsSchema.parse(details),details);
  for(const bad of [{...details,commissioningDate:'2027-02-31'},{...details,totalApartments:-1},{...details,availableApartments:421},{...details,availableApartments:1.5}])assert.equal(projectDetailsSchema.safeParse(bad).success,false);
  assert.equal(catalogPropertySchema.safeParse(DEFAULT_STATE.properties[0]).success,true);

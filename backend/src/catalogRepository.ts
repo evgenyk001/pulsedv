@@ -58,7 +58,7 @@ async function hydrate(sql:Sql,items:CatalogProperty[],view:CatalogView){
 
   const [features,floorplans]=await Promise.all([
     sql.query("select id,property_id,label,icon,sort_order from catalog_property_features where property_id=any($1::text[]) order by property_id,sort_order,id",[ids]),
-    sql.query("select id,property_id,room_label,area_from,area_to,price_from,image_url,finish_type,finish_options,sort_order from catalog_property_floorplans where property_id=any($1::text[]) order by property_id,sort_order,id",[ids]),
+    sql.query("select id,property_id,room_label,area_from,area_to,price_from,price_to,is_exact,image_url,finish_type,finish_options,sort_order from catalog_property_floorplans where property_id=any($1::text[]) order by property_id,sort_order,id",[ids]),
   ]);
   for(const row of features.rows){
     byId.get(row.property_id)?.features.push({id:row.id,label:row.label,icon:row.icon,sortOrder:Number(row.sort_order)});
@@ -66,7 +66,7 @@ async function hydrate(sql:Sql,items:CatalogProperty[],view:CatalogView){
   for(const row of floorplans.rows){
     byId.get(row.property_id)?.floorplans.push({
       id:row.id,roomLabel:row.room_label,areaFrom:n(row.area_from),areaTo:n(row.area_to),
-      priceFrom:n(row.price_from),imageUrl:view==="full"?row.image_url:null,
+      priceFrom:n(row.price_from),...(row.price_to!=null?{priceTo:n(row.price_to)}:{}),...(row.is_exact?{isExact:true}:{}),imageUrl:view==="full"?row.image_url:null,
        finishType:row.finish_type??null,finishOptions:Array.isArray(row.finish_options)?row.finish_options:[],sortOrder:Number(row.sort_order),
     });
   }
@@ -119,7 +119,7 @@ export async function listCatalog(sql:Sql,options:CatalogListOptions={}){
       else planConditions.push("coalesce(substring(fp.room_label from '[0-9]+')::int,0)"+(/^\d+\+$/.test(rooms)?">="+add(parseInt(rooms)):"="+add(Number(rooms)||-1)));
     }
     const baseConditions=["not exists(select 1 from catalog_property_floorplans fp0 where fp0.property_id=p.id)"];
-    if(minM!==undefined){const v=add(minM);planConditions.push("fp.price_from>="+v);baseConditions.push("p.price_from>="+v);}
+    if(minM!==undefined){const v=add(minM);planConditions.push("coalesce(fp.price_to,fp.price_from)>="+v);baseConditions.push("p.price_from>="+v);}
     if(maxM!==undefined){const v=add(maxM);planConditions.push("fp.price_from<="+v);baseConditions.push("p.price_from<="+v);}
     const plans="exists(select 1 from catalog_property_floorplans fp where "+planConditions.join(" and ")+")";
     where.push(specific?plans:"("+plans+" or ("+baseConditions.join(" and ")+"))");
@@ -161,6 +161,10 @@ export async function catalogMeta(sql:Sql,status:"published"|"all"="published"){
       select fp.price_from as price from catalog_property_floorplans fp
       join catalog_properties p on p.id=fp.property_id
       where fp.price_from is not null ${joinedStatus}
+      union all
+      select fp.price_to as price from catalog_property_floorplans fp
+      join catalog_properties p on p.id=fp.property_id
+      where fp.price_to is not null ${joinedStatus}
     ) prices`)).rows[0];
   const countRow=(await sql.query(`select count(*)::int as total from catalog_properties ${propertyWhere}`)).rows[0];
   const cities=(await sql.query(`select city,count(*)::int as count from catalog_properties ${propertyWhere} group by city order by city`)).rows;
@@ -207,8 +211,10 @@ export async function upsertCatalogProperty(sql:Sql,p:CatalogProperty){
     // Keep catalog filtering consistent with confirmed finish prices.
     const offerPrices=(plan.finishOptions??[]).map(offer=>offer.priceFrom).filter((price):price is number=>price!==null&&price>0);
     const effectivePlanPrice=plan.finishOptions?.length?(offerPrices.length?Math.min(...offerPrices):null):plan.priceFrom;
-    await sql.query("insert into catalog_property_floorplans(id,property_id,room_label,area_from,area_to,price_from,image_url,finish_type,finish_options,sort_order) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",[
-      plan.id||randomUUID(),p.id,plan.roomLabel,plan.areaFrom,plan.areaTo,effectivePlanPrice,plan.imageUrl,plan.finishType??null,JSON.stringify(plan.finishOptions??[]),plan.sortOrder??index
+    const upperPrices=(plan.finishOptions??[]).flatMap(offer=>offer.priceFrom!==null?[offer.priceTo??offer.priceFrom]:[]);
+    const effectivePlanUpper=plan.finishOptions?.length?(upperPrices.length&&plan.finishOptions.every(offer=>offer.priceFrom!==null&&offer.priceTo!=null)?Math.max(...upperPrices):null):plan.priceTo??null;
+    await sql.query("insert into catalog_property_floorplans(id,property_id,room_label,area_from,area_to,price_from,image_url,finish_type,finish_options,sort_order,price_to,is_exact) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)",[
+      plan.id||randomUUID(),p.id,plan.roomLabel,plan.areaFrom,plan.areaTo,effectivePlanPrice,plan.imageUrl,plan.finishType??null,JSON.stringify(plan.finishOptions??[]),plan.sortOrder??index,effectivePlanUpper,plan.isExact??false
     ]);
   }
 
