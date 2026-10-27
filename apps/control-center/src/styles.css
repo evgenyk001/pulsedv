@@ -2382,3 +2382,7 @@ main{
 .catalogPhotoItem{min-width:0;display:flex;flex-direction:column;gap:8px}.catalogPhotoItem .controlField{min-width:0}.catalogPhotoItem input{width:100%;min-width:0}
 .catalogPhotoOrder{display:flex;gap:6px}.catalogPhotoOrder button{min-width:44px;min-height:36px;border-radius:10px;border:1px solid var(--pc-line);background:var(--pc-surface);color:var(--pc-text);display:grid;place-items:center}.catalogPhotoOrder button:disabled{opacity:.3}
 .catalogPhotoLink{margin-top:16px;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}.catalogPhotoLink label{flex:1;min-width:180px}.catalogPhotoLink button{min-height:44px}
+
+/* Checkboxes keep their native compact geometry inside full-width form fields. */
+.control input[type="checkbox"],.control .controlField input[type="checkbox"]{appearance:auto;-webkit-appearance:checkbox;box-sizing:border-box;width:16px;height:16px;min-width:16px;min-height:16px;max-width:16px;max-height:16px;flex:0 0 16px;padding:0;margin:0;border-radius:3px;vertical-align:middle}
+.control input[type="checkbox"]:focus-visible{outline:2px solid var(--pc-red);outline-offset:3px}

@@ -9,7 +9,7 @@ import React from "react";
 
 import {propertyReturn} from "../helpers/navigationMemory";
 import {FloorplanViewer} from "../components/FloorplanViewer";
-import {APARTMENT_FINISHES,planFinishOffers,planPriceForFinish,planStartingPrice,apartmentFinishLabel} from "../../../../packages/domain/propertyFinish";
+import {APARTMENT_FINISHES,canonicalApartmentFinish,planFinishOffers,planPriceForFinish,planStartingPrice,apartmentFinishLabel} from "../../../../packages/domain/propertyFinish";
 import type {ApartmentFinish} from "../../../../packages/pulse-data/model";
 import {PropertyGallery} from "../components/PropertyGallery";
 import {usePulseControlState} from "../helpers/usePulseControlState";
@@ -108,10 +108,10 @@ export default function PropertyPage(){
 
   const details=p.projectDetails;
   const finishTypes=APARTMENT_FINISHES.filter(([value])=>
-    (details?.finishes??[]).includes(value)||p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>offer.finishType===value))
+    (details?.finishes??[]).some(finish=>canonicalApartmentFinish(finish)===value)||p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>canonicalApartmentFinish(offer.finishType)===value))
   );
   const priceForPlan=(plan:typeof p.floorplans[number])=>selectedFinish?planPriceForFinish(plan,selectedFinish):planStartingPrice(plan);
-  const matchesFinish=(plan:typeof p.floorplans[number])=>!selectedFinish||planFinishOffers(plan).some(offer=>offer.finishType===selectedFinish);
+  const matchesFinish=(plan:typeof p.floorplans[number])=>!selectedFinish||planFinishOffers(plan).some(offer=>canonicalApartmentFinish(offer.finishType)===canonicalApartmentFinish(selectedFinish));
   const visiblePlans=p.floorplans
     .filter(plan=>activeRoom&&normalizeRoomLabel(plan.roomLabel)===activeRoom&&matchesFinish(plan))
     .sort((a,b)=>(priceForPlan(a)??Infinity)-(priceForPlan(b)??Infinity)||a.sortOrder-b.sortOrder);
@@ -205,7 +205,7 @@ export default function PropertyPage(){
                 <div className={styles.planCopy}>
                   <span>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'}</span>
                   <strong>{plan.areaFrom!==null?plan.areaFrom+(plan.areaTo&&plan.areaTo!==plan.areaFrom?'–'+plan.areaTo:'')+' м²':'Площадь уточняется'}</strong>
-                  {offers.length>0&&<span className={styles.planFinishes}>{selectedFinish?apartmentFinishLabel(selectedFinish):offers.map(offer=>apartmentFinishLabel(offer.finishType)).join(' · ')}</span>}
+                  {offers.length>0&&<span className={styles.planFinishes}>{selectedFinish?apartmentFinishLabel(selectedFinish):[...new Set(offers.map(offer=>apartmentFinishLabel(offer.finishType)))].join(' · ')}</span>}
                   <b>{planPriceLabel(plan,selectedFinish)}</b>
                   {planPrice!==null?<Link to={propertyMortgageLink(p,plan,selectedFinish)}>Рассчитать платёж <ChevronRight size={14}/></Link>:<small>Уточните стоимость у менеджера</small>}
                 </div>

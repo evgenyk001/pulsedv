@@ -2,14 +2,14 @@ import React from 'react';
 import type {ApartmentFinish,PulseProperty} from '../../../../packages/pulse-data/model';
 import {Link} from 'react-router-dom';
 import {propertyPriceLabel,planPriceLabel,propertyPriceRub,propertyMortgageLink} from '../../../../packages/domain/propertyPresentation';
-import {apartmentFinishLabel,planFinishOffers,planPriceForFinish,planStartingPrice} from '../../../../packages/domain/propertyFinish';
+import {apartmentFinishLabel,canonicalApartmentFinish,planFinishOffers,planPriceForFinish,planStartingPrice} from '../../../../packages/domain/propertyFinish';
 import {Sheet,SheetTrigger,SheetContent,SheetHeader,SheetTitle,SheetDescription} from './Sheet';
 import {LeadSheet} from './LeadSheet';
 import './clientPolish.css';
 
 export function FloorplanViewer({property,plan,preferredFinish}:{property:PulseProperty;plan:PulseProperty['floorplans'][number];preferredFinish?:ApartmentFinish|null}){
  const offers=planFinishOffers(plan);
- const preferred=offers.find(option=>option.finishType===preferredFinish)?.finishType??[...offers].filter(option=>option.priceFrom!==null).sort((a,b)=>(a.priceFrom??Infinity)-(b.priceFrom??Infinity))[0]?.finishType??offers[0]?.finishType??null;
+ const preferred=offers.find(option=>option.finishType===preferredFinish)?.finishType??offers.find(option=>canonicalApartmentFinish(option.finishType)===canonicalApartmentFinish(preferredFinish))?.finishType??[...offers].filter(option=>option.priceFrom!==null).sort((a,b)=>(a.priceFrom??Infinity)-(b.priceFrom??Infinity))[0]?.finishType??offers[0]?.finishType??null;
  const [finish,setFinish]=React.useState<ApartmentFinish|null>(preferred);
  const [zoom,setZoom]=React.useState(1),[broken,setBroken]=React.useState(false);
  React.useEffect(()=>setFinish(preferred),[preferred]);

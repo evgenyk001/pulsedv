@@ -7,6 +7,17 @@ import {catalogPropertySchema} from '../src/validation';
 import {DEFAULT_STATE,type PulseProperty} from '../../packages/pulse-data/model';
 import {planPriceLabel,propertyMortgageLink} from '../../packages/domain/propertyPresentation';
 import {matchesBudgetAndRooms} from '../../packages/domain/propertyMatch';
+import {APARTMENT_FINISHES,apartmentFinishLabel,planPriceForFinish} from '../../packages/domain/propertyFinish';
+
+test('Unfinished is a legacy rough alias, with original offer prices retained',()=>{
+ assert.deepEqual(APARTMENT_FINISHES.map(([key])=>key),['rough','white_box','finished']);
+ assert.equal(apartmentFinishLabel('unfinished'),'Черновая');
+ const legacy={priceFrom:7,finishOptions:[{finishType:'unfinished' as const,priceFrom:7,priceTo:8}]};
+ assert.equal(planPriceForFinish(legacy,'rough'),7);assert.match(planPriceLabel(legacy,'rough'),/^7\s000\s000–8\s000\s000 ₽$/);
+ const separate={priceFrom:7,finishOptions:[...legacy.finishOptions,{finishType:'rough' as const,priceFrom:9,priceTo:10}]};
+ assert.equal(planPriceForFinish(separate,'unfinished'),7);assert.equal(planPriceForFinish(separate,'rough'),9);
+ assert.equal(separate.finishOptions.length,2);
+});
 
 test('Exact and ranged plan prices persist, filter by overlap and keep mortgage starting amounts',async()=>{
  const exact={...DEFAULT_STATE.properties[0].floorplans[0],id:'exact',isExact:true,areaFrom:47.52,areaTo:47.52,priceFrom:6.3,priceTo:6.3};

@@ -1,6 +1,6 @@
 import React from 'react';
 import type {ProjectDetails} from '../../../../packages/pulse-data/model';
-import {APARTMENT_FINISHES} from '../../../../packages/domain/propertyFinish';
+import {APARTMENT_FINISHES,canonicalApartmentFinish} from '../../../../packages/domain/propertyFinish';
 const empty:ProjectDetails={commissioningDate:null,totalApartments:null,availableApartments:null,finishes:[]};
 export function ProjectDetailsEditor({value,onChange,onValidityChange}:{value?:ProjectDetails;onChange:(value:ProjectDetails)=>void;onValidityChange?:(valid:boolean)=>void}){
  const [draft,setDraft]=React.useState({...empty,...value});
@@ -30,8 +30,8 @@ export function ProjectDetailsEditor({value,onChange,onValidityChange}:{value?:P
    <legend style={{fontSize:12,fontWeight:700,marginBottom:8}}>Варианты отделки в ЖК</legend>
    <p style={{fontSize:11,opacity:.72,margin:'0 0 10px'}}>Отмечайте только подтверждённые застройщиком варианты. Цены для конкретных планировок задаются ниже.</p>
    <div style={{display:'flex',flexWrap:'wrap',gap:12}}>
-    {APARTMENT_FINISHES.map(([finish,label])=><label key={finish} style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:12}}>
-     <input type="checkbox" checked={(draft.finishes??[]).includes(finish)} onChange={e=>{const next={...draft,finishes:e.target.checked?[...(draft.finishes??[]),finish]:(draft.finishes??[]).filter(x=>x!==finish)};setDraft(next);commit(next)}}/>{label}
+    {APARTMENT_FINISHES.map(([finish,label])=><label key={finish} className="finishChoice" style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:12,whiteSpace:'nowrap',minHeight:32}}>
+     <input type="checkbox" checked={(draft.finishes??[]).some(value=>canonicalApartmentFinish(value)===finish)} onChange={e=>{const next={...draft,finishes:e.target.checked?[...(draft.finishes??[]).filter(x=>canonicalApartmentFinish(x)!==finish),finish]:(draft.finishes??[]).filter(x=>canonicalApartmentFinish(x)!==finish)};setDraft(next);commit(next)}}/>{label}
     </label>)}
    </div>
   </fieldset>

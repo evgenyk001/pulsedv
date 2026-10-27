@@ -133,3 +133,26 @@ test('Control adds individual layouts and price ranges without mixing exact and 
  const detail=page.getByRole('dialog',{name:'ЖК Приморский · 1 комн.',exact:true});
  await expect(detail).toContainText('3 330 000 ₽');await expect(detail).not.toContainText('от 3 330 000 ₽');
 });
+
+test('Control finish checkboxes stay compact and legacy unfinished is shown as rough',async({page})=>{
+ await seed(page);await page.goto('/pulsedv/control-center/#/objects');
+ await page.evaluate(()=>{
+  const key='pulse.dv.control.state.v1',state=JSON.parse(localStorage.getItem(key)!);
+  state.properties[0].projectDetails.finishes=['unfinished'];
+  state.properties[0].floorplans[0].finishOptions=[{finishType:'unfinished',priceFrom:7.8}];
+  localStorage.setItem(key,JSON.stringify(state));
+ });
+ await page.reload();await page.locator('.catalogObjectCard').filter({hasText:'ЖК Приморский'}).click();
+ const editor=page.getByRole('dialog',{name:'Редактор объекта'}),group=editor.getByRole('group',{name:'Варианты отделки в ЖК',exact:true});
+ await expect(group.getByRole('checkbox')).toHaveCount(3);await expect(group).not.toContainText('Без отделки');
+ const rough=group.getByRole('checkbox',{name:'Черновая',exact:true});await expect(rough).toBeChecked();
+ for(const input of await group.getByRole('checkbox').all()){
+  const box=await input.boundingBox();expect(box?.width).toBe(16);expect(box?.height).toBe(16);
+ }
+ await rough.uncheck();await rough.check();await editor.getByRole('button',{name:'Готово',exact:true}).click();
+ await page.goto('/pulsedv/mini-app/#/property/primorskiy');
+ const finishes=page.getByRole('group',{name:'Варианты отделки'});await expect(finishes).not.toContainText('Без отделки');
+ await finishes.getByRole('button',{name:'Черновая',exact:true}).click();
+ await page.getByRole('button',{name:'Выбрать планировки: 1',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Квартиры и планировки ЖК'})).toContainText('7 800 000');
+});
