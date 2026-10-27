@@ -1,3 +1,4 @@
+import {ensureAnnouncementSubscription} from './announcementSubscriptions';
 import {setTimeout} from 'node:timers/promises';
 import type {Database,Sql} from './database';
 import type {RuntimeConfig} from './config';
@@ -29,6 +30,7 @@ export async function handleBotUpdate(sql:Sql,config:BotConfig,call:BotCall,upda
  };
  if(/^\/(start|help)(?:@\w+)?(?:\s|$)/.test(m.text??'')){
   const user=(await sql.query('insert into app_users(telegram_user_id,telegram_username,first_name,last_name) values($1,$2,$3,$4) on conflict(telegram_user_id) do update set telegram_username=excluded.telegram_username,first_name=excluded.first_name,last_name=excluded.last_name,last_seen_at=now() returning id,phone',[u.id,u.username??null,u.first_name,u.last_name??null])).rows[0];
+  await ensureAnnouncementSubscription(sql,user.id);
   if(user.phone){await open('С возвращением в PULSEDV.RU!');return;}
   await sql.query('insert into telegram_contact_consent(user_id,consent_version) values($1,$2) on conflict(user_id) do update set requested_at=now(),consent_version=excluded.consent_version,accepted_at=null',[user.id,config.CONSENT_VERSION]);
   await requestPhone();return;

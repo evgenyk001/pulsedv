@@ -177,7 +177,7 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,im
     onSelect(undefined);setGroupIds([]);
    }} aria-label={`Интерактивная карта${provider?' '+provider:''} с новостройками`}/>
   {status==='loading'&&<div className={styles.state} role="status">Загружаем карту…</div>}
-  {status==='error'&&<div className={styles.state} role="status"><strong>Не удалось открыть карту</strong><span>Проверьте соединение или продолжите выбирать квартиры в списке.</span><div className={styles.stateActions}><button type="button" onClick={()=>setAttempt(value=>value+1)}><RotateCw size={15}/>Попробовать снова</button>{onShowList&&<button type="button" onClick={onShowList}>Открыть список ЖК</button>}</div></div>}
+  {status==='error'&&<div className={styles.state} role="status"><strong>Не удалось открыть карту</strong><div className={styles.stateActions}><button type="button" onClick={()=>setAttempt(value=>value+1)}><RotateCw size={15}/>Попробовать снова</button>{onShowList&&<button type="button" onClick={onShowList}>Открыть список ЖК</button>}</div></div>}
   {status==='ready'&&<div className={styles.zoomControls} role="group" aria-label="Масштаб карты"><button type="button" aria-label="Увеличить карту" onClick={()=>mapRef.current?.zoom(1)}><Plus size={20}/></button><button type="button" aria-label="Уменьшить карту" onClick={()=>mapRef.current?.zoom(-1)}><Minus size={20}/></button></div>}
   {status==='ready'&&selected&&<article ref={previewRef} key={selected.id} id="map-project-preview" className={styles.previewCard} aria-label={selected.name}>
    <div className={styles.previewHero}>

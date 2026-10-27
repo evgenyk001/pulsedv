@@ -1,3 +1,4 @@
+import {LoadRecovery} from '../components/LoadRecovery';
 import {BackLink} from "../components/BackLink";
 import {IconTile} from '../components/IconTile';
 import React from 'react';
@@ -106,14 +107,14 @@ export default function PartnersPage(){
   </nav>
   {!q.isLoading&&q.data&&!p&&<PageHeader title="Рекомендуйте PULSE" subtitle="Помогите знакомому найти квартиру и зарабатывайте вместе с нами." compact/>}
   {q.isLoading&&<div className={styles.card} role="status">Загружаем партнёрский кабинет…</div>}
-  {q.error&&<div className={styles.error} role="alert">{q.error.message}<button onClick={()=>void q.refetch()}>Повторить</button></div>}
+  {q.error&&!q.data&&<LoadRecovery label="Обновить партнёрский кабинет" onRetry={()=>void q.refetch()}/>}
   {error&&p&&!sheet&&!selected&&<div className={styles.error} role="alert">{error}</div>}
   {!q.isLoading&&q.data&&!p&&<>
    <section className={styles.hero}><div className={styles.heroTop}><span>За вашу рекомендацию</span><Wallet size={23}/></div><strong>30%</strong><h2>от комиссии за покупку квартиры через PULSEDV.RU</h2><p>После вычета 6%. Начисление до налогов получателя.</p><button className={styles.heroLink} onClick={()=>openSheet('calculation')}>100 000 ₽ комиссии → 28 200 ₽ вам<ArrowUpRight size={15}/></button></section>
    <section className={styles.card}><h2>Как это работает</h2><ol className={styles.steps}><li><b>Добавьте клиента</b><span>Подключитесь к программе и введите его имя и телефон с его разрешения.</span></li><li><b>Отправьте ему ссылку</b><span>После проверки номера покупатель подтвердит приглашение. Закреп — на 1 месяц, дата будет в кабинете.</span></li><li><b>Получите вознаграждение</b><span>После сделки, поступления комиссии и оформления документов.</span></li></ol></section>
    <section className={styles.card}><h2>Подключиться к программе</h2>
     {runtime.enabled&&program.data?.offerPublished===false&&<p>Подключение станет доступно после публикации окончательных условий программы.</p>}
-    {program.isError&&<p className={styles.error} role="alert">Не удалось загрузить условия. <button onClick={()=>void program.refetch()}>Повторить</button></p>}
+    {program.isError&&!program.data&&<LoadRecovery label="Обновить условия программы" onRetry={()=>void program.refetch()}/>}
     {q.data.authenticated?<form className={styles.form} onSubmit={e=>{e.preventDefault();void run(()=>joinPartner({name,phone,consent,termsVersion:PARTNER_TERMS_VERSION}))}}>
      <label>Ваше имя для приглашения<Input value={name} onChange={e=>setName(e.target.value)} maxLength={80} minLength={2} required autoComplete="given-name" placeholder="Как представить вас покупателю"/></label>
      <label>Ваш контактный телефон<Input type="tel" value={phone} onChange={e=>setPhone(e.target.value)} required maxLength={24} autoComplete="tel" placeholder="+7 999 000-00-00"/></label>

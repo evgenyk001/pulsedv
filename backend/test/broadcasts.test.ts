@@ -32,11 +32,11 @@ async function fixture(t:any,bot=true){
  const save=(id=randomUUID(),version=0,c=content)=>call('PUT','/control/broadcasts/'+id,{version,content:c});
  return {db,app,config,controls,visitors,call,save};
 }
-test('Broadcasts: opt-in audience, role boundaries, immutable snapshot, duplicate send and persistent delivery totals',async t=>{
+test('Broadcasts: default subscription audience, role boundaries, immutable snapshot, duplicate send and persistent delivery totals',async t=>{
  const {db,call,save,controls,visitors}=await fixture(t);
  assert.equal((await call('GET','/control/broadcasts',undefined,controls.manager)).statusCode,403);
  assert.equal((await call('PUT','/me/announcements',{enabled:true},visitors[2])).statusCode,400);
- assert.equal((await call('GET','/me/announcements',undefined,visitors[0])).json().enabled,false);
+ assert.equal((await call('GET','/me/announcements',undefined,visitors[0])).json().enabled,true);
  await call('PUT','/me/announcements',{enabled:true},visitors[0]);
  const saved=(await save()).json().item;assert.ok(saved.id);assert.equal(saved.status,'draft');
  assert.equal((await call('POST','/control/broadcasts/'+saved.id+'/send',{version:99})).statusCode,409);
@@ -77,4 +77,20 @@ test('Broadcasts: upload normalisation, caption and URL validation, private test
  await sender.sendMessage({chatId:'9000',text:'<unsafe>\n\nA & B',richTitle:true,buttonLabel:'Каталог',deepLink:'https://pulsedv.ru/pulsedv/mini-app/#/catalog',preferencesLink:'https://pulsedv.ru/pulsedv/mini-app/#/profile'});assert.equal(requests[1].body.text,'<b>&lt;unsafe&gt;</b>\n\nA &amp; B');assert.match(requests[1].body.reply_markup.inline_keyboard[0][0].web_app.url,/#\/catalog$/);assert.match(requests[1].body.reply_markup.inline_keyboard[1][0].web_app.url,/#\/profile$/);
  assert.equal((await db.query("select count(*)::int n from outbox_events where topic='user.broadcast'")).rows[0].n,0);
  const noBot=await fixture(t,false),draft=(await noBot.save()).json().item;assert.equal((await noBot.call('POST','/control/broadcasts/'+draft.id+'/send',{version:draft.version})).statusCode,409);
+});
+
+
+test('Announcement defaults migrate existing accounts once and preserve explicit opt-outs',async t=>{
+ const {db}=await fixture(t);
+ const users=(await db.query('select id,telegram_user_id from app_users order by telegram_user_id')).rows;
+ const off=users[0].id,on=users[1].id,missing=users[2].id;
+ await db.query('insert into announcement_subscriptions(user_id,enabled) values($1,false),($2,true)',[off,on]);
+ const before=(await db.query('select consent_key from announcement_subscriptions where user_id=$1',[off])).rows[0].consent_key;
+ await db.query("delete from schema_migrations where name='029_announcement_defaults.sql'");
+ await migrate(db);await migrate(db);
+ const rows=(await db.query('select user_id,enabled,consent_key from announcement_subscriptions')).rows;
+ assert.equal(rows.find(r=>r.user_id===off).enabled,false);
+ assert.equal(rows.find(r=>r.user_id===off).consent_key,before);
+ assert.equal(rows.find(r=>r.user_id===on).enabled,true);
+ assert.equal(rows.find(r=>r.user_id===missing).enabled,true);
 });

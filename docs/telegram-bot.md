@@ -26,3 +26,9 @@ Compose enables `REQUIRE_TELEGRAM_PHONE=true` by default; config parsing default
 Control → «Посетители и интерес» contains an owner/admin-only registered-client list with name, phone, Telegram ID/username and confirmation time. It is paginated and searchable. Registration creates no artificial lead. Managers do not receive this global contact directory.
 
 The Compose reliability smoke keeps anonymous CRM fixture mode (`REQUIRE_TELEGRAM_PHONE=false`) because it has no live Telegram bot. Mandatory registration is separately tested with signed initData and real SQL in account-registration.test.ts, plus API-mode browser tests on Chromium and WebKit.
+
+### Анонсы и работа при потере связи
+
+С версии с миграцией `029_announcement_defaults.sql` анонсы включены для Telegram-аккаунтов без сохранённой настройки. Миграция добавляет отсутствующие подписки; повторный вход и `/start` создают настройку только при её отсутствии. Явное отключение не сбрасывается. Настройка сохраняется на сервере и действует на всех устройствах. Само обновление не отправляет рассылку.
+
+В мини-приложении ошибки фонового чтения не добавляют текстовые баннеры поверх уже загруженного содержимого. Для первой неудачной загрузки есть единая кнопка повтора; чтения повторяются при восстановлении сети. Избранное сохраняет очередь изменений и синхронизирует её после восстановления связи. Ошибки действий (заявка, сообщение, изменение настроек) остаются видимыми и не подменяются сообщением об успехе. Подробности сетевых и серверных ошибок доступны диагностике, а пользователю выводится короткое сообщение без технических данных.

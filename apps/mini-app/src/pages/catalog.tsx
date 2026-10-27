@@ -1,3 +1,4 @@
+import {LoadRecovery} from '../components/LoadRecovery';
 import {IconTile} from '../components/IconTile';
 import { hasSea, matchScore, matchesBudgetAndRooms } from "../../../../packages/domain/propertyMatch";
 import { usePulseControlState } from "../helpers/usePulseControlState";
@@ -392,15 +393,15 @@ export default function CatalogPage(){
 
     {view==="list"?<div className={styles.list}>
       {isLoading&&<div className={styles.empty}><strong>Загружаем каталог</strong><span>Объекты появятся через секунду.</span></div>}
-      {error&&<div className={styles.empty}><strong>Не удалось загрузить каталог</strong><span>Проверьте соединение и попробуйте снова.</span></div>}
-      {!isLoading&&!error&&visible.map(property=><PropertyCard key={property.id} property={property} compact returnTo={catalogReturnTo}/>)}
+      {error&&!visible.length&&<LoadRecovery label="Обновить каталог" onRetry={()=>void (pulseMode?pulseQuery.refetch():listQuery.refetch())}/>}
+      {!isLoading&&visible.map(property=><PropertyCard key={property.id} property={property} compact returnTo={catalogReturnTo}/>)}
       {!isLoading&&!error&&visible.length===0&&<div className={styles.empty}><strong>Ничего не нашли</strong><span>Попробуйте изменить фильтры или город.</span><button onClick={resetFilters}>Сбросить фильтры</button></div>}
       {!pulseMode&&listQuery.hasNextPage&&<button className={styles.loadMore} disabled={listQuery.isFetchingNextPage} onClick={()=>void listQuery.fetchNextPage()}>
         {listQuery.isFetchingNextPage?"Загружаем…":`Показать ещё · ${Math.max(0,total-visible.length)}`}
       </button>}
     </div>:<div className={styles.mapMode}>
       {isLoading?<div className={styles.empty}><strong>Загружаем карту</strong><span>Получаем объекты для отображения.</span></div>:
-       error?<div className={styles.empty}><strong>Не удалось загрузить объекты</strong><span>Проверьте соединение.</span></div>:
+       error&&!mapProperties.length?<LoadRecovery label="Обновить объекты на карте" onRetry={()=>void mapQuery.refetch()}/>:
        !mapProperties.length?<div className={styles.empty}><strong>На карте нет подходящих объектов</strong><span>Измените фильтры или откройте список: у части ЖК координаты ещё не указаны.</span><button onClick={resetFilters}>Сбросить фильтры</button></div>:<PropertyMap properties={mapProperties} selectedId={selectedId} onSelect={setSelectedId} onShowList={()=>setView("list")} onOpen={openMapProperty} city={appliedCity==="Все"?undefined:appliedCity}/>}
     </div>}
   </div>;

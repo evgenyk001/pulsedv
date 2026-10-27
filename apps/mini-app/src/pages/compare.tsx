@@ -1,3 +1,4 @@
+import {LoadRecovery} from '../components/LoadRecovery';
 import React from 'react';
 import {Link,useSearchParams} from 'react-router-dom';
 import {Plus,Search,X,Check,Building2} from 'lucide-react';
@@ -12,7 +13,7 @@ import {recordPulseEvent} from '../../../../packages/pulse-data';
 import styles from './compare.module.css';
 
 export default function ComparePage(){
- const {ids,error:syncError,retry}=useFavoriteIds();
+ const {ids}=useFavoriteIds();
  const {data:saved=[],isLoading,error,refetch}=useFavoriteProperties(ids);
  const [params,setParams]=useSearchParams();
  const [picker,setPicker]=React.useState<number|null>(null),[query,setQuery]=React.useState('');
@@ -40,8 +41,7 @@ export default function ComparePage(){
  return <div className={styles.page}>
   <nav data-app-back-row className={styles.back}><BackLink to="/favorites" aria-label="Назад в избранное"/><span>Сравнение</span></nav>
   <PageHeader title={complete?'Сравнение двух ЖК':'Какие ЖК сравним?'} subtitle={complete?'Каждый параметр — рядом. Сразу видно, чем отличаются два варианта.':'Выберите первый и второй ЖК из избранного.'}/>
-  {syncError&&<p role="alert">{syncError} <button onClick={()=>void retry()}>Повторить синхронизацию</button></p>}
-  {error&&<p role="alert">Не удалось загрузить ЖК. <button onClick={()=>void refetch()}>Повторить</button></p>}
+  {error&&!saved.length&&<LoadRecovery label="Обновить сравнение" onRetry={()=>void refetch()}/>}
   {isLoading?<p role="status">Загружаем избранное…</p>:complete?<ComparisonTable properties={[selected[0]!,selected[1]!]} onReplace={pick} onRemove={index=>choose(index,'')}/>:<>
    <div className={styles.slots}>{[0,1].map(index=>{const p=selected[index];return <div className={styles.slot} key={index}>
     <span className={styles.ordinal}>{index===0?'Первый ЖК':'Второй ЖК'}</span>

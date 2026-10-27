@@ -12,6 +12,7 @@ export function RuntimeGate({children}:{children:React.ReactNode}){
  const [error,setError]=React.useState('');
  const load=React.useCallback(async()=>{setError('');try{await initializePublic();if(runtime.requiresPhone){const account=await visitorApi<{registered:boolean}>('/me/account');setRegistered(account.registered)}setReady(true);}catch(e){setError(e instanceof Error?e.message:'Не удалось загрузить приложение');}},[]);
  React.useEffect(()=>{if(runtime.enabled)void load();},[load]);
+ React.useEffect(()=>{if(!runtime.enabled||ready)return;const retry=()=>{void load()};window.addEventListener('online',retry);return()=>window.removeEventListener('online',retry)},[ready,load]);
  React.useEffect(()=>{if(!ready||!runtime.enabled)return;const refresh=()=>{if(!pageIsLeaving()&&document.visibilityState==='visible')void initializePublic().catch(()=>{});};window.addEventListener('online',refresh);document.addEventListener('visibilitychange',refresh);return()=>{window.removeEventListener('online',refresh);document.removeEventListener('visibilitychange',refresh);};},[ready]);
  React.useEffect(()=>{if(error||ready&&runtime.requiresPhone&&!registered)dismissLaunchScreen()},[error,ready,registered]);
  if(!ready)return <BrandLoading fullScreen error={error} onRetry={()=>void load()}/>;

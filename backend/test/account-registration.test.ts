@@ -20,6 +20,7 @@ test('Mandatory contact: signed identity, consent, own contact, CRM permissions 
   assert.equal((await contactRequest({consent:true,consentVersion:config.CONSENT_VERSION})).statusCode,401);
   const params=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id:123,first_name:'Анна',last_name:'Иванова',username:'anna'})});const secret=createHmac('sha256','WebAppData').update(config.BOT_TOKEN).digest();params.set('hash',createHmac('sha256',secret).update([...params].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n')).digest('hex'));
   assert.equal((await app.inject({method:'POST',url:'/api/v1/auth/telegram',headers,payload:{initData:params.toString()}})).statusCode,200);
+  assert.equal((await app.inject({url:'/api/v1/me/announcements',headers})).statusCode,403); // Phone gate still applies.
   assert.equal((await contactRequest({consent:true,consentVersion:'stale'})).statusCode,409);
   assert.equal((await contactRequest({consent:true,consentVersion:config.CONSENT_VERSION,phone:'+79991234567'})).statusCode,400,'client cannot submit a phone as proof');
   assert.equal((await contactRequest({consent:true,consentVersion:config.CONSENT_VERSION})).statusCode,200);
@@ -29,6 +30,10 @@ test('Mandatory contact: signed identity, consent, own contact, CRM permissions 
   await db.transaction(sql=>handleBotUpdate(sql,config,async()=>({}),update(123)));
   assert.equal((await app.inject({url:'/api/v1/me/account',headers})).json().registered,true);
   assert.equal((await app.inject({url:'/api/v1/me/favorites',headers})).statusCode,200);
+  assert.equal((await app.inject({url:'/api/v1/me/announcements',headers})).json().enabled,true);
+  await app.inject({method:'PUT',url:'/api/v1/me/announcements',headers,payload:{enabled:false}});
+  await app.inject({method:'POST',url:'/api/v1/auth/telegram',headers,payload:{initData:params.toString()}});
+  assert.equal((await app.inject({url:'/api/v1/me/announcements',headers})).json().enabled,false);
   assert.equal(Number((await db.query('select count(*) from leads')).rows[0].count),0);
   assert.equal((await app.inject('/api/v1/control/registrations')).statusCode,401);
   for(const role of ['owner','manager']){

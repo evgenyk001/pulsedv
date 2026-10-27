@@ -1,3 +1,4 @@
+import {LoadRecovery} from './LoadRecovery';
 import React from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
@@ -141,8 +142,7 @@ export function MortgageStoryOnboarding({ onDone }: { onDone: () => void }) {
       <div className={styles.slide}>
         <div className={styles.art} aria-busy={ready !== slide.image && failed !== slide.image}>
           {failed === slide.image ? <div className={styles.error}>
-            <p>Не удалось загрузить иллюстрацию</p>
-            <button type="button" onClick={() => { setFailed(null); setRetry(value => value + 1); }}>Повторить</button>
+            <LoadRecovery label="Обновить иллюстрацию" onRetry={() => { setFailed(null); setRetry(value => value + 1); }}/>
           </div> : <img
             key={`${slide.image}-${retry}`}
             className={styles.artImage}

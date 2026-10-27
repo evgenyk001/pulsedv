@@ -1,3 +1,4 @@
+import {LoadRecovery} from './LoadRecovery';
 import {BackLink} from "./BackLink";
 import {NativeSelect} from "./NativeSelect";
 import {useMessageHistory} from '../../../../packages/journey/useMessageHistory';
@@ -76,9 +77,9 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
   <div className={styles.subject}><span>{subject||'Обсуждение квартиры'}</span><small>{journeyStatus(entry.status)}</small></div>
   <div className={styles.tabs} role="tablist" aria-label="Разделы обращения">{[{id:'chat',label:'Переписка',Icon:MessageCircle,count:0},{id:'collections',label:'Подборки',Icon:Sparkles,count:j.collections.length},{id:'showings',label:'Показы',Icon:CalendarDays,count:j.showings.filter(s=>['requested','confirmed'].includes(s.status)).length}].map(({id,label,Icon,count})=><button key={id} id={'tab-'+id} type="button" role="tab" aria-selected={tab===id} aria-controls={'panel-'+id} tabIndex={tab===id?0:-1} onClick={()=>setTab(id)} onKeyDown={e=>{const ids=['chat','collections','showings'];const step=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(step){e.preventDefault();const next=ids[(ids.indexOf(id)+step+3)%3];setTab(next);requestAnimationFrame(()=>document.getElementById('tab-'+next)?.focus())}}}><Icon size={16}/>{label}{count>0&&<span>{count}</span>}</button>)}</div>
   {!runtime.enabled&&<p className={styles.demo}>Сообщения сохраняются на устройстве. Отправка команде пока недоступна.</p>}
-  {(error||query.error)&&<div className={styles.error} role="alert">{error||'Не удалось обновить переписку. Проверьте подключение.'}<button onClick={()=>void query.refetch()}>Обновить</button></div>}
+  {error&&<div className={styles.error} role="alert">{error}<button onClick={()=>void query.refetch()}>Обновить</button></div>}
   {notice&&<div className={styles.notice} role="status"><Check size={15}/>{notice}</div>}
-  {catalogError&&tab!=='chat'&&<div className={styles.error} role="alert">Не удалось загрузить сведения о ЖК.<button onClick={onRetryCatalog}>Повторить</button></div>}
+  {catalogError&&!properties.length&&tab!=='chat'&&<LoadRecovery label="Обновить сведения о ЖК" onRetry={onRetryCatalog}/>}
   {tab==='chat'?<section id="panel-chat" role="tabpanel" aria-labelledby="tab-chat" className={styles.chatPanel}>
    <div className={styles.messages} ref={log} role="log" aria-label="Переписка по обращению" aria-live="polite" onScroll={()=>{const node=log.current;if(node){nearBottom.current=node.scrollHeight-node.scrollTop-node.clientHeight<72;if(nearBottom.current)setNewBelow(false)}}}>
     <div className={styles.systemMessage}>Обращение от {journeyDate(entry.createdAt)}<br/>Время обращения — Владивосток</div>

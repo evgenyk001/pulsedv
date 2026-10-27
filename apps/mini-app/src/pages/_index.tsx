@@ -1,3 +1,4 @@
+import {LoadRecovery} from '../components/LoadRecovery';
 import {IconTile} from '../components/IconTile';
 import {PartnerEntryCard} from "../components/PartnerEntryCard";
 import {ClientUpdates} from "../components/ClientUpdates";
@@ -48,7 +49,7 @@ export default function HomePage(){
 
     <section className={styles.section}>
       <div className={styles.sectionHead}><div><span>Выбор PULSEDV.RU</span><h2>Стоит посмотреть</h2></div><Link to="/catalog">Все <ChevronRight size={15}/></Link></div>
-      <div className={styles.propertyRail}>{isLoading&&<p role="status">Загружаем проекты…</p>}{error&&<p role="alert">Не удалось загрузить проекты. <button onClick={()=>void refetch()}>Повторить</button></p>}{!isLoading&&properties.map(p=><PropertyCard key={p.id} property={p}/>)}</div>
+      <div className={styles.propertyRail}>{isLoading&&<p role="status">Загружаем проекты…</p>}{error&&!properties.length&&<LoadRecovery label="Обновить проекты" onRetry={()=>void refetch()}/>}{!isLoading&&properties.map(p=><PropertyCard key={p.id} property={p}/>)}</div>
     </section>
 
     <Link to="/selection" className={styles.concierge}>

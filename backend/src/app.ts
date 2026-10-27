@@ -1,3 +1,5 @@
+import {ensureAnnouncementSubscription} from './announcementSubscriptions';
+import {controlProfileSelect} from './controlProfiles';
 import {registerAccountRoutes,registeredPhone} from './accountRoutes';
 import {registerPartnerBiometricRoutes} from './partnerBiometrics';
 import {registerAcquisitionRoutes,linkAcquisition} from './acquisitionRoutes';
@@ -117,6 +119,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const current=(await sql.query('select u.telegram_user_id from sessions s left join app_users u on u.id=s.user_id where s.id=$1',[request.visitor!.sessionId])).rows[0];
    if(current?.telegram_user_id&&String(current.telegram_user_id)!==String(user.id))throw new HttpError(409,'Эта сессия уже принадлежит другому пользователю');
    const row=(await sql.query('insert into app_users(telegram_user_id,telegram_username,first_name,last_name) values($1,$2,$3,$4) on conflict(telegram_user_id) do update set telegram_username=excluded.telegram_username,first_name=excluded.first_name,last_name=excluded.last_name,last_seen_at=now() returning id',[user.id,user.username??null,user.first_name,user.last_name??null])).rows[0];
+   await ensureAnnouncementSubscription(sql,row.id);
    await mergeFavorites(sql,request.visitor!.sessionId,row.id);
    await mergeSearch(sql,request.visitor!.sessionId,row.id);
    await mergeNotificationReads(sql,request.visitor!.sessionId,row.id);
@@ -313,9 +316,9 @@ export async function createApp(db:Database,config:RuntimeConfig){
  });
  app.get('/api/v1/control/profiles',{preHandler:control},async request=>{
   const m=request.member!,scoped=m.role==='manager',q=pageQuery.parse(request.query),offset=(q.page-1)*q.limit;
-  const where=scoped?'where session_id in(select session_id from leads where manager_id=$1)':'';const values=scoped?[m.id]:[];
-  const total=Number((await db.query(`select count(*)::int as total from visitor_profiles ${where}`,values)).rows[0]?.total||0);
-  const items=(await db.query(`select * from visitor_profiles ${where} order by score desc,last_seen_at desc limit $${values.length+1} offset $${values.length+2}`,[...values,q.limit,offset])).rows.map(camelRow);
+  const where=scoped?'where p.session_id in(select session_id from leads where manager_id=$1)':'';const values=scoped?[m.id]:[];
+  const total=Number((await db.query(`select count(*)::int as total from visitor_profiles p ${where}`,values)).rows[0]?.total||0);
+  const items=(await db.query(`${controlProfileSelect} ${where} order by p.score desc,p.last_seen_at desc limit $${values.length+1} offset $${values.length+2}`,[...values,q.limit,offset])).rows.map(camelRow);
   return {items,page:q.page,limit:q.limit,total,hasMore:q.page*q.limit<total};
  });
 
@@ -407,7 +410,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
   const leads=(await db.query(`select * from leads ${scoped?'where manager_id=$1':''} order by score desc,created_at desc limit 1000`,scoped?[m.id]:[])).rows.map(row=>{const lead=camelRow(row);lead.manager=lead.managerId;delete lead.idempotencyKey;delete lead.submissionFingerprint;return lead;});
   const tasks=(await db.query(`select * from crm_tasks ${scoped?'where assigned_to=$1':''} order by due_at limit 1000`,scoped?[m.id]:[])).rows.map(camelRow);
   const events=(await db.query(`select id,session_id,user_id,event_type,entity_type,entity_id,metadata,occurred_at as created_at from user_events ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by occurred_at desc limit 2000`,scoped?[m.id]:[])).rows.map(camelRow);
-  const profiles=(await db.query(`select * from visitor_profiles ${scoped?'where session_id in(select session_id from leads where manager_id=$1)':''} order by score desc limit 1000`,scoped?[m.id]:[])).rows.map(camelRow);
+  const profiles=(await db.query(`${controlProfileSelect} ${scoped?'where p.session_id in(select session_id from leads where manager_id=$1)':''} order by p.score desc limit 1000`,scoped?[m.id]:[])).rows.map(camelRow);
   const members=(await db.query(scoped?'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members where id=$1':'select id,name,email,role,active,cities,telegram_user_id,mfa_enabled from team_members order by name',scoped?[m.id]:[])).rows.map(memberView);
   const notifications=scoped?[]:(await db.query('select id,topic,attempts,last_error,processed_at,dead_at,created_at,available_at from outbox_events order by (dead_at is not null) desc,(processed_at is null and last_error is not null) desc,created_at desc limit 30')).rows.map(camelRow);
   return {state,version,leads,tasks,events,profiles,members,notifications,limited:leads.length===1000||events.length===2000||profiles.length===1000||tasks.length===1000};

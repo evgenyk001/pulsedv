@@ -1,3 +1,4 @@
+import {ensureAnnouncementSubscription} from './announcementSubscriptions';
 import {z} from 'zod';
 import type {FastifyInstance,FastifyRequest} from 'fastify';
 import type {Database,Sql} from './database';
@@ -19,6 +20,7 @@ export async function broadcastView(sql:Sql,row:any):Promise<Broadcast>{
 export async function registerBroadcastRoutes(app:FastifyInstance,db:Database,config:RuntimeConfig,visitor:(r:FastifyRequest)=>Promise<void>,editor:(r:FastifyRequest)=>Promise<void>){
  app.get('/api/v1/me/announcements',{preHandler:visitor},async r=>db.transaction(async sql=>{
   const identity=await favoriteOwner(sql,r.visitor!.sessionId);
+  if(identity.authenticated)await ensureAnnouncementSubscription(sql,r.visitor!.userId!);
   const row=identity.authenticated?(await sql.query('select enabled from announcement_subscriptions where user_id=$1',[r.visitor!.userId])).rows[0]:null;
   return {enabled:!!row?.enabled,authenticated:identity.authenticated};
  }));

@@ -1,3 +1,4 @@
+import {LoadRecovery} from '../components/LoadRecovery';
 import {sortRoomLabels,normalizeRoomLabel} from '../../../../packages/domain/catalogFacets';
 import {BackLink} from "../components/BackLink";
 import {usePropertyHeroMotion} from "../helpers/usePropertyHeroMotion";
@@ -84,7 +85,7 @@ export default function PropertyPage(){
   },[p?.id]);
 
   if(isLoading)return <div className={styles.loading}>Загружаем объект…</div>;
-  if(error)return <div className={styles.notFound} role="alert"><strong>Не удалось загрузить объект</strong><p>Проверьте соединение и повторите попытку.</p><button onClick={()=>void refetch()}>Повторить</button><Link to="/catalog">Вернуться в каталог</Link></div>;
+  if(error&&!p)return <div className={styles.notFound}><LoadRecovery label="Обновить ЖК" onRetry={()=>void refetch()}/><Link to="/catalog">Вернуться в каталог</Link></div>;
   if(!p)return <div className={styles.notFound}><strong>Объект не найден</strong><Link to="/catalog">Вернуться в каталог</Link></div>;
 
   const favorite=isFavorite(p.id);
