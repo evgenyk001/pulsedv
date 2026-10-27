@@ -51,7 +51,8 @@ test('Mortgage story waits for artwork and recovers after an image error', async
   await expect(story.locator('i')).toHaveCSS('animation-play-state', 'paused');
   await expect(story.getByRole('heading')).toHaveText('Начните с выбора');
   release();
-  await expect(story.getByText('Не удалось загрузить иллюстрацию')).toBeVisible();
+  await expect(story.getByText('Не удалось загрузить иллюстрацию')).toHaveCount(0);
+  await expect(story.getByRole('button',{name:'Обновить иллюстрацию'})).toBeVisible();
   await page.unroute('**/mortgage-v5-programs.webp');
   await story.getByRole('button', { name: 'Повторить' }).click();
   await expect(story.locator('i')).toHaveCSS('animation-play-state', 'running');
