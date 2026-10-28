@@ -35,7 +35,7 @@ jobs:
       - run: npx playwright install --with-deps chromium webkit
       - run: npx playwright test tests/ui/property-experience.spec.ts tests/ui/property-upgrade.spec.ts tests/ui/mobile-scroll.spec.ts tests/ui/price-entry-select.spec.ts tests/ui/yandex-map.spec.ts --workers=1
       - run: npx playwright test --config=playwright.finance-webkit.config.ts tests/ui/property-experience.spec.ts tests/ui/property-upgrade.spec.ts tests/ui/mobile-scroll.spec.ts tests/ui/price-entry-select.spec.ts tests/ui/yandex-map.spec.ts --workers=1
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: pulse-property-review
