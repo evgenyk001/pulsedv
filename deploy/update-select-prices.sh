@@ -42,9 +42,12 @@ recover(){
   exit "$status"
 }
 trap recover EXIT
+# Git checkout permissions must allow the unprivileged container user to read new sources.
+umask 022
 git fetch origin "$target"
 git merge --ff-only "$target"
 test "$(git rev-parse HEAD)" = "$target"
+umask 077
 docker compose config --quiet
 docker compose build api worker web
 docker compose run --rm -T --no-deps api node --import tsx backend/src/preflight.ts
