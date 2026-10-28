@@ -88,7 +88,7 @@ for(const width of [320,390,430])test(`Property experience ${width}px: fullscree
 test('Control changes exact ruble prices, gallery order and captions used in Mini App',async({page})=>{
  await seed(page);await page.goto('/pulsedv/control-center/#/objects');await page.locator('.catalogObjectCard').filter({hasText:'ЖК Приморский'}).click();
  const editor=page.getByRole('dialog',{name:'Редактор объекта'});
- await editor.getByLabel('Цена от, ₽',{exact:true}).first().fill('8123456');
+ await editor.getByLabel('Стартовая стоимость квартиры',{exact:true}).fill('8123456');
  await editor.getByLabel('Подпись фото 2').fill('Двор без машин');await editor.getByRole('button',{name:'Переместить фото 2 раньше',exact:true}).click();await expect(editor.getByLabel('Подпись фото 1')).toHaveValue('Двор без машин');
  await editor.getByRole('button',{name:'Готово',exact:true}).click();
  await page.goto('/pulsedv/mini-app/#/property/primorskiy');await expect(page.getByText('от '+rub(8123456)+' ₽',{exact:true}).first()).toBeVisible();

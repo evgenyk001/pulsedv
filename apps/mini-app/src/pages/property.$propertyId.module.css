@@ -132,3 +132,5 @@
 .projectFacts[data-count="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}.projectFacts[data-count="3"]>div{display:flex;flex-direction:column;gap:5px}.projectFacts[data-count="3"] svg{display:none}
 
 .financeSummary small{display:flex;flex-direction:column;gap:2px}
+
+.startingPrice .squareMetre{font-size:12px;line-height:1.4;font-weight:450;font-variant-numeric:tabular-nums}

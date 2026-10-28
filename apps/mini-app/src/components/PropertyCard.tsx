@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Heart, Building2 } from "lucide-react";
 import { PropertyRecord } from "../helpers/propertyTypes";
 import { useFavoriteIds } from "../helpers/useFavoriteIds";
-import {catalogImageVariant} from "../../../../packages/domain/propertyPresentation";
+import {catalogImageVariant,formatPropertyMillions,propertyPricePerSqmLabel} from "../../../../packages/domain/propertyPresentation";
 import styles from "./PropertyCard.module.css";
 
 type PropertyCardProps={property:PropertyRecord;compact?:boolean;returnTo?:string};
@@ -45,7 +45,7 @@ export function PropertyCard({property,compact=false,returnTo}:PropertyCardProps
       <div className={styles.body}>
         <strong>{property.name}</strong>
         <span>{property.city} · {property.district}</span>
-        <div><b>от {property.priceFrom.toFixed(1).replace(".",",")} млн ₽</b><small>{property.delivery}</small></div>
+        <div><div className={styles.priceStack}><b>от {formatPropertyMillions(property.priceFrom)} млн ₽</b>{propertyPricePerSqmLabel(property)&&<small className={styles.squareMetre}>{propertyPricePerSqmLabel(property)}</small>}</div><small>{property.delivery}</small></div>
       </div>
     </Link>
     <button className={`${styles.heart} ${saved?styles.saved:""}`} onClick={()=>toggle(property.id)} aria-pressed={saved} aria-label={saved?"Убрать из избранного":"Добавить в избранное"}>

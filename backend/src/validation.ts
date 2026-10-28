@@ -21,6 +21,9 @@ export const financeSchema=z.object({commissionRub:money,agentPayoutRub:money,ex
 });
 const finishTypeSchema=z.enum(['rough','white_box','finished','unfinished']);
 export const projectDetailsSchema=z.object({
+ startingApartmentArea:z.number().positive().max(10000).nullable().optional(),
+ priceInputMode:z.enum(['total','per_sqm']).optional(),
+ pricePerSqmFromRub:z.number().positive().max(1_000_000_000).nullable().optional(),
  commissioningDate:z.iso.date().nullable().default(null),
  totalApartments:z.number().int().nonnegative().max(2_000_000).nullable().default(null),
  availableApartments:z.number().int().nonnegative().max(2_000_000).nullable().default(null),
@@ -88,7 +91,7 @@ export const leadSchema=z.object({idempotencyKey:z.uuid(),source:text(100).min(1
 
 export const eventsSchema=z.object({events:z.array(z.object({idempotencyKey:z.uuid(),eventType:z.enum(publicEventTypes),entityType:nullableText(80).optional(),entityId:nullableText(200).optional(),metadata:z.record(z.string(),z.unknown()).default({}),occurredAt:z.iso.datetime()})).min(1).max(100)});
 export function safeMetadata(input:Record<string,unknown>){
- const allowed=['medium','campaign','propertyIds','city','district','priceFrom','min','max','rooms','delivery','sea','mortgage','topScore','strongCount','program','price','down','years','rate','payment','results','source','policyVersion','purchaseMode','preferences','method','outcome','propertyName','floorplanId','areaFrom','areaTo','finishType','kind','position','target','propertyKind','preferredRate','marketRate','subsidizedLimit','marketPrincipal','status','blockReason','largeArea','futureRate','scenarioVersion'];
+ const allowed=['medium','campaign','propertyIds','city','district','priceFrom','min','max','rooms','delivery','sea','mortgage','topScore','strongCount','program','price','down','years','rate','payment','results','source','policyVersion','purchaseMode','housingClasses','preferences','method','outcome','propertyName','floorplanId','areaFrom','areaTo','finishType','kind','position','target','propertyKind','preferredRate','marketRate','subsidizedLimit','marketPrincipal','status','blockReason','largeArea','futureRate','scenarioVersion'];
  const entries:[string,unknown][]=[];
  for(const [key,value] of Object.entries(input)){
   if(!allowed.includes(key))continue;

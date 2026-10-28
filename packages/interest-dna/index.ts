@@ -1,3 +1,4 @@
+import {apartmentFinishLabel} from '../domain/propertyFinish';
 import {reactionLabels,type Reaction} from '../journey/model';
 import type { PulseEvent, PulseState } from '../pulse-data/model';
 import { selectionMatch, type SelectionCriteria, type PreferenceId } from '../domain/propertyMatch';
@@ -26,6 +27,10 @@ function selectionFacts(event:PulseEvent):Fact[]{
  const facts:Fact[]=[];const add=(key:string,label:string,value:string)=>{if(value)facts.push({key,label,value,evidence})};
  add('city','Город',specified(m.city));const r=room(m.rooms);add('rooms','Комнатность',r?roomLabel(r):'');
  add('delivery','Сдача дома',specified(m.delivery));
+ add('housingClasses','Класс жилья',text(m.housingClasses));
+ const areaFrom=num(m.areaFrom),areaTo=num(m.areaTo);
+ if(areaFrom||areaTo)add('area','Площадь',(areaFrom?'от '+areaFrom:'')+(areaTo?' до '+areaTo:'')+' м²');
+ if(['rough','white_box','finished'].includes(text(m.finishType)))add('finishType','Отделка',apartmentFinishLabel(m.finishType as 'rough'|'white_box'|'finished'));
  const mode=m.purchaseMode==='mortgage'||m.mortgage===true?'mortgage':m.purchaseMode==='cash'||m.mortgage===false?'cash':null;
  if(mode==='cash'){
   add('purchaseMode','Способ расчёта','По стоимости');const min=num(m.min),max=num(m.max);
@@ -124,7 +129,7 @@ export function buildInterestDNA(input:PulseEvent[],state:Pick<PulseState,'prope
     });
    }
   }else if(!mortgage&&financeKnown){
-   const criteria:SelectionCriteria={city:specified(m.city)||'Все',rooms:room(m.rooms)||'Все',delivery:specified(m.delivery)||'Не важно',purchaseMode:'cash',min:min??0,max:max??Number.MAX_SAFE_INTEGER,downPayment:0,monthlyPayment:0,preferences:text(m.preferences).split(',').filter(x=>!!preferenceNames[x]) as PreferenceId[]};
+   const criteria:SelectionCriteria={city:specified(m.city)||'Все',rooms:room(m.rooms)||'Все',housingClasses:text(m.housingClasses).split(',').map(v=>v.trim()).filter(Boolean),areaFrom:num(m.areaFrom),areaTo:num(m.areaTo),finishType:['rough','white_box','finished'].includes(text(m.finishType))?m.finishType as 'rough'|'white_box'|'finished':null,delivery:specified(m.delivery)||'Не важно',purchaseMode:'cash',min:min??0,max:max??Number.MAX_SAFE_INTEGER,downPayment:0,monthlyPayment:0,preferences:text(m.preferences).split(',').filter(x=>!!preferenceNames[x]) as PreferenceId[]};
    const matches=state.properties.filter(p=>p.status==='published').map(p=>({p,match:selectionMatch(p,criteria,state.mortgagePrograms,state.select.weights)})).filter(x=>x.match.eligible).sort((a,b)=>b.match.score-a.match.score||a.p.id.localeCompare(b.p.id));
    for(const {p,match} of matches.slice(0,3))recommendations.push({id:p.id,name:p.name,reasons:match.reasons,tradeoffs:match.tradeoffs});
   }

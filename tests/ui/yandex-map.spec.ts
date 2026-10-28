@@ -28,6 +28,19 @@ async function setup(page:Page,state=DEFAULT_STATE){
 }
 const openMap='/pulsedv/mini-app/#/catalog?view=map&city='+encodeURIComponent('Владивосток');
 
+test('Map rounds fractional prices and shows a confirmed square-metre price in the preview',async({page})=>{
+ const state=structuredClone(DEFAULT_STATE);state.properties[0].priceFrom=6.05706;
+ state.properties[0].projectDetails={commissioningDate:null,totalApartments:null,availableApartments:null,pricePerSqmFromRub:151426.5};
+ await setup(page,state);
+ await page.route('https://api-maps.yandex.ru/v3/**',route=>route.fulfill({contentType:'application/javascript',body:sdkFixture}));
+ await page.goto(openMap);
+ await page.getByRole('button',{name:'ЖК Приморский, от 6,1 млн рублей',exact:true}).click();
+ const preview=page.getByRole('article',{name:'ЖК Приморский',exact:true});
+ await expect(preview).toContainText('от 6,1 млн ₽');
+ await expect(preview).toContainText(/151\s*427 ₽\/м²/);
+ await expect(preview).not.toContainText('6,05706');
+});
+
 for(const width of [320,390])test(`Yandex SDK contract ${width}px: pins, zoom, selection, property navigation and cleanup`,async({page})=>{
  await page.setViewportSize({width,height:844});await setup(page);
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));

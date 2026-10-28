@@ -1,3 +1,7 @@
+import {housingClassChoices,housingClassMatches,housingClassKey,mentionedHousingClasses} from '../../../../packages/domain/housingClass';
+import {APARTMENT_FINISHES,apartmentFinishLabel} from '../../../../packages/domain/propertyFinish';
+import {propertyPricePerSqmLabel} from '../../../../packages/domain/propertyPresentation';
+import type {ApartmentFinish} from '../../../../packages/pulse-data/model';
 import {LoadRecovery} from '../components/LoadRecovery';
 import {publishedCatalogFacets,roomChoiceLabel} from '../../../../packages/domain/catalogFacets';
 import {IconTile} from '../components/IconTile';
@@ -86,6 +90,10 @@ const preferenceIcon=(id:PreferenceId)=>{
 };
 
 type SavedSelection={
+  housingClasses?:string[];
+  areaFrom?:number|null;
+  areaTo?:number|null;
+  finishType?:ApartmentFinish|null;
   step?:number;
   city?:string;
   rooms?:string;
@@ -148,6 +156,12 @@ export default function SelectionPage(){
   const [openPanel,setOpenPanel]=React.useState<PanelId|null>("essentials");
   const [city,setCity]=React.useState(defaultCity);
   const [rooms,setRooms]=React.useState(defaultRooms);
+  const [housingClasses,setHousingClasses]=React.useState<string[]>(Array.isArray(saved.housingClasses)?saved.housingClasses.filter((v):v is string=>typeof v==='string').slice(0,8):[]);
+  const [areaFrom,setAreaFrom]=React.useState<number|null>(typeof saved.areaFrom==='number'&&saved.areaFrom>0&&saved.areaFrom<=10000?saved.areaFrom:null);
+  const [areaTo,setAreaTo]=React.useState<number|null>(typeof saved.areaTo==='number'&&saved.areaTo>0&&saved.areaTo<=10000?saved.areaTo:null);
+  const [finishType,setFinishType]=React.useState<ApartmentFinish|null>(APARTMENT_FINISHES.some(([id])=>id===saved.finishType)?saved.finishType!:null);
+  const classOptions=React.useMemo(()=>housingClassChoices(properties.filter(p=>city==='Все'||p.city===city).map(p=>p.className)),[properties,city]);
+  const invalidArea=[areaFrom,areaTo].some(value=>value!==null&&(!Number.isFinite(value)||value<=0||value>10000))||(areaFrom!==null&&areaTo!==null&&areaFrom>areaTo);
   const [purchaseMode,setPurchaseMode]=React.useState<PurchaseMode>(control.select.mortgageEnabled&&saved.purchaseMode!=="cash"?"mortgage":"cash");
   const [budget,setBudget]=React.useState<[number,number]>(saved.budget||[FALLBACK_MIN,FALLBACK_MAX]);
   const [budgetDraft,setBudgetDraft]=React.useState<[string,string]>([
@@ -296,6 +310,7 @@ export default function SelectionPage(){
   const criteria=React.useMemo<SelectionCriteria>(()=>({
     city,
     rooms,
+    housingClasses,areaFrom,areaTo,finishType,
     delivery,
     purchaseMode,
     min:budget[0],
@@ -305,11 +320,11 @@ export default function SelectionPage(){
     mortgageProgram,
     mortgageScenario:appliedMortgageScenario,
     preferences,
-  }),[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,appliedMortgageScenario,preferences]);
+  }),[city,rooms,housingClasses,areaFrom,areaTo,finishType,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,appliedMortgageScenario,preferences]);
 
   const rankFor=React.useCallback((next:SelectionCriteria)=>properties
     .map(property=>({property,match:selectionMatch(property,next,control.mortgagePrograms,control.select.weights)}))
-    .sort((a,b)=>Number(b.match.eligible)-Number(a.match.eligible)||b.match.score-a.match.score||a.property.sortOrder-b.property.sortOrder)
+    .sort((a,b)=>Number(b.match.eligible)-Number(a.match.eligible)||b.match.score-a.match.score||a.match.tradeoffs.length-b.match.tradeoffs.length||(a.match.price??Infinity)-(b.match.price??Infinity)||a.property.id.localeCompare(b.property.id))
   ,[properties,control.mortgagePrograms,control.select.weights]);
 
   const ranked=React.useMemo(()=>rankFor(criteria),[rankFor,criteria]);
@@ -321,9 +336,9 @@ export default function SelectionPage(){
     :("до "+shortRub(budget[1]));
 
   const persistSelection=React.useCallback(()=>{
-    const value:SavedSelection={city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started,version:4};
+    const value:SavedSelection={city,rooms,housingClasses,areaFrom,areaTo,finishType,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started,version:5};
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(value));}catch{}
-  },[city,rooms,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started]);
+  },[city,rooms,housingClasses,areaFrom,areaTo,finishType,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started]);
 
   React.useEffect(()=>{persistSelection()},[persistSelection]);
 
@@ -341,6 +356,12 @@ export default function SelectionPage(){
     let nextPayment=monthlyPayment;
     let nextDelivery=delivery;
     const nextPreferences=[...preferences];
+    const classes=mentionedHousingClasses(text,classOptions);
+    if(classes.length){setHousingClasses(classes);found++;}
+    const parsedFinish=/без отделки|без ремонта|чернов/.test(text)?'rough':/white\s*box|вайт\s*бокс|предчистов/.test(text)?'white_box':/готов[а-я]* ремонт|с ремонтом|чистов[а-я]* отделк/.test(text)?'finished':null;
+    if(parsedFinish){setFinishType(parsedFinish);found++;}
+    const areaRange=text.match(/(?:от\s*)?(\d+(?:[.,]\d+)?)\s*(?:м[²2]\s*)?(?:до|[-–])\s*(\d+(?:[.,]\d+)?)\s*(?:м[²2]|кв\.?\s*м)/);
+    if(areaRange){const from=Number(areaRange[1].replace(',','.')),to=Number(areaRange[2].replace(',','.'));if(from>0&&to>=from&&to<=10000){setAreaFrom(from);setAreaTo(to);found++;}}
 
     const cityMatch=control.select.cities.find(value=>text.includes(value.toLowerCase().replace(/ё/g,"е")));
     if(cityMatch){nextCity=cityMatch;found++;}
@@ -388,11 +409,12 @@ export default function SelectionPage(){
       ["parking",/парков|паркинг|машин/],
       ["center",/центр|центральн/],
       ["courtyard",/двор|благоустрой|зел[её]н/],
-      ["finish",/отделк|ремонт|готов.*заех/],
+      ["finish",/white\s*box|предчистов|с отделкой|с ремонтом|готов.*заех/],
     ];
+    if(parsedFinish==='rough'){const index=nextPreferences.indexOf('finish');if(index>=0)nextPreferences.splice(index,1);}
     for(const [id,pattern] of preferenceMap){
       const enabled=control.select.preferenceEnabled[id]&&(id!=="sea"||control.select.seaEnabled);
-      if(enabled&&pattern.test(text)&&!nextPreferences.includes(id)){nextPreferences.push(id);found++;}
+      if(enabled&&!(id==="finish"&&parsedFinish==="rough")&&pattern.test(text)&&!nextPreferences.includes(id)){nextPreferences.push(id);found++;}
     }
 
     if(nextCity!=="Владивосток"||!control.select.seaEnabled){
@@ -425,7 +447,7 @@ export default function SelectionPage(){
     try{
       const history=JSON.parse(localStorage.getItem("pulse_selection_history")||"[]");
       const nextHistory=[{
-        city,rooms,min:budget[0],max:budget[1],delivery,
+        city,rooms,housingClasses,areaFrom,areaTo,finishType,min:budget[0],max:budget[1],delivery,
         mortgage:purchaseMode==="mortgage",downPayment,monthlyPayment,mortgageProgram,
         preferences,score:topScore,strongCount,createdAt:Date.now(),
       },...(Array.isArray(history)?history:[])].slice(0,5);
@@ -436,7 +458,7 @@ export default function SelectionPage(){
       eventType:"select_submit",
       entityType:"selection",
       metadata:{
-        city,rooms,min:budget[0],max:budget[1],delivery,
+        city,rooms,housingClasses:housingClasses.join(","),areaFrom,areaTo,finishType,min:budget[0],max:budget[1],delivery,
         mortgage:purchaseMode==="mortgage",
         sea:preferences.includes("sea"),
         down:downPayment,
@@ -446,7 +468,7 @@ export default function SelectionPage(){
         program:purchaseMode==="mortgage"?mortgageProgram:null,
         topScore,strongCount,results:eligible.length,
         propertyIds:eligible.slice(0,3).map(item=>item.property.id),
-        source:"pulse-select-v4",
+        source:"pulse-select-v5",
         policyVersion:MORTGAGE_POLICY_VERSION,
       }
     });
@@ -522,7 +544,7 @@ export default function SelectionPage(){
   };
 
   const panelSummary=(id:PanelId)=>{
-    if(id==="essentials")return city+" · "+roomChoiceLabel(rooms);
+    if(id==="essentials")return [city,roomChoiceLabel(rooms),...housingClasses,finishType?apartmentFinishLabel(finishType):null].filter(Boolean).join(" · ");
     if(id==="finance")return purchaseMode==="mortgage"
       ?formatRub(downPayment)+" ₽ ПВ · "+Math.round(monthlyPayment/1000)+" тыс./мес"
       :shortRub(budget[0])+" — "+shortRub(budget[1]);
@@ -542,13 +564,13 @@ export default function SelectionPage(){
   </button>;
 
   if(showResult){
-    const display=showAll?eligible:eligible.slice(0,3);
-    const source=eligible.length?display:ranked.slice(0,3);
+    const display=showAll?eligible:eligible.slice(0,6);
+    const source=eligible.length?display:ranked.filter(item=>(city==='Все'||item.property.city===city)&&housingClassMatches(item.property.className,housingClasses)).slice(0,6);
     return <div className={styles.page}>
       <section className={styles.selectResultSummary} aria-label="Результат PULSE Select">
         <div className={styles.selectResultTop}>
           <span className={styles.eyebrow}>PULSE SELECT</span>
-          <span className={styles.selectPolicy}><CircleCheck size={12}/>v4</span>
+          <span className={styles.selectPolicy}><CircleCheck size={12}/>v5</span>
         </div>
         <h1>{eligible.length
           ?eligible.length+" "+plural(eligible.length,["вариант подходит","варианта подходят","вариантов подходят"])
@@ -560,6 +582,9 @@ export default function SelectionPage(){
         <div className={styles.summaryChips}>
           <span><Home size={13}/>{city}</span>
           <span>{roomChoiceLabel(rooms)}</span>
+        {housingClasses.map(value=><span key={value}>{value}</span>)}
+        {(areaFrom!==null||areaTo!==null)&&<span>{areaFrom??0}–{areaTo??"∞"} м²</span>}
+        {finishType&&<span>{apartmentFinishLabel(finishType)}</span>}
           <span>{financeLabel}</span>
           {delivery!=="Не важно"&&<span>{delivery==="Сдан"?"Сдан":"до "+delivery}</span>}
         </div>
@@ -571,21 +596,22 @@ export default function SelectionPage(){
       </section>
 
       <section className={styles.matchList}>
+        {!source.length&&<p className={styles.disclaimer}>В выбранном городе пока нет ЖК указанного класса. Измените условия запроса.</p>}
         {source.map(({property,match},index)=>{
           const image=property.coverImageUrl||property.images[0]?.url;
           return <article className={styles.matchCard} key={property.id}>
             <div className={styles.matchMedia}>
               {image?<img src={image} alt={property.name}/>:<div className={styles.matchFallback}><Building2 size={28}/></div>}
-              <span className={styles.matchRank}>{index===0?"Лучшее совпадение":index===1?"Сильная альтернатива":"Стоит посмотреть"}</span>
+              <span className={styles.matchRank}>{!match.eligible?"Стоит уточнить параметры":index===0?"Лучшее совпадение":index===1?"Сильная альтернатива":"Подходит по запросу"}</span>
               <span className={styles.matchScore}>{match.score}%</span>
             </div>
             <div className={styles.matchBody}>
               <div className={styles.matchTitle}>
                 <div><strong>{property.name}</strong><span>{property.city} · {property.district}</span></div>
-                <b>{match.price?("от "+shortRub(match.price)):"По запросу"}</b>
+                <div className={styles.resultPrice}><b>{match.price?("от "+shortRub(match.price)):"По запросу"}</b>{propertyPricePerSqmLabel(property)&&<small>{propertyPricePerSqmLabel(property)}</small>}</div>
               </div>
 
-              <div className={styles.whyTitle}><Sparkles size={13}/><span>Почему подходит</span></div>
+              <div className={styles.whyTitle}><Sparkles size={13}/><span>{match.eligible?"Почему подходит":"Что совпало"}</span></div>
               <div className={styles.reasonList}>
                 {match.reasons.map(reason=><span key={reason}><Check size={12}/>{reason}</span>)}
               </div>
@@ -619,8 +645,8 @@ export default function SelectionPage(){
         </div>
       </section>}
 
-      {eligible.length>3&&!showAll&&<button type="button" className={styles.moreButton} onClick={()=>setShowAll(true)}>
-        Показать ещё {eligible.length-3} {plural(eligible.length-3,["вариант","варианта","вариантов"])}
+      {eligible.length>6&&!showAll&&<button type="button" className={styles.moreButton} onClick={()=>setShowAll(true)}>
+        Показать ещё {eligible.length-6} {plural(eligible.length-6,["вариант","варианта","вариантов"])}
       </button>}
 
       <div className={styles.resultActions}>
@@ -634,7 +660,7 @@ export default function SelectionPage(){
 
   return <div className={styles.page}>
     <header className={styles.selectHero}>
-      <div className={styles.selectHeroTop}><span className={styles.eyebrow}>PULSE SELECT</span><span className={styles.selectVersion}>4.0</span></div>
+      <div className={styles.selectHeroTop}><span className={styles.eyebrow}>PULSE SELECT</span><span className={styles.selectVersion}>5.0</span></div>
       <h1>Опишите, что ищете.<br/><em>PULSE соберёт остальное.</em></h1>
       <p>Не анкета и не сотня фильтров. Один живой запрос, который можно уточнять в любом порядке.</p>
     </header>
@@ -664,6 +690,9 @@ export default function SelectionPage(){
       <div className={styles.liveRequestChips}>
         <span>{city}</span>
         <span>{roomChoiceLabel(rooms)}</span>
+        {housingClasses.map(value=><span key={value}>{value}</span>)}
+        {(areaFrom!==null||areaTo!==null)&&<span>{areaFrom??0}–{areaTo??"∞"} м²</span>}
+        {finishType&&<span>{apartmentFinishLabel(finishType)}</span>}
         <span>{financeLabel}</span>
         {delivery!=="Не важно"&&<span>{delivery==="Сдан"?"Сдан":delivery}</span>}
         {preferences.slice(0,2).map(id=><span key={id}>{preferenceLabel(id)}</span>)}
@@ -675,7 +704,7 @@ export default function SelectionPage(){
 
     <section className={styles.selectPanels}>
       <article className={openPanel==="essentials"?styles.selectPanelOpen:styles.selectPanel}>
-        {panelHeader("essentials","Где и что","Город и комнатность",<Building2 size={18}/>)}
+        {panelHeader("essentials","Где и что","Город, комнатность, класс и площадь",<Building2 size={18}/>)}
         {openPanel==="essentials"&&<div className={styles.selectPanelBody}>
           <div className={styles.fieldBlock}>
             <label>Город</label>
@@ -684,6 +713,25 @@ export default function SelectionPage(){
           <div className={styles.fieldBlock}>
             <label>Комнатность</label>
             <NativeSelect aria-label="Комнатность" value={rooms} onChange={e=>{setStarted(true);setRooms(e.target.value);safeHaptic();}}>{roomOptions.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
+          </div>
+          <div className={styles.fieldBlock}>
+            <label>Класс жилья</label>
+            <div className={styles.classChoices}>
+              <button type="button" aria-pressed={!housingClasses.length} onClick={()=>{setStarted(true);setHousingClasses([])}}>Любой класс</button>
+              {classOptions.map(value=><button type="button" key={value} aria-pressed={housingClasses.some(v=>housingClassKey(v)===housingClassKey(value))} onClick={()=>{setStarted(true);setHousingClasses(current=>current.some(v=>housingClassKey(v)===housingClassKey(value))?current.filter(v=>housingClassKey(v)!==housingClassKey(value)):[...current,value])}}>{value}</button>)}
+            </div>
+          </div>
+          <div className={styles.fieldBlock}>
+            <label>Площадь квартиры, м²</label>
+            <div className={styles.areaInputs}>
+              <Input aria-label="Площадь от" placeholder="От" type="number" inputMode="decimal" min={1} max={10000} step="0.1" value={areaFrom??""} onChange={e=>{setStarted(true);setAreaFrom(e.target.value?Number(e.target.value):null)}}/>
+              <Input aria-label="Площадь до" placeholder="До" type="number" inputMode="decimal" min={1} max={10000} step="0.1" value={areaTo??""} onChange={e=>{setStarted(true);setAreaTo(e.target.value?Number(e.target.value):null)}}/>
+            </div>
+            {invalidArea&&<small role="status">Площадь «от» должна быть не больше площади «до».</small>}
+          </div>
+          <div className={styles.fieldBlock}>
+            <label>Отделка</label>
+            <NativeSelect aria-label="Отделка" value={finishType??""} onChange={e=>{setStarted(true);setFinishType(e.target.value as ApartmentFinish||null)}}><option value="">Не важно</option>{APARTMENT_FINISHES.map(([value,label])=><option key={value} value={value}>{label}</option>)}</NativeSelect>
           </div>
         </div>}
       </article>
@@ -763,7 +811,7 @@ export default function SelectionPage(){
       </article>
     </section>
 
-    <button type="button" className={styles.selectPrimary} disabled={catalog.isLoading||properties.length===0} onClick={finish}>
+    <button type="button" className={styles.selectPrimary} disabled={catalog.isLoading||properties.length===0||invalidArea} onClick={finish}>
       <span><strong>Показать подходящие</strong><small>{eligible.length?eligible.length+" "+plural(eligible.length,["вариант","варианта","вариантов"])+" сейчас":"Покажем ближайшие варианты"}</small></span>
       <ArrowRight size={18}/>
     </button>

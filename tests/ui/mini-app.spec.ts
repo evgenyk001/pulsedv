@@ -771,7 +771,10 @@ for(const width of [320,390])test(`Переписка ${width}px: чернови
  await page.screenshot({path:`test-results/chat-short-${width}.png`,animations:'disabled'});
  await page.getByRole('link',{name:'Все мои обращения',exact:true}).click();
  await expect(page.getByRole('link').filter({hasText:'Какой район удобнее?'})).toBeVisible();
- await expect(page.getByRole('link',{name:'На главную',exact:true})).toBeVisible();await expect(page.getByRole('link',{name:'Профиль',exact:true})).toBeVisible();
+ await expect(page.getByRole('link',{name:'На главную',exact:true})).toBeVisible();
+ // The redundant profile and refresh actions were intentionally removed from this screen.
+ await expect(page.getByRole('link',{name:'Профиль',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Обновить',exact:true})).toHaveCount(0);
  await expect(page.getByRole('navigation',{name:'Основная навигация'})).toBeVisible();
  await page.setViewportSize({width,height:844});await page.screenshot({path:`test-results/chat-inbox-${width}.png`,animations:'disabled'});
  expect(errors).toEqual([]);await manager.close();

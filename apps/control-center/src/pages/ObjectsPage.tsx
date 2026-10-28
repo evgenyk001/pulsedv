@@ -1,3 +1,4 @@
+import {StartingPriceEditor} from '../components/StartingPriceEditor';
 import {PlanDimensionsEditor} from '../components/PlanDimensionsEditor';
 import {PropertyLocationEditor} from '../components/PropertyLocationEditor';
 import {ProjectDetailsEditor} from '../components/ProjectDetailsEditor';
@@ -137,7 +138,8 @@ function PreviewObjectsPage(){
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>Карточка и страница ЖК</small></div></div>
         <div className="formGrid">
           {([['name','Название'],['city','Город'],['district','Район'],['address','Адрес'],['developerName','Застройщик'],['delivery','Срок сдачи'],['className','Класс'],['coverImageUrl','Обложка · HTTPS URL']] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input value={(p as any)[key]||''} onChange={e=>patch({[key]:e.target.value||(['address','coverImageUrl'].includes(key)?null:'')} as any)}/></label>)}
-          {([['priceFrom','Цена от, ₽'],['sortOrder','Порядок']] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input type="number" step={key==='priceFrom'?'1':'any'} value={(key==='priceFrom'?propertyPriceRub(p.priceFrom):(p as any)[key])??''} onChange={e=>patch({[key]:key==='priceFrom'?Math.round(Number(e.target.value))/1_000_000:Number(e.target.value)} as any)}/></label>)}
+          <StartingPriceEditor property={p} onChange={patch}/>
+          <label className="controlField"><span>Порядок</span><input type="number" value={p.sortOrder} onChange={e=>patch({sortOrder:Number(e.target.value)})}/></label>
           <label className="controlField"><span>Статус</span><select value={p.status} onChange={e=>patch({status:e.target.value as PulseProperty['status']})}><option value="draft">Черновик</option><option value="published">Опубликован</option><option value="archived">Архив</option></select></label>
           <label className="controlField"><span>Теги через запятую</span><input value={p.tags.join(', ')} onChange={e=>patch({tags:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})}/></label>
           <label className="controlField wide"><span>Описание</span><textarea rows={5} value={p.description} onChange={e=>patch({description:e.target.value})}/></label>
