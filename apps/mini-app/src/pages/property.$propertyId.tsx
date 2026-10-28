@@ -13,7 +13,7 @@ import {APARTMENT_FINISHES,canonicalApartmentFinish,planFinishOffers,planPriceFo
 import type {ApartmentFinish} from "../../../../packages/pulse-data/model";
 import {PropertyGallery} from "../components/PropertyGallery";
 import {usePulseControlState} from "../helpers/usePulseControlState";
-import {propertyPhotos,propertyMortgageLink,propertyPriceLabel,planPriceLabel,propertyPriceRub} from "../../../../packages/domain/propertyPresentation";
+import {propertyPhotos,propertyMortgageLink,propertyPriceLabel,planPriceLabel,propertyPriceRub,propertyPricePerSqmLabel} from "../../../../packages/domain/propertyPresentation";
 import {calculateMortgageScenario,readMortgageScenario,newbuildHasIncreasedLimit} from "../../../../packages/domain/mortgagePolicy";
 import { TrackedFloorplan } from "../components/TrackedFloorplan";
 import { Link, useParams, useLocation } from "react-router-dom";
@@ -100,6 +100,7 @@ export default function PropertyPage(){
   const matchedPricedPlans=(usesPlanPrice?p.floorplans.filter(plan=>!activeRoom||normalizeRoomLabel(plan.roomLabel)===activeRoom).map(plan=>({plan,price:selectedFinish?planPriceForFinish(plan,selectedFinish):planStartingPrice(plan)})):[])
     .filter((offer):offer is {plan:typeof p.floorplans[number];price:number}=>offer.price!==null).sort((a,b)=>a.price-b.price);
   const selectedPrice=usesPlanPrice?(matchedPricedPlans[0]?.price??null):p.priceFrom;
+  const squareMetreLabel=propertyPricePerSqmLabel(p,{plans:usesPlanPrice?matchedPricedPlans.map(offer=>offer.plan):undefined,finish:selectedFinish});
   const mortgagePrice=selectedPrice===null?null:propertyPriceRub(selectedPrice);
   const mortgagePlan=matchedPricedPlans[0]?.plan??p.floorplans.find(plan=>planStartingPrice(plan)!==null&&propertyPriceRub(planStartingPrice(plan)!)===mortgagePrice);
   const mortgageQuote=mortgageRule&&mortgagePrice!==null?calculateMortgageScenario({programs:control.mortgagePrograms,settings:{...savedScenario,programId:mortgageRule.id,propertyKind:'newbuild',largeArea:newbuildHasIncreasedLimit(mortgagePlan)},price:mortgagePrice,down:0}):null;
@@ -160,7 +161,7 @@ export default function PropertyPage(){
         <h1>{p.name}</h1>
         {fromPulse&&<span className={styles.selectionBadge}>Из вашей подборки PULSE Select</span>}
         <div className={styles.location}><MapPin size={14}/>{p.city} · {p.district}</div>
-        <div className={styles.startingPrice} role="region" aria-label="Стоимость выбранного варианта"><strong>{selectedPrice!==null?priceLabel(selectedPrice):'Цена уточняется'}</strong><span>{[activeRoom?(activeRoom==='Студия'?'Студия':activeRoom+' комн.'):null,selectedFinish?apartmentFinishLabel(selectedFinish):null].filter(Boolean).join(' · ')||'стоимость квартир в ЖК'}</span></div>
+        <div className={styles.startingPrice} role="region" aria-label="Стоимость выбранного варианта"><strong>{selectedPrice!==null?priceLabel(selectedPrice):'Цена уточняется'}</strong>{squareMetreLabel&&<span className={styles.squareMetre}>{squareMetreLabel}</span>}<span>{[activeRoom?(activeRoom==='Студия'?'Студия':activeRoom+' комн.'):null,selectedFinish?apartmentFinishLabel(selectedFinish):null].filter(Boolean).join(' · ')||'стоимость квартир в ЖК'}</span></div>
         <details className={styles.freshness}><summary>Цены и наличие подтвердим перед бронированием <ChevronRight size={13}/></summary><PropertyFreshness id={p.id}/></details>
         {shareNotice&&<span className={styles.shareNotice} role="status">{shareNotice}</span>}
         <div className={styles.projectFacts} data-count={facts.length} role="region" aria-label="Ключевые характеристики">{facts.map(({label,value,icon:Icon})=><div key={label}><Icon size={16}/><span>{label}</span><strong>{value}</strong></div>)}</div>

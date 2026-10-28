@@ -1,9 +1,32 @@
+import {squareMetreFromTotal} from './propertyPricing';
 import type {ApartmentFinish,PulseProperty} from '../pulse-data/model';
 import {planPriceForFinish,planStartingPrice,planPriceRange,type FinishablePlan} from './propertyFinish';
 
 export type PropertyPhoto={url:string;alt:string};
 export const propertyPriceRub=(price:number)=>Math.round(price*1_000_000);
 export const propertyPriceLabel=(price:number)=>'от '+propertyPriceRub(price).toLocaleString('ru-RU')+' ₽';
+export const formatPropertyMillions=(price:number)=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1}).format(price);
+
+/** The two project minima need not describe the same apartment. Never divide them. */
+export function propertyPricePerSqm(property:PulseProperty,options:{plans?:PulseProperty['floorplans'];finish?:ApartmentFinish|null}={}){
+ const explicit=property.projectDetails?.pricePerSqmFromRub;
+ if(options.plans===undefined&&!options.finish){
+  if(explicit!=null&&Number.isFinite(explicit)&&explicit>0)return explicit;
+  const paired=squareMetreFromTotal(propertyPriceRub(property.priceFrom),property.projectDetails?.startingApartmentArea??null);
+  if(paired!==null)return paired;
+ }
+ const prices=(options.plans??property.floorplans).flatMap(plan=>{
+  if(!(plan.areaFrom&&plan.areaFrom===plan.areaTo))return [];
+  const {from,to}=planPriceRange(plan,options.finish);
+  if(from==null||from<=0||(!plan.isExact&&to!==from))return [];
+  return [propertyPriceRub(from)/plan.areaFrom];
+ });
+ return prices.length?Math.round(Math.min(...prices)):null;
+}
+export function propertyPricePerSqmLabel(property:PulseProperty,options:Parameters<typeof propertyPricePerSqm>[1]={}){
+ const price=propertyPricePerSqm(property,options);
+ return price===null?null:'от '+Math.round(price).toLocaleString('ru-RU')+' ₽/м²';
+}
 export function planPriceLabel(plan:FinishablePlan,finish?:ApartmentFinish|null){
  const {from,to}=planPriceRange(plan,finish);
  if(from==null)return 'Цена уточняется';

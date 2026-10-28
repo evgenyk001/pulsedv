@@ -7,7 +7,7 @@ export type CatalogFreshness={source:string;responsible:string;verifiedAt:string
 export type DealFinance={commissionRub:number|null;agentPayoutRub:number|null;expectedPaymentOn:string|null;receivedOn:string|null;agentPaidOn:string|null};
 
 export type ApartmentFinish='rough'|'white_box'|'finished'|'unfinished';
-export type ProjectDetails={commissioningDate:string|null;totalApartments:number|null;availableApartments:number|null;finishes?:ApartmentFinish[];parkingSpaces?:number|null;floorsFrom?:number|null;floorsTo?:number|null;areaFrom?:number|null;areaTo?:number|null};
+export type ProjectDetails={commissioningDate:string|null;totalApartments:number|null;availableApartments:number|null;pricePerSqmFromRub?:number|null;startingApartmentArea?:number|null;priceInputMode?:'total'|'per_sqm';finishes?:ApartmentFinish[];parkingSpaces?:number|null;floorsFrom?:number|null;floorsTo?:number|null;areaFrom?:number|null;areaTo?:number|null};
 
 export type PulseProperty={
   projectDetails?:ProjectDetails;

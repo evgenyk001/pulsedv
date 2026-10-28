@@ -2,7 +2,7 @@ import React from 'react';
 import {ArrowUpRight,Building2,Heart,MapPin,Minus,Plus,RotateCw,X} from 'lucide-react';
 import {PropertyRecord} from '../helpers/propertyTypes';
 import {useFavoriteIds} from '../helpers/useFavoriteIds';
-import {catalogImageVariant} from '../../../../packages/domain/propertyPresentation';
+import {catalogImageVariant,formatPropertyMillions,propertyPricePerSqmLabel} from '../../../../packages/domain/propertyPresentation';
 import Supercluster,{type ClusterProperties} from 'supercluster';
 import {getMapConfig} from '../endpoints/map_config_GET.schema';
 import {createPropertyMap,type Coordinates,type MapMarker,type PropertyMapAdapter} from '../helpers/propertyMapAdapter';
@@ -19,7 +19,7 @@ type PropertyMapProps={
 };
 const located=(p:PropertyRecord)=>Number.isFinite(p.longitude)&&Number.isFinite(p.latitude)&&Math.abs(p.longitude!)<=180&&Math.abs(p.latitude!)<=90;
 const coordinates=(p:PropertyRecord):Coordinates=>[p.longitude!,p.latitude!];
-const price=(p:PropertyRecord)=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:6}).format(p.priceFrom);
+const price=(p:PropertyRecord)=>formatPropertyMillions(p.priceFrom);
 
 export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,immersive=false,city}:PropertyMapProps){
  const nodeRef=React.useRef<HTMLDivElement>(null);
@@ -191,7 +191,7 @@ export function PropertyMap({properties,selectedId,onSelect,onOpen,onShowList,im
     <div className={styles.heroCopy}><h2>{selected.name}</h2><p><MapPin size={12}/>{[selected.city,selected.district].filter(Boolean).join(' · ')}</p></div>
    </div>
    <div className={styles.previewBody}>
-    <div className={styles.previewFacts}><div><span>Стоимость квартиры</span><strong>от {price(selected)} <small>млн ₽</small></strong></div>{selected.delivery&&<div className={styles.delivery}><span>Срок сдачи</span><b>{selected.delivery}</b></div>}</div>
+    <div className={styles.previewFacts}><div><span>Стоимость квартиры</span><strong>от {price(selected)} <small>млн ₽</small></strong>{propertyPricePerSqmLabel(selected)&&<span className={styles.squareMetre}>{propertyPricePerSqmLabel(selected)}</span>}</div>{selected.delivery&&<div className={styles.delivery}><span>Срок сдачи</span><b>{selected.delivery}</b></div>}</div>
     {badges.length>0&&<div className={styles.features}>{badges.map(badge=><span key={badge}>{badge}</span>)}</div>}
     {favoriteError&&<p className={styles.favoriteError} role="status">{favoriteError}</p>}
     <button type="button" className={styles.openProject} aria-label={'Открыть '+selected.name} onClick={()=>(onOpen??onSelect)(selected.id)}><span>Смотреть ЖК</span><ArrowUpRight size={19}/></button>

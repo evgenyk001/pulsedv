@@ -2,10 +2,12 @@ import React from 'react';
 import type {PulseProperty,ApartmentFinish} from '../../../../packages/pulse-data/model';
 import {APARTMENT_FINISHES,canonicalApartmentFinish} from '../../../../packages/domain/propertyFinish';
 import {propertyPriceRub} from '../../../../packages/domain/propertyPresentation';
+import {totalFromSquareMetre,squareMetreFromTotal} from '../../../../packages/domain/propertyPricing';
 
 type Floorplan=PulseProperty['floorplans'][number];
 export function PlanFinishOptionsEditor({plan,onChange}:{plan:Floorplan;onChange:(next:Floorplan)=>void}){
  const offers=plan.finishOptions??[];
+ const [unitDraft,setUnitDraft]=React.useState<{index:number;value:string}|null>(null);
  const add=()=>{
   const free=APARTMENT_FINISHES.find(([key])=>!offers.some(offer=>canonicalApartmentFinish(offer.finishType)===key));
   if(free)onChange({...plan,finishType:null,finishOptions:[...offers,{finishType:free[0],priceFrom:null,priceTo:null}]});
@@ -23,6 +25,10 @@ export function PlanFinishOptionsEditor({plan,onChange}:{plan:Floorplan;onChange
      {APARTMENT_FINISHES.filter(([key])=>key===canonicalApartmentFinish(offer.finishType)||!offers.some((item,i)=>i!==index&&canonicalApartmentFinish(item.finishType)===key)).map(([key,label])=><option key={key} value={key}>{label}</option>)}
     </select>
    </label>
+   {plan.isExact&&<label className="controlField"><span>Цена за м² для этой отделки, ₽</span><input aria-label={'Цена за квадратный метр отделки варианта '+(index+1)} type="number" min="0.01" step="0.01" disabled={!plan.areaFrom} placeholder="Укажите точную площадь" value={unitDraft?.index===index?unitDraft.value:squareMetreFromTotal(offer.priceFrom==null?null:propertyPriceRub(offer.priceFrom),plan.areaFrom)??''} onFocus={e=>setUnitDraft({index,value:e.target.value})} onBlur={()=>setUnitDraft(null)} onChange={e=>{
+    setUnitDraft({index,value:e.target.value});
+    const total=totalFromSquareMetre(e.target.value===''?null:Number(e.target.value),plan.areaFrom);const price=total===null?null:total/1000000;update(index,{...offer,priceFrom:price,priceTo:price});
+   }}/></label>}
    <label className="controlField"><span>{plan.isExact?'Цена, ₽ для этой отделки':'Цена от, ₽ для этой отделки'}</span>
     <input aria-label={'Цена отделки варианта '+(index+1)} type="number" min="1" step="1" placeholder="Уточняется" value={offer.priceFrom===null?'':propertyPriceRub(offer.priceFrom)} onChange={e=>{const price=e.target.value===''?null:Math.round(Number(e.target.value))/1_000_000;update(index,{...offer,priceFrom:price,...(plan.isExact?{priceTo:price}:{})})}}/>
    </label>

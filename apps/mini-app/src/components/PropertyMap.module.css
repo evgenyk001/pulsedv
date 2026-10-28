@@ -70,3 +70,5 @@
 .groupList small{font-size:9px;color:#78828e}
 .groupList strong{font-size:10px;white-space:nowrap;color:var(--primary)}
 @media(prefers-reduced-motion:reduce){.clusterPin{transition:none}}
+
+.previewFacts .squareMetre{display:block;margin-top:5px;font-size:11px;line-height:1.35;font-weight:450;color:var(--muted-foreground);font-variant-numeric:tabular-nums}

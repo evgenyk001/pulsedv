@@ -52,8 +52,17 @@ const normalizeBase=(row:any):CatalogProperty=>({
 });
 
 async function hydrate(sql:Sql,items:CatalogProperty[],view:CatalogView){
-  if(!items.length||view==="card")return items;
+  if(!items.length)return items;
   const ids=items.map(item=>item.id);
+  if(view==='card'){
+    const prices=await sql.query(`select property_id,round(min(price_from*1000000/area_from)) as price
+      from catalog_property_floorplans where property_id=any($1::text[]) and area_from>0 and area_to=area_from
+      and price_from>0 and (is_exact=true or price_to=price_from) group by property_id`,[ids]);
+    for(const row of prices.rows){const item=items.find(p=>p.id===row.property_id)!;
+      if(!((item.projectDetails?.pricePerSqmFromRub??0)>0))item.projectDetails={commissioningDate:null,totalApartments:null,availableApartments:null,...item.projectDetails,pricePerSqmFromRub:Number(row.price)};
+    }
+    return items;
+  }
   const byId=new Map(items.map(item=>[item.id,item]));
 
   const [features,floorplans]=await Promise.all([
