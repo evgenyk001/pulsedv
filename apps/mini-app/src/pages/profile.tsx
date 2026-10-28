@@ -65,7 +65,7 @@ export default function ProfilePage(){
       <MenuLink to="/privacy" icon={<ShieldCheck/>} title="Персональные данные"/>
       <Sheet>
         <SheetTrigger asChild><MenuButton icon={<Info/>} title="О сервисе PULSEDV.RU"/></SheetTrigger>
-        <SheetContent side="bottom" className={styles.infoSheet}>
+        <SheetContent side="bottom" className={`${styles.infoSheet} ${styles.aboutSheet}`}>
           <SheetHeader><SheetTitle>О PULSEDV.RU</SheetTitle><SheetDescription>Новостройки Приморья и помощь с покупкой квартиры — от первого выбора до сделки.</SheetDescription></SheetHeader>
           <div className={styles.aboutContent}>
             <section className={styles.aboutSection}><span className={styles.aboutEyebrow}>ОСНОВАТЕЛЬНИЦА</span><h2>Диана Козменко</h2><p>Основательница PULSE.DV — агентства недвижимости в Приморском крае. PULSEDV.RU объединяет каталог новостроек и работу с командой агентства в одном приложении.</p></section>

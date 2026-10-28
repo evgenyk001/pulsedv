@@ -15,6 +15,14 @@
 .aboutSection h2{margin:0 0 8px;font-size:17px;line-height:1.25;letter-spacing:-.025em}
 .aboutSection p{margin:0;font-size:13px;line-height:1.65;color:var(--muted-foreground)}
 .aboutEyebrow{display:block;margin-bottom:8px;font-size:9px;font-weight:700;letter-spacing:.12em;color:var(--muted-foreground)}
+.aboutSheet{box-sizing:border-box;max-height:min(90dvh,calc(var(--sheet-viewport-height,100dvh) - var(--pulse-safe-top) - var(--pulse-safe-bottom) - 16px));padding:30px var(--app-sheet-inline) 18px}
+.aboutSheet [data-sheet-header]{padding:8px 4px 10px}
+.aboutSheet .aboutContent{gap:14px;margin-top:6px}
+.aboutSheet .aboutSection h2{margin-bottom:6px}
+.aboutSheet .aboutSection p{line-height:1.5}
+.aboutSheet .aboutEyebrow{margin-bottom:6px}
+.aboutSheet .about{margin-top:14px;padding:12px}
+.aboutSheet .about p{line-height:1.5}
 
 
 .page>header{align-items:flex-start;gap:14px}
