@@ -48,7 +48,7 @@ function setupAccount(active=false){
   if(path.startsWith('/public/catalog/'))return {property:DEFAULT_STATE.properties.find(p=>p.id===path.split('/').at(-1))};
   return {ok:true,items:[]};
  };
- return {starts:()=>starts,messages:()=>messages,lastStart:()=>lastStart,deletes:()=>deletes,reply:()=>{items[0].managerHasReplied=true;items[0].journey.messages.push({id:'manager-reply',author:'manager',authorName:'Мария',text:'Добрый день! Помогу с подбором.',at:new Date().toISOString()})}};
+ return {starts:()=>starts,messages:()=>messages,lastStart:()=>lastStart,deletes:()=>deletes,reply:()=>{items[0].managerName=null;items[0].managerHasReplied=true;items[0].journey.messages.push({id:'manager-reply',author:'manager',authorName:'Мария',text:'Добрый день! Помогу с подбором.',at:new Date().toISOString()})}};
 }
 async function prepare(page:any){
  await page.addInitScript(state=>localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion),DEFAULT_STATE);
