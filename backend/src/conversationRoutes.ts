@@ -18,8 +18,9 @@ export function registerConversationRoutes(app:FastifyInstance,db:Database,confi
   if(input.referralCode&&!input.referralConsent)throw new HttpError(400,'Подтвердите рекомендацию');
   return db.transaction(async sql=>{
    await sql.query('select id from sessions where id=$1 for update',[identity.sessionId]);
-   const user=(await sql.query('select u.* from app_users u join telegram_contact_consent c on c.user_id=u.id where u.id=$1 and u.phone is not null and c.accepted_at is not null',[identity.userId])).rows[0];
+   const user=(await sql.query('select u.*,c.accepted_at as registration_consent_at,c.consent_version as registration_consent_version from app_users u join telegram_contact_consent c on c.user_id=u.id where u.id=$1 and u.phone is not null and c.accepted_at is not null',[identity.userId])).rows[0];
    if(!user)throw new HttpError(403,'Подтвердите свой номер в Telegram');
+   if(user.registration_consent_version!==config.CONSENT_VERSION)throw new HttpError(409,'Подтвердите обновлённые условия при входе');
    await lockBuyerIdentity(sql,user.phone,identity.userId);
    const context=safeLeadContext(input.context??{});
    context.source=input.source;
@@ -30,6 +31,7 @@ export function registerConversationRoutes(app:FastifyInstance,db:Database,confi
    const active=!input.newPurchase&&!input.referralCode?(await sql.query(`select id,manager_id from leads where user_id=$1 and status not in ('closed','lost','deal') and ($2::text is null or property_id=$2 or property_id is null) order by case when property_id=$2 then 0 else 1 end,created_at desc,id desc limit 1 for update`,[identity.userId,input.propertyId??null])).rows[0]:null;
    const fullName=([user.first_name,user.last_name].filter(Boolean).join(' ').trim()||user.telegram_username||'').slice(0,100);
    const result=active??await createLead(sql,leadSchema.parse({idempotencyKey:input.idempotencyKey,source:input.source,propertyId:input.propertyId??null,name:fullName.length>=2?fullName:'Клиент Telegram',phone:user.phone,comment:input.text,context,consent:true,consentVersion:config.CONSENT_VERSION,referralCode:input.referralCode,referralConsent:input.referralConsent}),r);
+   if(!active)await sql.query('update leads set consent_at=$2,consent_version=$3 where id=$1',[result.id,user.registration_consent_at,user.registration_consent_version]);
    const current=await withMessages(sql,(await sql.query('select document from client_journeys where lead_id=$1',[result.id])).rows[0]?.document??emptyJourney(result.id));
    const next=applyJourney(current,{type:'message',id:randomUUID(),text:input.text,requestContext:context},'client');
    const message=next.messages!.at(-1)!;

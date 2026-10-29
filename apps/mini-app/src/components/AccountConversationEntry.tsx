@@ -1,7 +1,7 @@
 import React from 'react';
 import {Link,useNavigate} from 'react-router-dom';
 import {useQueryClient} from '@tanstack/react-query';
-import {ArrowUp,MessageCircle,ShieldCheck} from 'lucide-react';
+import {ArrowUp,MessageCircle} from 'lucide-react';
 import {visitorApi,runtime} from '../../../../packages/pulse-data/runtime';
 import {loadJourneys} from '../../../../packages/journey/client';
 import {rememberedPartnerInvite,clearPartnerInvite} from '../../../../packages/partners/client';
@@ -36,11 +36,11 @@ export function AccountConversationDraft({details}:{details:ConversationDraft}){
  const restored=React.useMemo(()=>{try{return JSON.parse(sessionStorage.getItem(storageKey)??'{}')}catch{return {}}},[storageKey]);
  const [text,setText]=React.useState<string>(typeof restored.text==='string'?restored.text:'');
  const id=React.useRef(typeof restored.id==='string'?restored.id:crypto.randomUUID());
- const [consent,setConsent]=React.useState(false),[referralConsent,setReferralConsent]=React.useState(false),[referralCode,setReferralCode]=React.useState(details.referralCode);
+ const [referralConsent,setReferralConsent]=React.useState(false),[referralCode,setReferralCode]=React.useState(details.referralCode);
  const [busy,setBusy]=React.useState(false),[error,setError]=React.useState('');const locked=React.useRef(false);
  React.useEffect(()=>{try{sessionStorage.setItem(storageKey,JSON.stringify({id:id.current,text}))}catch{}},[storageKey,text]);
  const send=async(e:React.FormEvent)=>{
-  e.preventDefault();if(locked.current||!text.trim()||!consent)return;locked.current=true;setBusy(true);setError('');
+  e.preventDefault();if(locked.current||!text.trim())return;locked.current=true;setBusy(true);setError('');
   try{
    const result=await visitorApi<{id:string}>('/me/conversations/start',{method:'POST',body:JSON.stringify({idempotencyKey:id.current,source:details.source,propertyId:details.propertyId??null,context:{...details.context,...(details.project?{propertyName:details.project}:{})},text:text.trim(),newPurchase:!!details.newPurchase,consent:true,consentVersion:runtime.consentVersion,...(referralCode&&referralConsent?{referralCode,referralConsent:true}:{})})});
    try{sessionStorage.removeItem(storageKey)}catch{}clearPartnerInvite();
@@ -54,12 +54,10 @@ export function AccountConversationDraft({details}:{details:ConversationDraft}){
    {details.project&&<div className={styles.chatContextNote}><small>Обсуждаем</small><strong>{details.project}</strong></div>}
   </section>
   <form className={`${styles.composer} ${styles.firstComposer}`} onSubmit={send}>
-   <label className={styles.firstConsent}><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>Согласен на обработку обращения и подбор недвижимости. <Link to="/personal-data-consent">Согласие</Link></span></label>
    {referralCode&&<><label className={styles.firstConsent}><input type="checkbox" checked={referralConsent} onChange={e=>setReferralConsent(e.target.checked)}/><span>Меня пригласил(а) {details.referralName||'партнёр PULSE'}. Разрешаю передавать партнёру имя и статусы рекомендации, включая начисление и выплату вознаграждения. Телефон и переписка ему не передаются.</span></label><button type="button" className={styles.linkAction} onClick={()=>{setReferralCode(undefined);setReferralConsent(false);clearPartnerInvite()}}>Я обратился самостоятельно</button></>}
    {error&&<p className={styles.entryError} role="alert">{error}</p>}
    <label className={styles.srOnly} htmlFor="first-message">Сообщение</label><textarea id="first-message" placeholder="Написать сообщение…" maxLength={2000} rows={2} value={text} readOnly={busy} onChange={e=>setText(e.target.value)}/>
-   <button className={styles.sendButton} type="submit" aria-label="Отправить сообщение" disabled={busy||!text.trim()||!consent||!!referralCode&&!referralConsent}><ArrowUp size={21}/></button>
-   <small className={styles.firstHint}><ShieldCheck size={12}/>Ваши контакты уже сохранены в аккаунте</small>
+   <button className={styles.sendButton} type="submit" aria-label="Отправить сообщение" disabled={busy||!text.trim()||!!referralCode&&!referralConsent}><ArrowUp size={21}/></button>
   </form>
  </div>;
 }

@@ -1,3 +1,5 @@
+import {SwipeRow} from '../components/SwipeRow';
+import {setJourneyPreferences} from '../../../../packages/journey/client';
 import {AccountConversationDraft} from '../components/AccountConversationEntry';
 import {runtime} from '../../../../packages/pulse-data/runtime';
 import {LoadRecovery} from '../components/LoadRecovery';
@@ -5,8 +7,8 @@ import {BackLink} from "../components/BackLink";
 import {IconTile} from '../components/IconTile';
 import React from 'react';
 import {Link, useLocation, useSearchParams} from 'react-router-dom';
-import {useQuery} from '@tanstack/react-query';
-import {ArrowRight, MessageCircle, CalendarDays, Sparkles, Plus, ChevronRight} from 'lucide-react';
+import {useQuery,useQueryClient} from '@tanstack/react-query';
+import {ArrowRight, MessageCircle, CalendarDays, Sparkles, Plus, ChevronRight, Pin, PinOff, Trash2} from 'lucide-react';
 import {useClientJourneys} from '../helpers/useClientJourneys';
 import {getPropertiesByIds} from '../helpers/catalogApi';
 import {LeadSheet} from '../components/LeadSheet';
@@ -16,8 +18,13 @@ import styles from './journey.module.css';
 export default function JourneyPage(){
  const [params]=useSearchParams();
  const location=useLocation();
+ const cache=useQueryClient();
+ const [removed,setRemoved]=React.useState<string|null>(null),[undoError,setUndoError]=React.useState(false);
+ const changePreference=async(id:string,input:{pinned?:boolean;hidden?:boolean})=>{await setJourneyPreferences(id,input);await cache.invalidateQueries({queryKey:['my-journeys']});if(input.hidden)setRemoved(id)};
  const query=useClientJourneys(params.get('lead')?10000:30000);
  const items=query.data?.items||[];
+ const visibleItems=items.filter(e=>!e.hiddenAt);
+ React.useEffect(()=>{if(removed&&visibleItems.some(e=>e.leadId===removed))setRemoved(null)},[query.data,removed]);
  const ids=[...new Set(items.flatMap(e=>[e.propertyId,...e.journey.collections.flatMap(c=>c.items.map(i=>i.propertyId)),...e.journey.showings.map(s=>s.propertyId)]).filter((id):id is string=>!!id))].sort();
  const catalog=useQuery({queryKey:['journey-properties',ids],queryFn:()=>getPropertiesByIds(ids),enabled:ids.length>0,staleTime:60000});
  const properties=catalog.data||[];
@@ -28,14 +35,15 @@ export default function JourneyPage(){
  return <div className={styles.page}>
   <nav className={styles.navigation} data-app-back-row aria-label="Навигация по обращениям"><BackLink to="/" aria-label="На главную"/></nav>
   <header className={styles.pageHeader}><span>НА СВЯЗИ С PULSEDV.RU</span><h1>Мои подборки<br/>и показы</h1><p>Ваши диалоги, варианты квартир и встречи — в одном месте.</p></header>
-  {query.isLoading?<div className={styles.loading} role="status">Загружаем обращения…</div>:query.error&&!query.data?<LoadRecovery label="Обновить обращения" onRetry={()=>void query.refetch()}/>:leadId?<div className={styles.empty}><MessageCircle size={32}/><h2>Обращение недоступно</h2><p>Возможно, оно создано в другом браузере или аккаунте.</p><Link className={styles.primary} to="/journey">Все мои обращения</Link></div>:!items.length?<section className={styles.empty}>
+  {query.isLoading?<div className={styles.loading} role="status">Загружаем обращения…</div>:query.error&&!query.data?<LoadRecovery label="Обновить обращения" onRetry={()=>void query.refetch()}/>:leadId?<div className={styles.empty}><MessageCircle size={32}/><h2>Обращение недоступно</h2><p>Возможно, оно создано в другом браузере или аккаунте.</p><Link className={styles.primary} to="/journey">Все мои обращения</Link></div>:!visibleItems.length?<section className={styles.empty}>
    <IconTile className={styles.emptyIcon}><MessageCircle size={30}/></IconTile><h2>Найдём квартиру вместе</h2><p>Начните диалог с командой. Поможем сравнить варианты и организовать просмотр.</p>
    <div className={styles.benefits}><span><Sparkles size={18}/><b>Подборки под вас</b><small>Сохраняйте подходящие варианты</small></span><span><MessageCircle size={18}/><b>Личная переписка</b><small>Вопросы и ответы всегда рядом</small></span><span><CalendarDays size={18}/><b>Удобные показы</b><small>Выбирайте время вместе с менеджером</small></span></div>
 
-  </section>:<><div className={styles.inbox} aria-label="Мои диалоги">{[...items].sort((a,b)=>Date.parse(b.journey.messages?.at(-1)?.at||b.createdAt)-Date.parse(a.journey.messages?.at(-1)?.at||a.createdAt)).map(e=>{
+  </section>:<><div className={styles.inbox} aria-label="Мои диалоги">{[...visibleItems].sort((a,b)=>Number(!!b.pinnedAt)-Number(!!a.pinnedAt)||Date.parse(b.pinnedAt||'')-Date.parse(a.pinnedAt||'')||Date.parse(b.journey.messages?.at(-1)?.at||b.createdAt)-Date.parse(a.journey.messages?.at(-1)?.at||a.createdAt)).map(e=>{
    const last=e.journey.messages?.at(-1);const property=properties.find(p=>p.id===e.propertyId);const closed=['deal','closed','lost'].includes(e.status);
-   return <Link className={styles.dialogRow} key={e.leadId} to={'/journey?lead='+e.leadId}><span className={styles.avatar}>{e.managerName?e.managerName.trim().split(/\s+/).map(n=>n[0]).slice(0,2).join(''):<MessageCircle size={22}/>}</span><span className={styles.dialogCopy}><span className={styles.dialogTitle}><strong>{e.managerHasReplied===false?'Команда PULSEDV.RU':e.managerName||'Команда PULSEDV.RU'}</strong><time>{journeyDate(last?.at||e.createdAt,true)}</time></span><b>{property?.name||'Помощь с покупкой'}</b><small>{last?(last.author==='client'?'Вы: ':'')+last.text:closed?'Обращение завершено':'Начните переписку — расскажите, что ищете'}</small><span className={styles.status}>{journeyStatus(e.status)}</span></span><ChevronRight size={16}/></Link>;
+   return <SwipeRow key={e.leadId} id={'journey:'+e.leadId} label={property?.name||'Помощь с покупкой'} actions={[{label:e.pinnedAt?'Открепить':'Закрепить',icon:e.pinnedAt?<PinOff/>:<Pin/>,run:()=>changePreference(e.leadId,{pinned:!e.pinnedAt})},{label:'Удалить',icon:<Trash2/>,danger:true,run:()=>changePreference(e.leadId,{hidden:true})}]}><Link className={styles.dialogRow} to={'/journey?lead='+e.leadId}><span className={styles.avatar}>{e.managerName?e.managerName.trim().split(/\s+/).map(n=>n[0]).slice(0,2).join(''):<MessageCircle size={22}/>}</span><span className={styles.dialogCopy}><span className={styles.dialogTitle}><strong>{e.managerHasReplied===false?'Команда PULSEDV.RU':e.managerName||'Команда PULSEDV.RU'}</strong><time>{e.pinnedAt&&<Pin size={12} aria-label="Закреплено"/>}{journeyDate(last?.at||e.createdAt,true)}</time></span><b>{property?.name||'Помощь с покупкой'}</b><small>{last?(last.author==='client'?'Вы: ':'')+last.text:closed?'Обращение завершено':'Начните переписку — расскажите, что ищете'}</small><span className={styles.status}>{journeyStatus(e.status)}</span></span><ChevronRight size={16}/></Link></SwipeRow>;
   })}</div></>}
+  {removed&&<div className={styles.undo} role="status">Обращение убрано из списка<button onClick={()=>void changePreference(removed,{hidden:false}).then(()=>setRemoved(null)).catch(()=>setUndoError(true))}>Отменить</button>{undoError&&<small role="alert">Не удалось восстановить. Попробуйте ещё раз.</small>}</div>}
   {!leadId&&!query.isLoading&&!query.error&&<div className={styles.startActions}><LeadSheet title="Помочь с выбором квартиры" source="journey"><button className={items.length?styles.secondary:styles.primary}>{items.length?<><Plus size={18}/>Обсудить другую покупку</>:<>Обсудить покупку<ArrowRight size={17}/></>}</button></LeadSheet>{!items.length&&<Link className={styles.secondary} to="/catalog">Пока посмотрю каталог</Link>}</div>}
  </div>;
 }

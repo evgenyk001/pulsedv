@@ -47,19 +47,25 @@ test('Smart query and migrated centre preference use the district; an unavailabl
  await page.getByRole('button',{name:'Изменить запрос',exact:true}).click();await input.fill('До 2 млн наличными');await input.press('Enter');
  await page.getByRole('button',{name:/Показать подходящие/}).click();await expect(page.getByRole('button',{name:'Посмотреть проект',exact:true})).toHaveCount(0);
 });
-test('Home uses distinct-viewer popularity in the chosen city; city changes persist and never fill with another city',async({page})=>{
+test('Home keeps popular projects for the chosen city without a second city picker',async({page})=>{
  await seed(page);await page.goto('/pulsedv/mini-app/');
  const section=page.locator('section').filter({has:page.getByRole('heading',{name:'Стоит посмотреть',exact:true})});
- await expect(section.getByRole('combobox',{name:'Город подборки на главной'})).toHaveValue('Уссурийск');
+ await expect(section.getByRole('combobox')).toHaveCount(0);
  const cards=section.locator('article');await expect(cards).toHaveCount(3);await expect(cards.nth(0)).toContainText('ЖК Атриум');await expect(cards.nth(1)).toContainText('ЖК Другой 3');
- await section.getByRole('combobox',{name:'Город подборки на главной'}).selectOption('Владивосток');await expect(cards).toHaveCount(1);await expect(cards.first()).toContainText('ЖК Во Владивостоке');
- await page.reload();await expect(cards).toHaveCount(1);await expect(section.getByRole('combobox',{name:'Город подборки на главной'})).toHaveValue('Владивосток');
+ await page.goto('/pulsedv/mini-app/#/selection');await page.getByRole('combobox',{name:'Город',exact:true}).selectOption('Владивосток');await page.goto('/pulsedv/mini-app/');
+ await expect(cards).toHaveCount(1);await expect(cards.first()).toContainText('ЖК Во Владивостоке');
+ await page.reload();await expect(cards).toHaveCount(1);await expect(section.getByRole('combobox')).toHaveCount(0);
+ await expect(section.getByRole('link',{name:'Все',exact:true})).toHaveAttribute('href',/#\/catalog\?city=/);
  await page.goto('/pulsedv/mini-app/#/selection');await page.getByRole('combobox',{name:'Город',exact:true}).selectOption('Уссурийск');await page.goto('/pulsedv/mini-app/');
- await expect(section.getByRole('combobox',{name:'Город подборки на главной'})).toHaveValue('Уссурийск');
+ await expect(cards).toHaveCount(3);await expect(cards.first()).toContainText('ЖК Атриум');
 });
 
-test('Without an explicit city, home uses the city of the last viewed project; All cities stays explicit',async({page})=>{
+test('Without an explicit city home uses the last viewed project; All cities from catalog stays explicit',async({page})=>{
  await seed(page,{started:false});await page.goto('/pulsedv/mini-app/#/property/vlad-popular');await expect(page.getByRole('heading',{name:'ЖК Во Владивостоке',exact:true})).toBeVisible();
- await page.goto('/pulsedv/mini-app/');const picker=page.getByRole('combobox',{name:'Город подборки на главной'});await expect(picker).toHaveValue('Владивосток');
- await picker.selectOption('');await page.goto('/pulsedv/mini-app/#/property/uss-0');await expect(page.getByRole('heading',{name:'ЖК Атриум',exact:true})).toBeVisible();await page.goto('/pulsedv/mini-app/');await expect(picker).toHaveValue('');
+ await page.goto('/pulsedv/mini-app/');
+ const section=page.locator('section').filter({has:page.getByRole('heading',{name:'Стоит посмотреть',exact:true})});
+ await expect(section.locator('article')).toHaveCount(1);await expect(section.locator('article').first()).toContainText('ЖК Во Владивостоке');
+ await page.goto('/pulsedv/mini-app/#/selection');await page.goto('/pulsedv/mini-app/#/catalog');await page.getByRole('button',{name:/Фильтры/}).click();await page.getByRole('combobox',{name:'Город',exact:true}).selectOption('Все');await page.getByRole('button',{name:/^Показать /}).click();
+ await page.goto('/pulsedv/mini-app/#/property/uss-0');await expect(page.getByRole('heading',{name:'ЖК Атриум',exact:true})).toBeVisible();await page.goto('/pulsedv/mini-app/');
+ await expect(section.getByRole('combobox')).toHaveCount(0);await expect(section.getByRole('link',{name:'Все',exact:true})).toHaveAttribute('href','#/catalog');
 });

@@ -24,8 +24,9 @@ test('Account conversations use verified identity, atomically create the first m
   assert.equal((await app.inject({url:'/api/v1/me/journeys',headers})).json().items.length,0);
   assert.equal((await start({...input,name:'Other',phone:'+79990000000'})).statusCode,400);
   assert.equal((await start({...input,consentVersion:'old'})).statusCode,409);
+  await db.query("update telegram_contact_consent set consent_version='old' where user_id=$1",[userId]);assert.equal((await app.inject({url:'/api/v1/me/account',headers})).json().registered,false);assert.equal((await start(input)).statusCode,409);await db.query('update telegram_contact_consent set consent_version=$2 where user_id=$1',[userId,config.CONSENT_VERSION]);
   const response=await start(input);assert.equal(response.statusCode,200,response.body);const id=response.json().id;
-  const lead=(await db.query('select * from leads where id=$1',[id])).rows[0];assert.equal(lead.name,'Анна Иванова');assert.equal(lead.phone,'+79991234567');assert.equal(lead.user_id,userId);
+  const lead=(await db.query('select * from leads where id=$1',[id])).rows[0];assert.equal(lead.name,'Анна Иванова');assert.equal(lead.phone,'+79991234567');assert.equal(lead.user_id,userId);const priorConsent=(await db.query('select accepted_at from telegram_contact_consent where user_id=$1',[userId])).rows[0].accepted_at;assert.equal(new Date(lead.consent_at).toISOString(),new Date(priorConsent).toISOString());
   const message=(await db.query('select document from journey_messages where lead_id=$1',[id])).rows[0].document;
   assert.equal(message.text,input.text);assert.equal(message.author,'client');assert.equal(message.requestContext.rooms,'2');assert.equal(message.requestContext.phone,undefined);assert.equal(message.requestContext.propertyName,DEFAULT_STATE.properties[0].name);
   assert.equal((await start(input)).json().id,id);assert.equal((await db.query('select id from journey_messages where lead_id=$1',[id])).rows.length,1);

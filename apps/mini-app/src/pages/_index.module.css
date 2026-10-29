@@ -5,5 +5,3 @@
 .quickActions a>span,.conciergeIcon{background:var(--icon-surface);color:var(--icon-ink);border-radius:12px}
 .quickActions b{font-size:12px;font-weight:650}.quickActions small{font-size:9.5px;line-height:1.4}
 .concierge strong{font-size:12px}.concierge small{font-size:10px;line-height:1.4}
-
-.cityPicker{max-width:230px;margin:0 0 14px}.cityPicker select{min-height:38px;font-size:11px}
