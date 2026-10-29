@@ -1,5 +1,6 @@
+import {rankPopularProperties} from '../../../../packages/domain/catalogPopularity';
 import {publishedCatalogFacets} from '../../../../packages/domain/catalogFacets';
-import { getPulseState } from "../../../../packages/pulse-data";
+import { getPulseState, listPulseEvents } from "../../../../packages/pulse-data";
 import { api, runtime } from "../../../../packages/pulse-data/runtime";
 import { hasSea, matchesBudgetAndRooms, deliveryMatches } from "../../../../packages/domain/propertyMatch";
 import type { PropertyRecord } from "./propertyTypes";
@@ -83,8 +84,10 @@ export async function getPropertyDetail(id:string):Promise<PropertyRecord|null>{
   catch(error:any){if(error?.status===404)return null;throw error}
 }
 
-export async function getFeaturedProperties(limit=3){
-  return (await getCatalogPage({page:1,limit,view:"card"})).items;
+export async function getFeaturedProperties(limit=3,city:string|null=null){
+  if(!runtime.enabled){const state=getPulseState();return rankPopularProperties(state.properties,listPulseEvents(),city).slice(0,limit);}
+  const query=new URLSearchParams({limit:String(limit)});if(city)query.set('city',city);
+  return (await api<{items:PropertyRecord[]}>("/public/catalog/featured?"+query)).items;
 }
 
 export async function getPropertiesByIds(ids:string[]){

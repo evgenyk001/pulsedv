@@ -1,6 +1,6 @@
 import React from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
-import { subscribePulseState } from "../../../../packages/pulse-data";
+import { subscribePulseState,subscribePulseEvents } from "../../../../packages/pulse-data";
 import { runtime } from "../../../../packages/pulse-data/runtime";
 import {
   getCatalogMeta,getCatalogPage,getFeaturedProperties,getMapProperties,getPropertiesByIds,getPropertyDetail,getSelectionProperties,
@@ -11,13 +11,14 @@ function useCatalogInvalidation(){
   const client=useQueryClient();
   React.useEffect(()=>{
     if(runtime.enabled)return;
-    return subscribePulseState(()=>{void client.invalidateQueries({queryKey:["catalog"]})});
+    const invalidate=()=>{void client.invalidateQueries({queryKey:["catalog"]})};
+    const state=subscribePulseState(invalidate),events=subscribePulseEvents(invalidate);return()=>{state();events()};
   },[client]);
 }
 
-export function useFeaturedProperties(limit=3){
+export function useFeaturedProperties(limit=3,city:string|null=null){
   useCatalogInvalidation();
-  return useQuery({queryKey:["catalog","featured",limit],queryFn:()=>getFeaturedProperties(limit),staleTime:60_000});
+  return useQuery({queryKey:["catalog","featured",limit,city],queryFn:()=>getFeaturedProperties(limit,city),staleTime:60_000,refetchOnMount:"always"});
 }
 
 export function useFavoriteProperties(ids:string[]){

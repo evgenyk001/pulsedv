@@ -1,4 +1,5 @@
-import {housingClassChoices,housingClassMatches,housingClassKey,mentionedHousingClasses} from '../../../../packages/domain/housingClass';
+import {rememberCityInterest} from '../helpers/cityInterest';
+import {housingClassChoices,mentionedHousingClasses} from '../../../../packages/domain/housingClass';
 import {APARTMENT_FINISHES,apartmentFinishLabel} from '../../../../packages/domain/propertyFinish';
 import {propertyPricePerSqmLabel} from '../../../../packages/domain/propertyPresentation';
 import type {ApartmentFinish} from '../../../../packages/pulse-data/model';
@@ -29,6 +30,7 @@ import {
 } from "lucide-react";
 import {
   selectionMatch,
+  districtKey,
   preferenceLabel,
   type PreferenceId,
   type PurchaseMode,
@@ -75,7 +77,6 @@ const preferenceOptions:{id:PreferenceId;label:string;hint:string}[]=[
   {id:"sea",label:"Вид на море",hint:"Только Владивосток"},
   {id:"family",label:"Для семьи",hint:"Двор, дети, инфраструктура"},
   {id:"parking",label:"Парковка",hint:"Паркинг или места рядом"},
-  {id:"center",label:"Ближе к центру",hint:"Городская инфраструктура"},
   {id:"courtyard",label:"Красивый двор",hint:"Благоустройство и прогулки"},
   {id:"finish",label:"С отделкой",hint:"Быстрее заехать"},
 ];
@@ -90,6 +91,9 @@ const preferenceIcon=(id:PreferenceId)=>{
 };
 
 type SavedSelection={
+  district?:string|null;
+  districtRequired?:boolean;
+  preferredPreferences?:PreferenceId[];
   housingClasses?:string[];
   areaFrom?:number|null;
   areaTo?:number|null;
@@ -110,7 +114,7 @@ type SavedSelection={
 };
 
 type PanelId="essentials"|"finance"|"delivery"|"preferences";
-type ScenarioId="more-payment"|"more-down"|"relax-preference"|"relax-delivery";
+type ScenarioId="more-payment"|"more-down"|"relax-preference"|"relax-delivery"|"relax-district"|"relax-class"|"relax-area"|"relax-finish";
 type Scenario={id:ScenarioId;title:string;detail:string;value:string;gain:number};
 
 function safeHaptic(kind:"light"|"medium"="light"){
@@ -134,7 +138,7 @@ export default function SelectionPage(){
   const properties=catalog.data??[];
   const facets=React.useMemo(()=>publishedCatalogFacets(catalog.data??[]),[catalog.data]);
   const roomOptions=React.useMemo(()=>["Все",...facets.rooms],[facets.rooms]);
-  const minPrice=bounds?.minPriceRub??FALLBACK_MIN;
+  const minPrice=0;
   const maxPrice=bounds?.maxPriceRub??FALLBACK_MAX;
   const priceStep=bounds?.stepRub??FALLBACK_STEP;
 
@@ -155,6 +159,10 @@ export default function SelectionPage(){
   const [started,setStarted]=React.useState(saved.started===true||saved.showResult===true||(Number.isInteger(saved.step)&&Number(saved.step)>0));
   const [openPanel,setOpenPanel]=React.useState<PanelId|null>("essentials");
   const [city,setCity]=React.useState(defaultCity);
+  const [district,setDistrict]=React.useState<string|null>(saved.district??(saved.preferences?.includes("center")?"Центр":null));
+  const [districtRequired,setDistrictRequired]=React.useState(saved.districtRequired??!saved.preferredPreferences?.includes("center"));
+  const [preferredPreferences,setPreferredPreferences]=React.useState<PreferenceId[]>(saved.preferredPreferences??[]);
+  const districtOptions=React.useMemo(()=>[...new Set(properties.filter(p=>p.status==='published'&&(city==='Все'||p.city===city)).map(p=>p.district.trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ru')),[properties,city]);
   const [rooms,setRooms]=React.useState(defaultRooms);
   const [housingClasses,setHousingClasses]=React.useState<string[]>(Array.isArray(saved.housingClasses)?saved.housingClasses.filter((v):v is string=>typeof v==='string').slice(0,8):[]);
   const [areaFrom,setAreaFrom]=React.useState<number|null>(typeof saved.areaFrom==='number'&&saved.areaFrom>0&&saved.areaFrom<=10000?saved.areaFrom:null);
@@ -176,7 +184,7 @@ export default function SelectionPage(){
   const [monthlyPayment,setMonthlyPayment]=React.useState(saved.monthlyPayment??60_000);
   const [paymentDraft,setPaymentDraft]=React.useState(formatRub(saved.monthlyPayment??60_000));
   const [delivery,setDelivery]=React.useState(saved.delivery||"Не важно");
-  const [preferences,setPreferences]=React.useState<PreferenceId[]>(Array.isArray(saved.preferences)?saved.preferences.slice(0,control.select.maxPreferences):[]);
+  const [preferences,setPreferences]=React.useState<PreferenceId[]>(Array.isArray(saved.preferences)?saved.preferences.filter(id=>id!=="center").slice(0,control.select.maxPreferences):[]);
   const [smartQuery,setSmartQuery]=React.useState("");
   const [smartStatus,setSmartStatus]=React.useState("");
 
@@ -189,7 +197,6 @@ export default function SelectionPage(){
 
   React.useEffect(()=>{
     if(!control.select.cities.includes(city))setCity(control.select.cities[0]??"Владивосток");
-    if(catalog.isSuccess&&!roomOptions.includes(rooms))setRooms(facets.rooms.includes("2")?"2":facets.rooms[0]??"Все");
   },[control.select.cities,roomOptions,city,rooms,catalog.isSuccess,facets.rooms]);
 
   React.useEffect(()=>{
@@ -217,7 +224,7 @@ export default function SelectionPage(){
     if(!bounds||budgetInitialized.current)return;
     const savedBudget=saved.budget;
     const next:[number,number]=savedBudget
-      ?[clamp(savedBudget[0],bounds.minPriceRub,bounds.maxPriceRub),clamp(savedBudget[1],bounds.minPriceRub,bounds.maxPriceRub)]
+      ?[Math.max(0,savedBudget[0]),Math.max(0,savedBudget[1])]
       :[bounds.minPriceRub,bounds.maxPriceRub];
     if(next[0]>next[1])next[0]=next[1];
     setBudget(next);
@@ -227,10 +234,6 @@ export default function SelectionPage(){
 
   const deliveryOptions=React.useMemo(()=>["Не важно",...facets.deliveries],[facets.deliveries]);
 
-  React.useEffect(()=>{
-    if(catalog.isSuccess&&!deliveryOptions.includes(delivery))setDelivery("Не важно");
-  },[delivery,deliveryOptions,catalog.isSuccess]);
-
   const appliedMortgageScenario=React.useMemo(()=>{
     if(purchaseMode!=="mortgage"||!mortgageScenario)return null;
     if(mortgageScenario.programId!==mortgageProgram)return null;
@@ -239,6 +242,7 @@ export default function SelectionPage(){
   },[purchaseMode,mortgageScenario,mortgageProgram]);
 
   const setBudgetFromSlider=(values:number[])=>{
+    budgetInitialized.current=true;
     setStarted(true);
     const next:[number,number]=[values[0]??minPrice,values[1]??maxPrice];
     setBudget(next);
@@ -246,6 +250,7 @@ export default function SelectionPage(){
   };
 
   const editBudgetDraft=(index:0|1,value:string)=>{
+    budgetInitialized.current=true;
     setStarted(true);
     const clean=value.replace(/[^0-9]/g,"");
     setBudgetDraft(prev=>{
@@ -259,7 +264,7 @@ export default function SelectionPage(){
     setStarted(true);
     const raw=Number(budgetDraft[index].replace(/[^0-9]/g,""));
     let value=Number.isFinite(raw)&&raw>0?raw:budget[index];
-    value=clamp(snap(value,priceStep),minPrice,maxPrice);
+    value=Math.max(0,Math.round(value));
     const next:[number,number]=[...budget] as [number,number];
     next[index]=value;
     if(index===0&&next[0]>next[1])next[1]=next[0];
@@ -308,7 +313,7 @@ export default function SelectionPage(){
   };
 
   const criteria=React.useMemo<SelectionCriteria>(()=>({
-    city,
+    city,district,districtRequired,requiredPreferences:preferences.filter(id=>!preferredPreferences.includes(id)),
     rooms,
     housingClasses,areaFrom,areaTo,finishType,
     delivery,
@@ -320,7 +325,7 @@ export default function SelectionPage(){
     mortgageProgram,
     mortgageScenario:appliedMortgageScenario,
     preferences,
-  }),[city,rooms,housingClasses,areaFrom,areaTo,finishType,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,appliedMortgageScenario,preferences]);
+  }),[city,district,districtRequired,preferredPreferences,rooms,housingClasses,areaFrom,areaTo,finishType,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,appliedMortgageScenario,preferences]);
 
   const rankFor=React.useCallback((next:SelectionCriteria)=>properties
     .map(property=>({property,match:selectionMatch(property,next,control.mortgagePrograms,control.select.weights)}))
@@ -336,9 +341,9 @@ export default function SelectionPage(){
     :("до "+shortRub(budget[1]));
 
   const persistSelection=React.useCallback(()=>{
-    const value:SavedSelection={city,rooms,housingClasses,areaFrom,areaTo,finishType,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started,version:5};
+    const value:SavedSelection={city,district,districtRequired,preferredPreferences,rooms,housingClasses,areaFrom,areaTo,finishType,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started,version:6};
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(value));}catch{}
-  },[city,rooms,housingClasses,areaFrom,areaTo,finishType,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started]);
+  },[city,district,districtRequired,preferredPreferences,rooms,housingClasses,areaFrom,areaTo,finishType,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started]);
 
   React.useEffect(()=>{persistSelection()},[persistSelection]);
 
@@ -356,22 +361,33 @@ export default function SelectionPage(){
     let nextPayment=monthlyPayment;
     let nextDelivery=delivery;
     const nextPreferences=[...preferences];
-    const classes=mentionedHousingClasses(text,classOptions);
+    let nextDistrict=district;
+    let nextDistrictRequired=districtRequired;
+    const classes=mentionedHousingClasses(text,housingClassChoices(properties.map(p=>p.className)));
     if(classes.length){setHousingClasses(classes);found++;}
+    else if(/любой класс|класс не важен/.test(text)){setHousingClasses([]);found++;}
     const parsedFinish=/без отделки|без ремонта|чернов/.test(text)?'rough':/white\s*box|вайт\s*бокс|предчистов/.test(text)?'white_box':/готов[а-я]* ремонт|с ремонтом|чистов[а-я]* отделк/.test(text)?'finished':null;
     if(parsedFinish){setFinishType(parsedFinish);found++;}
     const areaRange=text.match(/(?:от\s*)?(\d+(?:[.,]\d+)?)\s*(?:м[²2]\s*)?(?:до|[-–])\s*(\d+(?:[.,]\d+)?)\s*(?:м[²2]|кв\.?\s*м)/);
     if(areaRange){const from=Number(areaRange[1].replace(',','.')),to=Number(areaRange[2].replace(',','.'));if(from>0&&to>=from&&to<=10000){setAreaFrom(from);setAreaTo(to);found++;}}
 
     const cityMatch=control.select.cities.find(value=>text.includes(value.toLowerCase().replace(/ё/g,"е")));
-    if(cityMatch){nextCity=cityMatch;found++;}
+    if(cityMatch){nextCity=cityMatch;rememberCityInterest(cityMatch);found++;}
+    if(nextCity!==city)nextDistrict=null;
+    const possibleDistricts=properties.filter(p=>p.city===nextCity&&p.status==='published').map(p=>p.district.trim()).filter(Boolean);
+    const mentionedDistrict=possibleDistricts.find(value=>districtKey(value)!=='центр'&&text.includes(districtKey(value)));
+    const centerRequest=/(?:^|[^а-я])центр[а-я]*(?:$|[^а-я])/.test(text)&&!/не\s+(?:в\s+)?центр|без\s+центр/.test(text);
+    const centerDistrict=possibleDistricts.find(value=>districtKey(value)==='центр');
+    if(mentionedDistrict||centerRequest){nextDistrict=mentionedDistrict??centerDistrict??'Центр';nextDistrictRequired=!/желательн|ближе|недалеко|рядом/.test(text);found++;}
+    if(/любой район|район не важен|без ограничения по району/.test(text)){nextDistrict=null;found++;}
+
 
     if(/студи/.test(text)){nextRooms="Студия";found++;}
     else if(/двуш|2\s*[- ]?(?:комн|к\b)|двухкомнат/.test(text)){nextRooms="2";found++;}
     else if(/однуш|1\s*[- ]?(?:комн|к\b)|однокомнат/.test(text)){nextRooms="1";found++;}
     else if(/треш|трехкомнат|3\s*[- ]?(?:комн|к\b)/.test(text)){nextRooms=facets.rooms.includes("3")?"3":"3+";found++;}
 
-    const mortgageIntent=/ипотек|платеж|платёж|в месяц|\/мес/.test(text);
+    const mortgageIntent=!/без\s+ипотек/.test(text)&&/ипотек|платеж|платёж|в месяц|\/мес/.test(text);
     const cashIntent=/налич|без ипотек|полная стоимость/.test(text);
     if(mortgageIntent&&control.select.mortgageEnabled){nextMode="mortgage";found++;}
     else if(cashIntent){nextMode="cash";found++;}
@@ -379,20 +395,21 @@ export default function SelectionPage(){
     const paymentMatch=text.match(/(\d+(?:[.,]\d+)?)\s*(тыс|тысяч|к)?\.?\s*(?:руб(?:лей|ля|ль)?\.?|₽)?\s*(?:\/\s*мес|в месяц)/i);
     if(paymentMatch){
       const parsed=paymentMatch[2]?parseScaledMoney(paymentMatch[1],paymentMatch[2]):Number(paymentMatch[1].replace(",","."));
-      if(parsed&&control.select.mortgageEnabled){nextPayment=clamp(Math.round(parsed),15_000,300_000);nextMode="mortgage";found++;}
+      if(parsed&&control.select.mortgageEnabled){nextPayment=Math.round(parsed);nextMode="mortgage";found++;}
     }
 
     const downMatch=text.match(/(?:первоначальн\w*\s+)?взнос[^\d]{0,18}(\d+(?:[.,]\d+)?)\s*(млн|миллион\w*|тыс|тысяч)/i);
     if(downMatch){
       const parsed=parseScaledMoney(downMatch[1],downMatch[2]);
-      if(parsed&&control.select.mortgageEnabled){nextDown=clamp(snap(parsed,100_000),0,Math.max(maxPrice,parsed));nextMode="mortgage";found++;}
+      if(parsed&&control.select.mortgageEnabled){nextDown=Math.round(parsed);nextMode="mortgage";found++;}
     }
 
-    const budgetMatch=text.match(/(?:до|бюджет[^\d]{0,12}|стоимост\w*[^\d]{0,12})(\d+(?:[.,]\d+)?)\s*(млн|миллион\w*)/i);
+    const budgetMatch=text.match(/(?:до\s*|бюджет[^\d]{0,12}|стоимост\w*[^\d]{0,12})(\d+(?:[.,]\d+)?)\s*(млн|миллион\w*)/i);
     if(budgetMatch&&!downMatch){
+      budgetInitialized.current=true;
       const parsed=parseScaledMoney(budgetMatch[1],budgetMatch[2]);
       if(parsed){
-        const nextMax=clamp(snap(parsed,priceStep),minPrice,maxPrice);
+        const nextMax=Math.round(parsed);
         nextBudget=[minPrice,nextMax];
         if(!mortgageIntent)nextMode="cash";
         found++;
@@ -400,21 +417,22 @@ export default function SelectionPage(){
     }
 
     const year=text.match(/20(?:2[6-9]|3\d)/)?.[0];
-    if(year&&deliveryOptions.includes(year)){nextDelivery=year;found++;}
+    if(year){nextDelivery=year;found++;}
     else if(/сдан|готовый дом|готовое/.test(text)){nextDelivery="Сдан";found++;}
 
     const preferenceMap:[PreferenceId,RegExp][]=[
       ["sea",/море|моря|морю|морем|морск|панорам.*вод/],
       ["family",/семь|семейн|дет|школ|садик/],
       ["parking",/парков|паркинг|машин/],
-      ["center",/центр|центральн/],
       ["courtyard",/двор|благоустрой|зел[её]н/],
       ["finish",/white\s*box|предчистов|с отделкой|с ремонтом|готов.*заех/],
     ];
     if(parsedFinish==='rough'){const index=nextPreferences.indexOf('finish');if(index>=0)nextPreferences.splice(index,1);}
     for(const [id,pattern] of preferenceMap){
       const enabled=control.select.preferenceEnabled[id]&&(id!=="sea"||control.select.seaEnabled);
-      if(enabled&&!(id==="finish"&&parsedFinish==="rough")&&pattern.test(text)&&!nextPreferences.includes(id)){nextPreferences.push(id);found++;}
+      const preferenceText=id==='family'?text.replace(/семейн[а-я]*\s+ипотек[а-я]*/g,''):text;
+      const negated=id==='parking'&&/без\s+парков|парковк[а-я]*\s+не\s+нуж/.test(text);
+      if(enabled&&!negated&&!(id==="finish"&&parsedFinish==="rough")&&pattern.test(preferenceText)&&!nextPreferences.includes(id)){nextPreferences.push(id);found++;}
     }
 
     if(nextCity!=="Владивосток"||!control.select.seaEnabled){
@@ -423,7 +441,8 @@ export default function SelectionPage(){
     }
 
     setCity(nextCity);
-    if(roomOptions.includes(nextRooms))setRooms(nextRooms);
+    setDistrict(nextDistrict);setDistrictRequired(nextDistrictRequired);
+    setRooms(nextRooms);
     setPurchaseMode(nextMode);
     setBudget(nextBudget);
     setBudgetDraft([formatRub(nextBudget[0]),formatRub(nextBudget[1])]);
@@ -447,18 +466,19 @@ export default function SelectionPage(){
     try{
       const history=JSON.parse(localStorage.getItem("pulse_selection_history")||"[]");
       const nextHistory=[{
-        city,rooms,housingClasses,areaFrom,areaTo,finishType,min:budget[0],max:budget[1],delivery,
+        city,district,districtRequired,preferredPreferences,rooms,housingClasses,areaFrom,areaTo,finishType,min:budget[0],max:budget[1],delivery,
         mortgage:purchaseMode==="mortgage",downPayment,monthlyPayment,mortgageProgram,
         preferences,score:topScore,strongCount,createdAt:Date.now(),
       },...(Array.isArray(history)?history:[])].slice(0,5);
       localStorage.setItem("pulse_selection_history",JSON.stringify(nextHistory));
     }catch{}
 
+    rememberCityInterest(city);
     recordPulseEvent({
       eventType:"select_submit",
       entityType:"selection",
       metadata:{
-        city,rooms,housingClasses:housingClasses.join(","),areaFrom,areaTo,finishType,min:budget[0],max:budget[1],delivery,
+        city,district,districtRequired,requiredPreferences:preferences.filter(id=>!preferredPreferences.includes(id)).join(","),rooms,housingClasses:housingClasses.join(","),areaFrom,areaTo,finishType,min:budget[0],max:budget[1],delivery,
         mortgage:purchaseMode==="mortgage",
         sea:preferences.includes("sea"),
         down:downPayment,
@@ -468,7 +488,7 @@ export default function SelectionPage(){
         program:purchaseMode==="mortgage"?mortgageProgram:null,
         topScore,strongCount,results:eligible.length,
         propertyIds:eligible.slice(0,3).map(item=>item.property.id),
-        source:"pulse-select-v5",
+        source:"pulse-select-v6",
         policyVersion:MORTGAGE_POLICY_VERSION,
       }
     });
@@ -513,18 +533,30 @@ export default function SelectionPage(){
       items.push({id:"more-payment",title:"Чуть расширить бюджет",detail:"Добавить до "+shortRub(extra)+" к верхней границе.",value:extraLabel(result.measured.eligible-base.eligible),gain:result.gain});
     }
 
+    const alternatives:{id:ScenarioId;title:string;detail:string;active:boolean;criteria:SelectionCriteria}[]=[
+      {id:'relax-class',title:'Рассмотреть другие классы',detail:'Снять только ограничение по классу жилья.',active:housingClasses.length>0,criteria:{...criteria,housingClasses:[]}},
+      {id:'relax-area',title:'Гибче по площади',detail:'Снять только ограничения по площади квартиры.',active:areaFrom!==null||areaTo!==null,criteria:{...criteria,areaFrom:null,areaTo:null}},
+      {id:'relax-finish',title:'Рассмотреть другую отделку',detail:'Снять только выбор конкретной отделки.',active:finishType!==null,criteria:{...criteria,finishType:null}},
+    ];
+    for(const alternative of alternatives.filter(item=>item.active)){
+      const result=gainFor(alternative.criteria);items.push({id:alternative.id,title:alternative.title,detail:alternative.detail,value:extraLabel(result.measured.eligible-base.eligible),gain:result.gain});
+    }
+    if(district){
+      const result=gainFor({...criteria,district:null});
+      items.push({id:"relax-district",title:"Рассмотреть другие районы",detail:"Снять только ограничение по району; остальные условия сохранятся.",value:extraLabel(result.measured.eligible-base.eligible),gain:result.gain});
+    }
     if(preferences.length){
       const result=gainFor({...criteria,preferences:preferences.slice(0,-1)});
-      items.push({id:"relax-preference",title:"Без «"+preferenceLabel(preferences[preferences.length-1])+"»",detail:"Ослабим только один мягкий приоритет.",value:extraLabel(result.measured.strong-base.strong,true),gain:result.gain});
+      items.push({id:"relax-preference",title:"Без «"+preferenceLabel(preferences[preferences.length-1])+"»",detail:"Снимем только это условие; остальные сохранятся.",value:extraLabel(result.measured.eligible-base.eligible),gain:result.gain});
     }
 
     if(delivery!=="Не важно"){
       const result=gainFor({...criteria,delivery:"Не важно"});
-      items.push({id:"relax-delivery",title:"Гибче по сроку сдачи",detail:"Не ограничивать выбор одним сроком.",value:extraLabel(result.measured.strong-base.strong,true),gain:result.gain});
+      items.push({id:"relax-delivery",title:"Гибче по сроку сдачи",detail:"Не ограничивать выбор одним сроком.",value:extraLabel(result.measured.eligible-base.eligible),gain:result.gain});
     }
 
     return items.sort((a,b)=>b.gain-a.gain).slice(0,3);
-  },[criteria,eligible.length,strongCount,purchaseMode,monthlyPayment,downPayment,budget,preferences,delivery,measure,maxPrice]);
+  },[criteria,eligible.length,strongCount,purchaseMode,monthlyPayment,downPayment,budget,preferences,delivery,district,housingClasses,areaFrom,areaTo,finishType,measure,maxPrice]);
 
   const applyScenario=(id:ScenarioId)=>{
     if(id==="more-payment"){
@@ -539,12 +571,16 @@ export default function SelectionPage(){
     if(id==="more-down"){const next=downPayment+500_000;setDownPayment(next);setDownDraft(formatRub(next));}
     if(id==="relax-preference")setPreferences(current=>current.slice(0,-1));
     if(id==="relax-delivery")setDelivery("Не важно");
+    if(id==="relax-district")setDistrict(null);
+    if(id==='relax-class')setHousingClasses([]);
+    if(id==='relax-area'){setAreaFrom(null);setAreaTo(null);}
+    if(id==='relax-finish')setFinishType(null);
     setShowAll(false);
     safeHaptic("medium");
   };
 
   const panelSummary=(id:PanelId)=>{
-    if(id==="essentials")return [city,roomChoiceLabel(rooms),...housingClasses,finishType?apartmentFinishLabel(finishType):null].filter(Boolean).join(" · ");
+    if(id==="essentials")return [city,district,roomChoiceLabel(rooms),...housingClasses,finishType?apartmentFinishLabel(finishType):null].filter(Boolean).join(" · ");
     if(id==="finance")return purchaseMode==="mortgage"
       ?formatRub(downPayment)+" ₽ ПВ · "+Math.round(monthlyPayment/1000)+" тыс./мес"
       :shortRub(budget[0])+" — "+shortRub(budget[1]);
@@ -565,38 +601,38 @@ export default function SelectionPage(){
 
   if(showResult){
     const display=showAll?eligible:eligible.slice(0,6);
-    const source=eligible.length?display:ranked.filter(item=>(city==='Все'||item.property.city===city)&&housingClassMatches(item.property.className,housingClasses)).slice(0,6);
+    const source=display;
     return <div className={styles.page}>
       <section className={styles.selectResultSummary} aria-label="Результат PULSE Select">
         <div className={styles.selectResultTop}>
           <span className={styles.eyebrow}>PULSE SELECT</span>
-          <span className={styles.selectPolicy}><CircleCheck size={12}/>v5</span>
+          <span className={styles.selectPolicy}><CircleCheck size={12}/>v6</span>
         </div>
         <h1>{eligible.length
           ?eligible.length+" "+plural(eligible.length,["вариант подходит","варианта подходят","вариантов подходят"])
           :"Точного совпадения пока нет"}</h1>
         <p>{eligible.length
           ?<>Из них <strong>{strongCount}</strong> {plural(strongCount,["сильное совпадение","сильных совпадения","сильных совпадений"])}. PULSE объясняет, почему каждый проект попал сюда.</>
-          :<>Показываем ближайшие варианты и сразу считаем, какие условия с ними не совпадают. Специалист поможет проверить альтернативы.</>
+          :<>ЖК по всем обязательным условиям пока нет. Измените запрос или выберите ниже, какое ограничение можно снять.</>
         }</p>
         <div className={styles.summaryChips}>
           <span><Home size={13}/>{city}</span>
-          <span>{roomChoiceLabel(rooms)}</span>
+          <span>{roomChoiceLabel(rooms)}</span>{district&&<span>{district}{!districtRequired?" · желательно":""}</span>}
         {housingClasses.map(value=><span key={value}>{value}</span>)}
         {(areaFrom!==null||areaTo!==null)&&<span>{areaFrom??0}–{areaTo??"∞"} м²</span>}
         {finishType&&<span>{apartmentFinishLabel(finishType)}</span>}
           <span>{financeLabel}</span>
-          {delivery!=="Не важно"&&<span>{delivery==="Сдан"?"Сдан":"до "+delivery}</span>}
+          {delivery!=="Не важно"&&<span>{delivery}</span>}
         </div>
       </section>
 
       <section className={styles.resultIntro}>
-        <div><span>РЕКОМЕНДАЦИИ</span><strong>{eligible.length?"Сначала самое подходящее":"Ближайшие варианты"}</strong></div>
-        <small>Match — вторичный сигнал. Главное — причины и компромиссы.</small>
+        <div><span>РЕКОМЕНДАЦИИ</span><strong>{eligible.length?"Сначала самое подходящее":"Измените условия поиска"}</strong></div>
+        <small>Процент показывает совпадение с условиями и пожеланиями, а не вероятность покупки.</small>
       </section>
 
       <section className={styles.matchList}>
-        {!source.length&&<p className={styles.disclaimer}>В выбранном городе пока нет ЖК указанного класса. Измените условия запроса.</p>}
+        {!source.length&&<p className={styles.disclaimer}>Нет подтверждённых совпадений по всем условиям. Другие ЖК появятся только после изменения запроса.</p>}
         {source.map(({property,match},index)=>{
           const image=property.coverImageUrl||property.images[0]?.url;
           return <article className={styles.matchCard} key={property.id}>
@@ -660,7 +696,7 @@ export default function SelectionPage(){
 
   return <div className={styles.page}>
     <header className={styles.selectHero}>
-      <div className={styles.selectHeroTop}><span className={styles.eyebrow}>PULSE SELECT</span><span className={styles.selectVersion}>5.0</span></div>
+      <div className={styles.selectHeroTop}><span className={styles.eyebrow}>PULSE SELECT</span><span className={styles.selectVersion}>6.0</span></div>
       <h1>Опишите, что ищете.<br/><em>PULSE соберёт остальное.</em></h1>
       <p>Не анкета и не сотня фильтров. Один живой запрос, который можно уточнять в любом порядке.</p>
     </header>
@@ -689,7 +725,7 @@ export default function SelectionPage(){
       </div>
       <div className={styles.liveRequestChips}>
         <span>{city}</span>
-        <span>{roomChoiceLabel(rooms)}</span>
+        <span>{roomChoiceLabel(rooms)}</span>{district&&<span>{district}{!districtRequired?" · желательно":""}</span>}
         {housingClasses.map(value=><span key={value}>{value}</span>)}
         {(areaFrom!==null||areaTo!==null)&&<span>{areaFrom??0}–{areaTo??"∞"} м²</span>}
         {finishType&&<span>{apartmentFinishLabel(finishType)}</span>}
@@ -708,18 +744,20 @@ export default function SelectionPage(){
         {openPanel==="essentials"&&<div className={styles.selectPanelBody}>
           <div className={styles.fieldBlock}>
             <label>Город</label>
-            <NativeSelect aria-label="Город" value={city} onChange={e=>{setStarted(true);setCity(e.target.value);safeHaptic();}}>{control.select.cities.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
+            <NativeSelect aria-label="Город" value={city} onChange={e=>{setStarted(true);setCity(e.target.value);rememberCityInterest(e.target.value);setDistrict(null);safeHaptic();}}>{control.select.cities.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
+          </div>
+          <div className={styles.fieldBlock}>
+            <label>Район</label>
+            <NativeSelect aria-label="Район" value={district??""} onChange={e=>{setStarted(true);setDistrict(e.target.value||null)}}><option value="">Любой район</option>{district&&!districtOptions.includes(district)&&<option value={district}>{district}</option>}{districtOptions.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
+            {district&&<NativeSelect aria-label="Важность района" value={districtRequired?'required':'preferred'} onChange={e=>setDistrictRequired(e.target.value==='required')}><option value="required">Обязательно этот район</option><option value="preferred">Желательно этот район</option></NativeSelect>}
           </div>
           <div className={styles.fieldBlock}>
             <label>Комнатность</label>
-            <NativeSelect aria-label="Комнатность" value={rooms} onChange={e=>{setStarted(true);setRooms(e.target.value);safeHaptic();}}>{roomOptions.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
+            <NativeSelect aria-label="Комнатность" value={rooms} onChange={e=>{setStarted(true);setRooms(e.target.value);safeHaptic();}}>{!roomOptions.includes(rooms)&&<option value={rooms}>{rooms}</option>}{roomOptions.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
           </div>
           <div className={styles.fieldBlock}>
             <label>Класс жилья</label>
-            <div className={styles.classChoices}>
-              <button type="button" aria-pressed={!housingClasses.length} onClick={()=>{setStarted(true);setHousingClasses([])}}>Любой класс</button>
-              {classOptions.map(value=><button type="button" key={value} aria-pressed={housingClasses.some(v=>housingClassKey(v)===housingClassKey(value))} onClick={()=>{setStarted(true);setHousingClasses(current=>current.some(v=>housingClassKey(v)===housingClassKey(value))?current.filter(v=>housingClassKey(v)!==housingClassKey(value)):[...current,value])}}>{value}</button>)}
-            </div>
+            <NativeSelect aria-label="Класс жилья" value={housingClasses.length>1?'saved':housingClasses[0]??''} onChange={e=>{setStarted(true);setHousingClasses(e.target.value?[e.target.value]:[])}}><option value="">Любой класс</option>{housingClasses.length>1&&<option value="saved">{housingClasses.join(' / ')}</option>}{housingClasses.length===1&&!classOptions.includes(housingClasses[0])&&<option value={housingClasses[0]}>{housingClasses[0]}</option>}{classOptions.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
           </div>
           <div className={styles.fieldBlock}>
             <label>Площадь квартиры, м²</label>
@@ -778,7 +816,7 @@ export default function SelectionPage(){
               <label><span>До</span><div><Input inputMode="numeric" value={budgetDraft[1]} onChange={e=>editBudgetDraft(1,e.target.value)} onBlur={()=>commitBudgetDraft(1)} onKeyDown={e=>{if(e.key==="Enter")e.currentTarget.blur()}}/><b>₽</b></div></label>
             </div>
             <div className={styles.sliderWrap}>
-              <Slider min={minPrice} max={maxPrice} step={priceStep} value={budget} onValueChange={setBudgetFromSlider}/>
+              <Slider min={minPrice} max={Math.max(maxPrice,budget[1])} step={priceStep} value={budget} onValueChange={setBudgetFromSlider}/>
               <div className={styles.sliderBounds}><span>{shortRub(minPrice)}</span><span>{shortRub(maxPrice)}</span></div>
             </div>
           </>}
@@ -786,15 +824,15 @@ export default function SelectionPage(){
       </article>
 
       <article className={openPanel==="delivery"?styles.selectPanelOpen:styles.selectPanel}>
-        {panelHeader("delivery","Когда нужны ключи","Срок — мягкий приоритет",<CalendarDays size={18}/>)}
+        {panelHeader("delivery","Когда нужны ключи","Срок сдачи — обязательное условие",<CalendarDays size={18}/>)}
         {openPanel==="delivery"&&<div className={styles.selectPanelBody}>
-          <NativeSelect aria-label="Срок сдачи" value={delivery} onChange={e=>{setStarted(true);setDelivery(e.target.value);safeHaptic();}}>{deliveryOptions.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
-          <div className={styles.timelineNote}><CalendarDays size={16}/><span>Срок не убивает сильный вариант: он влияет на порядок, а не превращает хороший ЖК в «неподходящий».</span></div>
+          <NativeSelect aria-label="Срок сдачи" value={delivery} onChange={e=>{setStarted(true);setDelivery(e.target.value);safeHaptic();}}>{!deliveryOptions.includes(delivery)&&<option value={delivery}>{delivery}</option>}{deliveryOptions.map(value=><option key={value} value={value}>{value}</option>)}</NativeSelect>
+          <div className={styles.timelineNote}><CalendarDays size={16}/><span>Выбранный год ограничивает выдачу этим годом сдачи. «Сдан» — только введённые дома.</span></div>
         </div>}
       </article>
 
       <article className={openPanel==="preferences"?styles.selectPanelOpen:styles.selectPanel}>
-        {panelHeader("preferences","Что для вас важно","До "+control.select.maxPreferences+" мягких приоритетов",<Sparkles size={18}/>)}
+        {panelHeader("preferences","Что для вас важно","До "+control.select.maxPreferences+" условий и пожеланий",<Sparkles size={18}/>)}
         {openPanel==="preferences"&&<div className={styles.selectPanelBody}>
           <div className={styles.preferenceGrid}>
             {visiblePreferences.map(option=>{
@@ -806,13 +844,14 @@ export default function SelectionPage(){
               </button>
             })}
           </div>
+          {preferences.map(id=><label key={id} className={styles.fieldBlock}><span>{preferenceLabel(id)}</span><NativeSelect aria-label={'Важность: '+preferenceLabel(id)} value={preferredPreferences.includes(id)?'preferred':'required'} onChange={e=>setPreferredPreferences(current=>e.target.value==='preferred'?[...new Set([...current,id])]:current.filter(value=>value!==id))}><option value="required">Обязательно</option><option value="preferred">Желательно</option></NativeSelect></label>)}
           <div className={styles.selectionCount}>{preferences.length}/{control.select.maxPreferences} выбрано</div>
         </div>}
       </article>
     </section>
 
     <button type="button" className={styles.selectPrimary} disabled={catalog.isLoading||properties.length===0||invalidArea} onClick={finish}>
-      <span><strong>Показать подходящие</strong><small>{eligible.length?eligible.length+" "+plural(eligible.length,["вариант","варианта","вариантов"])+" сейчас":"Покажем ближайшие варианты"}</small></span>
+      <span><strong>Показать подходящие</strong><small>{eligible.length?eligible.length+" "+plural(eligible.length,["вариант","варианта","вариантов"])+" сейчас":"Проверим выбранные условия"}</small></span>
       <ArrowRight size={18}/>
     </button>
 

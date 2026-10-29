@@ -1,3 +1,4 @@
+import {rememberCityInterest} from '../helpers/cityInterest';
 import {LoadRecovery} from '../components/LoadRecovery';
 import {IconTile} from '../components/IconTile';
 import { hasSea, matchScore, matchesBudgetAndRooms } from "../../../../packages/domain/propertyMatch";
@@ -250,6 +251,7 @@ export default function CatalogPage(){
     rooms==="Все"?next.delete("rooms"):next.set("rooms",rooms);
     sea?next.set("sea","1"):next.delete("sea");
     setParams(next,{replace:true});
+    rememberCityInterest(city);
     recordPulseEvent({eventType:"catalog_filter",entityType:"catalog",entityId:"filters",metadata:{city,min:priceRange[0],max:priceRange[1],delivery,rooms,sea,results:previewTotal}});
   };
 

@@ -29,7 +29,8 @@ test('DNA: актуальные пожелания, изменение запр�
  assert.ok(dna.changes.some(c=>c.title.includes('бюджет')));assert.ok(dna.changes.some(c=>c.id.startsWith('return:')));
  assert.deepEqual(dna.changes.find(c=>c.title.includes('бюджет'))!.eventIds,['before','after']);
  assert.ok(dna.questions.includes('Когда планирует покупку?'));
- assert.ok(dna.recommendations.length>0);assert.ok(dna.recommendations.every(p=>DEFAULT_STATE.properties.find(x=>x.id===p.id)?.city==='Владивосток'));
+ // There are no completed projects in this fixture; the required delivery must not be relaxed.
+ assert.equal(dna.recommendations.length,0);
 });
 test('DNA: снятые предпочтения и удалённое избранное не остаются подтверждёнными',()=>{
  const dna=buildInterestDNA([event('1','select_submit',{city:'Владивосток',rooms:'2',purchaseMode:'cash',min:5e6,max:9e6},'2026-09-26T00:00:00Z'),event('2','select_submit',{city:'Все',rooms:'Не важно',purchaseMode:'mortgage',down:2e6,payment:6e4,program:'family'},'2026-09-27T00:00:00Z'),event('3','favorite_add',{},'2026-09-27T01:00:00Z'),event('4','favorite_remove',{},'2026-09-27T02:00:00Z')],DEFAULT_STATE,now);
