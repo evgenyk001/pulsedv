@@ -89,6 +89,10 @@ function propertyText(property:PulseProperty){
 }
 
 export function hasSea(property:PulseProperty){
+  return property.city==='Владивосток'&&/мор[еяю]|морской/.test(propertyText(property));
+}
+
+function confirmedSeaView(property:PulseProperty){
   if(property.city!=='Владивосток')return false;
   return [...property.tags,...property.features.map(item=>item.label),property.description].flatMap(text=>text.toLowerCase().split(/[.!?;\n]/)).some(clause=>
     /(?:вид[а-я]*|панорам[а-я]*).{0,24}(?:мор[еяю]|залив)/.test(clause)&&
@@ -97,7 +101,7 @@ export function hasSea(property:PulseProperty){
 
 export function matchesPreference(property:PulseProperty,id:PreferenceId){
   const text=propertyText(property);
-  if(id==='sea')return hasSea(property);
+  if(id==='sea')return confirmedSeaView(property);
   const mentioned=(pattern:RegExp)=>text.split(/[.!?;\n]/).some(clause=>pattern.test(clause)&&
     !new RegExp('(?:без|нет|не предусмотрен[а-я]*|отсутств[а-я]*).{0,32}(?:'+pattern.source+')|(?:'+pattern.source+').{0,24}(?:нет|не предусмотрен|отсутств)').test(clause));
   if(id==='family')return mentioned(/для\s+сем|семейн[а-я]*\s+(?:двор|простран|жизн)|детск|школ|садик/);
