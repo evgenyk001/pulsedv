@@ -1,3 +1,4 @@
+import {safeLocalStorage,safeSessionStorage} from '../../../../packages/browser/storage';
 import {rememberCityInterest} from '../helpers/cityInterest';
 import {LoadRecovery} from '../components/LoadRecovery';
 import {IconTile} from '../components/IconTile';
@@ -91,7 +92,7 @@ export default function CatalogPage(){
 
   React.useEffect(()=>{
     if(initialSort&&sortLabels[initialSort])return;
-    const stored=localStorage.getItem("pulse_catalog_sort") as SortMode|null;
+    const stored=safeLocalStorage.getItem("pulse_catalog_sort") as SortMode|null;
     if(stored&&sortLabels[stored])setSort(stored);
   },[initialSort]);
 
@@ -182,7 +183,7 @@ export default function CatalogPage(){
   const catalogReturnTo=React.useMemo(()=>{const next=new URLSearchParams(params);query?next.set("q",query):next.delete("q");const search=next.toString();return "/catalog"+(search?"?"+search:"")},[params,query]);
 
   const openMapProperty=(id:string)=>{
-    try{sessionStorage.setItem('pulse.property.return',catalogReturnTo)}catch{}
+    try{safeSessionStorage.setItem('pulse.property.return',catalogReturnTo)}catch{}
     navigate('/property/'+id,{state:{returnTo:catalogReturnTo}});
   };
 
@@ -194,7 +195,7 @@ export default function CatalogPage(){
 
   const selectSort=(nextSort:SortMode)=>{
     setSort(nextSort);
-    localStorage.setItem("pulse_catalog_sort",nextSort);
+    safeLocalStorage.setItem("pulse_catalog_sort",nextSort);
     const next=new URLSearchParams(params);
     nextSort==="popular"?next.delete("sort"):next.set("sort",nextSort);
     setParams(next,{replace:true});

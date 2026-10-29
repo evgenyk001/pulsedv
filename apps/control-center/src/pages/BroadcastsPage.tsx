@@ -1,3 +1,4 @@
+import {safeSessionStorage} from '../../../../packages/browser/storage';
 import React from 'react';
 import {Megaphone,Plus,RefreshCw,Send,Save,Copy,ImagePlus,X,CheckCircle2} from 'lucide-react';
 import {PageFrame} from '../components/PageFrame';
@@ -16,11 +17,11 @@ const templates:Record<BroadcastContent['kind'],BroadcastContent>={
 };
 const CACHE='pulse.broadcast.editor.v1';
 export function BroadcastsPage(){
- const [data,setData]=React.useState<BroadcastList|null>(null),[page,setPage]=React.useState(1),[item,setItem]=React.useState<Broadcast>(()=>{try{const saved=JSON.parse(sessionStorage.getItem(CACHE)||'null');if(saved?.status==='draft'&&saved.id)return saved}catch{}return make()}),[dirty,setDirty]=React.useState(()=>!!sessionStorage.getItem(CACHE)),[busy,setBusy]=React.useState(false),[error,setError]=React.useState(''),[notice,setNotice]=React.useState(''),[review,setReview]=React.useState(false),[stopping,setStopping]=React.useState(false);
+ const [data,setData]=React.useState<BroadcastList|null>(null),[page,setPage]=React.useState(1),[item,setItem]=React.useState<Broadcast>(()=>{try{const saved=JSON.parse(safeSessionStorage.getItem(CACHE)||'null');if(saved?.status==='draft'&&saved.id)return saved}catch{}return make()}),[dirty,setDirty]=React.useState(()=>!!safeSessionStorage.getItem(CACHE)),[busy,setBusy]=React.useState(false),[error,setError]=React.useState(''),[notice,setNotice]=React.useState(''),[review,setReview]=React.useState(false),[stopping,setStopping]=React.useState(false);
  const requestId=React.useRef(crypto.randomUUID());
  const refresh=React.useCallback(async()=>setData(await listBroadcasts(page)),[page]);
  React.useEffect(()=>{void refresh().catch(e=>setError(e.message))},[refresh]);
- React.useEffect(()=>{try{if(item.status==='draft')sessionStorage.setItem(CACHE,JSON.stringify(item));else sessionStorage.removeItem(CACHE)}catch{setError('Черновик не поместился в памяти этой вкладки. Уменьшите фото и сохраните его снова')}},[item]);
+ React.useEffect(()=>{try{if(item.status==='draft'){if(!safeSessionStorage.setItem(CACHE,JSON.stringify(item)))throw Error('Storage unavailable')}else safeSessionStorage.removeItem(CACHE)}catch{setError('Черновик не поместился в памяти этой вкладки. Уменьшите фото и сохраните его снова')}},[item]);
  React.useEffect(()=>{const guard=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue=''}};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard)},[dirty]);
  useDialog(review||stopping,()=>{if(!busy){setReview(false);setStopping(false)}});
  const locked=item.status!=='draft',validation=broadcastError(item),saved=item.version>0&&!dirty;

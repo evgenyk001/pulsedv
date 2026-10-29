@@ -1,3 +1,4 @@
+import {safeLocalStorage} from '../../../../packages/browser/storage';
 import {useAppBack} from '../helpers/navigationMemory';
 import {IconTile} from '../components/IconTile';
 import React from "react";
@@ -89,7 +90,7 @@ function MortgageCalculator(){
   const programs=control.mortgagePrograms;
   const scenarioKey=fromProperty?MORTGAGE_SCENARIO_KEY+":property:"+sourcePropertyId+":"+(params.get("floorplan")||"")+":"+(params.get("finish")||""):MORTGAGE_SCENARIO_KEY;
   const storedScenario=React.useMemo(()=>{
-    const storage=typeof localStorage==="undefined"?null:localStorage;
+    const storage=typeof safeLocalStorage==="undefined"?null:safeLocalStorage;
     const own=readMortgageScenario(storage,scenarioKey);
     if(!fromProperty)return own;
     const shared=readMortgageScenario(storage);
@@ -136,7 +137,7 @@ function MortgageCalculator(){
   const [downDraft,setDownDraft]=React.useState(formatRub(initialDown));
   const [interacted,setInteracted]=React.useState(false);
   const [showMortgageStory,setShowMortgageStory]=React.useState(()=>{
-    try{return localStorage.getItem(MORTGAGE_STORY_STORAGE)!==MORTGAGE_STORY_VERSION}catch{return true}
+    try{return safeLocalStorage.getItem(MORTGAGE_STORY_STORAGE)!==MORTGAGE_STORY_VERSION}catch{return true}
   });
   const lastCalculation=React.useRef("");
   const propertyKindMounted=React.useRef(false);
@@ -267,7 +268,7 @@ function MortgageCalculator(){
       down,
       updatedAt:new Date().toISOString(),
     };
-    try{localStorage.setItem(MORTGAGE_SCENARIO_KEY,JSON.stringify(shared));if(fromProperty)localStorage.setItem(scenarioKey,JSON.stringify(shared));}catch{}
+    try{safeLocalStorage.setItem(MORTGAGE_SCENARIO_KEY,JSON.stringify(shared));if(fromProperty)safeLocalStorage.setItem(scenarioKey,JSON.stringify(shared));}catch{}
   },[program,propertyKind,childrenCount,hasYoungChild,disabledChild,largeArea,allowBlended,marketRate,futureRate,years,price,down]);
 
   React.useEffect(()=>{

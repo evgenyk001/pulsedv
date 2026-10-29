@@ -1,3 +1,4 @@
+import {safeLocalStorage,safeSessionStorage} from '../../../../packages/browser/storage';
 import {LoadRecovery} from './LoadRecovery';
 import {BackLink} from "./BackLink";
 import {NativeSelect} from "./NativeSelect";
@@ -18,7 +19,7 @@ import styles from '../pages/journey.module.css';
 export const journeyStatus=(status:string)=>({new:'Обращение принято',contacted:'На связи',qualified:'Подбираем варианты',showing:'Готовимся к показу',booking:'Бронирование',deal:'Сделка завершена',closed:'Обращение завершено',lost:'Обращение закрыто'}[status]||'Обращение принято');
 export const journeyDate=(value:string,short=false)=>new Date(value).toLocaleString('ru-RU',short?{day:'numeric',month:'short'}:{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Vladivostok'});
 const clock=(value:string)=>new Date(value).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-function draftFor(id:string){try{return sessionStorage.getItem('pulse.chat-draft.'+id)||''}catch{return ''}}
+function draftFor(id:string){try{return safeSessionStorage.getItem('pulse.chat-draft.'+id)||''}catch{return ''}}
 
 type Props={entry:JourneyEntry;properties:PulseProperty[];query:ReturnType<typeof useClientJourneys>;catalogError:boolean;onRetryCatalog:()=>void};
 export function ClientConversation({entry,properties,query,catalogError,onRetryCatalog}:Props){
@@ -34,7 +35,7 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
  React.useEffect(()=>()=>{if(uploadedAttachment)void discardJourneyAttachment(entry.leadId,uploadedAttachment,true).catch(()=>{})},[uploadedAttachment,entry.leadId]);
  const uploadGeneration=React.useRef(0);
  React.useEffect(()=>()=>{uploadGeneration.current++},[]);
- const [requestContext,setRequestContext]=React.useState<Record<string,unknown>|undefined>(()=>{try{return JSON.parse(sessionStorage.getItem('pulse.chat-context.'+entry.leadId)??'null')??undefined}catch{return undefined}});
+ const [requestContext,setRequestContext]=React.useState<Record<string,unknown>|undefined>(()=>{try{return JSON.parse(safeSessionStorage.getItem('pulse.chat-context.'+entry.leadId)??'null')??undefined}catch{return undefined}});
  const locked=React.useRef(false),messageId=React.useRef(crypto.randomUUID());
  const [replies,setReplies]=React.useState<Record<string,string>>({});
  const [propertyId,setPropertyId]=React.useState(''),[at,setAt]=React.useState(''),[note,setNote]=React.useState('');
@@ -49,8 +50,8 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
  React.useEffect(()=>{const resize=()=>{const viewport=window.visualViewport;root.current?.style.setProperty('--chat-height',(viewport?.height||window.innerHeight)+'px');root.current?.style.setProperty('--chat-top',(viewport?.offsetTop||0)+'px');if(nearBottom.current)requestAnimationFrame(scrollEnd)};resize();window.visualViewport?.addEventListener('resize',resize);window.visualViewport?.addEventListener('scroll',resize);window.addEventListener('resize',resize);return()=>{window.visualViewport?.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('scroll',resize);window.removeEventListener('resize',resize)}},[]);
  React.useLayoutEffect(()=>{if(tab!=='chat')return;if(nearBottom.current)scrollEnd();else setNewBelow(true)},[j.messages?.length,tab]);
  React.useLayoutEffect(()=>{if(input.current){input.current.style.height='auto';input.current.style.height=Math.min(112,input.current.scrollHeight)+'px'}},[draft,tab]);
- React.useEffect(()=>{try{if(draft)sessionStorage.setItem('pulse.chat-draft.'+entry.leadId,draft);else sessionStorage.removeItem('pulse.chat-draft.'+entry.leadId)}catch{}},[draft,entry.leadId]);
- React.useEffect(()=>{if(tab!=='chat')return;try{const previous=JSON.parse(localStorage.getItem('pulse.read-updates.v1')||'[]');const ids=(j.messages||[]).filter(m=>m.author==='manager').map(m=>'message:'+m.id);localStorage.setItem('pulse.read-updates.v1',JSON.stringify([...new Set([...ids,...(Array.isArray(previous)?previous:[])])].slice(0,500)))}catch{}},[j.messages,tab]);
+ React.useEffect(()=>{try{if(draft)safeSessionStorage.setItem('pulse.chat-draft.'+entry.leadId,draft);else safeSessionStorage.removeItem('pulse.chat-draft.'+entry.leadId)}catch{}},[draft,entry.leadId]);
+ React.useEffect(()=>{if(tab!=='chat')return;try{const previous=JSON.parse(safeLocalStorage.getItem('pulse.read-updates.v1')||'[]');const ids=(j.messages||[]).filter(m=>m.author==='manager').map(m=>'message:'+m.id);safeLocalStorage.setItem('pulse.read-updates.v1',JSON.stringify([...new Set([...ids,...(Array.isArray(previous)?previous:[])])].slice(0,500)))}catch{}},[j.messages,tab]);
  const unreadManager=(j.messages||[]).filter(m=>m.author==='manager'&&!m.readAt).map(m=>m.id).join(',');
  React.useEffect(()=>{if(tab!=='chat'||!unreadManager)return;let cancelled=false;void markJourneyRead(j,unreadManager.split(','),true).then(result=>{if(cancelled)return;cache.setQueryData(['my-journeys'],(old:{items:JourneyEntry[];limited:boolean}|undefined)=>old?{...old,items:old.items.map(e=>e.leadId===entry.leadId?{...e,journey:result.journey}:e)}:old)}).catch(()=>{});return()=>{cancelled=true}},[tab,unreadManager,entry.leadId]);
  React.useEffect(()=>()=>{if(previewUrl)URL.revokeObjectURL(previewUrl)},[previewUrl]);
@@ -80,7 +81,7 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
  };
  const send=async(e:React.FormEvent)=>{e.preventDefault();if((!draft.trim()&&!pendingFile)||closed||uploading||pendingFile&&!uploadedAttachment)return;
   if(await run({type:'message',id:messageId.current,text:draft.trim(),attachment:uploadedAttachment,requestContext})){
-   setDraft('');clearAttachment();setRequestContext(undefined);try{sessionStorage.removeItem('pulse.chat-context.'+entry.leadId)}catch{}
+   setDraft('');clearAttachment();setRequestContext(undefined);try{safeSessionStorage.removeItem('pulse.chat-context.'+entry.leadId)}catch{}
    messageId.current=crypto.randomUUID();nearBottom.current=true;requestAnimationFrame(scrollEnd);input.current?.focus();
   }
  };

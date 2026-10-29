@@ -1,3 +1,4 @@
+import {AppBoundary} from '../../../packages/browser/AppBoundary';
 import { configureRuntime } from "../../../packages/pulse-data/runtime";
 import { RuntimeShell } from "./RuntimeShell";
 import React from "react";
@@ -10,6 +11,6 @@ configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.me
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <HashRouter><RuntimeShell><App/></RuntimeShell></HashRouter>
+    <AppBoundary><HashRouter><RuntimeShell><App/></RuntimeShell></HashRouter></AppBoundary>
   </React.StrictMode>
 );

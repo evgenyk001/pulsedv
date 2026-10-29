@@ -1,3 +1,4 @@
+import {safeLocalStorage} from '../../../../packages/browser/storage';
 import {LoadRecovery} from './LoadRecovery';
 import React from "react";
 import { createPortal } from "react-dom";
@@ -56,7 +57,7 @@ export function MortgageStoryOnboarding({ onDone }: { onDone: () => void }) {
   const finish = React.useCallback((eventType: "mortgage_intro_complete" | "mortgage_intro_skip") => {
     if (finished.current) return;
     finished.current = true;
-    try { localStorage.setItem(MORTGAGE_STORY_STORAGE, MORTGAGE_STORY_VERSION); } catch { /* Storage may be unavailable in private mode. */ }
+    try { safeLocalStorage.setItem(MORTGAGE_STORY_STORAGE, MORTGAGE_STORY_VERSION); } catch { /* Storage may be unavailable in private mode. */ }
     recordPulseEvent({ eventType, entityType: "onboarding", entityId: MORTGAGE_STORY_VERSION });
     onDone();
   }, [onDone]);

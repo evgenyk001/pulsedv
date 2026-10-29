@@ -1,3 +1,4 @@
+import {safeLocalStorage} from '../../../../packages/browser/storage';
 import {rememberCityInterest} from '../helpers/cityInterest';
 import {housingClassChoices,mentionedHousingClasses} from '../../../../packages/domain/housingClass';
 import {APARTMENT_FINISHES,apartmentFinishLabel} from '../../../../packages/domain/propertyFinish';
@@ -144,7 +145,7 @@ export default function SelectionPage(){
 
   const saved=React.useMemo<SavedSelection>(()=>{
     try{
-      const parsed=JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}");
+      const parsed=JSON.parse(safeLocalStorage.getItem(STORAGE_KEY)||"{}");
       return parsed&&typeof parsed==="object"?parsed:{};
     }catch{return{};}
   },[]);
@@ -178,7 +179,7 @@ export default function SelectionPage(){
   ]);
   const budgetInitialized=React.useRef(false);
   const [mortgageProgram,setMortgageProgram]=React.useState<"standard"|"family"|"farEast"|"it">(saved.mortgageProgram??"standard");
-  const [mortgageScenario,setMortgageScenario]=React.useState<MortgageScenarioSettings|null>(()=>readMortgageScenario(typeof localStorage==="undefined"?null:localStorage));
+  const [mortgageScenario,setMortgageScenario]=React.useState<MortgageScenarioSettings|null>(()=>readMortgageScenario(typeof safeLocalStorage==="undefined"?null:safeLocalStorage));
   const [downPayment,setDownPayment]=React.useState(saved.downPayment??1_500_000);
   const [downDraft,setDownDraft]=React.useState(formatRub(saved.downPayment??1_500_000));
   const [monthlyPayment,setMonthlyPayment]=React.useState(saved.monthlyPayment??60_000);
@@ -189,7 +190,7 @@ export default function SelectionPage(){
   const [smartStatus,setSmartStatus]=React.useState("");
 
   React.useEffect(()=>{
-    const shared=readMortgageScenario(localStorage);
+    const shared=readMortgageScenario(safeLocalStorage);
     if(!shared)return;
     setMortgageScenario(shared);
     if(control.mortgagePrograms.some(item=>item.id===shared.programId))setMortgageProgram(shared.programId);
@@ -342,7 +343,7 @@ export default function SelectionPage(){
 
   const persistSelection=React.useCallback(()=>{
     const value:SavedSelection={city,district,districtRequired,preferredPreferences,rooms,housingClasses,areaFrom,areaTo,finishType,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started,version:6};
-    try{localStorage.setItem(STORAGE_KEY,JSON.stringify(value));}catch{}
+    try{safeLocalStorage.setItem(STORAGE_KEY,JSON.stringify(value));}catch{}
   },[city,district,districtRequired,preferredPreferences,rooms,housingClasses,areaFrom,areaTo,finishType,delivery,purchaseMode,budget,downPayment,monthlyPayment,mortgageProgram,preferences,showResult,started]);
 
   React.useEffect(()=>{persistSelection()},[persistSelection]);
@@ -464,13 +465,13 @@ export default function SelectionPage(){
     setStarted(true);
     persistSelection();
     try{
-      const history=JSON.parse(localStorage.getItem("pulse_selection_history")||"[]");
+      const history=JSON.parse(safeLocalStorage.getItem("pulse_selection_history")||"[]");
       const nextHistory=[{
         city,district,districtRequired,preferredPreferences,rooms,housingClasses,areaFrom,areaTo,finishType,min:budget[0],max:budget[1],delivery,
         mortgage:purchaseMode==="mortgage",downPayment,monthlyPayment,mortgageProgram,
         preferences,score:topScore,strongCount,createdAt:Date.now(),
       },...(Array.isArray(history)?history:[])].slice(0,5);
-      localStorage.setItem("pulse_selection_history",JSON.stringify(nextHistory));
+      safeLocalStorage.setItem("pulse_selection_history",JSON.stringify(nextHistory));
     }catch{}
 
     rememberCityInterest(city);

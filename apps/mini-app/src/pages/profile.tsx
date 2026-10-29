@@ -1,3 +1,4 @@
+import {safeLocalStorage} from '../../../../packages/browser/storage';
 import {PartnerSecurityPreferences} from '../components/PartnerSecurity';
 import {IconTile} from '../components/IconTile';
 import {AnnouncementPreferences} from '../components/AnnouncementPreferences';
@@ -17,7 +18,7 @@ export default function ProfilePage(){
   const [history,setHistory]=React.useState<Array<{city:string;rooms:string;min:number;max:number;delivery:string;mortgage:boolean;sea:boolean;createdAt:number}>>([]);
   React.useEffect(()=>{
     try{
-      const stored=JSON.parse(localStorage.getItem("pulse_selection_history")||"[]");
+      const stored=JSON.parse(safeLocalStorage.getItem("pulse_selection_history")||"[]");
       setHistory(Array.isArray(stored)?stored.slice(0,3):[]);
     }catch{setHistory([])}
   },[]);

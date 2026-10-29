@@ -1,3 +1,5 @@
+import {loadTelegramSdk} from '../browser/telegramSdk';
+import {safeLocalStorage} from '../browser/storage';
 import {pageIsLeaving,pageRequestSignal} from './pageLifecycle';
 import {partnerGrant} from '../partners/securityState';
 import {isPublicEvent} from './eventContract';
@@ -25,10 +27,21 @@ export function subscribeRuntime(listener:()=>void){window.addEventListener('pul
 export function runtimeError(error:unknown){runtime.error=error instanceof Error?error.message:'Не удалось выполнить запрос';notify();}
 export class ApiError extends Error{constructor(public status:number,message:string){super(message);}}
 export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
- let response:Response;
- try{response=await fetch(runtime.base+path,{...options,credentials:'same-origin',headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers},signal:typeof AbortSignal.any==='function'?AbortSignal.any([options.signal??AbortSignal.timeout(12000),pageRequestSignal()]):options.signal??AbortSignal.timeout(12000)});}catch(error){throw new ApiError(0,runtime.role==='public'?'Не получилось выполнить действие. Попробуйте ещё раз.':error instanceof Error&&error.name==='TimeoutError'?'Сервер не успел ответить. Проверьте данные и повторите попытку':error instanceof Error&&error.name==='AbortError'?'Запрос отменён':'Нет связи с сервером. Проверьте соединение и повторите попытку');}
- const body=await response.json().catch(()=>({}));
- if(!response.ok)throw new ApiError(response.status,runtime.role==='public'&&response.status>=500?'Не получилось выполнить действие. Попробуйте ещё раз.':body.error||'Не удалось выполнить запрос');return body;
+ const controller=new AbortController();
+ const sources=[options.signal,pageRequestSignal()].filter((signal):signal is AbortSignal=>!!signal);
+ const abort=()=>{const source=sources.find(signal=>signal.aborted);controller.abort(source?.reason)};
+ const timer=options.signal?undefined:setTimeout(()=>controller.abort(new DOMException('Request timed out','TimeoutError')),12000);
+ for(const source of sources){source.addEventListener('abort',abort,{once:true});if(source.aborted)abort()}
+ try{
+  const response=await fetch(runtime.base+path,{...options,credentials:'same-origin',headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers},signal:controller.signal});
+  let body:any;
+  try{body=await response.json()}catch(error){if(response.ok)throw error;body={}}
+  if(!response.ok)throw new ApiError(response.status,runtime.role==='public'&&response.status>=500?'Не получилось выполнить действие. Попробуйте ещё раз.':body.error||'Не удалось выполнить запрос');
+  return body;
+ }catch(error){
+  if(error instanceof ApiError)throw error;
+  throw new ApiError(0,runtime.role==='public'?'Не получилось выполнить действие. Попробуйте ещё раз.':error instanceof Error&&error.name==='TimeoutError'?'Сервер не успел ответить. Проверьте данные и повторите попытку':error instanceof Error&&error.name==='AbortError'?'Запрос отменён':'Нет связи с сервером. Проверьте соединение и повторите попытку');
+ }finally{clearTimeout(timer);for(const source of sources)source.removeEventListener('abort',abort)}
 }
 type Session={sessionId:string;accessToken:string;expiresAt:string};
 let sessionPromise:Promise<Session>|null=null;
@@ -39,10 +52,10 @@ export async function visitorSessionId(){return (await session()).sessionId;}
 async function session():Promise<Session>{
  if(sessionPromise)return sessionPromise;
  sessionPromise=(async()=>{
-  let stored:Session|null=null;try{stored=JSON.parse(localStorage.getItem(SESSION)||'null');}catch{}
+  let stored:Session|null=null;try{stored=JSON.parse(safeLocalStorage.getItem(SESSION)||'null');}catch{}
   if(stored&&Date.parse(stored.expiresAt)>Date.now()+60_000)return stored;
   const value=await api<Session>('/auth/session',{method:'POST',body:JSON.stringify(attribution(entrySearch(),document.referrer,window.location.origin))});
-  try{localStorage.setItem(SESSION,JSON.stringify(value));}catch{}
+  try{safeLocalStorage.setItem(SESSION,JSON.stringify(value));}catch{}
   return value;
  })();try{return await sessionPromise;}catch(error){sessionPromise=null;throw error;}
 }
@@ -50,7 +63,7 @@ export async function visitorApi<T=any>(path:string,options:RequestInit={}):Prom
  const identity=await session();
  try{return await api<T>(path,{...options,headers:{...options.headers,Authorization:'Bearer '+identity.accessToken,...(path.startsWith('/me/partner')&&partnerGrant()?{'X-Partner-Unlock':partnerGrant()}:{})}});}catch(error){
   if(error instanceof ApiError&&error.status===423&&path.startsWith('/me/partner'))window.dispatchEvent(new Event('pulse:partner-locked'));
-  if(error instanceof ApiError&&error.status===401){sessionPromise=null;telegramBound=false;visitorCookieBound=false;try{localStorage.removeItem(SESSION);}catch{}}
+  if(error instanceof ApiError&&error.status===401){sessionPromise=null;telegramBound=false;visitorCookieBound=false;try{safeLocalStorage.removeItem(SESSION);}catch{}}
   throw error;
  }
 }
@@ -60,6 +73,7 @@ export async function initializePublic(){
  if(pageIsLeaving())return;
  await session();
  if(!visitorCookieBound){await visitorApi('/auth/cookie',{method:'POST',body:'{}'});visitorCookieBound=true;}
+ await loadTelegramSdk();
  const initData=(window as any).Telegram?.WebApp?.initData;
  if(initData&&!telegramBound){await visitorApi('/auth/telegram',{method:'POST',body:JSON.stringify({initData})});telegramBound=true;}
  // Analytics must not block the application or reset its authenticated identity.
@@ -160,10 +174,10 @@ export async function createRemoteLead(payload:Record<string,unknown>){return vi
 type QueuedEvent={idempotencyKey:string;eventType:string;entityType:string|null;entityId:string|null;metadata:Record<string,unknown>;occurredAt:string};
 const QUEUE='pulse.dv.api.events.v1';
 let queue:QueuedEvent[]=[];let loaded=false;let flushing=false;let retry=0;let timer:ReturnType<typeof setTimeout>|undefined;
-const persist=()=>{try{localStorage.setItem(QUEUE,JSON.stringify(queue.slice(-500)));}catch{}};
+const persist=()=>{try{safeLocalStorage.setItem(QUEUE,JSON.stringify(queue.slice(-500)));}catch{}};
 export function enqueueEvent(input:{eventType:string;entityType?:string|null;entityId?:string|null;metadata?:Record<string,unknown>}){
  if(!isPublicEvent(input.eventType))return;
- if(!loaded){loaded=true;try{const saved=JSON.parse(localStorage.getItem(QUEUE)||'[]');queue=Array.isArray(saved)?saved.filter(x=>Date.parse(x.occurredAt)>Date.now()-7*86400_000).slice(-400):[];}catch{}}
+ if(!loaded){loaded=true;try{const saved=JSON.parse(safeLocalStorage.getItem(QUEUE)||'[]');queue=Array.isArray(saved)?saved.filter(x=>Date.parse(x.occurredAt)>Date.now()-7*86400_000).slice(-400):[];}catch{}}
  queue.push({idempotencyKey:crypto.randomUUID(),eventType:input.eventType,entityType:input.entityType??null,entityId:input.entityId??null,metadata:input.metadata??{},occurredAt:new Date().toISOString()});
  queue=queue.slice(-500);persist();schedule(800);
 }

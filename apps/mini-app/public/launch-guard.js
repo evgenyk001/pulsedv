@@ -1,5 +1,7 @@
 // Runs independently of the app bundle, including when its download fails.
 (()=>{
+ const ready=()=>{const tg=window.Telegram?.WebApp;for(const call of [()=>tg?.ready?.(),()=>tg?.expand?.()])try{call()}catch{}};
+ ready();window.addEventListener('pulse:telegram-sdk-ready',ready);
  const screen=document.getElementById('pulse-launch');
  if(!screen)return;
  const show=()=>{if(screen.isConnected&&!screen.dataset.ready){const note=document.getElementById('pulse-launch-note');if(note)note.hidden=false}};
