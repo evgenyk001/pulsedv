@@ -57,3 +57,9 @@ test('Home uses distinct-viewer popularity in the chosen city; city changes pers
  await page.goto('/pulsedv/mini-app/#/selection');await page.getByRole('combobox',{name:'Город',exact:true}).selectOption('Уссурийск');await page.goto('/pulsedv/mini-app/');
  await expect(section.getByRole('combobox',{name:'Город подборки на главной'})).toHaveValue('Уссурийск');
 });
+
+test('Without an explicit city, home uses the city of the last viewed project; All cities stays explicit',async({page})=>{
+ await seed(page,{started:false});await page.goto('/pulsedv/mini-app/#/property/vlad-popular');await expect(page.getByRole('heading',{name:'ЖК Во Владивостоке',exact:true})).toBeVisible();
+ await page.goto('/pulsedv/mini-app/');const picker=page.getByRole('combobox',{name:'Город подборки на главной'});await expect(picker).toHaveValue('Владивосток');
+ await picker.selectOption('');await page.goto('/pulsedv/mini-app/#/property/uss-0');await expect(page.getByRole('heading',{name:'ЖК Атриум',exact:true})).toBeVisible();await page.goto('/pulsedv/mini-app/');await expect(picker).toHaveValue('');
+});
