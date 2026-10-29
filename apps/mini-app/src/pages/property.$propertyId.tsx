@@ -1,3 +1,4 @@
+import {rememberViewedCity} from '../helpers/cityInterest';
 import {propertyAreaRange,dimensionRange} from '../../../../packages/domain/propertyDimensions';
 import {LoadRecovery} from '../components/LoadRecovery';
 import {sortRoomLabels,normalizeRoomLabel} from '../../../../packages/domain/catalogFacets';
@@ -81,6 +82,7 @@ export default function PropertyPage(){
 
   React.useEffect(()=>{
     if(!p)return;
+    rememberViewedCity(p.city);
     try{localStorage.setItem("pulse.last-property",JSON.stringify({id:p.id,name:p.name,at:Date.now()}))}catch{}
     recordPulseEvent({eventType:"property_view",entityType:"property",entityId:p.id,metadata:{propertyName:p.name,city:p.city,district:p.district,priceFrom:p.priceFrom}});
   },[p?.id]);

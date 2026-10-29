@@ -9,7 +9,7 @@ import type { Database } from "./database";
 import type { RuntimeConfig } from "./config";
 import { audit } from "./repository";
 import { catalogImportSchema, catalogPropertySchema } from "./validation";
-import { catalogMeta, getCatalogProperty, listCatalog, removeCatalogProperty, upsertCatalogProperty } from "./catalogRepository";
+import { featuredCatalog, catalogMeta, getCatalogProperty, listCatalog, removeCatalogProperty, upsertCatalogProperty } from "./catalogRepository";
 import { BinaryBodyError, readBinaryBody, registerBinaryParsers } from "./binaryBody";
 
 type Guard=(request:FastifyRequest)=>Promise<void>;
@@ -82,6 +82,12 @@ export async function registerCatalogRoutes(
       sea:!!query.sea,min:query.min,max:query.max,sort:query.sort,ids,view:query.view,
     });
     return {...result,items:result.items.map(({freshness,...property})=>property)};
+  });
+
+  app.get('/api/v1/public/catalog/featured',async(request,reply)=>{
+    const query=z.object({city:z.string().trim().min(1).max(100).optional(),limit:z.coerce.number().int().min(1).max(12).default(3)}).parse(request.query);
+    reply.header('Cache-Control','public, max-age=60');
+    return {items:await featuredCatalog(db,query.city??null,query.limit)};
   });
 
   app.get("/api/v1/public/catalog/:id",async(request,reply)=>{

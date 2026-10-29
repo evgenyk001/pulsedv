@@ -39,6 +39,7 @@ function setupApi(){
   if(path==='/me/announcements'){if(req.method==='PUT')announcements=payload.enabled;return {enabled:announcements,authenticated:true};}
   if(path==='/me/journeys')return {items:[]};
   if(path==='/public/catalog/meta')return {rooms:['1','2'],deliveries:['2027'],cities:[],minPriceRub:4000000,maxPriceRub:25000000,stepRub:100000,total:DEFAULT_STATE.properties.length};
+  if(path==='/public/catalog/featured'){if(failCatalog)return failure;return {items:DEFAULT_STATE.properties.filter(p=>p.status==='published').slice(0,3)};}
   if(path==='/public/catalog'){
    if(failCatalog)return failure;
    const ids=url.searchParams.get('ids')?.split(',');const items=DEFAULT_STATE.properties.filter(p=>p.status==='published'&&(!ids||ids.includes(p.id)));

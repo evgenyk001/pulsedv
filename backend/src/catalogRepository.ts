@@ -238,3 +238,23 @@ export async function upsertCatalogProperty(sql:Sql,p:CatalogProperty){
 export async function removeCatalogProperty(sql:Sql,id:string){
   return (await sql.query("delete from catalog_properties where id=$1 returning id",[id])).rows.length>0;
 }
+
+/** Public aggregate only: no identities, event metadata or per-person counts leave this function. */
+export async function featuredCatalog(sql:Sql,city:string|null=null,limit=3){
+ const count=Math.max(1,Math.min(12,Math.floor(limit)));
+ const rows=(await sql.query(`with viewers as (
+   select e.entity_id,coalesce(e.user_id::text,e.session_id::text) as viewer,max(e.occurred_at) as last_seen
+   from user_events e join catalog_properties p on p.id=e.entity_id
+   where e.event_type='property_view' and e.occurred_at>=now()-interval '30 days' and e.occurred_at<=now()
+     and p.status='published' and ($1::text is null or p.city=$1)
+   group by e.entity_id,coalesce(e.user_id::text,e.session_id::text)
+ ), popularity as (
+   select entity_id,sum(case when last_seen>=now()-interval '7 days' then 2 else 1 end) as score,count(*) as people
+   from viewers group by entity_id
+ ) select p.id from catalog_properties p left join popularity v on v.entity_id=p.id
+ where p.status='published' and ($1::text is null or p.city=$1)
+ order by coalesce(v.score,0) desc,coalesce(v.people,0) desc,p.id asc limit $2`,[city,count])).rows;
+ if(!rows.length)return [];
+ const items=(await listCatalog(sql,{ids:rows.map(row=>row.id),limit:count,view:'card'})).items;
+ return rows.flatMap(row=>{const item=items.find(p=>p.id===row.id);if(!item)return [];const {freshness,...publicItem}=item;return [publicItem]});
+}

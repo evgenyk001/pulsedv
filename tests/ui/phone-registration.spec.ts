@@ -37,6 +37,7 @@ test('Mandatory phone blocks direct routes, cancellation and forged client succe
   if(path==='/me/favorites'){privateReads++;return {ids:[],authenticated:true};}
   if(path==='/me/journeys')return {items:[]};
   if(path==='/public/catalog/meta')return {rooms:[],deliveries:[],cities:[],minPriceRub:0,maxPriceRub:25000000,stepRub:100000,total:0};
+  if(path==='/public/catalog/featured')return {items:[]};
   if(path==='/public/catalog')return {items:[],page:1,limit:20,total:0,hasMore:false};
   return {ok:true};
  };

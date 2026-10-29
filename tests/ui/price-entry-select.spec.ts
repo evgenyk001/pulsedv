@@ -35,13 +35,13 @@ test('Control calculates in both directions, saves reference area and displays t
 });
 for(const width of [320,390])test(`Select ${width}px: class, area and finish persist without overflow`,async({page})=>{
  await page.setViewportSize({width,height:844});await seed(page);await page.goto('/pulsedv/mini-app/#/selection');
- await page.getByRole('button',{name:'Бизнес',exact:true}).click();
+ await page.getByRole('combobox',{name:'Класс жилья',exact:true}).selectOption('Бизнес');
  await page.getByRole('textbox',{name:'Площадь от',exact:true}).or(page.getByRole('spinbutton',{name:'Площадь от',exact:true})).fill('30');
  await page.getByRole('spinbutton',{name:'Площадь до',exact:true}).fill('80');
  await page.getByRole('combobox',{name:'Отделка',exact:true}).selectOption('rough');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.screenshot({path:`test-results/select-filters-${width}.png`,fullPage:true});
- await page.reload();await expect(page.getByRole('button',{name:'Бизнес',exact:true})).toHaveAttribute('aria-pressed','true');
+ await page.reload();await expect(page.getByRole('combobox',{name:'Класс жилья',exact:true})).toHaveValue('Бизнес');
  await expect(page.getByRole('spinbutton',{name:'Площадь от',exact:true})).toHaveValue('30');
  await expect(page.getByRole('combobox',{name:'Отделка',exact:true})).toHaveValue('rough');
 });
