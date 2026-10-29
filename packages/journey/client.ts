@@ -1,12 +1,13 @@
+import {safeLocalStorage,safeSessionStorage} from '../browser/storage';
 import {api,visitorApi,runtime} from '../pulse-data/runtime';
 import {listPulseLeads,recordPulseEvent} from '../pulse-data';
 import {applyJourney,clientJourney,emptyJourney,type Journey,type JourneyAttachment,type JourneyCommand,type Verification} from './model';
 export type JourneyEntry={leadId:string;leadName?:string;status:string;propertyId:string|null;createdAt:string;managerName?:string|null;managerHasReplied?:boolean;pinnedAt?:string|null;hiddenAt?:string|null;journey:Journey};
 const KEY='pulse.dv.journeys.v1';
-function read():Record<string,Journey>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return {}}}
+function read():Record<string,Journey>{try{return JSON.parse(safeLocalStorage.getItem(KEY)||'{}')}catch{return {}}}
 export async function loadJourneys(client=false):Promise<{items:JourneyEntry[];limited:boolean}>{
  if(runtime.enabled)return (client?visitorApi:api)((client?'/me':'/control')+'/journeys');
- const data=read(),preferences=readPreferences();const session=sessionStorage.getItem('pulse.dv.session.v1');
+ const data=read(),preferences=readPreferences();const session=safeSessionStorage.getItem('pulse.dv.session.v1');
  return {limited:false,items:listPulseLeads().filter(l=>!client||l.sessionId===session).map(l=>({leadId:l.id,leadName:l.name,status:l.status,propertyId:l.propertyId,createdAt:l.createdAt,...(client?localJourneyPreference(l.id,data[l.id]||emptyJourney(l.id),preferences):{}),journey:client?clientJourney(data[l.id]||emptyJourney(l.id)):data[l.id]||emptyJourney(l.id)}))};
 }
 export async function loadJourney(leadId:string,client=false):Promise<JourneyEntry|null>{
@@ -20,7 +21,7 @@ export async function saveJourney(journey:Journey,command:JourneyCommand,client=
  const data=read();const current=data[journey.leadId]||emptyJourney(journey.leadId);
  if(current.revision!==journey.revision)throw new Error('Карточка изменилась. Обновите данные');
  data[journey.leadId]=applyJourney(current,command,client?'client':'manager');
- localStorage.setItem(KEY,JSON.stringify(data));window.dispatchEvent(new Event('pulse:journey'));
+ safeLocalStorage.setItem(KEY,JSON.stringify(data));window.dispatchEvent(new Event('pulse:journey'));
  if(client)recordPulseEvent({eventType:command.type==='reaction'?'collection_reaction':command.type==='message'?'client_message':command.type==='showing_change'?(command.action==='cancel'?'showing_cancelled':'showing_reschedule_requested'):'showing_requested',entityType:'property',entityId:command.type==='reaction'||command.type==='showing'?command.propertyId:null,metadata:command.type==='reaction'?{reaction:command.reaction,reply:command.reply.slice(0,150)}:{}});
  return {journey:client?clientJourney(data[journey.leadId]):data[journey.leadId]};
 }
@@ -43,14 +44,14 @@ export async function markJourneyRead(journey:Journey,messageIds:string[],client
  if(runtime.enabled)return (client?visitorApi:api)<{journey:Journey}>((client?'/me':'/control')+'/journeys/'+journey.leadId+'/read',{method:'POST',body:JSON.stringify({messageIds:ids})});
  const data=read();const current=data[journey.leadId]||emptyJourney(journey.leadId);const target=client?'manager':'client';const now=new Date().toISOString();
  current.messages=(current.messages||[]).map(m=>ids.includes(m.id)&&m.author===target&&!m.readAt?{...m,readAt:now}:m);
- data[journey.leadId]=current;localStorage.setItem(KEY,JSON.stringify(data));window.dispatchEvent(new Event('pulse:journey'));
+ data[journey.leadId]=current;safeLocalStorage.setItem(KEY,JSON.stringify(data));window.dispatchEvent(new Event('pulse:journey'));
  return {journey:client?clientJourney(current):current};
 }
-export async function loadVerifications():Promise<Verification[]>{if(runtime.enabled)return (await api('/public/verifications')).items;try{return JSON.parse(localStorage.getItem('pulse.dv.verifications.v1')||'[]')}catch{return []}}
+export async function loadVerifications():Promise<Verification[]>{if(runtime.enabled)return (await api('/public/verifications')).items;try{return JSON.parse(safeLocalStorage.getItem('pulse.dv.verifications.v1')||'[]')}catch{return []}}
 export async function verifyProperty(propertyId:string,note:string,revision:number){
  if(runtime.enabled)return api('/control/verifications/'+encodeURIComponent(propertyId),{method:'POST',body:JSON.stringify({note,revision})});
  const all=await loadVerifications();if((all.find(x=>x.propertyId===propertyId)?.revision||0)!==revision)throw new Error('Проверка изменилась');
- localStorage.setItem('pulse.dv.verifications.v1',JSON.stringify([{propertyId,note,revision:revision+1,checkedAt:new Date().toISOString()},...all.filter(x=>x.propertyId!==propertyId)]));
+ safeLocalStorage.setItem('pulse.dv.verifications.v1',JSON.stringify([{propertyId,note,revision:revision+1,checkedAt:new Date().toISOString()},...all.filter(x=>x.propertyId!==propertyId)]));
 }
 
 export async function discardJourneyAttachment(leadId:string,attachment:JourneyAttachment,client=false){
@@ -61,9 +62,9 @@ export async function discardJourneyAttachment(leadId:string,attachment:JourneyA
 }
 
 const PREFERENCES='pulse.journey-preferences.v1';
-function readPreferences():Record<string,{pinnedAt?:string|null;hiddenAt?:string|null}>{try{return JSON.parse(localStorage.getItem(PREFERENCES)||'{}')}catch{return {}}}
+function readPreferences():Record<string,{pinnedAt?:string|null;hiddenAt?:string|null}>{try{return JSON.parse(safeLocalStorage.getItem(PREFERENCES)||'{}')}catch{return {}}}
 function localJourneyPreference(id:string,journey:Journey,all:ReturnType<typeof readPreferences>){const p=all[id]||{};return {...p,hiddenAt:p.hiddenAt&&!(journey.messages||[]).some(m=>m.author==='manager'&&Date.parse(m.at)>Date.parse(p.hiddenAt!))?p.hiddenAt:null}}
 export async function setJourneyPreferences(id:string,input:{pinned?:boolean;hidden?:boolean}){
  if(runtime.enabled)return visitorApi('/me/journeys/'+encodeURIComponent(id)+'/preferences',{method:'PATCH',body:JSON.stringify(input)});
- const all=readPreferences(),previous=all[id]||{},now=new Date().toISOString();all[id]={...previous,...(input.pinned===undefined?{}:{pinnedAt:input.pinned?previous.pinnedAt||now:null}),...(input.hidden===undefined?{}:{hiddenAt:input.hidden?now:null})};localStorage.setItem(PREFERENCES,JSON.stringify(all));window.dispatchEvent(new Event('pulse:journey'));return all[id];
+ const all=readPreferences(),previous=all[id]||{},now=new Date().toISOString();all[id]={...previous,...(input.pinned===undefined?{}:{pinnedAt:input.pinned?previous.pinnedAt||now:null}),...(input.hidden===undefined?{}:{hiddenAt:input.hidden?now:null})};safeLocalStorage.setItem(PREFERENCES,JSON.stringify(all));window.dispatchEvent(new Event('pulse:journey'));return all[id];
 }

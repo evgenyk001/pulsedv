@@ -1,3 +1,4 @@
+import {safeLocalStorage,safeSessionStorage} from '../browser/storage';
 import {lossError} from './loss';
 import {guardLocalPartnerFinance} from '../partners/finance';
 import { runtime, stageState, updateRemote, enqueueEvent } from "./runtime";
@@ -18,7 +19,7 @@ export const PULSE_TASKS_EVENT="pulse:control-tasks";
 
 const now=()=>new Date().toISOString();
 const id=()=>typeof crypto!=="undefined"&&"randomUUID" in crypto?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now().toString(36);
-const canStore=()=>typeof window!=="undefined"&&!!window.localStorage;
+const canStore=()=>typeof window!=="undefined";
 
 function mergeState(input:Partial<PulseState>|null|undefined):PulseState{
   return {
@@ -48,16 +49,16 @@ export function getPulseState():PulseState{
   if(runtime.enabled)return runtime.snapshot.state;
   if(!canStore())return DEFAULT_STATE;
   try{
-    const state=mergeState(JSON.parse(localStorage.getItem(STATE_KEY)||"null"));
+    const state=mergeState(JSON.parse(safeLocalStorage.getItem(STATE_KEY)||"null"));
     // One-time demo upgrade. Later edits, disabling or removing the campaign remain authoritative.
     const upgradeKey="pulse.dv.partner-banner.v1";
-    if(!localStorage.getItem(upgradeKey)){
+    if(!safeLocalStorage.getItem(upgradeKey)){
       if(!state.banners.some(b=>b.id===DEFAULT_PARTNER_BANNER.id)){
         state.banners=[{...DEFAULT_PARTNER_BANNER},...state.banners];
         state.updatedAt=now();
-        try{localStorage.setItem(STATE_KEY,JSON.stringify(state))}catch{/* Keep the readable state if storage is full. */}
+        try{safeLocalStorage.setItem(STATE_KEY,JSON.stringify(state))}catch{/* Keep the readable state if storage is full. */}
       }
-      try{localStorage.setItem(upgradeKey,"1")}catch{/* Storage may be restricted. */}
+      try{safeLocalStorage.setItem(upgradeKey,"1")}catch{/* Storage may be restricted. */}
     }
     return state;
   }
@@ -68,7 +69,7 @@ export function setPulseState(next:PulseState){
   if(runtime.enabled){stageState(next);return;}
   if(!canStore())return;
   const value={...next,updatedAt:now()};
-  localStorage.setItem(STATE_KEY,JSON.stringify(value));
+  safeLocalStorage.setItem(STATE_KEY,JSON.stringify(value));
   window.dispatchEvent(new CustomEvent(PULSE_STATE_EVENT));
 }
 
@@ -89,7 +90,7 @@ export function subscribePulseState(listener:()=>void){
 export function listPulseLeads():PulseLead[]{
   if(runtime.enabled)return runtime.snapshot.leads;
   if(!canStore())return[];
-  try{const value=JSON.parse(localStorage.getItem(LEADS_KEY)||"[]");return Array.isArray(value)?value:[]}
+  try{const value=JSON.parse(safeLocalStorage.getItem(LEADS_KEY)||"[]");return Array.isArray(value)?value:[]}
   catch{return[]}
 }
 export function addPulseLead(payload:Omit<PulseLead,"id"|"status"|"manager"|"createdAt"|"updatedAt"|"sessionId"|"userId"|"score"|"priority"|"scoreReasons"|"topPropertyId"|"city"|"mortgageProgram"|"nextAction">){
@@ -102,7 +103,7 @@ export function addPulseLead(payload:Omit<PulseLead,"id"|"status"|"manager"|"cre
     topPropertyId:payload.propertyId,city:null,mortgageProgram:null,nextAction:null,nextActionManual:false
   };
   const leads=[lead,...listPulseLeads()];
-  localStorage.setItem(LEADS_KEY,JSON.stringify(leads));
+  safeLocalStorage.setItem(LEADS_KEY,JSON.stringify(leads));
   window.dispatchEvent(new CustomEvent(PULSE_LEADS_EVENT));
   recordPulseEvent({eventType:"lead_created",entityType:"lead",entityId:lead.id,metadata:{source:lead.source,propertyId:lead.propertyId}});
   return lead;
@@ -120,7 +121,7 @@ export function updatePulseLead(idValue:string,patch:Partial<Pick<PulseLead,"sta
     }else{next.lossReason=null;next.lossNote=null;next.lostAt=null;}
     return {...next,...('nextAction' in patch?{nextActionManual:patch.nextAction!==null}:{}),updatedAt:now()};
   });
-  localStorage.setItem(LEADS_KEY,JSON.stringify(leads));
+  safeLocalStorage.setItem(LEADS_KEY,JSON.stringify(leads));
   window.dispatchEvent(new CustomEvent(PULSE_LEADS_EVENT));
 }
 export function subscribePulseLeads(listener:()=>void){
@@ -135,7 +136,7 @@ export function subscribePulseLeads(listener:()=>void){
 export function listPulseProfiles():PulseVisitorProfile[]{
   if(runtime.enabled)return runtime.snapshot.profiles;
   if(!canStore())return[];
-  try{const value=JSON.parse(localStorage.getItem(PROFILES_KEY)||"[]");return Array.isArray(value)?value:[]}
+  try{const value=JSON.parse(safeLocalStorage.getItem(PROFILES_KEY)||"[]");return Array.isArray(value)?value:[]}
   catch{return[]}
 }
 export function subscribePulseProfiles(listener:()=>void){
@@ -149,14 +150,14 @@ export function subscribePulseProfiles(listener:()=>void){
 export function listPulseTasks():PulseTask[]{
   if(runtime.enabled)return runtime.snapshot.tasks;
   if(!canStore())return[];
-  try{const value=JSON.parse(localStorage.getItem(TASKS_KEY)||"[]");return Array.isArray(value)?value:[]}
+  try{const value=JSON.parse(safeLocalStorage.getItem(TASKS_KEY)||"[]");return Array.isArray(value)?value:[]}
   catch{return[]}
 }
 export function updatePulseTask(idValue:string,patch:Partial<Pick<PulseTask,"status"|"title"|"reason"|"dueAt">>){
   if(runtime.enabled){void updateRemote("tasks",idValue,patch).catch(()=>{});return;}
   if(!canStore())return;
   const tasks=listPulseTasks().map(task=>task.id===idValue?{...task,...patch,updatedAt:now()}:task);
-  localStorage.setItem(TASKS_KEY,JSON.stringify(tasks));
+  safeLocalStorage.setItem(TASKS_KEY,JSON.stringify(tasks));
   window.dispatchEvent(new CustomEvent(PULSE_TASKS_EVENT));
 }
 export function subscribePulseTasks(listener:()=>void){
@@ -198,7 +199,7 @@ function syncSessionSignals(session:string,events:PulseEvent[]){
   const profiles=[profile,...listPulseProfiles().filter(item=>item.sessionId!==session)]
     .sort((a,b)=>b.score-a.score)
     .slice(0,1000);
-  localStorage.setItem(PROFILES_KEY,JSON.stringify(profiles));
+  safeLocalStorage.setItem(PROFILES_KEY,JSON.stringify(profiles));
   window.dispatchEvent(new CustomEvent(PULSE_PROFILES_EVENT));
 
   const leads=listPulseLeads();
@@ -215,7 +216,7 @@ function syncSessionSignals(session:string,events:PulseEvent[]){
       nextAction:(lead.nextActionManual??!!lead.nextAction)?lead.nextAction:profile.nextAction,
       updatedAt:now(),
     }:lead);
-    localStorage.setItem(LEADS_KEY,JSON.stringify(nextLeads));
+    safeLocalStorage.setItem(LEADS_KEY,JSON.stringify(nextLeads));
     window.dispatchEvent(new CustomEvent(PULSE_LEADS_EVENT));
   }
 
@@ -251,7 +252,7 @@ function syncSessionSignals(session:string,events:PulseEvent[]){
       updatedAt:now(),
     };
     const nextTasks=[nextTask,...tasks.filter(task=>task.id!==nextTask.id)];
-    localStorage.setItem(TASKS_KEY,JSON.stringify(nextTasks));
+    safeLocalStorage.setItem(TASKS_KEY,JSON.stringify(nextTasks));
     window.dispatchEvent(new CustomEvent(PULSE_TASKS_EVENT));
   }
 }
@@ -266,14 +267,14 @@ export function recalculatePulseLeadEngine(){
 
 function sessionId(){
   if(typeof window==="undefined")return"server";
-  let value=sessionStorage.getItem(SESSION_KEY);
-  if(!value){value=id();sessionStorage.setItem(SESSION_KEY,value)}
+  let value=safeSessionStorage.getItem(SESSION_KEY);
+  if(!value){value=id();safeSessionStorage.setItem(SESSION_KEY,value)}
   return value;
 }
 export function listPulseEvents():PulseEvent[]{
   if(runtime.enabled)return runtime.snapshot.events;
   if(!canStore())return[];
-  try{const value=JSON.parse(localStorage.getItem(EVENTS_KEY)||"[]");return Array.isArray(value)?value:[]}
+  try{const value=JSON.parse(safeLocalStorage.getItem(EVENTS_KEY)||"[]");return Array.isArray(value)?value:[]}
   catch{return[]}
 }
 export function recordPulseEvent(input:{eventType:string;entityType?:string|null;entityId?:string|null;metadata?:Record<string,unknown>;userId?:string|null}){
@@ -281,7 +282,7 @@ export function recordPulseEvent(input:{eventType:string;entityType?:string|null
   if(!canStore())return;
   const event:PulseEvent={id:id(),sessionId:sessionId(),userId:input.userId??null,eventType:input.eventType,entityType:input.entityType??null,entityId:input.entityId??null,metadata:input.metadata??{},createdAt:now()};
   const events=[event,...listPulseEvents()].slice(0,1000);
-  localStorage.setItem(EVENTS_KEY,JSON.stringify(events));
+  safeLocalStorage.setItem(EVENTS_KEY,JSON.stringify(events));
   window.dispatchEvent(new CustomEvent(PULSE_EVENTS_EVENT));
   syncSessionSignals(event.sessionId,events);
 }
@@ -296,8 +297,8 @@ export function subscribePulseEvents(listener:()=>void){
 export function resetPulsePreviewData(){
   if(runtime.enabled)return;
   if(!canStore())return;
-  localStorage.removeItem(STATE_KEY);localStorage.removeItem(LEADS_KEY);localStorage.removeItem(EVENTS_KEY);
-  localStorage.removeItem(PROFILES_KEY);localStorage.removeItem(TASKS_KEY);
+  safeLocalStorage.removeItem(STATE_KEY);safeLocalStorage.removeItem(LEADS_KEY);safeLocalStorage.removeItem(EVENTS_KEY);
+  safeLocalStorage.removeItem(PROFILES_KEY);safeLocalStorage.removeItem(TASKS_KEY);
   window.dispatchEvent(new CustomEvent(PULSE_STATE_EVENT));
   window.dispatchEvent(new CustomEvent(PULSE_LEADS_EVENT));
   window.dispatchEvent(new CustomEvent(PULSE_EVENTS_EVENT));

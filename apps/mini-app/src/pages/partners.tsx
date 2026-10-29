@@ -1,3 +1,4 @@
+import {safeLocalStorage} from '../../../../packages/browser/storage';
 import {LoadRecovery} from '../components/LoadRecovery';
 import {BackLink} from "../components/BackLink";
 import {IconTile} from '../components/IconTile';
@@ -66,8 +67,8 @@ export default function PartnersPage(){
  const deep=useQuery({queryKey:['partner-referral',selectedId],queryFn:()=>getOwnPartnerReferral(selectedId!),enabled:!!selectedId,staleTime:0});
  const [label,setLabel]=React.useState(''),[inviteCode,setInviteCode]=React.useState<string|null>(null);
  const inviteKey=React.useRef(crypto.randomUUID()),guideShown=React.useRef(false);
- const dismissSheet=()=>{if(sheet==='guide'){try{localStorage.setItem(GUIDE_KEY,'seen')}catch{}}setSheet(null);setError('')};
- React.useEffect(()=>{if(q.isLoading||!q.data||guideShown.current)return;guideShown.current=true;try{if(localStorage.getItem(GUIDE_KEY)==='seen')return}catch{}setSheet('guide')},[q.isLoading,q.data]);
+ const dismissSheet=()=>{if(sheet==='guide'){try{safeLocalStorage.setItem(GUIDE_KEY,'seen')}catch{}}setSheet(null);setError('')};
+ React.useEffect(()=>{if(q.isLoading||!q.data||guideShown.current)return;guideShown.current=true;try{if(safeLocalStorage.getItem(GUIDE_KEY)==='seen')return}catch{}setSheet('guide')},[q.isLoading,q.data]);
  const program=useQuery({queryKey:['partner-program'],queryFn:()=>runtime.enabled?api<{botUsername:string;offerPublished:boolean}>('/public/partner-program'):Promise.resolve({botUsername:'pulsedvbot',offerPublished:false}),staleTime:600000});
  const offerReady=!runtime.enabled||program.data?.offerPublished===true;
  const p=q.data?.partner,needsTerms=!!p&&p.termsVersion!==PARTNER_TERMS_VERSION,canInvite=p?.status==='active'&&!needsTerms;

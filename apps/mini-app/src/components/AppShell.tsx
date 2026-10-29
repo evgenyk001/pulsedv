@@ -1,3 +1,4 @@
+import {safeLocalStorage,safeSessionStorage} from '../../../../packages/browser/storage';
 import {prepareTelegramWindow} from '../helpers/telegramWindow';
 import {FavoriteSync} from "../helpers/useFavoriteIds";
 import {attribution} from '../../../../packages/journey/attribution';
@@ -32,7 +33,7 @@ export function AppShell({children}:{children:React.ReactNode}){
 
   React.useEffect(()=>{
     const version=control.content.onboardingVersion;
-    setShowOnboarding(control.content.onboardingEnabled&&localStorage.getItem("pulse_onboarding_version")!==version);
+    setShowOnboarding(control.content.onboardingEnabled&&safeLocalStorage.getItem("pulse_onboarding_version")!==version);
   },[control.content.onboardingEnabled,control.content.onboardingVersion]);
 
   React.useEffect(()=>{
@@ -43,7 +44,7 @@ export function AppShell({children}:{children:React.ReactNode}){
 
   React.useEffect(()=>{
     if(showOnboarding||location.pathname==='/mortgage'||mortgageWarmed.current)return;
-    try{if(localStorage.getItem(MORTGAGE_STORY_STORAGE)===MORTGAGE_STORY_VERSION)return}catch{/* Storage may be unavailable. */}
+    try{if(safeLocalStorage.getItem(MORTGAGE_STORY_STORAGE)===MORTGAGE_STORY_VERSION)return}catch{/* Storage may be unavailable. */}
     const timer=window.setTimeout(()=>{mortgageWarmed.current=true;warmMortgageArtwork()},700);
     return()=>window.clearTimeout(timer);
   },[showOnboarding,location.pathname]);
@@ -58,7 +59,7 @@ export function AppShell({children}:{children:React.ReactNode}){
   },[]);
 
   React.useEffect(()=>{
-    if(!sessionStorage.getItem("pulse.attribution.v1")){recordPulseEvent({eventType:"attribution",metadata:attribution(window.location.search||window.location.hash.split("?")[1]||"",document.referrer,window.location.origin)});sessionStorage.setItem("pulse.attribution.v1","1");}
+    if(!safeSessionStorage.getItem("pulse.attribution.v1")){recordPulseEvent({eventType:"attribution",metadata:attribution(window.location.search||window.location.hash.split("?")[1]||"",document.referrer,window.location.origin)});safeSessionStorage.setItem("pulse.attribution.v1","1");}
     const tg=window.Telegram?.WebApp;
     prepareTelegramWindow(tg);
   },[]);

@@ -1,21 +1,22 @@
+import {safeLocalStorage} from '../../../../packages/browser/storage';
 import React from 'react';
 import {recordPulseEvent} from '../../../../packages/pulse-data';
 import {runtime,visitorApi,visitorSessionId} from '../../../../packages/pulse-data/runtime';
 const KEY='pulse.dv.favorites.v1',PENDING='pulse.favorite-changes.v2',MIGRATED='pulse.favorites-imported.v2';
 type Change={id:string;saved:boolean;nonce:string};
-function read<T>(key:string,fallback:T):T{try{return JSON.parse(localStorage.getItem(key)||'null')??fallback}catch{return fallback}}
+function read<T>(key:string,fallback:T):T{try{return JSON.parse(safeLocalStorage.getItem(key)||'null')??fallback}catch{return fallback}}
 function readIds():string[]{const ids=read<unknown>(KEY,[]);return Array.isArray(ids)?ids.filter(x=>typeof x==='string').slice(0,500):[]}
 function pending():Change[]{const v=read<unknown>(PENDING,[]);return Array.isArray(v)?v.filter(x=>typeof x?.id==='string'&&typeof x?.saved==='boolean'&&typeof x?.nonce==='string'):[]}
-function save(ids:string[]){localStorage.setItem(KEY,JSON.stringify(ids));window.dispatchEvent(new Event('pulse-favorites'))}
+function save(ids:string[]){safeLocalStorage.setItem(KEY,JSON.stringify(ids));window.dispatchEvent(new Event('pulse-favorites'))}
 let task:Promise<void>|null=null;let error='';let notice='';let authenticated=false;
 export function syncFavorites():Promise<void>{
  if(!runtime.enabled)return Promise.resolve();if(task)return task;
  task=(async()=>{try{
   const sessionId=await visitorSessionId();
-  const batch=pending().slice(0,500),importIds=localStorage.getItem(MIGRATED)===sessionId?undefined:readIds();
+  const batch=pending().slice(0,500),importIds=safeLocalStorage.getItem(MIGRATED)===sessionId?undefined:readIds();
   const result=await visitorApi<{ids:string[];authenticated:boolean;rejectedIds?:string[]}>('/me/favorites',batch.length||importIds?{method:'POST',body:JSON.stringify({changes:batch.map(({id,saved})=>({id,saved})),importIds})}:{});
-  if(importIds)localStorage.setItem(MIGRATED,sessionId);
-  const remaining=pending().filter(c=>!batch.some(b=>b.nonce===c.nonce));localStorage.setItem(PENDING,JSON.stringify(remaining));
+  if(importIds)safeLocalStorage.setItem(MIGRATED,sessionId);
+  const remaining=pending().filter(c=>!batch.some(b=>b.nonce===c.nonce));safeLocalStorage.setItem(PENDING,JSON.stringify(remaining));
   const ids=new Set(result.ids);for(const c of remaining)c.saved?ids.add(c.id):ids.delete(c.id);
   authenticated=result.authenticated;error='';notice=result.rejectedIds?.length?'Некоторые объекты больше не опубликованы и не добавлены в избранное.':'';save([...ids]);
  }catch(e){error=(e as Error).message;window.dispatchEvent(new Event('pulse-favorites'))}
@@ -37,7 +38,7 @@ export function useFavoriteIds(){
   const current=readIds(),removing=current.includes(propertyId);
   if(!removing&&current.length>=500){notice='В избранном можно сохранить до 500 ЖК';window.dispatchEvent(new Event('pulse-favorites'));return}
   notice='';
-  if(runtime.enabled){const changes=pending().filter(c=>c.id!==propertyId);changes.push({id:propertyId,saved:!removing,nonce:crypto.randomUUID()});localStorage.setItem(PENDING,JSON.stringify(changes));}
+  if(runtime.enabled){const changes=pending().filter(c=>c.id!==propertyId);changes.push({id:propertyId,saved:!removing,nonce:crypto.randomUUID()});safeLocalStorage.setItem(PENDING,JSON.stringify(changes));}
   save(removing?current.filter(x=>x!==propertyId):[...current,propertyId]);
   recordPulseEvent({eventType:removing?'favorite_remove':'favorite_add',entityType:'property',entityId:propertyId});
   if(runtime.enabled)void syncFavorites().then(()=>{if(!error&&pending().length)void syncFavorites()});

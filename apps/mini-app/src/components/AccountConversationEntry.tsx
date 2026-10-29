@@ -1,3 +1,4 @@
+import {safeSessionStorage} from '../../../../packages/browser/storage';
 import React from 'react';
 import {Link,useNavigate} from 'react-router-dom';
 import {useQueryClient} from '@tanstack/react-query';
@@ -21,7 +22,7 @@ export function AccountConversationEntry(props:LeadSheetProps){
    const active=!newPurchase&&!referralCode?entries.filter(e=>!['deal','lost','closed'].includes(e.status)&&(!props.propertyId||e.propertyId===props.propertyId||!e.propertyId)).sort((a,b)=>Number(b.propertyId===props.propertyId)-Number(a.propertyId===props.propertyId)||Date.parse(b.createdAt)-Date.parse(a.createdAt))[0]:null;
    const details:ConversationDraft={source:props.source??'app',propertyId:props.propertyId,project:props.project,context:props.context,newPurchase,referralCode,referralName:props.referralName??invitation?.partnerName};
    if(active){
-    if(props.context||props.propertyId){try{sessionStorage.setItem('pulse.chat-context.'+active.leadId,JSON.stringify({...props.context,source:details.source,...(props.project?{propertyName:props.project}:{})}))}catch{}}
+    if(props.context||props.propertyId){try{safeSessionStorage.setItem('pulse.chat-context.'+active.leadId,JSON.stringify({...props.context,source:details.source,...(props.project?{propertyName:props.project}:{})}))}catch{}}
     navigate('/journey?lead='+active.leadId);
    }else navigate('/journey?compose=1',{state:{conversationDraft:details}});
   }catch{setError(true)}finally{setBusy(false)}
@@ -33,17 +34,17 @@ export function AccountConversationDraft({details}:{details:ConversationDraft}){
  const root=React.useRef<HTMLDivElement>(null);
  React.useEffect(()=>{const resize=()=>{root.current?.style.setProperty('--chat-height',(window.visualViewport?.height??innerHeight)+'px');root.current?.style.setProperty('--chat-top',(window.visualViewport?.offsetTop??0)+'px')};resize();window.visualViewport?.addEventListener('resize',resize);window.visualViewport?.addEventListener('scroll',resize);return()=>{window.visualViewport?.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('scroll',resize)}},[]);
  const storageKey='pulse.new-conversation.'+details.source+'.'+(details.propertyId??'general')+'.'+!!details.newPurchase;
- const restored=React.useMemo(()=>{try{return JSON.parse(sessionStorage.getItem(storageKey)??'{}')}catch{return {}}},[storageKey]);
+ const restored=React.useMemo(()=>{try{return JSON.parse(safeSessionStorage.getItem(storageKey)??'{}')}catch{return {}}},[storageKey]);
  const [text,setText]=React.useState<string>(typeof restored.text==='string'?restored.text:'');
  const id=React.useRef(typeof restored.id==='string'?restored.id:crypto.randomUUID());
  const [referralConsent,setReferralConsent]=React.useState(false),[referralCode,setReferralCode]=React.useState(details.referralCode);
  const [busy,setBusy]=React.useState(false),[error,setError]=React.useState('');const locked=React.useRef(false);
- React.useEffect(()=>{try{sessionStorage.setItem(storageKey,JSON.stringify({id:id.current,text}))}catch{}},[storageKey,text]);
+ React.useEffect(()=>{try{safeSessionStorage.setItem(storageKey,JSON.stringify({id:id.current,text}))}catch{}},[storageKey,text]);
  const send=async(e:React.FormEvent)=>{
   e.preventDefault();if(locked.current||!text.trim())return;locked.current=true;setBusy(true);setError('');
   try{
    const result=await visitorApi<{id:string}>('/me/conversations/start',{method:'POST',body:JSON.stringify({idempotencyKey:id.current,source:details.source,propertyId:details.propertyId??null,context:{...details.context,...(details.project?{propertyName:details.project}:{})},text:text.trim(),newPurchase:!!details.newPurchase,consent:true,consentVersion:runtime.consentVersion,...(referralCode&&referralConsent?{referralCode,referralConsent:true}:{})})});
-   try{sessionStorage.removeItem(storageKey)}catch{}clearPartnerInvite();
+   try{safeSessionStorage.removeItem(storageKey)}catch{}clearPartnerInvite();
    await cache.invalidateQueries({queryKey:['my-journeys']});navigate('/journey?lead='+result.id,{replace:true});
   }catch{setError('Не удалось отправить сообщение. Текст сохранён — попробуйте ещё раз.')}finally{locked.current=false;setBusy(false)}
  };

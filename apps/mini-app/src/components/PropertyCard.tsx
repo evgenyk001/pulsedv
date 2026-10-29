@@ -1,3 +1,4 @@
+import {safeSessionStorage} from '../../../../packages/browser/storage';
 import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Heart, Building2 } from "lucide-react";
@@ -30,7 +31,7 @@ export function PropertyCard({property,compact=false,returnTo}:PropertyCardProps
   };
   const open=(event:React.MouseEvent<HTMLAnchorElement>)=>{
     const value=currentReturn();
-    try{sessionStorage.setItem('pulse.property.return',value)}catch{}
+    try{safeSessionStorage.setItem('pulse.property.return',value)}catch{}
     if(location.pathname==="/catalog"){
       event.preventDefault();
       navigate(`/property/${property.id}`,{state:{returnTo:value}});

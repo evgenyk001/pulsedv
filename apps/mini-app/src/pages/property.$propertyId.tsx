@@ -1,3 +1,4 @@
+import {safeLocalStorage} from '../../../../packages/browser/storage';
 import {rememberViewedCity} from '../helpers/cityInterest';
 import {propertyAreaRange,dimensionRange} from '../../../../packages/domain/propertyDimensions';
 import {LoadRecovery} from '../components/LoadRecovery';
@@ -61,7 +62,7 @@ export default function PropertyPage(){
   const {data:p,isLoading,error,refetch}=usePropertyDetail(propertyId);
   const heroRef=usePropertyHeroMotion(!isLoading&&!error?p?.id:undefined);
   const control=usePulseControlState();
-  const savedScenario=React.useMemo(()=>readMortgageScenario(localStorage),[]);
+  const savedScenario=React.useMemo(()=>readMortgageScenario(safeLocalStorage),[]);
   const {toggle,isFavorite}=useFavoriteIds();
   const [photoIndex,setPhotoIndex]=React.useState(0);
   const selectionKey=location.key+':'+propertyId;
@@ -83,7 +84,7 @@ export default function PropertyPage(){
   React.useEffect(()=>{
     if(!p)return;
     rememberViewedCity(p.city);
-    try{localStorage.setItem("pulse.last-property",JSON.stringify({id:p.id,name:p.name,at:Date.now()}))}catch{}
+    try{safeLocalStorage.setItem("pulse.last-property",JSON.stringify({id:p.id,name:p.name,at:Date.now()}))}catch{}
     recordPulseEvent({eventType:"property_view",entityType:"property",entityId:p.id,metadata:{propertyName:p.name,city:p.city,district:p.district,priceFrom:p.priceFrom}});
   },[p?.id]);
 

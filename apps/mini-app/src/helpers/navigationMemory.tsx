@@ -1,3 +1,4 @@
+import {safeSessionStorage} from '../../../../packages/browser/storage';
 import {nativeBackButton,topAppDialog,closeTopAppDialog} from './nativeBack';
 import React from 'react';
 import {useLocation,useNavigate,useNavigationType} from 'react-router-dom';
@@ -7,10 +8,10 @@ type History={entries:Entry[];index:number};
 const key='pulse.navigation.v1';
 const BackContext=React.createContext({canGoBack:false,previousPath:''});
 function readHistory():History{
- try{const value=JSON.parse(sessionStorage.getItem(key)||'null');if(Array.isArray(value?.entries)&&Number.isInteger(value.index)&&value.index>=0&&value.index<value.entries.length&&value.entries.every((e:Entry)=>typeof e.key==='string'&&typeof e.path==='string'&&e.path.startsWith('/')&&!e.path.startsWith('//')))return value}catch{}
+ try{const value=JSON.parse(safeSessionStorage.getItem(key)||'null');if(Array.isArray(value?.entries)&&Number.isInteger(value.index)&&value.index>=0&&value.index<value.entries.length&&value.entries.every((e:Entry)=>typeof e.key==='string'&&typeof e.path==='string'&&e.path.startsWith('/')&&!e.path.startsWith('//')))return value}catch{}
  return {entries:[],index:-1};
 }
-export function propertyReturn(){try{const v=sessionStorage.getItem('pulse.property.return');return v&&/^\/(catalog|favorites|compare|selection|journey|my-search)([?]|$)/.test(v)?v:'/catalog'}catch{return '/catalog'}}
+export function propertyReturn(){try{const v=safeSessionStorage.getItem('pulse.property.return');return v&&/^\/(catalog|favorites|compare|selection|journey|my-search)([?]|$)/.test(v)?v:'/catalog'}catch{return '/catalog'}}
 export function useAppBack(fallback='/'){
  const {canGoBack,previousPath}=React.useContext(BackContext),navigate=useNavigate();
  const back=React.useCallback(()=>{if(canGoBack)navigate(-1);else navigate(fallback,{replace:true})},[canGoBack,navigate,fallback]);
@@ -28,7 +29,7 @@ export function NavigationMemory({children}:{children:React.ReactNode}){
   if(kind==='POP')return {entries:[entry],index:0};
   const entries=[...history.entries.slice(0,history.index+1),entry].slice(-60);return {entries,index:entries.length-1};
  },[history,location.key,path,kind]);
- React.useLayoutEffect(()=>{setHistory(current);try{sessionStorage.setItem(key,JSON.stringify(current))}catch{}},[current]);
+ React.useLayoutEffect(()=>{setHistory(current);try{safeSessionStorage.setItem(key,JSON.stringify(current))}catch{}},[current]);
  const canGoBack=current.index>0;
  React.useLayoutEffect(()=>{
   const tg=nativeBackButton();if(!tg)return;
@@ -41,7 +42,7 @@ export function NavigationMemory({children}:{children:React.ReactNode}){
   return()=>{observer.disconnect();tg.offClick(back);tg.hide();delete document.documentElement.dataset.nativeBack};
  },[canGoBack,navigate,path]);
  React.useLayoutEffect(()=>{
-  if(!location.pathname.startsWith('/property/')){try{sessionStorage.setItem('pulse.property.return',path)}catch{}}
+  if(!location.pathname.startsWith('/property/')){try{safeSessionStorage.setItem('pulse.property.return',path)}catch{}}
   const entryKey=location.key;
   const y=kind==='POP'?positions.get(entryKey)||0:0;
   let cancelled=false,frame=0,restoring=y>0;

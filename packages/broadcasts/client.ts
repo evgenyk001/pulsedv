@@ -1,8 +1,9 @@
+import {safeLocalStorage} from '../browser/storage';
 import {api,runtime,visitorApi} from '../pulse-data/runtime';
 import {broadcastError,type Broadcast,type BroadcastContent,type BroadcastList} from './index';
 const KEY='pulse.broadcasts.v1',SUB='pulse.announcements.v1';
-const read=():Broadcast[]=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return []}};
-const write=(items:Broadcast[])=>{try{localStorage.setItem(KEY,JSON.stringify(items))}catch{throw Error('Не хватает места для тестового черновика. Уменьшите фото или подготовьте рассылку на серверной версии')}};
+const read=():Broadcast[]=>{try{return JSON.parse(safeLocalStorage.getItem(KEY)||'[]')}catch{return []}};
+const write=(items:Broadcast[])=>{try{if(!safeLocalStorage.setItem(KEY,JSON.stringify(items)))throw Error('Storage unavailable')}catch{throw Error('Не хватает места для тестового черновика. Уменьшите фото или подготовьте рассылку на серверной версии')}};
 export async function listBroadcasts(page=1):Promise<BroadcastList>{
  if(runtime.enabled)return api('/control/broadcasts?page='+page);
  const all=read().sort((a,b)=>Date.parse(b.createdAt)-Date.parse(a.createdAt));
@@ -29,5 +30,5 @@ export async function uploadBroadcastPhoto(file:File):Promise<string>{
  if(!runtime.enabled){if(file.size>2*1024*1024)throw Error('Для тестового черновика выберите фото до 2 МБ');return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(Error('Не удалось прочитать фото'));reader.readAsDataURL(file)});}
  const r=await fetch(runtime.base+'/control/content/broadcast-media',{method:'POST',credentials:'same-origin',headers:{'Content-Type':file.type},body:file,signal:AbortSignal.timeout(30000)});const result=await r.json();if(!r.ok)throw Error(result.error||'Не удалось загрузить фото');return result.imageUrl;
 }
-export async function announcementSettings():Promise<{enabled:boolean;authenticated:boolean}>{return runtime.enabled?visitorApi('/me/announcements'):{enabled:localStorage.getItem(SUB)!=='false',authenticated:false};}
-export async function saveAnnouncementSettings(enabled:boolean){if(runtime.enabled)return visitorApi<{enabled:boolean;authenticated:boolean}>('/me/announcements',{method:'PUT',body:JSON.stringify({enabled})});localStorage.setItem(SUB,String(enabled));return {enabled,authenticated:false};}
+export async function announcementSettings():Promise<{enabled:boolean;authenticated:boolean}>{return runtime.enabled?visitorApi('/me/announcements'):{enabled:safeLocalStorage.getItem(SUB)!=='false',authenticated:false};}
+export async function saveAnnouncementSettings(enabled:boolean){if(runtime.enabled)return visitorApi<{enabled:boolean;authenticated:boolean}>('/me/announcements',{method:'PUT',body:JSON.stringify({enabled})});safeLocalStorage.setItem(SUB,String(enabled));return {enabled,authenticated:false};}

@@ -1,3 +1,4 @@
+import {AppBoundary} from '../../../packages/browser/AppBoundary';
 import {dismissLaunchScreen} from './helpers/launchScreen';
 import {BrandLoading} from './components/BrandLoading';
 import {PartnerSecurityGate} from './components/PartnerSecurity';
@@ -21,7 +22,6 @@ import FavoritesPage from './pages/favorites';
 const PartnersPage=React.lazy(()=>import('./pages/partners'));
 const PartnerOfferPage=React.lazy(()=>import('./pages/partner-offer'));
 const PartnerInvitePage=React.lazy(()=>import('./pages/partner-invite'));
-import {referralCodeFromStart} from "../../../packages/partners/model";
 const ProfilePage=React.lazy(()=>import('./pages/profile'));
 const MySearchPage=React.lazy(()=>import('./pages/my-search'));
 const PropertyPage=React.lazy(()=>import('./pages/property.$propertyId'));
@@ -29,13 +29,6 @@ const PrivacyPage=React.lazy(()=>import('./pages/privacy'));
 const PersonalDataConsentPage=React.lazy(()=>import('./pages/personal-data-consent'));
 
 configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.meta.env.VITE_API_BASE_URL,role:"public"});
-
-// start_param only selects the invitation screen; the API validates its owner and buyer identity.
-const tg=(window as any).Telegram?.WebApp;
-const start=tg?.initDataUnsafe?.start_param||new URLSearchParams(window.location.search).get("tgWebAppStartParam");
-const referral=referralCodeFromStart(start);
-if(referral)window.location.hash="/partner-invite?code="+encodeURIComponent(referral);
-else if(start==="partners")window.location.hash="/partners";
 
 const queryClient=new QueryClient({defaultOptions:{queries:{retry:(count,error)=>count<1&&(!(error instanceof ApiError)||error.status===0||error.status>=500),retryDelay:1000}}});
 
@@ -78,4 +71,4 @@ function App(){
   </QueryClientProvider>
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><RuntimeGate><App/></RuntimeGate></React.StrictMode>);
+ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><AppBoundary onError={dismissLaunchScreen}><RuntimeGate><App/></RuntimeGate></AppBoundary></React.StrictMode>);

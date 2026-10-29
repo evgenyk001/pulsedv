@@ -1,3 +1,4 @@
+import {safeLocalStorage} from '../../../../packages/browser/storage';
 import React from 'react';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
 import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
@@ -8,8 +9,8 @@ import {localPartnerNotices} from '../../../../packages/partners/client';
 export type ClientNotice={id:string;kind:'message'|'collection'|'showing'|'search'|'partner';title:string;body:string;at:string;href:string;read:boolean};
 export type ClientInbox={items:ClientNotice[];unreadCount:number};
 const KEY='pulse.read-updates.v1',DISMISSED='pulse.dismissed-updates.v1';
-function dismissedIds():string[]{try{const v=JSON.parse(localStorage.getItem(DISMISSED)||'[]');return Array.isArray(v)?v.filter((id):id is string=>typeof id==='string'):[]}catch{return []}}
-function readIds():string[]{try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(v)?v.filter((id):id is string=>typeof id==='string'):[]}catch{return []}}
+function dismissedIds():string[]{try{const v=JSON.parse(safeLocalStorage.getItem(DISMISSED)||'[]');return Array.isArray(v)?v.filter((id):id is string=>typeof id==='string'):[]}catch{return []}}
+function readIds():string[]{try{const v=JSON.parse(safeLocalStorage.getItem(KEY)||'[]');return Array.isArray(v)?v.filter((id):id is string=>typeof id==='string'):[]}catch{return []}}
 async function localInbox():Promise<ClientInbox>{
  const [journeys,search]=await Promise.all([loadJourneys(true),getMySearch()]);
  const seen=new Set(readIds());
@@ -26,13 +27,13 @@ async function markClientNotifications(command:{ids:string[]}|{all:true}):Promis
  if(runtime.enabled)return visitorApi('/me/notifications/read',{method:'POST',body:JSON.stringify(command)});
  const inbox=await localInbox();
  const ids='all' in command?inbox.items.map(u=>u.id):command.ids;
- localStorage.setItem(KEY,JSON.stringify([...new Set([...ids,...readIds()])].slice(0,10000)));
+ safeLocalStorage.setItem(KEY,JSON.stringify([...new Set([...ids,...readIds()])].slice(0,10000)));
  window.dispatchEvent(new Event('pulse:notification-read'));
  return loadClientNotifications();
 }
 async function dismissClientNotifications(ids:string[]):Promise<ClientInbox>{
  if(runtime.enabled)return visitorApi('/me/notifications/dismiss',{method:'POST',body:JSON.stringify({ids})});
- localStorage.setItem(DISMISSED,JSON.stringify([...new Set([...dismissedIds(),...ids])]));window.dispatchEvent(new Event('pulse:notification-read'));return loadClientNotifications();
+ safeLocalStorage.setItem(DISMISSED,JSON.stringify([...new Set([...dismissedIds(),...ids])]));window.dispatchEvent(new Event('pulse:notification-read'));return loadClientNotifications();
 }
 export function useClientNotifications(){
  const cache=useQueryClient();

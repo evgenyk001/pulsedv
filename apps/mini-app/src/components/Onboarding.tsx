@@ -1,3 +1,4 @@
+import {safeLocalStorage} from '../../../../packages/browser/storage';
 import React from "react";
 import {ArrowRight} from "lucide-react";
 import { getPulseState, recordPulseEvent } from "../../../../packages/pulse-data";
@@ -13,7 +14,7 @@ export function Onboarding({onDone}:{onDone:()=>void}){
   const [index,setIndex]=React.useState(0);
   const [loaded,setLoaded]=React.useState<string|null>(null);
   const startX=React.useRef<number|null>(null);
-  const finish=()=>{const version=getPulseState().content.onboardingVersion;localStorage.setItem("pulse_onboarding_version",version);recordPulseEvent({eventType:"onboarding_complete",entityType:"onboarding",entityId:version});onDone()};
+  const finish=()=>{const version=getPulseState().content.onboardingVersion;safeLocalStorage.setItem("pulse_onboarding_version",version);recordPulseEvent({eventType:"onboarding_complete",entityType:"onboarding",entityId:version});onDone()};
   const next=()=>index===slides.length-1?finish():setIndex(index+1);
 
   React.useEffect(()=>{

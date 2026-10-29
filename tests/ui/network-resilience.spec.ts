@@ -99,3 +99,86 @@ test('Failed lead submission keeps the form and never reports success or exposes
  await expect(page.getByRole('textbox',{name:'Как к вам обращаться'})).toHaveValue('Анна');
  await expect(page.getByText(/SQLSTATE|stack trace/)).toHaveCount(0);
 });
+
+test('Telegram is ready before the first API response, and startup errors remain visible',async({page})=>{
+ const control=setupApi();control.failBoot(true);
+ await page.addInitScript(()=>{(window as any).readyCalls=0;(window as any).Telegram={WebApp:{ready(){(window as any).readyCalls++},expand(){}}}});
+ await page.goto(origin+'/pulsedv/mini-app/');
+ await expect.poll(()=>page.evaluate(()=>(window as any).readyCalls)).toBeGreaterThan(0);
+ await expect(page.getByRole('button',{name:'Попробовать снова'})).toBeVisible();
+ await expect(page.getByText('Не удалось загрузить приложение.',{exact:true})).toBeVisible();
+});
+
+test('Denied browser storage keeps the app and navigation usable',async({page})=>{
+ setupApi();await page.addInitScript(()=>{
+  for(const name of ['localStorage','sessionStorage'])Object.defineProperty(window,name,{get(){throw new DOMException('Denied','SecurityError')}});
+ });
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(origin+'/pulsedv/mini-app/');
+ // Dismiss the introductory story; its completion must also tolerate denied writes.
+ const skip=page.getByRole('button',{name:'Пропустить',exact:true});if(await skip.isVisible())await skip.click();
+ await expect(page.getByRole('button',{name:'Каталог',exact:true})).toBeVisible();
+ await expect(page.locator('#pulse-launch')).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'Перезагрузить',exact:true})).toHaveCount(0);
+ expect(errors).toEqual([]);
+});
+
+test('The top-level boundary catches an AppShell failure outside the route boundary',async({page})=>{
+ setupApi();await page.route('**/api/v1/public/state',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({state:{...DEFAULT_STATE,content:null},version:1})}));
+ await page.goto(origin+'/pulsedv/mini-app/');
+ await expect(page.getByRole('button',{name:'Перезагрузить',exact:true})).toBeVisible();
+ await expect(page.locator('#pulse-launch')).toHaveCount(0);
+});
+
+test('A stalled SDK does not block public API reads, times out visibly, and retries Telegram authentication',async({page})=>{
+ setupApi();let reads=0,bindings=0,attempts=0;const held:any[]=[];
+ await page.route('**/api/v1/public/state',route=>{reads++;return route.fulfill({contentType:'application/json',body:JSON.stringify({state:DEFAULT_STATE,version:1,requiresPhone:true})})});
+ await page.route('**/api/v1/me/account',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({registered:true})}));
+ await page.route('**/api/v1/auth/telegram',route=>{bindings++;expect(route.request().postDataJSON()).toEqual({initData:'signed-retry'});return route.fulfill({contentType:'application/json',body:'{"ok":true}'})});
+ await page.route('https://telegram.org/js/telegram-web-app.js**',route=>{
+  attempts++;
+  if(attempts===1){held.push(route);return;}
+  return route.fulfill({contentType:'text/javascript',body:`window.Telegram={WebApp:{initData:'signed-retry',ready(){},expand(){}}}`});
+ });
+ try{
+  await page.goto(origin+'/pulsedv/mini-app/?tgWebAppVersion=8.0',{waitUntil:'domcontentloaded'});
+  await expect.poll(()=>reads).toBeGreaterThan(0);expect(bindings).toBe(0);
+  await expect(page.getByRole('button',{name:'Попробовать снова'})).toBeVisible({timeout:12000});
+  await page.getByRole('button',{name:'Попробовать снова'}).click();
+  await expect(page.getByRole('button',{name:'Каталог',exact:true})).toBeVisible();
+  expect(attempts).toBe(2);expect(bindings).toBe(1);
+ }finally{for(const route of held)await route.abort().catch(()=>{})}
+});
+
+test('Startup works without AbortSignal timeout and any static methods',async({page})=>{
+ setupApi();await page.addInitScript(()=>{Object.defineProperty(AbortSignal,'timeout',{value:undefined});Object.defineProperty(AbortSignal,'any',{value:undefined})});
+ await page.goto(origin+'/pulsedv/mini-app/');await expect(page.getByRole('button',{name:'Каталог',exact:true})).toBeVisible();
+});
+
+test('A broken JSON response offers retry instead of treating it as an empty successful state',async({page})=>{
+ setupApi();await page.route('**/api/v1/public/state',route=>route.fulfill({contentType:'application/json',body:'{"state":'}));
+ await page.goto(origin+'/pulsedv/mini-app/');await expect(page.getByRole('button',{name:'Попробовать снова'})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Каталог',exact:true})).toHaveCount(0);
+});
+
+test('An ordinary browser can open public screens while the Telegram SDK is stalled',async({page})=>{
+ setupApi();let held:any;
+ await page.route('https://telegram.org/js/telegram-web-app.js**',route=>{held=route});
+ try{
+  await page.goto(origin+'/pulsedv/mini-app/',{waitUntil:'domcontentloaded'});
+  await expect(page.getByRole('button',{name:'Каталог',exact:true})).toBeVisible();
+ }finally{await held?.abort().catch(()=>{})}
+});
+
+test('A Telegram reload with cached launch data still waits for the SDK before account access',async({page})=>{
+ setupApi();let held:any,accountReads=0;
+ await page.addInitScript(()=>sessionStorage.setItem('__telegram__initParams',JSON.stringify({tgWebAppData:'signed-cached'})));
+ await page.route('https://telegram.org/js/telegram-web-app.js**',route=>{held=route});
+ await page.route('**/api/v1/public/state',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({state:DEFAULT_STATE,version:1,requiresPhone:true})}));
+ await page.route('**/api/v1/me/account',route=>{accountReads++;return route.fulfill({contentType:'application/json',body:'{"registered":true}'})});
+ try{
+  await page.goto(origin+'/pulsedv/mini-app/#/favorites',{waitUntil:'domcontentloaded'});
+  await expect(page.getByRole('button',{name:'Попробовать снова'})).toBeVisible({timeout:12000});
+  expect(accountReads).toBe(0);
+ }finally{await held?.abort().catch(()=>{})}
+});

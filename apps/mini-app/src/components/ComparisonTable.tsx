@@ -1,3 +1,4 @@
+import {safeSessionStorage} from '../../../../packages/browser/storage';
 import React from 'react';
 import {Link,useLocation} from 'react-router-dom';
 import {Building2, Check, ChevronRight, MapPin, SlidersHorizontal, WalletCards, X} from 'lucide-react';
@@ -11,7 +12,7 @@ const MIN_RATE=2;
 
 function readScenario(){
  const defaults={different:false,down:30,rate:18,years:20};
- try{const v=JSON.parse(sessionStorage.getItem('pulse.compare.scenario.v1')||'null');if(v&&typeof v.different==='boolean'&&Number.isFinite(v.down)&&v.down>=0&&v.down<=100&&Number.isFinite(v.rate)&&v.rate>=0&&v.rate<=50&&Number.isFinite(v.years)&&v.years>=1&&v.years<=30)return {...v,down:Math.max(MIN_DOWN,v.down),rate:Math.max(MIN_RATE,v.rate)} as typeof defaults}catch{}
+ try{const v=JSON.parse(safeSessionStorage.getItem('pulse.compare.scenario.v1')||'null');if(v&&typeof v.different==='boolean'&&Number.isFinite(v.down)&&v.down>=0&&v.down<=100&&Number.isFinite(v.rate)&&v.rate>=0&&v.rate<=50&&Number.isFinite(v.years)&&v.years>=1&&v.years<=30)return {...v,down:Math.max(MIN_DOWN,v.down),rate:Math.max(MIN_RATE,v.rate)} as typeof defaults}catch{}
  return defaults;
 }
 
@@ -42,7 +43,7 @@ export function ComparisonTable({properties,onReplace,onRemove}:{properties:Puls
  const setDown=(down:number)=>setScenario(v=>({...v,down}));
  const setRate=(rate:number)=>setScenario(v=>({...v,rate}));
  const setYears=(years:number)=>setScenario(v=>({...v,years}));
- React.useEffect(()=>{try{sessionStorage.setItem('pulse.compare.scenario.v1',JSON.stringify(scenario))}catch{}},[scenario]);
+ React.useEffect(()=>{try{safeSessionStorage.setItem('pulse.compare.scenario.v1',JSON.stringify(scenario))}catch{}},[scenario]);
  const rows:{name:string;value:(p:PulseProperty)=>string}[]=[
   {name:'Расположение',value:p=>p.city+' · '+p.district},
   {name:'Цена от',value:p=>p.priceFrom.toLocaleString('ru-RU')+' млн ₽'},

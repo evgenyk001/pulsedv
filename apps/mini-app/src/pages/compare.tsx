@@ -1,3 +1,4 @@
+import {safeLocalStorage} from '../../../../packages/browser/storage';
 import {LoadRecovery} from '../components/LoadRecovery';
 import React from 'react';
 import {Link,useSearchParams} from 'react-router-dom';
@@ -25,11 +26,11 @@ export default function ComparePage(){
   if(isLoading||initialized.current||!saved.length)return;
   initialized.current=true;
   if(pair.some(Boolean))return;
-  let stored:string[]=[];try{const value=JSON.parse(localStorage.getItem('pulse.compare.v1')||'[]');if(Array.isArray(value))stored=[...new Set(value.filter((id:unknown):id is string=>typeof id==='string'&&saved.some(p=>p.id===id)))].slice(0,2)}catch{}
+  let stored:string[]=[];try{const value=JSON.parse(safeLocalStorage.getItem('pulse.compare.v1')||'[]');if(Array.isArray(value))stored=[...new Set(value.filter((id:unknown):id is string=>typeof id==='string'&&saved.some(p=>p.id===id)))].slice(0,2)}catch{}
   const initial=stored.length?stored:saved.length===2?saved.map(p=>p.id):[];
   if(initial.length){const next=new URLSearchParams();next.set('first',initial[0]);if(initial[1])next.set('second',initial[1]);setParams(next,{replace:true})}
  },[isLoading,saved,params,setParams]);
- React.useEffect(()=>{if(isLoading||!initialized.current)return;try{localStorage.setItem('pulse.compare.v1',JSON.stringify(selected.flatMap(p=>p?[p.id]:[])))}catch{}},[pair.join('|'),isLoading,saved]);
+ React.useEffect(()=>{if(isLoading||!initialized.current)return;try{safeLocalStorage.setItem('pulse.compare.v1',JSON.stringify(selected.flatMap(p=>p?[p.id]:[])))}catch{}},[pair.join('|'),isLoading,saved]);
  const choose=(index:number,id:string)=>{
   const next=new URLSearchParams(params);id?next.set(index===0?'first':'second',id):next.delete(index===0?'first':'second');
   setParams(next,{replace:true});setPicker(null);setQuery('');
