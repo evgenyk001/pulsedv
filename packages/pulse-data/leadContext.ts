@@ -1,3 +1,4 @@
+import {apartmentFinishLabel} from '../domain/propertyFinish';
 const mortgageNames:Record<string,string>={
   family:"Семейная ипотека",
   farEast:"Дальневосточная ипотека",
@@ -38,6 +39,7 @@ export function describeLeadRequestContext(context:Record<string,unknown>,source
   const lines:string[]=[];
   const propertyName=text(context.propertyName);
   if(propertyName)lines.push(propertyName);
+  if(['rough','white_box','finished'].includes(String(context.finishType)))lines.push(apartmentFinishLabel(context.finishType as 'rough'|'white_box'|'finished'));
   if(source.startsWith("mortgage")||context.program||context.payment){
     const program=text(context.program);
     if(program)lines.push(mortgageNames[program]||program);

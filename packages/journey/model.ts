@@ -5,14 +5,14 @@ export type Collection={id:string;title:string;items:JourneyItem[];published:boo
 export type Showing={id:string;propertyId:string;at:string;status:'requested'|'confirmed'|'completed'|'cancelled';note:string;result:string;updatedAt?:string;updatedBy?:'client'|'manager';proposedAt?:string;changeNote?:string;changeDecision?:'accepted'|'declined'};
 export const showingLabels:Record<Showing['status'],string>={requested:'Ожидает подтверждения',confirmed:'Подтверждён',completed:'Состоялся',cancelled:'Отменён'};
 export type JourneyAttachment={kind:'image'|'file';name:string;url:string;mimeType:string;size:number};
-export type JourneyMessage={id:string;text:string;author:'client'|'manager';at:string;attachment?:JourneyAttachment;readAt?:string};
+export type JourneyMessage={id:string;text:string;author:'client'|'manager';at:string;attachment?:JourneyAttachment;readAt?:string;requestContext?:Record<string,unknown>;authorName?:string};
 export type Journey={leadId:string;revision:number;collections:Collection[];showings:Showing[];nextStep:{title:string;dueAt:string;done:boolean}|null;messagesBefore?:number|null;messages?:JourneyMessage[]};
 export type JourneyCommand=
  |{type:'collection';id:string;title:string;items:{propertyId:string;note:string}[];published:boolean}
  |{type:'reaction';collectionId:string;propertyId:string;reaction:Reaction;reply:string}
  |{type:'showing';id:string;propertyId:string;at:string;note:string}
  |{type:'showing_status';id:string;status:Showing['status'];result:string}
- |{type:'message';id:string;text:string;attachment?:JourneyAttachment}
+ |{type:'message';id:string;text:string;attachment?:JourneyAttachment;requestContext?:Record<string,unknown>}
  |{type:'showing_change';id:string;action:'cancel'|'reschedule';at?:string;note:string}
  |{type:'showing_reschedule';id:string;accept:boolean}
  |{type:'next_step';title:string;dueAt:string;done:boolean};
@@ -44,7 +44,7 @@ export function applyJourney(current:Journey,command:JourneyCommand,role:'client
    if(!['image','file'].includes(c.attachment.kind))throw new Error('Некорректный тип вложения');
   }
   if(j.messages?.some(m=>m.id===c.id))throw new Error('Сообщение уже отправлено');
-  j.messages=[...(j.messages||[]),{id:c.id,text,author:role,at:iso,...(c.attachment?{attachment:c.attachment}:{})}];
+  j.messages=[...(j.messages||[]),{id:c.id,text,author:role,at:iso,...(c.attachment?{attachment:c.attachment}:{}),...(c.requestContext?{requestContext:c.requestContext}:{})}];
  }else if(c.type==='showing_change'){
   const s=j.showings.find(s=>s.id===c.id);if(!s||!['requested','confirmed'].includes(s.status))throw new Error('Показ уже завершён или отменён');
   if(c.action==='cancel'){s.status='cancelled';delete s.proposedAt;delete s.changeDecision;s.changeNote=c.note;}

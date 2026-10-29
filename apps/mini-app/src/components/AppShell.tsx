@@ -26,7 +26,7 @@ export function AppShell({children}:{children:React.ReactNode}){
   const [showOnboarding,setShowOnboarding]=React.useState(false);
   const [storyOverlayOpen,setStoryOverlayOpen]=React.useState(false);
   const mortgageWarmed=React.useRef(false);
-  const chatRoute=location.pathname==="/journey"&&new URLSearchParams(location.search).has("lead");
+  const chatRoute=location.pathname==="/journey"&&(new URLSearchParams(location.search).has("lead")||new URLSearchParams(location.search).has("compose"));
   const propertyRoute=location.pathname.startsWith("/property/");
   const hideNav=propertyRoute||chatRoute;
 

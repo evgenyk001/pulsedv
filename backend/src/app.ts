@@ -1,3 +1,4 @@
+import {registerConversationRoutes} from './conversationRoutes';
 import {ensureAnnouncementSubscription} from './announcementSubscriptions';
 import {controlProfileSelect} from './controlProfiles';
 import {registerAccountRoutes,registeredPhone} from './accountRoutes';
@@ -138,9 +139,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
    return result;
   });
  });
- app.post('/api/v1/leads',{preHandler:visitor,config:{rateLimit:{max:10,timeWindow:'1 minute'}}},async request=>{
-  const input=leadSchema.parse(request.body);if(input.consentVersion!==config.CONSENT_VERSION)throw new HttpError(409,'Условия обработки данных обновились. Обновите страницу');
-  return db.transaction(async sql=>{
+ const persistLead=async(sql:Sql,input:z.infer<typeof leadSchema>,request:FastifyRequest)=>{
    const session=request.visitor!;await sessionLock(sql,session.sessionId);await lockBuyerIdentity(sql,input.phone,session.userId);
    const source=input.referralCode?'partner':input.source;
    const requestContext=safeLeadContext(input.context??{});
@@ -164,8 +163,13 @@ export async function createApp(db:Database,config:RuntimeConfig){
    const propertyName=input.propertyId?(await sql.query('select name from catalog_properties where id=$1',[input.propertyId])).rows[0]?.name:null;
    await repo.enqueueOutbox({topic:'manager.new_lead',aggregateType:'lead',aggregateId:row.id,payload:{name:input.name,phone:input.phone,propertyName,source,contextSummary:leadContextText(requestContext)+(referringPartner?' · Рекомендация от '+referringPartner.name:''),comment:input.comment?.slice(0,500)??null,score:processed.result.score,priority:processed.result.priority,city:typeof requestContext.city==='string'?requestContext.city:processed.result.city,nextAction:processed.result.recommendedAction,deepLink:config.PUBLIC_ORIGIN+'/pulsedv/control-center/#/leads?lead='+row.id}});
    return {ok:true,id:row.id,duplicate:false};
-  });
+
+ };
+ app.post('/api/v1/leads',{preHandler:visitor,config:{rateLimit:{max:10,timeWindow:'1 minute'}}},async request=>{
+  const input=leadSchema.parse(request.body);if(input.consentVersion!==config.CONSENT_VERSION)throw new HttpError(409,'Условия обработки данных обновились. Обновите страницу');
+  return db.transaction(sql=>persistLead(sql,input,request));
  });
+ registerConversationRoutes(app,db,config,visitor,persistLead);
  app.post('/api/v1/control/login',{config:{rateLimit:{max:5,timeWindow:'1 minute'}}},async(request,reply)=>{
   const {email,password}=z.object({email:z.email().max(254),password:z.string().min(1).max(200)}).parse(request.body);
   const row=(await db.query('select * from team_members where lower(email)=$1 and active=true',[email.trim().toLowerCase()])).rows[0];

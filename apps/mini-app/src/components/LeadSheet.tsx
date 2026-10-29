@@ -1,6 +1,7 @@
+import {AccountConversationEntry} from './AccountConversationEntry';
 import {Link} from "react-router-dom";
-import {useQueryClient} from "@tanstack/react-query";
-import { runtime } from "../../../../packages/pulse-data/runtime";
+import {useQuery,useQueryClient} from "@tanstack/react-query";
+import {visitorApi, runtime } from "../../../../packages/pulse-data/runtime";
 import React from "react";
 import { CheckCircle2, Send, ArrowRight, X } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "./Sheet";
@@ -11,9 +12,14 @@ import {rememberedPartnerInvite,subscribePartners,clearPartnerInvite} from "../.
 import styles from "./LeadSheet.module.css";
 import {PersonalDataConsentDocument} from "../pages/personal-data-consent";
 
-type LeadSheetProps={children:React.ReactNode;title?:string;project?:string;propertyId?:string;source?:string;context?:Record<string,unknown>;referralCode?:string;referralName?:string};
+export type LeadSheetProps={children:React.ReactNode;title?:string;project?:string;propertyId?:string;source?:string;context?:Record<string,unknown>;referralCode?:string;referralName?:string};
 
-export function LeadSheet({children,title="Получить консультацию",project,propertyId,source="app",context,referralCode,referralName}:LeadSheetProps){
+export function LeadSheet(props:LeadSheetProps){
+ const account=useQuery({queryKey:['visitor-account'],queryFn:()=>visitorApi<{registered:boolean}>('/me/account'),enabled:runtime.enabled,staleTime:30000});
+ if(runtime.enabled&&(account.isPending||account.isError))return React.cloneElement(props.children as React.ReactElement<any>,{disabled:account.isPending,onClick:()=>void account.refetch()});
+ return runtime.enabled&&account.data?.registered?<AccountConversationEntry {...props}/>:<LegacyLeadSheet {...props}/>;
+}
+function LegacyLeadSheet({children,title="Получить консультацию",project,propertyId,source="app",context,referralCode,referralName}:LeadSheetProps){
   const cache=useQueryClient();
   const [leadId,setLeadId]=React.useState<string>();
   const key=React.useRef(crypto.randomUUID());

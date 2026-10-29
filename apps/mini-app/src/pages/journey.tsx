@@ -1,8 +1,10 @@
+import {AccountConversationDraft} from '../components/AccountConversationEntry';
+import {runtime} from '../../../../packages/pulse-data/runtime';
 import {LoadRecovery} from '../components/LoadRecovery';
 import {BackLink} from "../components/BackLink";
 import {IconTile} from '../components/IconTile';
 import React from 'react';
-import {Link, useSearchParams} from 'react-router-dom';
+import {Link, useLocation, useSearchParams} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {ArrowRight, MessageCircle, CalendarDays, Sparkles, Plus, ChevronRight} from 'lucide-react';
 import {useClientJourneys} from '../helpers/useClientJourneys';
@@ -13,6 +15,7 @@ import styles from './journey.module.css';
 
 export default function JourneyPage(){
  const [params]=useSearchParams();
+ const location=useLocation();
  const query=useClientJourneys(params.get('lead')?10000:30000);
  const items=query.data?.items||[];
  const ids=[...new Set(items.flatMap(e=>[e.propertyId,...e.journey.collections.flatMap(c=>c.items.map(i=>i.propertyId)),...e.journey.showings.map(s=>s.propertyId)]).filter((id):id is string=>!!id))].sort();
@@ -20,6 +23,7 @@ export default function JourneyPage(){
  const properties=catalog.data||[];
  const leadId=params.get('lead');
  const selected=items.find(e=>e.leadId===leadId);
+ if(params.get('compose')==='1'&&runtime.enabled)return <AccountConversationDraft details={location.state?.conversationDraft??{source:'journey'}}/>;
  if(leadId&&selected)return <ClientConversation key={leadId} entry={selected} properties={properties} query={query} catalogError={!!catalog.error} onRetryCatalog={()=>void catalog.refetch()}/>;
  return <div className={styles.page}>
   <nav className={styles.navigation} data-app-back-row aria-label="Навигация по обращениям"><BackLink to="/" aria-label="На главную"/></nav>
@@ -30,7 +34,7 @@ export default function JourneyPage(){
 
   </section>:<><div className={styles.inbox} aria-label="Мои диалоги">{[...items].sort((a,b)=>Date.parse(b.journey.messages?.at(-1)?.at||b.createdAt)-Date.parse(a.journey.messages?.at(-1)?.at||a.createdAt)).map(e=>{
    const last=e.journey.messages?.at(-1);const property=properties.find(p=>p.id===e.propertyId);const closed=['deal','closed','lost'].includes(e.status);
-   return <Link className={styles.dialogRow} key={e.leadId} to={'/journey?lead='+e.leadId}><span className={styles.avatar}>{e.managerName?e.managerName.trim().split(/\s+/).map(n=>n[0]).slice(0,2).join(''):<MessageCircle size={22}/>}</span><span className={styles.dialogCopy}><span className={styles.dialogTitle}><strong>{e.managerName||'Команда PULSEDV.RU'}</strong><time>{journeyDate(last?.at||e.createdAt,true)}</time></span><b>{property?.name||'Помощь с покупкой'}</b><small>{last?(last.author==='client'?'Вы: ':'')+last.text:closed?'Обращение завершено':'Начните переписку — расскажите, что ищете'}</small><span className={styles.status}>{journeyStatus(e.status)}</span></span><ChevronRight size={16}/></Link>;
+   return <Link className={styles.dialogRow} key={e.leadId} to={'/journey?lead='+e.leadId}><span className={styles.avatar}>{e.managerName?e.managerName.trim().split(/\s+/).map(n=>n[0]).slice(0,2).join(''):<MessageCircle size={22}/>}</span><span className={styles.dialogCopy}><span className={styles.dialogTitle}><strong>{e.managerHasReplied===false?'Команда PULSEDV.RU':e.managerName||'Команда PULSEDV.RU'}</strong><time>{journeyDate(last?.at||e.createdAt,true)}</time></span><b>{property?.name||'Помощь с покупкой'}</b><small>{last?(last.author==='client'?'Вы: ':'')+last.text:closed?'Обращение завершено':'Начните переписку — расскажите, что ищете'}</small><span className={styles.status}>{journeyStatus(e.status)}</span></span><ChevronRight size={16}/></Link>;
   })}</div></>}
   {!leadId&&!query.isLoading&&!query.error&&<div className={styles.startActions}><LeadSheet title="Помочь с выбором квартиры" source="journey"><button className={items.length?styles.secondary:styles.primary}>{items.length?<><Plus size={18}/>Обсудить другую покупку</>:<>Обсудить покупку<ArrowRight size={17}/></>}</button></LeadSheet>{!items.length&&<Link className={styles.secondary} to="/catalog">Пока посмотрю каталог</Link>}</div>}
  </div>;
