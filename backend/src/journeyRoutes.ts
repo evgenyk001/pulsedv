@@ -1,3 +1,4 @@
+import {favoriteOwner} from './favoriteRoutes';
 import {safeLeadContext} from './validation';
 import {messagePage,withMessages} from './journeyMessages';
 import {syncShowingReminders} from './showingReminders';
@@ -128,11 +129,22 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
    const leadId=id.parse((r.params as any).id);const q=z.object({before:z.coerce.number().int().positive().optional()}).strict().parse(r.query);
    await leadAccess(db,r,leadId,client);return messagePage(db,leadId,q.before);
   });
+  if(client)app.patch(prefix+'/journeys/:id/preferences',{preHandler:auth,config:{rateLimit:{max:120,timeWindow:'1 minute'}}},async r=>{
+   const leadId=id.parse((r.params as any).id);
+   const input=z.object({pinned:z.boolean().optional(),hidden:z.boolean().optional()}).strict().refine(v=>v.pinned!==undefined||v.hidden!==undefined).parse(r.body);
+   return db.transaction(async sql=>{
+    await leadAccess(sql,r,leadId,true,true);const {owner}=await favoriteOwner(sql,r.visitor!.sessionId);
+    const row=(await sql.query(`insert into client_journey_preferences(owner,lead_id,pinned_at,hidden_at) values($1,$2,case when $3::boolean then now() end,case when $4::boolean then now() end)
+     on conflict(owner,lead_id) do update set pinned_at=case when $3::boolean is null then client_journey_preferences.pinned_at when $3 then coalesce(client_journey_preferences.pinned_at,now()) else null end,hidden_at=case when $4::boolean is null then client_journey_preferences.hidden_at when $4 then now() else null end returning pinned_at,hidden_at`,[owner,leadId,input.pinned??null,input.hidden??null])).rows[0];
+    return {pinnedAt:row.pinned_at,hiddenAt:row.hidden_at};
+   });
+  });
   app.get(prefix+'/journeys',{preHandler:auth},async r=>{
    if(client){
-    const values=[r.visitor!.sessionId,r.visitor!.userId];
-    const rows=(await db.query(`select l.id,l.name,l.status,l.property_id,l.created_at,m.public_name as manager_name,exists(select 1 from journey_messages jm where jm.lead_id=l.id and jm.document->>'author'='manager') as manager_has_replied,j.document from leads l left join team_members m on m.id=l.manager_id and m.active=true left join client_journeys j on j.lead_id=l.id where l.session_id=$1 or ($2::uuid is not null and l.user_id=$2) order by l.created_at desc limit 1001`,values)).rows;
-    return {limited:rows.length>1000,items:await Promise.all(rows.slice(0,1000).map(async l=>({leadId:l.id,leadName:l.name,status:l.status,propertyId:l.property_id,createdAt:l.created_at,managerName:l.manager_name||null,managerHasReplied:!!l.manager_has_replied,journey:clientJourney(await withMessages(db,l.document||emptyJourney(l.id)))})))};
+    const {owner}=await favoriteOwner(db,r.visitor!.sessionId);
+    const values=[r.visitor!.sessionId,r.visitor!.userId,owner];
+    const rows=(await db.query(`select l.id,l.name,l.status,l.property_id,l.created_at,p.pinned_at,case when p.hidden_at is not null and not exists(select 1 from journey_messages newer where newer.lead_id=l.id and newer.document->>'author'='manager' and (newer.document->>'at')::timestamptz>p.hidden_at) then p.hidden_at end as hidden_at,m.public_name as manager_name,exists(select 1 from journey_messages jm where jm.lead_id=l.id and jm.document->>'author'='manager') as manager_has_replied,j.document from leads l left join team_members m on m.id=l.manager_id and m.active=true left join client_journey_preferences p on p.lead_id=l.id and p.owner=$3 left join client_journeys j on j.lead_id=l.id where l.session_id=$1 or ($2::uuid is not null and l.user_id=$2) order by l.created_at desc limit 1001`,values)).rows;
+    return {limited:rows.length>1000,items:await Promise.all(rows.slice(0,1000).map(async l=>({leadId:l.id,leadName:l.name,status:l.status,propertyId:l.property_id,createdAt:l.created_at,managerName:l.manager_name||null,managerHasReplied:!!l.manager_has_replied,pinnedAt:l.pinned_at||null,hiddenAt:l.hidden_at||null,journey:clientJourney(await withMessages(db,l.document||emptyJourney(l.id)))})))};
    }
    const values=r.member!.role==='manager'?[r.member!.id]:[];
    const where=r.member!.role==='manager'?'where l.manager_id=$1':'';

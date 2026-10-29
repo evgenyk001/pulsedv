@@ -3,12 +3,12 @@ import {z} from 'zod';
 import type {Database} from './database';
 import type {RuntimeConfig} from './config';
 import {HttpError} from './security';
-export async function registeredPhone(db:Database,userId:string|null){
+export async function registeredPhone(db:Database,userId:string|null,consentVersion?:string){
  if(!userId)return false;
- return !!(await db.query('select u.id from app_users u join telegram_contact_consent c on c.user_id=u.id where u.id=$1 and u.phone is not null and c.accepted_at is not null',[userId])).rows.length;
+ return !!(await db.query('select u.id from app_users u join telegram_contact_consent c on c.user_id=u.id where u.id=$1 and u.phone is not null and c.accepted_at is not null and ($2::text is null or c.consent_version=$2)',[userId,consentVersion??null])).rows.length;
 }
 export function registerAccountRoutes(app:FastifyInstance,db:Database,config:RuntimeConfig,visitor:(r:FastifyRequest)=>Promise<void>,editor:(r:FastifyRequest)=>Promise<void>){
- app.get('/api/v1/me/account',{preHandler:visitor},async r=>({authenticated:!!r.visitor!.userId,registered:await registeredPhone(db,r.visitor!.userId),requiresPhone:config.REQUIRE_TELEGRAM_PHONE,botUsername:config.TELEGRAM_BOT_USERNAME,consentVersion:config.CONSENT_VERSION}));
+ app.get('/api/v1/me/account',{preHandler:visitor},async r=>({authenticated:!!r.visitor!.userId,registered:await registeredPhone(db,r.visitor!.userId,config.CONSENT_VERSION),requiresPhone:config.REQUIRE_TELEGRAM_PHONE,botUsername:config.TELEGRAM_BOT_USERNAME,consentVersion:config.CONSENT_VERSION}));
  app.post('/api/v1/me/account/contact-request',{preHandler:visitor,config:{rateLimit:{max:10,timeWindow:'1 minute'}}},async r=>{
   const input=z.object({consent:z.literal(true),consentVersion:z.string()}).strict().parse(r.body);
   if(input.consentVersion!==config.CONSENT_VERSION)throw new HttpError(409,'Условия обновились. Перезагрузите приложение');

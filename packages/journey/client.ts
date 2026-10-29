@@ -1,13 +1,13 @@
 import {api,visitorApi,runtime} from '../pulse-data/runtime';
 import {listPulseLeads,recordPulseEvent} from '../pulse-data';
 import {applyJourney,clientJourney,emptyJourney,type Journey,type JourneyAttachment,type JourneyCommand,type Verification} from './model';
-export type JourneyEntry={leadId:string;leadName?:string;status:string;propertyId:string|null;createdAt:string;managerName?:string|null;managerHasReplied?:boolean;journey:Journey};
+export type JourneyEntry={leadId:string;leadName?:string;status:string;propertyId:string|null;createdAt:string;managerName?:string|null;managerHasReplied?:boolean;pinnedAt?:string|null;hiddenAt?:string|null;journey:Journey};
 const KEY='pulse.dv.journeys.v1';
 function read():Record<string,Journey>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return {}}}
 export async function loadJourneys(client=false):Promise<{items:JourneyEntry[];limited:boolean}>{
  if(runtime.enabled)return (client?visitorApi:api)((client?'/me':'/control')+'/journeys');
- const data=read();const session=sessionStorage.getItem('pulse.dv.session.v1');
- return {limited:false,items:listPulseLeads().filter(l=>!client||l.sessionId===session).map(l=>({leadId:l.id,leadName:l.name,status:l.status,propertyId:l.propertyId,createdAt:l.createdAt,journey:client?clientJourney(data[l.id]||emptyJourney(l.id)):data[l.id]||emptyJourney(l.id)}))};
+ const data=read(),preferences=readPreferences();const session=sessionStorage.getItem('pulse.dv.session.v1');
+ return {limited:false,items:listPulseLeads().filter(l=>!client||l.sessionId===session).map(l=>({leadId:l.id,leadName:l.name,status:l.status,propertyId:l.propertyId,createdAt:l.createdAt,...(client?localJourneyPreference(l.id,data[l.id]||emptyJourney(l.id),preferences):{}),journey:client?clientJourney(data[l.id]||emptyJourney(l.id)):data[l.id]||emptyJourney(l.id)}))};
 }
 export async function loadJourney(leadId:string,client=false):Promise<JourneyEntry|null>{
  if(runtime.enabled)return ((await (client?visitorApi:api)<{entry:JourneyEntry}>((client?'/me':'/control')+'/journeys/'+encodeURIComponent(leadId))).entry)||null;
@@ -58,4 +58,12 @@ export async function discardJourneyAttachment(leadId:string,attachment:JourneyA
  const file=attachment.url.split('/').at(-1);
  if(!file||!/^[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/.test(file))return;
  await (client?visitorApi:api)((client?'/me':'/control')+'/journeys/'+leadId+'/attachments/'+file,{method:'DELETE',body:'{}'});
+}
+
+const PREFERENCES='pulse.journey-preferences.v1';
+function readPreferences():Record<string,{pinnedAt?:string|null;hiddenAt?:string|null}>{try{return JSON.parse(localStorage.getItem(PREFERENCES)||'{}')}catch{return {}}}
+function localJourneyPreference(id:string,journey:Journey,all:ReturnType<typeof readPreferences>){const p=all[id]||{};return {...p,hiddenAt:p.hiddenAt&&!(journey.messages||[]).some(m=>m.author==='manager'&&Date.parse(m.at)>Date.parse(p.hiddenAt!))?p.hiddenAt:null}}
+export async function setJourneyPreferences(id:string,input:{pinned?:boolean;hidden?:boolean}){
+ if(runtime.enabled)return visitorApi('/me/journeys/'+encodeURIComponent(id)+'/preferences',{method:'PATCH',body:JSON.stringify(input)});
+ const all=readPreferences(),previous=all[id]||{},now=new Date().toISOString();all[id]={...previous,...(input.pinned===undefined?{}:{pinnedAt:input.pinned?previous.pinnedAt||now:null}),...(input.hidden===undefined?{}:{hiddenAt:input.hidden?now:null})};localStorage.setItem(PREFERENCES,JSON.stringify(all));window.dispatchEvent(new Event('pulse:journey'));return all[id];
 }

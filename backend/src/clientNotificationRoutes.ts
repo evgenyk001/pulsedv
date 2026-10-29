@@ -44,7 +44,7 @@ const notices=`with owned as (
  where p.user_id=$2::uuid and e.kind in ('accrued','payout_details','payout_agreed','payout_reopened','paid')
 ), notices as (
  select r.id,r.kind,r.title,r.body,r.at,r.href,(r.source_read or seen.notice_id is not null) as read
- from raw r left join client_notification_reads seen on seen.owner=$3 and seen.notice_id=r.id
+ from raw r left join client_notification_reads seen on seen.owner=$3 and seen.notice_id=r.id where seen.dismissed_at is null
 )`;
 async function inbox(sql:Sql,args:unknown[]){
  const row=(await sql.query(notices+`select
@@ -53,8 +53,10 @@ async function inbox(sql:Sql,args:unknown[]){
  return {items:row.items,unreadCount:row.unread_count};
 }
 export async function mergeNotificationReads(sql:Sql,sessionId:string,userId:string){
- await sql.query('insert into client_notification_reads(owner,notice_id,read_at) select $2,notice_id,read_at from client_notification_reads where owner=$1 on conflict do nothing',['session:'+sessionId,'user:'+userId]);
+ await sql.query('insert into client_notification_reads(owner,notice_id,read_at,dismissed_at) select $2,notice_id,read_at,dismissed_at from client_notification_reads where owner=$1 on conflict(owner,notice_id) do update set dismissed_at=coalesce(client_notification_reads.dismissed_at,excluded.dismissed_at)',['session:'+sessionId,'user:'+userId]);
  await sql.query('delete from client_notification_reads where owner=$1',['session:'+sessionId]);
+ await sql.query('insert into client_journey_preferences(owner,lead_id,pinned_at,hidden_at) select $2,lead_id,pinned_at,hidden_at from client_journey_preferences where owner=$1 on conflict(owner,lead_id) do update set pinned_at=coalesce(client_journey_preferences.pinned_at,excluded.pinned_at),hidden_at=coalesce(client_journey_preferences.hidden_at,excluded.hidden_at)',['session:'+sessionId,'user:'+userId]);
+ await sql.query('delete from client_journey_preferences where owner=$1',['session:'+sessionId]);
 }
 export async function registerClientNotificationRoutes(app:FastifyInstance,db:Database,visitor:(r:FastifyRequest)=>Promise<void>){
  const input=z.union([z.object({ids:z.array(z.string().min(1).max(300)).min(1).max(100)}).strict(),z.object({all:z.literal(true)}).strict()]);
@@ -62,6 +64,15 @@ export async function registerClientNotificationRoutes(app:FastifyInstance,db:Da
   const {owner}=await favoriteOwner(sql,request.visitor!.sessionId);
   return inbox(sql,[request.visitor!.sessionId,request.visitor!.userId??null,owner]);
  }));
+ app.post('/api/v1/me/notifications/dismiss',{preHandler:visitor,config:{rateLimit:{max:120,timeWindow:'1 minute'}}},async request=>{
+  const command=z.object({ids:z.array(z.string().min(1).max(300)).min(1).max(100)}).strict().parse(request.body);
+  return db.transaction(async sql=>{
+   const {owner}=await favoriteOwner(sql,request.visitor!.sessionId);
+   const args=[request.visitor!.sessionId,request.visitor!.userId??null,owner];
+   await sql.query(notices+`insert into client_notification_reads(owner,notice_id,dismissed_at) select $3,id,now() from notices where id=any($4::text[]) on conflict(owner,notice_id) do update set dismissed_at=excluded.dismissed_at`,[...args,command.ids]);
+   return inbox(sql,args);
+  });
+ });
  app.post('/api/v1/me/notifications/read',{preHandler:visitor,config:{rateLimit:{max:60,timeWindow:'1 minute'}}},async request=>{
   const command=input.parse(request.body);
   return db.transaction(async sql=>{

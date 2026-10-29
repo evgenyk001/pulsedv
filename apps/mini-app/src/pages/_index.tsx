@@ -1,5 +1,4 @@
-import {NativeSelect} from '../components/NativeSelect';
-import {readCityInterest,rememberCityInterest} from '../helpers/cityInterest';
+import {readCityInterest} from '../helpers/cityInterest';
 import {LoadRecovery} from '../components/LoadRecovery';
 import {IconTile} from '../components/IconTile';
 import {PartnerEntryCard} from "../components/PartnerEntryCard";
@@ -11,7 +10,7 @@ import { Search, Bell, Building2, MapPin, Percent, Sparkles, ChevronRight, Messa
 import { PromoCarousel } from "../components/PromoCarousel";
 import { PropertyCard } from "../components/PropertyCard";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "../components/Sheet";
-import { useCatalogMeta, useFeaturedProperties } from "../helpers/useCatalog";
+import { useFeaturedProperties } from "../helpers/useCatalog";
 import { Input } from "../components/Input";
 import styles from "./_index.module.css";
 
@@ -19,7 +18,6 @@ export default function HomePage(){
   const navigate=useNavigate();
   const [query,setQuery]=React.useState("");
   const [interestCity,setInterestCity]=React.useState(readCityInterest);
-  const {data:catalogMeta}=useCatalogMeta();
   React.useEffect(()=>{const update=()=>setInterestCity(readCityInterest());window.addEventListener('pulse-city-interest',update);return()=>window.removeEventListener('pulse-city-interest',update)},[]);
   const {data:properties=[],isLoading,error,refetch}=useFeaturedProperties(3,interestCity);
   const submit=(e:React.FormEvent)=>{e.preventDefault();navigate(`/catalog${query?`?q=${encodeURIComponent(query)}`:""}`)};
@@ -54,7 +52,6 @@ export default function HomePage(){
 
     <section className={styles.section}>
       <div className={styles.sectionHead}><div><span>Выбор PULSEDV.RU</span><h2>Стоит посмотреть</h2></div><Link to={interestCity?"/catalog?city="+encodeURIComponent(interestCity):"/catalog"}>Все <ChevronRight size={15}/></Link></div>
-      <div className={styles.cityPicker}><NativeSelect aria-label="Город подборки на главной" value={interestCity??''} onChange={e=>{rememberCityInterest(e.target.value||'Все');setInterestCity(e.target.value||null)}}><option value="">Все города</option>{interestCity&&!catalogMeta?.cities.some(item=>item.city===interestCity)&&<option value={interestCity}>{interestCity}</option>}{catalogMeta?.cities.map(({city})=><option key={city} value={city}>{city}</option>)}</NativeSelect></div>
       {!isLoading&&!error&&!properties.length&&<p>В этом городе пока нет опубликованных ЖК.</p>}
       <div className={styles.propertyRail}>{isLoading&&<p role="status">Загружаем проекты…</p>}{error&&!properties.length&&<LoadRecovery label="Обновить проекты" onRetry={()=>void refetch()}/>}{!isLoading&&properties.map(p=><PropertyCard key={p.id} property={p}/>)}</div>
     </section>

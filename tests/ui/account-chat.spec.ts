@@ -62,7 +62,7 @@ for(const width of [320,390])test(`Registered chat ${width}: free first message,
  await expect(page.getByRole('navigation',{name:'Основная навигация'})).toHaveCount(0);expect(backend.starts()).toBe(0);
  await expect(page.getByRole('button',{name:'Хочу обсудить бюджет',exact:true})).toHaveCount(0);
  await page.getByRole('textbox',{name:'Сообщение',exact:true}).fill('Здравствуйте! Можно задать вопрос?');
- await page.getByRole('checkbox',{name:/Согласен на обработку/}).check();
+ await expect(page.getByRole('checkbox',{name:/Согласен на обработку/})).toHaveCount(0);
  await page.screenshot({path:`test-results/account-chat-draft-${width}.png`,animations:'disabled'});
  await page.getByRole('button',{name:'Отправить сообщение',exact:true}).click();
  await expect(page).toHaveURL(new RegExp('lead='+leadId));await expect(page.getByRole('article',{name:'Ваше сообщение'})).toHaveCount(1);expect(backend.starts()).toBe(1);

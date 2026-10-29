@@ -58,6 +58,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
   const sessionIds=sessionRows.map(row=>String(row.id));
   if(sessionIds.length){
    await sql.query('delete from client_notification_reads where owner=any($1::text[])',[sessionIds.map(id=>'session:'+id)]);
+   await sql.query('delete from client_journey_preferences where owner=any($1::text[])',[sessionIds.map(id=>'session:'+id)]);
    await sql.query('delete from search_profiles where owner=any($1::text[])',[sessionIds.map(id=>'session:'+id)]);
    await sql.query("delete from favorite_sets where owner=any($1::text[])",[sessionIds.map(id=>'session:'+id)]);
    await sql.query('delete from sessions where id=any($1::uuid[])',[sessionIds]);
@@ -67,6 +68,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
   const userIds=userRows.map(row=>String(row.id));
   if(userIds.length){
    await sql.query('delete from client_notification_reads where owner=any($1::text[])',[userIds.map(id=>'user:'+id)]);
+   await sql.query('delete from client_journey_preferences where owner=any($1::text[])',[userIds.map(id=>'user:'+id)]);
    await sql.query('delete from search_profiles where owner=any($1::text[])',[userIds.map(id=>'user:'+id)]);
    await sql.query("delete from favorite_sets where owner=any($1::text[])",[userIds.map(id=>'user:'+id)]);
    await sql.query('delete from app_users where id=any($1::uuid[])',[userIds]);

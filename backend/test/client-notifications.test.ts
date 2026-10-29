@@ -56,3 +56,37 @@ test('Inbox read receipts merge on Telegram binding without leaking to other vis
  await message(randomUUID());assert.equal((await get(b.headers)).json().unreadCount,1);
  assert.equal((await db.query('select * from client_notification_reads where owner=$1',['session:'+a.sessionId])).rows.length,0);
 });
+
+test('Dismissal removes only owned notices, fixes unread counts, survives sign-in and keeps future replies',async t=>{
+ const {db,app,a,b,leadId,other,message,get}=await fixture(t);
+ const own=randomUUID(),foreign=randomUUID();await message(own);await message(foreign,other);
+ const dismiss=(ids:string[],headers=a.headers)=>app.inject({method:'POST',url:'/api/v1/me/notifications/dismiss',headers,payload:{ids}});
+ assert.equal((await dismiss(['message:'+foreign])).json().unreadCount,1);assert.equal((await get(b.headers)).json().items.length,1);
+ const hidden=await dismiss(['message:'+own]);assert.equal(hidden.statusCode,200,hidden.body);assert.equal(hidden.json().items.length,0);assert.equal(hidden.json().unreadCount,0);
+ assert.equal((await dismiss(['message:'+own])).json().items.length,0);assert.equal((await db.query('select id from journey_messages where id=$1',[own])).rows.length,1);
+ const user=(await db.query('insert into app_users(telegram_user_id) values(987654) returning id')).rows[0].id;
+ await db.transaction(async sql=>{await mergeNotificationReads(sql,a.sessionId,user);await sql.query('update sessions set user_id=$2 where id=$1',[a.sessionId,user]);await sql.query('update leads set user_id=$2 where id=$1',[leadId,user])});
+ assert.equal((await get()).json().items.length,0);
+ await message(randomUUID());assert.equal((await get()).json().unreadCount,1);assert.equal((await get()).json().items.length,1);
+ assert.equal((await dismiss([])).statusCode,400);
+});
+
+test('Journey pin/hide preferences are private, merge at sign-in, sync across sessions and reveal a new manager reply without changing CRM',async t=>{
+ const {db,app,a,b,leadId,other,message}=await fixture(t);
+ const patch=(id:string,payload:unknown,headers=a.headers)=>app.inject({method:'PATCH',url:'/api/v1/me/journeys/'+id+'/preferences',headers,payload});
+ const list=async(headers=a.headers)=>(await app.inject({url:'/api/v1/me/journeys',headers})).json().items;
+ assert.equal((await patch(other,{hidden:true})).statusCode,404);
+ assert.equal((await patch(leadId,{pinned:true})).statusCode,200);assert.ok((await list())[0].pinnedAt);
+ assert.equal((await patch(leadId,{hidden:true})).statusCode,200);assert.ok((await list())[0].hiddenAt);
+ assert.equal((await list(b.headers))[0].hiddenAt,null);
+ assert.equal((await db.query('select status from leads where id=$1',[leadId])).rows[0].status,'new');
+ const user=(await db.query('insert into app_users(telegram_user_id) values(987655) returning id')).rows[0].id;
+ await db.transaction(async sql=>{await mergeNotificationReads(sql,a.sessionId,user);await sql.query('update sessions set user_id=$2 where id=$1',[a.sessionId,user]);await sql.query('update leads set user_id=$2 where id=$1',[leadId,user])});
+ assert.ok((await list())[0].hiddenAt);assert.ok((await list())[0].pinnedAt);
+ await db.query('update sessions set user_id=$2 where id=$1',[b.sessionId,user]);
+ const same=(await list(b.headers)).find((e:any)=>e.leadId===leadId);assert.ok(same.hiddenAt);assert.ok(same.pinnedAt);
+ const reply=randomUUID();await message(reply);await db.query("update journey_messages set document=jsonb_set(document,'{at}',to_jsonb((now()+interval '1 second')::text)) where id=$1",[reply]);
+ assert.equal((await list()).find((e:any)=>e.leadId===leadId).hiddenAt,null);assert.ok((await list()).find((e:any)=>e.leadId===leadId).pinnedAt);
+ await patch(leadId,{hidden:true});await patch(leadId,{hidden:false,pinned:false});assert.equal((await list())[0].pinnedAt,null);assert.equal((await list())[0].hiddenAt,null);
+ assert.equal((await patch(leadId,{})).statusCode,400);assert.equal((await patch(leadId,{owner:'another',hidden:true})).statusCode,400);
+});
