@@ -182,3 +182,19 @@ test('A Telegram reload with cached launch data still waits for the SDK before a
   expect(accountReads).toBe(0);
  }finally{await held?.abort().catch(()=>{})}
 });
+
+test('A failed notification dismiss returns the rounded row and a repeated tap cannot send twice',async({page})=>{
+ setupApi();let attempts=0;
+ const notice={id:'motion-test',kind:'message',title:'Сообщение от менеджера',body:'Подготовили варианты',at:new Date().toISOString(),href:'/journey?lead=motion',read:false};
+ await page.route('**/api/v1/me/notifications',route=>route.fulfill({json:{items:[notice],unreadCount:1}}));
+ await page.route('**/api/v1/me/notifications/dismiss',route=>{
+  attempts++;return attempts===1?route.fulfill({status:503,json:{error:'Server unavailable'}}):route.fulfill({json:{items:[],unreadCount:0}});
+ });
+ await page.goto(origin+'/pulsedv/mini-app/');await page.getByRole('button',{name:/Уведомления, новых:/}).click();
+ const row=page.locator('[data-swipe-row="notice:motion-test"]');const toggle=row.getByRole('button',{name:/^Действия —/});
+ await toggle.focus();await toggle.press('Enter');const remove=row.getByRole('button',{name:/^Убрать —/});
+ await remove.evaluate((button:HTMLButtonElement)=>{button.click();button.click()});
+ await expect(row.getByRole('alert')).toContainText('Не удалось сохранить');expect(attempts).toBe(1);
+ await expect(row).toHaveAttribute('data-open','true');await expect(remove).toBeEnabled();
+ await remove.click();await expect(row).toHaveCount(0);expect(attempts).toBe(2);await expect(page).not.toHaveURL(/journey/);
+});

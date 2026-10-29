@@ -1,3 +1,18 @@
-.row{position:relative;isolation:isolate;overflow:hidden;border-radius:20px;min-width:0}.content{position:relative;z-index:1;background:var(--background,#f4f5f8);transition:transform .22s ease;touch-action:pan-y;user-select:none;-webkit-user-select:none;will-change:transform}.actions{visibility:hidden;position:absolute;right:0;top:0;bottom:0;display:flex;align-items:stretch;z-index:0}.actions button{flex:1;min-width:0;border:0;padding:12px 3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;font:inherit;font-size:10px;line-height:1.2;color:#fff;cursor:pointer}.actions svg{width:21px;height:21px}.action{background:#69758b}.danger{background:var(--primary,#f00920)}.toggle{position:absolute;right:2px;top:4px;display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted-foreground);opacity:0;pointer-events:none}.toggle:focus-visible,.row:hover .toggle{opacity:1;pointer-events:auto}.toggle:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}.error{position:relative;z-index:2;display:block;background:var(--app-card);padding:7px 10px;color:var(--foreground);font-size:11px}.actions button:disabled{opacity:.6}.actions button:focus-visible{outline:2px solid white;outline-offset:-4px}@media(prefers-reduced-motion:reduce){.content{transition:none}}
-
-.row[data-open] .actions,.row[data-dragging] .actions{visibility:visible}
+.row{position:relative;isolation:isolate;overflow:hidden;border-radius:var(--app-radius-control,22px);min-width:0}
+.content{position:relative;z-index:1;overflow:hidden;border-radius:inherit;background:var(--background,#f4f5f8);transition:transform .42s cubic-bezier(.22,1.18,.36,1);touch-action:pan-y;user-select:none;-webkit-user-select:none;will-change:transform;box-shadow:8px 0 18px -14px rgba(23,35,52,.22)}
+.content>a{border-radius:inherit}
+.actions{visibility:hidden;position:absolute;inset:0;z-index:0;overflow:hidden;border-radius:inherit;background:var(--swipe-fill)}
+.buttons{position:absolute;right:0;top:0;bottom:0;display:flex;align-items:stretch;overflow:hidden;transition:width .42s cubic-bezier(.22,1.18,.36,1)}
+.actions button{flex:1;min-width:0;overflow:hidden;border:0;padding:12px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;font:inherit;font-size:11px;line-height:1.2;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.actions button>*{flex-shrink:0;white-space:nowrap;opacity:clamp(0,calc((var(--swipe-progress) - .2)*1.6),1);transform:scale(calc(.86 + var(--swipe-progress)*.14));transition:transform .18s ease,opacity .12s ease}
+.actions svg{width:22px;height:22px}
+.action{background:#69758b}.danger{background:var(--primary,#f00920)}
+.row[data-revealed] .actions{visibility:visible}
+.row[data-armed] .actions svg{transform:scale(1.12)}
+.row[data-busy] .content{transition:transform .18s ease-out}
+.row[data-busy] .buttons{transition:width .18s ease-out}
+.toggle{position:absolute;right:2px;top:4px;display:grid;place-items:center;width:24px;height:24px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted-foreground);opacity:0;pointer-events:none}
+.toggle:focus-visible,.row:hover .toggle{opacity:1;pointer-events:auto}.toggle:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+.error{position:relative;z-index:2;display:block;background:var(--app-card);padding:7px 10px;color:var(--foreground);font-size:11px}
+.actions button:disabled{opacity:.6}.actions button:focus-visible{outline:2px solid white;outline-offset:-4px}
+@media(prefers-reduced-motion:reduce){.content,.buttons,.actions button>*{transition:none!important}}
