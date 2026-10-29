@@ -1,7 +1,7 @@
 import {api,visitorApi,runtime} from '../pulse-data/runtime';
 import {listPulseLeads,recordPulseEvent} from '../pulse-data';
 import {applyJourney,clientJourney,emptyJourney,type Journey,type JourneyAttachment,type JourneyCommand,type Verification} from './model';
-export type JourneyEntry={leadId:string;leadName?:string;status:string;propertyId:string|null;createdAt:string;managerName?:string|null;journey:Journey};
+export type JourneyEntry={leadId:string;leadName?:string;status:string;propertyId:string|null;createdAt:string;managerName?:string|null;managerHasReplied?:boolean;journey:Journey};
 const KEY='pulse.dv.journeys.v1';
 function read():Record<string,Journey>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return {}}}
 export async function loadJourneys(client=false):Promise<{items:JourneyEntry[];limited:boolean}>{
@@ -51,4 +51,11 @@ export async function verifyProperty(propertyId:string,note:string,revision:numb
  if(runtime.enabled)return api('/control/verifications/'+encodeURIComponent(propertyId),{method:'POST',body:JSON.stringify({note,revision})});
  const all=await loadVerifications();if((all.find(x=>x.propertyId===propertyId)?.revision||0)!==revision)throw new Error('Проверка изменилась');
  localStorage.setItem('pulse.dv.verifications.v1',JSON.stringify([{propertyId,note,revision:revision+1,checkedAt:new Date().toISOString()},...all.filter(x=>x.propertyId!==propertyId)]));
+}
+
+export async function discardJourneyAttachment(leadId:string,attachment:JourneyAttachment,client=false){
+ if(!runtime.enabled)return;
+ const file=attachment.url.split('/').at(-1);
+ if(!file||!/^[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/.test(file))return;
+ await (client?visitorApi:api)((client?'/me':'/control')+'/journeys/'+leadId+'/attachments/'+file,{method:'DELETE',body:'{}'});
 }

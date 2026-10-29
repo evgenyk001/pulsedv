@@ -1,3 +1,4 @@
+import {safeLeadContext} from './validation';
 import {messagePage,withMessages} from './journeyMessages';
 import {syncShowingReminders} from './showingReminders';
 import {reserveUpload,bindUpload} from './journeyUploads';
@@ -22,7 +23,7 @@ export const journeyCommand=z.discriminatedUnion('type',[
  z.object({type:z.literal('reaction'),collectionId:id,propertyId:short,reaction:z.enum(['liked','expensive','location','question','none']),reply:note}),
  z.object({type:z.literal('showing'),id,propertyId:short,at:z.iso.datetime(),note}),
  z.object({type:z.literal('showing_status'),id,status:z.enum(['requested','confirmed','completed','cancelled']),result:note}),
- z.object({type:z.literal('message'),id,text:z.string().trim().max(2000).default(''),attachment:attachmentSchema.optional()}),
+ z.object({type:z.literal('message'),id,text:z.string().trim().max(2000).default(''),attachment:attachmentSchema.optional(),requestContext:z.record(z.string(),z.unknown()).optional()}),
  z.object({type:z.literal('showing_change'),id,action:z.enum(['cancel','reschedule']),at:z.iso.datetime().optional(),note}),
  z.object({type:z.literal('showing_reschedule'),id,accept:z.boolean()}),
  z.object({type:z.literal('next_step'),title:short,dueAt:z.iso.datetime(),done:z.boolean()})
@@ -103,6 +104,17 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
    return {attachment};
    }catch(error){await unlink(finalPath).catch(()=>{});await unlink(tempPath).catch(()=>{});await db.query('delete from journey_uploads where url=$1',[uploadUrl]);throw error;}
   });
+  app.delete(prefix+'/journeys/:id/attachments/:file',{preHandler:auth},async r=>{
+   const leadId=id.parse((r.params as any).id),file=z.string().regex(/^[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/).parse((r.params as any).file);
+   const url='/api/v1/journey-media/'+leadId+'/'+file,actor=client?'visitor:'+r.visitor!.sessionId:'member:'+r.member!.id;
+   return db.transaction(async sql=>{
+    await leadAccess(sql,r,leadId,client,true);
+    const row=(await sql.query('select url from journey_uploads where url=$1 and lead_id=$2 and actor=$3 and attached=false for update',[url,leadId,actor])).rows[0];
+    if(!row)throw new HttpError(404,'Вложение недоступно');
+    if(row){try{await unlink(join(config.MEDIA_ROOT,'private','chat',leadId,file))}catch(error){if((error as NodeJS.ErrnoException).code!=='ENOENT')throw error}await sql.query('delete from journey_uploads where url=$1 and attached=false',[url]);}
+    return {ok:true};
+   });
+  });
   app.post(prefix+'/journeys/:id/read',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);const input=z.object({messageIds:z.array(id).min(1).max(100)}).strict().parse(r.body);
    return db.transaction(async sql=>{await leadAccess(sql,r,leadId,client,true);
@@ -119,8 +131,8 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
   app.get(prefix+'/journeys',{preHandler:auth},async r=>{
    if(client){
     const values=[r.visitor!.sessionId,r.visitor!.userId];
-    const rows=(await db.query(`select l.id,l.name,l.status,l.property_id,l.created_at,m.name as manager_name,j.document from leads l left join team_members m on m.id=l.manager_id and m.active=true left join client_journeys j on j.lead_id=l.id where l.session_id=$1 or ($2::uuid is not null and l.user_id=$2) order by l.created_at desc limit 1001`,values)).rows;
-    return {limited:rows.length>1000,items:await Promise.all(rows.slice(0,1000).map(async l=>({leadId:l.id,leadName:l.name,status:l.status,propertyId:l.property_id,createdAt:l.created_at,managerName:l.manager_name||null,journey:clientJourney(await withMessages(db,l.document||emptyJourney(l.id)))})))};
+    const rows=(await db.query(`select l.id,l.name,l.status,l.property_id,l.created_at,m.public_name as manager_name,exists(select 1 from journey_messages jm where jm.lead_id=l.id and jm.document->>'author'='manager') as manager_has_replied,j.document from leads l left join team_members m on m.id=l.manager_id and m.active=true left join client_journeys j on j.lead_id=l.id where l.session_id=$1 or ($2::uuid is not null and l.user_id=$2) order by l.created_at desc limit 1001`,values)).rows;
+    return {limited:rows.length>1000,items:await Promise.all(rows.slice(0,1000).map(async l=>({leadId:l.id,leadName:l.name,status:l.status,propertyId:l.property_id,createdAt:l.created_at,managerName:l.manager_name||null,managerHasReplied:!!l.manager_has_replied,journey:clientJourney(await withMessages(db,l.document||emptyJourney(l.id)))})))};
    }
    const values=r.member!.role==='manager'?[r.member!.id]:[];
    const where=r.member!.role==='manager'?'where l.manager_id=$1':'';
@@ -129,7 +141,7 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
   });
   app.get(prefix+'/journeys/:id',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);
-   return db.transaction(async sql=>{const lead=await leadAccess(sql,r,leadId,client,false);const row=(await sql.query('select document from client_journeys where lead_id=$1',[leadId])).rows[0];const journey:Journey=await withMessages(sql,row?.document||emptyJourney(leadId));const managerName=lead.manager_id?(await sql.query('select name from team_members where id=$1 and active=true',[lead.manager_id])).rows[0]?.name||null:null;return {entry:{leadId,leadName:lead.name,status:lead.status,propertyId:lead.property_id,createdAt:lead.created_at,managerName,journey:client?clientJourney(journey):journey}};});
+   return db.transaction(async sql=>{const lead=await leadAccess(sql,r,leadId,client,false);const row=(await sql.query('select document from client_journeys where lead_id=$1',[leadId])).rows[0];const journey:Journey=await withMessages(sql,row?.document||emptyJourney(leadId));const managerName=lead.manager_id?(await sql.query('select '+(client?'public_name':'name')+' as name from team_members where id=$1 and active=true',[lead.manager_id])).rows[0]?.name||null:null;return {entry:{leadId,leadName:lead.name,status:lead.status,propertyId:lead.property_id,createdAt:lead.created_at,managerName,journey:client?clientJourney(journey):journey}};});
   });
   app.post(prefix+'/journeys/:id',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);const input=z.object({revision:z.number().int().nonnegative(),command:journeyCommand}).strict().parse(r.body);
@@ -139,6 +151,8 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
     if(input.command.type==='message'&&(await sql.query('select id from journey_messages where id=$1 and lead_id=$2',[input.command.id,leadId])).rows.length)return {journey:client?clientJourney(current):current};
     if(current.revision!==input.revision)throw new HttpError(409,'Карточка изменилась. Обновите данные перед повтором');
     const c=input.command;
+    if(c.type==='message'&&c.requestContext){c.requestContext=safeLeadContext(c.requestContext);}
+
     if(c.type==='message'&&c.attachment)await bindUpload(sql,leadId,client?'visitor:'+r.visitor!.sessionId:'member:'+r.member!.id,c.attachment);
     if(['deal','closed','lost'].includes(l.status))throw new HttpError(409,'Обращение завершено');
     const propertyIds=c.type==='collection'?c.items.map(x=>x.propertyId):c.type==='showing'?[c.propertyId]:[];
@@ -153,7 +167,7 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
      const conflict=(await sql.query(`select j.lead_id from client_journeys j join leads l on l.id=j.lead_id, jsonb_array_elements(j.document->'showings') s where l.manager_id=$1 and s->>'status'='confirmed' and s->>'id'<>$2 and abs(extract(epoch from ((s->>'at')::timestamptz-$3::timestamptz)))<3600 limit 1`,[l.manager_id,slot.id,slot.at])).rows.length;
      if(conflict)throw new HttpError(409,'У менеджера уже есть показ в пределах часа');
     }
-    if(c.type==='message'){const message=next.messages!.at(-1)!;await sql.query('insert into journey_messages(id,lead_id,document) values($1,$2,$3::jsonb)',[message.id,leadId,JSON.stringify(message)]);}
+    if(c.type==='message'){const message=next.messages!.at(-1)!;if(!client)message.authorName=(await sql.query('select public_name from team_members where id=$1',[r.member!.id])).rows[0]?.public_name||'Специалист';await sql.query('insert into journey_messages(id,lead_id,document) values($1,$2,$3::jsonb)',[message.id,leadId,JSON.stringify(message)]);}
     const {messages:_messages,messagesBefore:_cursor,...document}=next;
     await sql.query(`insert into client_journeys(lead_id,revision,document) values($1,$2,$3::jsonb) on conflict(lead_id) do update set revision=excluded.revision,document=excluded.document,updated_at=now()`,[leadId,next.revision,JSON.stringify(document)]);
     if(c.type.startsWith('showing'))await syncShowingReminders(sql,leadId,origin);
@@ -162,7 +176,7 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
     const workTitle=c.type==='message'?'Клиент написал сообщение':c.type==='showing'?'Клиент запросил показ':c.type==='showing_change'?(c.action==='cancel'?'Клиент отменил показ':'Клиент запросил перенос показа'):'Клиент ответил на подборку';
     const workBody=c.type==='message'?(c.text.slice(0,500)||'Клиент отправил вложение'):c.type==='reaction'?({liked:'Вариант понравился',expensive:'Дорого',location:'Не подходит расположение',question:'Есть вопрос',none:'Реакция снята'}[c.reaction]+(c.reply?' · '+c.reply.slice(0,300):'')):c.type==='showing'?new Date(c.at).toLocaleString('ru-RU',{timeZone:'Asia/Vladivostok'})+' (Владивосток)':'Откройте карточку клиента для деталей.';
     const recipient=client?l.manager_id:l.user_id;
-    if((client||recipient)&&(client||c.type==='collection'&&c.published||['showing_status','showing_reschedule','message'].includes(c.type)))await sql.query('insert into outbox_events(topic,aggregate_type,aggregate_id,payload) values($1,$2,$3,$4::jsonb)',[client?'manager.journey':'user.journey','lead',leadId,JSON.stringify({[client?'managerId':'userId']:recipient,title:client?workTitle:'Обновление по подбору',body:client?workBody:'Менеджер обновил ваше обращение. Откройте подборки, показы и сообщения.',deepLink:origin+(client?'/pulsedv/control-center/#/leads?lead='+leadId:'/pulsedv/mini-app/#/journey')})]);
+    if((client||recipient)&&(client||c.type==='collection'&&c.published||['showing_status','showing_reschedule','message'].includes(c.type)))await sql.query('insert into outbox_events(topic,aggregate_type,aggregate_id,payload) values($1,$2,$3,$4::jsonb)',[client?'manager.journey':'user.journey','lead',leadId,JSON.stringify({[client?'managerId':'userId']:recipient,title:client?workTitle:'Обновление по подбору',body:client?workBody:'Менеджер обновил ваше обращение. Откройте подборки, показы и сообщения.',deepLink:origin+(client?'/pulsedv/control-center/#/leads?lead='+leadId:'/pulsedv/mini-app/#/journey?lead='+leadId+(c.type==='collection'?'&tab=collections':c.type.startsWith('showing')?'&tab=showings':''))})]);
     if(!client)await audit(sql,r.member!.id,'journey.'+c.type,leadId,{revision:next.revision});
     return {journey:client?clientJourney(next):next};
    });

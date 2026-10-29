@@ -73,8 +73,15 @@ test('Journey API: доступ, конфликт версий, публикац
  response=await post(path,{type:'showing_status',id:show.id,status:'completed',result:'Клиент выбирает этаж'},5);assert.equal(response.statusCode,200,response.body);
  assert.equal((await mine()).showings[0].result,'');
  const uploaded=await app.inject({method:'POST',url:path+'/attachments?filename=offer.pdf',headers:{origin:config.PUBLIC_ORIGIN,'content-type':'application/pdf'},cookies,payload:await (async()=>{const pdf=await PDFDocument.create();pdf.addPage();return Buffer.from(await pdf.save())})()});assert.equal(uploaded.statusCode,200,uploaded.body);
+ const abandoned=await app.inject({method:'POST',url:path+'/attachments?filename=unused.pdf',headers:{origin:config.PUBLIC_ORIGIN,'content-type':'application/pdf'},cookies,payload:await (async()=>{const pdf=await PDFDocument.create();pdf.addPage();return Buffer.from(await pdf.save())})()});assert.equal(abandoned.statusCode,200,abandoned.body);
+ const abandonedFile=abandoned.json().attachment.url.split('/').at(-1);
+ assert.equal((await app.inject({method:'DELETE',payload:{},url:clientPath+'/attachments/'+abandonedFile,headers:auth})).statusCode,404,'client cannot discard a manager upload');
+ assert.equal((await app.inject({method:'DELETE',payload:{},url:path+'/attachments/'+abandonedFile,headers,cookies:otherCookies})).statusCode,404,'another employee cannot discard it');
+ assert.equal((await app.inject({method:'DELETE',payload:{},url:path+'/attachments/'+abandonedFile,headers,cookies})).statusCode,200);
+ assert.equal((await app.inject({url:abandoned.json().attachment.url,cookies})).statusCode,404);
  const attachment=uploaded.json().attachment;assert.match(attachment.url,new RegExp('^/api/v1/journey-media/'+lead.id+'/'));
  const messageId=randomUUID();response=await post(path,{type:'message',id:messageId,text:'Документы по квартире',attachment},6);assert.equal(response.statusCode,200,response.body);
+ assert.equal((await app.inject({method:'DELETE',payload:{},url:path+'/attachments/'+attachment.url.split('/').at(-1),headers,cookies})).statusCode,404,'sent files are retained');
  let clientJourneyState=await mine();assert.equal(clientJourneyState.messages[0].attachment.name,'offer.pdf');assert.equal(clientJourneyState.messages[0].readAt,undefined);
  assert.equal((await app.inject(attachment.url)).statusCode,401);
  assert.equal((await app.inject({url:attachment.url,headers:unauthorized})).statusCode,404);

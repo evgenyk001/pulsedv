@@ -63,6 +63,13 @@ function userText(event:OutboxRecord){
   return `${title}${['user.broadcast','manager.broadcast_test'].includes(event.topic)?'\n\n':'\n'}${body}`;
 }
 
+// Upgrade queued legacy journey alerts too; access to the target remains authenticated.
+function clientDeepLink(event:OutboxRecord){
+ const link=asString(event.payload.deepLink);
+ if(event.topic!=='user.journey'||!link||event.aggregateType!=='lead'||!event.aggregateId||!/^[0-9a-f-]{36}$/i.test(event.aggregateId))return link;
+ try{const url=new URL(link);if(['/pulsedv/mini-app/','/mini-app/'].includes(url.pathname)){const query=new URLSearchParams(url.hash.split('?')[1]??'');query.set('lead',event.aggregateId);url.hash='/journey?'+query.toString();}return url.toString();}catch{return link}
+}
+
 function retryAt(attempts:number){
   const seconds=Math.min(3600,Math.max(30,30*Math.pow(2,attempts)));
   return new Date(Date.now()+seconds*1000).toISOString();
@@ -102,7 +109,7 @@ export async function processNotificationOutbox(
         await telegram.sendMessage({
           chatId,
           text:userText(event),
-          deepLink:asString(event.payload.deepLink),
+          deepLink:clientDeepLink(event),
           ...(event.topic==='user.broadcast'?{imageUrl:asString(event.payload.imageUrl),buttonLabel:asString(event.payload.buttonLabel),preferencesLink:asString(event.payload.preferencesLink),richTitle:true}:{}),
         });
       }else{
