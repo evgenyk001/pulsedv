@@ -107,3 +107,37 @@ test.describe('Native touch inbox gestures',()=>{
   await expect(remaining).toHaveCount(1);await expect(page).not.toHaveURL(/journey/);await cdp.detach();
  });
 });
+
+for(const width of [320,390])test(`Swipe surface ${width}: continuous red backing, rounded front and readable action`,async({page})=>{
+ await page.setViewportSize({width,height:844});await seed(page,true);
+ await page.goto('/pulsedv/mini-app/');await page.getByRole('button',{name:/Уведомления, новых:/}).click();
+ const row=page.locator('[data-swipe-row="notice:message:new-message"]');await row.locator('a').click({trial:true});
+ const box=(await row.boundingBox())!,cy=box.y+box.height/2,start=box.x+box.width-25;
+ await page.mouse.move(start,cy);await page.mouse.down();await page.mouse.move(start-box.width*.4,cy,{steps:12});
+ const coverage=await row.evaluate((element:any)=>{
+  const root=element.getBoundingClientRect(),front=element.children[1],card=front.getBoundingClientRect(),button=element.querySelector('button');
+  let sample=document.elementFromPoint(card.right+6,root.top+root.height/2),paint='';
+  while(sample){const color=getComputedStyle(sample).backgroundColor;if(color!=='rgba(0, 0, 0, 0)'&&color!=='transparent'){paint=color;break}sample=sample.parentElement}
+  return {paint,expected:getComputedStyle(button).backgroundColor,rootRadius:getComputedStyle(element).borderTopRightRadius,frontRadius:getComputedStyle(front).borderTopRightRadius,exposed:root.right-card.right};
+ });
+ expect(coverage.exposed).toBeGreaterThan(76);expect(coverage.paint).toBe(coverage.expected);expect(coverage.frontRadius).toBe(coverage.rootRadius);
+ await page.screenshot({path:`test-results/swipe-continuous-drag-${width}.png`});
+ await page.mouse.up();await expect(row).toHaveAttribute('data-open','true');
+ const action=row.getByRole('button',{name:/^Убрать —/});await expect(action).toBeVisible();
+ await expect.poll(async()=>{const front=(await row.locator(':scope > div').nth(1).boundingBox())!,icon=(await action.locator('svg').boundingBox())!;return icon.x>=front.x+front.width}).toBe(true);
+ await page.screenshot({path:`test-results/swipe-rounded-open-${width}.png`});
+ // A short drag reveals an action rather than deleting or opening the conversation.
+ await expect(row).toHaveCount(1);await expect(page).not.toHaveURL(/journey/);
+});
+
+test('Two-action rows resist over-pull and settle back to actionable pin/delete buttons',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await seed(page,true);await page.goto('/pulsedv/mini-app/#/journey');
+ const row=page.locator('[data-swipe-row="journey:'+leadId+'"]');await row.locator('a').click({trial:true});
+ const box=(await row.boundingBox())!,start=box.x+box.width-25,cy=box.y+box.height/2;
+ await page.mouse.move(start,cy);await page.mouse.down();await page.mouse.move(start-250,cy,{steps:14});
+ const stretch=await row.evaluate((element:any)=>{const front=element.children[1].getBoundingClientRect(),root=element.getBoundingClientRect();return root.right-front.right});
+ expect(stretch).toBeGreaterThan(152);expect(stretch).toBeLessThan(180);
+ await page.screenshot({path:'test-results/swipe-journey-elastic.png'});await page.mouse.up();
+ await expect(row).toHaveAttribute('data-open','true');await row.getByRole('button',{name:/^Закрепить —/}).click();
+ await expect(row.getByLabel('Закреплено')).toBeVisible();await expect(page).not.toHaveURL(/lead=/);
+});
