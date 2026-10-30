@@ -9,7 +9,7 @@ import type { Database } from "./database";
 import type { RuntimeConfig } from "./config";
 import { audit } from "./repository";
 import { catalogImportSchema, catalogPropertySchema } from "./validation";
-import { featuredCatalog, catalogMeta, getCatalogProperty, listCatalog, removeCatalogProperty, upsertCatalogProperty } from "./catalogRepository";
+import { adminCatalogSummary, featuredCatalog, catalogMeta, getCatalogProperty, listCatalog, removeCatalogProperty, upsertCatalogProperty } from "./catalogRepository";
 import { BinaryBodyError, readBinaryBody, registerBinaryParsers } from "./binaryBody";
 
 type Guard=(request:FastifyRequest)=>Promise<void>;
@@ -106,6 +106,8 @@ export async function registerCatalogRoutes(
       rooms:query.rooms,sea:!!query.sea,min:query.min,max:query.max,sort:query.sort,ids,view:query.view,
     });
   });
+
+  app.get("/api/v1/control/catalog-summary",{preHandler:editor},async()=>adminCatalogSummary(db));
 
   app.get("/api/v1/control/catalog/:id",{preHandler:editor},async(request,reply)=>{
     const id=z.string().min(1).max(120).parse((request.params as any).id);
