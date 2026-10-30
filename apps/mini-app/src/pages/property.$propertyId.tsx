@@ -1,3 +1,5 @@
+import {ProjectBuildings} from '../components/ProjectBuildings';
+import {buildingPlans,buildingDelivery,buildingName} from '../../../../packages/domain/projectBuildings';
 import {safeLocalStorage} from '../../../../packages/browser/storage';
 import {rememberViewedCity} from '../helpers/cityInterest';
 import {propertyAreaRange,dimensionRange} from '../../../../packages/domain/propertyDimensions';
@@ -44,7 +46,7 @@ const priceLabel=propertyPriceLabel;
 const counted=(n:number,one:string,few:string,many:string)=>n.toLocaleString('ru-RU')+' '+(n%100>=11&&n%100<=14?many:n%10===1?one:n%10>=2&&n%10<=4?few:many);
 
 // Restore this history entry's choices on Back, without carrying them into a new visit.
-type PropertySelection={room:string;finish:ApartmentFinish|null};
+type PropertySelection={room:string;finish:ApartmentFinish|null;building?:string};
 const propertySelections=new Map<string,PropertySelection>();
 
 const formatProjectDate=(value:string|null|undefined)=>{
@@ -68,17 +70,18 @@ export default function PropertyPage(){
   const selectionKey=location.key+':'+propertyId;
   const [selectedRoom,setSelectedRoom]=React.useState(()=>propertySelections.get(selectionKey)?.room??"");
   const [selectedFinish,setSelectedFinish]=React.useState<ApartmentFinish|null>(()=>propertySelections.get(selectionKey)?.finish??null);
+  const [selectedBuilding,setSelectedBuilding]=React.useState(()=>propertySelections.get(selectionKey)?.building??"");
   const [shareNotice,setShareNotice]=React.useState("");
 
   const rememberSelection=(value:PropertySelection)=>{
     propertySelections.delete(selectionKey);propertySelections.set(selectionKey,value);
     if(propertySelections.size>60)propertySelections.delete(propertySelections.keys().next().value!);
   };
-  const selectRoom=(room:string)=>{setSelectedRoom(room);rememberSelection({room,finish:selectedFinish})};
-  const selectFinish=(finish:ApartmentFinish|null)=>{setSelectedFinish(finish);rememberSelection({room:selectedRoom,finish})};
+  const selectRoom=(room:string)=>{setSelectedRoom(room);rememberSelection({room,finish:selectedFinish,building:selectedBuilding})};
+  const selectFinish=(finish:ApartmentFinish|null)=>{setSelectedFinish(finish);rememberSelection({room:selectedRoom,finish,building:selectedBuilding})};
   React.useLayoutEffect(()=>{
     const saved=propertySelections.get(selectionKey);
-    setPhotoIndex(0);setSelectedRoom(saved?.room??"");setSelectedFinish(saved?.finish??null);setShareNotice("");
+    setSelectedBuilding(saved?.building??"");setPhotoIndex(0);setSelectedRoom(saved?.room??"");setSelectedFinish(saved?.finish??null);setShareNotice("");
   },[selectionKey]);
 
   React.useEffect(()=>{
@@ -95,42 +98,50 @@ export default function PropertyPage(){
   const favorite=isFavorite(p.id);
   const developer=p.developerName&&!/^Партнёр (PULSE\.DV|PULSEDV\.RU)$/.test(p.developerName)?p.developerName:"";
   const gallery=propertyPhotos(p);
-  const roomOptions=sortRoomLabels(p.floorplans.map(plan=>plan.roomLabel));
+  const activeBuilding=(p.projectDetails?.buildings??[]).find(b=>b.id===selectedBuilding);
+  const scopedPlans=buildingPlans(p,activeBuilding?.id??'');
+  const selectBuilding=(building:string)=>{setSelectedBuilding(building);setSelectedRoom('');setSelectedFinish(null);rememberSelection({building,room:'',finish:null})};
+  const roomOptions=sortRoomLabels(scopedPlans.map(plan=>plan.roomLabel));
   const activeRoom=selectedRoom&&roomOptions.includes(selectedRoom)?selectedRoom:"";
   const mortgageRule=control.mortgagePrograms.find(rule=>rule.id===savedScenario?.programId)??control.mortgagePrograms[0];
-  const hasConfirmedFinishingPrices=p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>offer.priceFrom!==null));
-  const usesPlanPrice=!!selectedFinish||!!activeRoom||hasConfirmedFinishingPrices;
-  const matchedPricedPlans=(usesPlanPrice?p.floorplans.filter(plan=>!activeRoom||normalizeRoomLabel(plan.roomLabel)===activeRoom).map(plan=>({plan,price:selectedFinish?planPriceForFinish(plan,selectedFinish):planStartingPrice(plan)})):[])
+  const hasConfirmedFinishingPrices=scopedPlans.some(plan=>planFinishOffers(plan).some(offer=>offer.priceFrom!==null));
+  const usesPlanPrice=!!activeBuilding||!!selectedFinish||!!activeRoom||hasConfirmedFinishingPrices;
+  const matchedPricedPlans=(usesPlanPrice?scopedPlans.filter(plan=>!activeRoom||normalizeRoomLabel(plan.roomLabel)===activeRoom).map(plan=>({plan,price:selectedFinish?planPriceForFinish(plan,selectedFinish):planStartingPrice(plan)})):[])
     .filter((offer):offer is {plan:typeof p.floorplans[number];price:number}=>offer.price!==null).sort((a,b)=>a.price-b.price);
   const selectedPrice=usesPlanPrice?(matchedPricedPlans[0]?.price??null):p.priceFrom;
   const squareMetreLabel=propertyPricePerSqmLabel(p,{plans:usesPlanPrice?matchedPricedPlans.map(offer=>offer.plan):undefined,finish:selectedFinish});
   const mortgagePrice=selectedPrice===null?null:propertyPriceRub(selectedPrice);
-  const mortgagePlan=matchedPricedPlans[0]?.plan??p.floorplans.find(plan=>planStartingPrice(plan)!==null&&propertyPriceRub(planStartingPrice(plan)!)===mortgagePrice);
+  const mortgagePlan=matchedPricedPlans[0]?.plan??scopedPlans.find(plan=>planStartingPrice(plan)!==null&&propertyPriceRub(planStartingPrice(plan)!)===mortgagePrice);
   const mortgageQuote=mortgageRule&&mortgagePrice!==null?calculateMortgageScenario({programs:control.mortgagePrograms,settings:{...savedScenario,programId:mortgageRule.id,propertyKind:'newbuild',largeArea:newbuildHasIncreasedLimit(mortgagePlan)},price:mortgagePrice,down:0}):null;
   const minDown=mortgageQuote?.requiredDown??null;
   const presentation=p.documents?.find(doc=>doc.kind==="presentation");
 
-  const details=p.projectDetails;
+  const details=activeBuilding?{...p.projectDetails,...activeBuilding,constructionType:activeBuilding.constructionType??p.projectDetails?.constructionType,ceilingHeight:activeBuilding.ceilingHeight??p.projectDetails?.ceilingHeight}:p.projectDetails;
   const finishTypes=APARTMENT_FINISHES.filter(([value])=>
-    (details?.finishes??[]).some(finish=>canonicalApartmentFinish(finish)===value)||p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>canonicalApartmentFinish(offer.finishType)===value))
+    (!activeBuilding?(details?.finishes??[]):[]).some(finish=>canonicalApartmentFinish(finish)===value)||scopedPlans.some(plan=>planFinishOffers(plan).some(offer=>canonicalApartmentFinish(offer.finishType)===value))
   );
+  const projectFinishLabels=APARTMENT_FINISHES.filter(([value])=>(p.projectDetails?.finishes??[]).some(finish=>canonicalApartmentFinish(finish)===value)||p.floorplans.some(plan=>planFinishOffers(plan).some(offer=>canonicalApartmentFinish(offer.finishType)===value))).map(([,label])=>label);
   const priceForPlan=(plan:typeof p.floorplans[number])=>selectedFinish?planPriceForFinish(plan,selectedFinish):planStartingPrice(plan);
   const matchesFinish=(plan:typeof p.floorplans[number])=>!selectedFinish||planFinishOffers(plan).some(offer=>canonicalApartmentFinish(offer.finishType)===canonicalApartmentFinish(selectedFinish));
-  const visiblePlans=p.floorplans
+  const visiblePlans=scopedPlans
     .filter(plan=>activeRoom&&normalizeRoomLabel(plan.roomLabel)===activeRoom&&matchesFinish(plan))
     .sort((a,b)=>(priceForPlan(a)??Infinity)-(priceForPlan(b)??Infinity)||a.sortOrder-b.sortOrder);
   const fromPulse=returnTo.startsWith("/selection");
-  const area=propertyAreaRange(p);
+  const area=propertyAreaRange(activeBuilding?{...p,projectDetails:{...details,commissioningDate:details?.commissioningDate??null,totalApartments:details?.totalApartments??null,availableApartments:details?.availableApartments??null,areaFrom:null,areaTo:null},floorplans:scopedPlans}:p);
   const areaLabel=dimensionRange(area.from,area.to);
+  const projectArea=propertyAreaRange(p),projectAreaLabel=dimensionRange(projectArea.from,projectArea.to);
+  const projectRooms=sortRoomLabels(p.floorplans.map(plan=>plan.roomLabel));
   const floorsLabel=dimensionRange(details?.floorsFrom,details?.floorsTo);
   const commissioning=formatProjectDate(details?.commissioningDate);
   const inventory=details?.availableApartments!=null
     ?'В продаже: '+counted(details.availableApartments,'квартира','квартиры','квартир')+(details.totalApartments!=null?' из '+details.totalApartments.toLocaleString('ru-RU'):'')+'.'
-    :details?.totalApartments!=null?'Всего в ЖК: '+counted(details.totalApartments,'квартира','квартиры','квартир')+'. Наличие уточняется.':'Актуальное наличие уточним по запросу.';
+    :details?.totalApartments!=null?(activeBuilding?'Всего в корпусе: ':'Всего в ЖК: ')+counted(details.totalApartments,'квартира','квартиры','квартир')+'. Наличие уточняется.':'Актуальное наличие уточним по запросу.';
   const facts=[
-    {label:'Срок сдачи',value:p.delivery||'Уточняется',icon:CalendarDays},
+    {label:'Срок сдачи',value:activeBuilding?buildingDelivery(activeBuilding):p.delivery||'Уточняется',icon:CalendarDays},
     ...(commissioning?[{label:'Плановый ввод дома',value:commissioning,icon:Building2}]:[]),
     ...(areaLabel?[{label:'Площадь квартир',value:areaLabel+' м²',icon:Ruler}]:[]),
+    ...(details?.constructionType?[{label:'Технология',value:details.constructionType,icon:Building2}]:[]),
+    ...(details?.ceilingHeight?[{label:'Потолки от',value:details.ceilingHeight.toLocaleString('ru-RU')+' м',icon:Ruler}]:[]),
     ...(p.className?[{label:'Класс жилья',value:p.className,icon:ShieldCheck}]:[]),
   ];
 
@@ -164,14 +175,15 @@ export default function PropertyPage(){
         <h1>{p.name}</h1>
         {fromPulse&&<span className={styles.selectionBadge}>Из вашей подборки PULSE Select</span>}
         <div className={styles.location}><MapPin size={14}/>{p.city} · {p.district}</div>
-        <div className={styles.startingPrice} role="region" aria-label="Стоимость выбранного варианта"><strong>{selectedPrice!==null?priceLabel(selectedPrice):'Цена уточняется'}</strong>{squareMetreLabel&&<span className={styles.squareMetre}>{squareMetreLabel}</span>}<span>{[activeRoom?(activeRoom==='Студия'?'Студия':activeRoom+' комн.'):null,selectedFinish?apartmentFinishLabel(selectedFinish):null].filter(Boolean).join(' · ')||'стоимость квартир в ЖК'}</span></div>
+        <div className={styles.startingPrice} role="region" aria-label="Стоимость выбранного варианта"><strong>{selectedPrice!==null?priceLabel(selectedPrice):'Цена уточняется'}</strong>{squareMetreLabel&&<span className={styles.squareMetre}>{squareMetreLabel}</span>}<span>{[activeBuilding?.name??null,activeRoom?(activeRoom==='Студия'?'Студия':activeRoom+' комн.'):null,selectedFinish?apartmentFinishLabel(selectedFinish):null].filter(Boolean).join(' · ')||'стоимость квартир в ЖК'}</span></div>
         <details className={styles.freshness}><summary>Цены и наличие подтвердим перед бронированием <ChevronRight size={13}/></summary><PropertyFreshness id={p.id}/></details>
         {shareNotice&&<span className={styles.shareNotice} role="status">{shareNotice}</span>}
         <div className={styles.projectFacts} data-count={facts.length} role="region" aria-label="Ключевые характеристики">{facts.map(({label,value,icon:Icon})=><div key={label}><Icon size={16}/><span>{label}</span><strong>{value}</strong></div>)}</div>
       </header>
 
+      <ProjectBuildings property={p} selected={activeBuilding?.id??""} onSelect={selectBuilding}/>
       <section id="property-plans" className={styles.apartmentSummary} aria-label="Квартиры и планировки ЖК">
-        <div className={styles.sectionHead}><div><span>КВАРТИРЫ И ПЛАНИРОВКИ</span><h2>Квартиры и цены</h2></div><small>{counted(p.floorplans.length,'планировка','планировки','планировок')}</small></div>
+        <div className={styles.sectionHead}><div><span>КВАРТИРЫ И ПЛАНИРОВКИ</span><h2>Квартиры и цены</h2></div><small>{counted(scopedPlans.length,'планировка','планировки','планировок')}</small></div>
         <p className={styles.sectionHint}>{inventory} Выберите комнатность — ниже откроются планировки.</p>
         <div className={styles.finishSummary} role="group" aria-label="Варианты отделки">
           <span className={styles.finishLabel}>Отделка</span>
@@ -189,7 +201,7 @@ export default function PropertyPage(){
         </div>
         {roomOptions.length===0&&<p className={styles.emptyPlans}>Планировки пока не загружены. Уточним подходящие варианты по запросу.</p>}
         <div className={styles.roomCards}>{roomOptions.map(room=>{
-          const plans=p.floorplans.filter(plan=>normalizeRoomLabel(plan.roomLabel)===room);
+          const plans=scopedPlans.filter(plan=>normalizeRoomLabel(plan.roomLabel)===room);
           const matching=plans.filter(matchesFinish);
           const prices=matching.map(priceForPlan).filter((price):price is number=>price!==null);
           const areas=matching.flatMap(plan=>plan.areaFrom!==null?[plan.areaFrom]:[]);
@@ -206,7 +218,7 @@ export default function PropertyPage(){
               return <TrackedFloorplan property={p} plan={plan} className={styles.planCard} key={plan.id||plan.roomLabel+'-'+index}>
                 <div className={plan.imageUrl?styles.planImage:styles.planImageMissing}><FloorplanViewer property={p} plan={plan} preferredFinish={selectedFinish}/></div>
                 <div className={styles.planCopy}>
-                  <span>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'}</span>
+                  <span>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'}</span>{(p.projectDetails?.buildings??[]).length>0&&<small className="pulsePlanBuilding">{buildingName(p,plan.buildingId)||"Корпус уточняется"}{plan.sectionLabel?" · секция "+plan.sectionLabel:""}</small>}
                   <strong>{plan.areaFrom!==null?plan.areaFrom+(plan.areaTo&&plan.areaTo!==plan.areaFrom?'–'+plan.areaTo:'')+' м²':'Площадь уточняется'}</strong>
                   {offers.length>0&&<span className={styles.planFinishes}>{selectedFinish?apartmentFinishLabel(selectedFinish):[...new Set(offers.map(offer=>apartmentFinishLabel(offer.finishType)))].join(' · ')}</span>}
                   <b>{planPriceLabel(plan,selectedFinish)}</b>
@@ -247,15 +259,16 @@ export default function PropertyPage(){
           <div><span>Застройщик</span><strong>{developer||"Уточняется"}</strong></div>
           <div><span>Класс</span><strong>{p.className||"Уточняется"}</strong></div>
           <div><span>Срок сдачи</span><strong>{p.delivery||"Уточняется"}</strong></div>
-          <div><span>Плановый ввод дома</span><strong>{commissioning||"Дата уточняется"}</strong></div>
-          {floorsLabel&&<div><span>Этажность</span><strong>{floorsLabel}</strong></div>}
-          {areaLabel&&<div><span>Площадь квартир</span><strong>{areaLabel} м²</strong></div>}
-          {details?.parkingSpaces!=null&&<div><span>Парковочных мест</span><strong>{details.parkingSpaces.toLocaleString('ru-RU')}</strong></div>}
-          {details?.totalApartments!=null&&<div><span>Всего квартир в ЖК</span><strong>{details.totalApartments.toLocaleString('ru-RU')}</strong></div>}
-          {details?.availableApartments!=null&&<div><span>Квартир в продаже</span><strong>{details.availableApartments.toLocaleString('ru-RU')}</strong></div>}
+          <div><span>Плановый ввод дома</span><strong>{formatProjectDate(p.projectDetails?.commissioningDate)||"Дата уточняется"}</strong></div>
+          {dimensionRange(p.projectDetails?.floorsFrom,p.projectDetails?.floorsTo)&&<div><span>Этажность</span><strong>{dimensionRange(p.projectDetails?.floorsFrom,p.projectDetails?.floorsTo)}</strong></div>}
+          {projectAreaLabel&&<div><span>Площадь квартир</span><strong>{projectAreaLabel} м²</strong></div>}
+          {p.projectDetails?.parkingSpaces!=null&&<div><span>Парковочных мест</span><strong>{p.projectDetails.parkingSpaces.toLocaleString('ru-RU')}</strong></div>}
+          {p.projectDetails?.totalApartments!=null&&<div><span>Всего квартир в ЖК</span><strong>{p.projectDetails.totalApartments.toLocaleString('ru-RU')}</strong></div>}
+          {p.projectDetails?.availableApartments!=null&&<div><span>Квартир в продаже</span><strong>{p.projectDetails.availableApartments.toLocaleString('ru-RU')}</strong></div>}
           <div><span>Стартовая цена ЖК</span><strong>{priceLabel(p.priceFrom).replace("от ","")}</strong></div>
-          <div><span>Типы квартир</span><strong>{roomOptions.length?roomOptions.join(" · "):"Уточняются"}</strong></div>
-          <div><span>Отделка</span><strong>{finishTypes.length?finishTypes.map(([,label])=>label).join(" · "):"Уточняется"}</strong></div>
+          {p.projectDetails?.parkingType&&<div><span>Тип парковки</span><strong>{{underground:'Подземная',multilevel:'Многоуровневая',surface:'Наземная',mixed:'Несколько видов'}[p.projectDetails.parkingType]}</strong></div>}
+          <div><span>Типы квартир</span><strong>{projectRooms.length?projectRooms.join(" · "):"Уточняются"}</strong></div>
+          <div><span>Отделка</span><strong>{projectFinishLabels.length?projectFinishLabels.join(" · "):"Уточняется"}</strong></div>
         </div>
       </details>
 
@@ -277,7 +290,7 @@ export default function PropertyPage(){
       {presentation?<a className={styles.secondary} href={presentation.url} target="_blank" rel="noreferrer"><FileText size={17}/><span>Презентация</span></a>:<LeadSheet title="Получить презентацию" project={p.name} propertyId={p.id} source="presentation">
         <button className={styles.secondary}><Send size={17}/><span>Презентация</span></button>
       </LeadSheet>}
-      <LeadSheet title="Узнать наличие" project={p.name} propertyId={p.id} source="property">
+      <LeadSheet title="Узнать наличие" project={p.name} propertyId={p.id} source="property" context={activeBuilding?{buildingId:activeBuilding.id,buildingName:activeBuilding.name,phase:activeBuilding.phase}:undefined}>
         <button className={styles.primary}><span>Узнать наличие</span><ChevronRight size={18}/></button>
       </LeadSheet>
     </div>

@@ -1,3 +1,5 @@
+import {projectDeliveries} from './projectBuildings';
+import type {ProjectDetails} from '../pulse-data/model';
 /** Public filter choices are derived from published catalog data, never editor presets. */
 export function normalizeRoomLabel(label:string):string|null{
  const text=label.trim().toLowerCase();
@@ -17,8 +19,8 @@ export function catalogFacets(roomLabels:string[],deliveries:string[]){
  }
  return {rooms:sortRoomLabels(roomLabels),deliveries:[...(completed?['Сдан']:[]),...[...years].sort()]};
 }
-export function publishedCatalogFacets(properties:readonly {status:string;delivery:string;floorplans:readonly {roomLabel:string}[]}[]){
+export function publishedCatalogFacets(properties:readonly {status:string;delivery:string;projectDetails?:ProjectDetails;floorplans:readonly {roomLabel:string}[]}[]){
  const published=properties.filter(p=>p.status==='published');
- return catalogFacets(published.flatMap(p=>p.floorplans.map(f=>f.roomLabel)),published.map(p=>p.delivery));
+ return catalogFacets(published.flatMap(p=>p.floorplans.map(f=>f.roomLabel)),published.flatMap(projectDeliveries));
 }
 export function roomChoiceLabel(value:string){return value==='Все'||value==='Не важно'?'Любая комнатность':value==='Студия'?'Студия':value+' комн.'}

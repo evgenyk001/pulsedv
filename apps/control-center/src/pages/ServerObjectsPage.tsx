@@ -1,3 +1,4 @@
+import {ProjectStructureEditor,PlanBuildingEditor} from '../components/ProjectStructureEditor';
 import {CatalogCover} from '../components/CatalogCover';
 import {CatalogCityFilter,useCatalogCity} from '../components/CatalogCityFilter';
 import {StartingPriceEditor} from '../components/StartingPriceEditor';
@@ -16,10 +17,10 @@ import {
   FileText,HardDrive,ImagePlus,Images,MapPin,PackageOpen,Plus,Save,Search,Trash2,Upload,X
 } from "lucide-react";
 import { PageFrame } from "../components/PageFrame";
-import type { PulseProperty } from "../../../../packages/pulse-data";
+import type { ProjectBuilding, PulseProperty } from "../../../../packages/pulse-data";
 import {
   createAdminProperty,deleteAdminMedia,getAdminProperty,importAdminCatalog,listAdminCatalog,
-  saveAdminProperty,uploadAdminMedia,uploadAdminMediaCompact,getAdminCatalogSummary,type CatalogSummary
+  saveAdminProperty,uploadAdminMedia,uploadAdminMediaCompact,getAdminCatalogSummary,type CatalogSummary,type AdminCatalogImportProperty
 } from "../catalogApi";
 
 type StatusFilter="all"|"draft"|"published"|"archived";
@@ -79,11 +80,11 @@ function downloadCsv(name:string,headers:string[],example:string[]){
 function downloadTemplates(){
   const files=[
     ["pulse-objects.csv",
-      ["id","name","city","district","address","developerName","delivery","className","priceFrom","description","tags","latitude","longitude","status","coverImageUrl","sortOrder","commissioningDate","totalApartments","availableApartments","parkingSpaces","floorsFrom","floorsTo","areaFrom","areaTo","pricePerSqmFromRub"],
-      ["solnechniy","ЖК Солнечный","Владивосток","Патрокл","Владивосток, Патрокл","Застройщик","IV кв. 2026","Комфорт+","6.2","Описание ЖК","Вид на море|Семейный","","","draft","","10","","","","","","","","",""]],
+      ["id","name","city","district","address","developerName","delivery","className","priceFrom","description","tags","latitude","longitude","status","coverImageUrl","sortOrder","commissioningDate","totalApartments","availableApartments","parkingSpaces","floorsFrom","floorsTo","areaFrom","areaTo","pricePerSqmFromRub","masterplanUrl","constructionType","ceilingHeight","parkingType"],
+      ["solnechniy","ЖК Солнечный","Владивосток","Патрокл","Владивосток, Патрокл","Застройщик","IV кв. 2028","Комфорт+","6.2","Описание ЖК","Вид на море|Семейный","","","draft","","10","","","","","","","","","","","Монолитно-кирпичный","2.8","underground"]],
     ["pulse-floorplans.csv",
-      ["propertyId","id","roomLabel","areaFrom","areaTo","priceFrom","priceTo","isExact","imageUrl","sortOrder"],
-      ["solnechniy","2room-56","2","52","69","8.6","10.2","false","","1"]],
+      ["propertyId","id","roomLabel","areaFrom","areaTo","priceFrom","priceTo","isExact","imageUrl","sortOrder","buildingId","sectionLabel"],
+      ["solnechniy","2room-56","2","52","69","8.6","10.2","false","","1","building-1","1"]],
     ["pulse-features.csv",
       ["propertyId","id","label","icon","sortOrder"],
       ["solnechniy","","Вид на море","waves","1"]],
@@ -93,11 +94,15 @@ function downloadTemplates(){
     ["pulse-documents.csv",
       ["propertyId","id","kind","name","url","mimeType","sizeBytes","sortOrder"],
       ["solnechniy","","presentation","Презентация ЖК","https://example.com/presentation.pdf","application/pdf","","1"]],
+    ["pulse-buildings.csv",
+      ["propertyId","id","name","phase","sections","status","address","deliveryYear","deliveryQuarter","commissioningDate","handoverDate","floorsFrom","floorsTo","totalApartments","availableApartments","constructionType","ceilingHeight"],
+      ["solnechniy","building-1","Корпус 1","Первая очередь","1–3","building","","2028","4","","","12","18","240","","",""]],
   ] as const;
   files.forEach((file,index)=>setTimeout(()=>downloadCsv(file[0],[...file[1]],[...file[2]]),index*100));
 }
 function fileKind(name:string){
   const lower=name.toLowerCase();
+  if(lower.includes("building"))return"buildings";
   if(lower.includes("floorplan"))return"floorplans";
   if(lower.includes("feature"))return"features";
   if(lower.includes("image"))return"images";
@@ -127,6 +132,7 @@ export function ServerObjectsPage(){
   const [busy,setBusy]=React.useState(false);
   const [error,setError]=React.useState("");
   const [detailsValid,setDetailsValid]=React.useState(true);
+  const [structureValid,setStructureValid]=React.useState(true);
   const [notice,setNotice]=React.useState("");
   const [summaryError,setSummaryError]=React.useState("");
 
@@ -174,7 +180,7 @@ export function ServerObjectsPage(){
 
   const save=async()=>{
     if(!selected)return null;
-    if(!detailsValid){setError('Исправьте значения в характеристиках ЖК перед сохранением.');return null}
+    if(!detailsValid||!structureValid){setError('Исправьте значения в характеристиках ЖК перед сохранением.');return null}
     setBusy(true);setError("");
     try{
       const next=await saveAdminProperty({...selected,documents:selected.documents??[]});
@@ -265,11 +271,22 @@ export function ServerObjectsPage(){
       const objectRows=parsed.get("objects")??[];
       if(!objectRows.length)throw new Error("Нужен CSV с объектами. Имя файла — например pulse-objects.csv");
 
+      const buildingsBy=new Map<string,ProjectBuilding[]>();
+      for(const row of parsed.get('buildings')??[]){
+        if(!row.propertyId)throw new Error('В CSV корпусов укажите propertyId для каждой строки.');
+        const list=buildingsBy.get(row.propertyId)??[];
+        if(!row.id||!row.name)throw new Error('В CSV корпусов обязательны id и name.');
+        if(!['unknown','planned','building','completed',''].includes(row.status||''))throw new Error('Неизвестный статус корпуса: '+row.status);
+        for(const key of ['deliveryYear','deliveryQuarter','floorsFrom','floorsTo','totalApartments','availableApartments','ceilingHeight'])if(row[key]?.trim()&&numberOrNull(row[key])===null)throw new Error('Проверьте число '+key+' у корпуса '+row.name);
+        list.push({...(row.constructionType?{constructionType:row.constructionType}:{}),...(row.ceilingHeight?{ceilingHeight:numberOrNull(row.ceilingHeight)}:{}),id:row.id,name:row.name,phase:row.phase||'',sections:row.sections||'',status:(row.status||'unknown') as ProjectBuilding['status'],address:row.address||null,deliveryYear:numberOrNull(row.deliveryYear),deliveryQuarter:numberOrNull(row.deliveryQuarter),commissioningDate:row.commissioningDate||null,handoverDate:row.handoverDate||null,floorsFrom:numberOrNull(row.floorsFrom),floorsTo:numberOrNull(row.floorsTo),totalApartments:numberOrNull(row.totalApartments),availableApartments:numberOrNull(row.availableApartments)});
+        buildingsBy.set(row.propertyId,list);
+      }
+      for(const propertyId of buildingsBy.keys())if(!objectRows.some(row=>row.id===propertyId))throw new Error('Для корпуса не найден ЖК в CSV объектов: '+propertyId);
       const floorplansBy=new Map<string,any[]>();
       for(const row of parsed.get("floorplans")??[]){
         if(!row.propertyId)continue;
         const list=floorplansBy.get(row.propertyId)??[];
-        list.push({id:row.id||crypto.randomUUID(),roomLabel:row.roomLabel||"1",areaFrom:numberOrNull(row.areaFrom),areaTo:numberOrNull(row.areaTo||(row.isExact==="true"?row.areaFrom:undefined)),priceFrom:numberOrNull(row.priceFrom),priceTo:numberOrNull(row.priceTo||(row.isExact==="true"?row.priceFrom:undefined)),isExact:row.isExact==="true",imageUrl:row.imageUrl||null,sortOrder:numberOr(row.sortOrder,list.length)});
+        list.push({id:row.id||crypto.randomUUID(),...('buildingId' in row?{buildingId:row.buildingId||null}:{}),...('sectionLabel' in row?{sectionLabel:row.sectionLabel||null}:{}),roomLabel:row.roomLabel||"1",areaFrom:numberOrNull(row.areaFrom),areaTo:numberOrNull(row.areaTo||(row.isExact==="true"?row.areaFrom:undefined)),priceFrom:numberOrNull(row.priceFrom),priceTo:numberOrNull(row.priceTo||(row.isExact==="true"?row.priceFrom:undefined)),isExact:row.isExact==="true",imageUrl:row.imageUrl||null,sortOrder:numberOr(row.sortOrder,list.length)});
         floorplansBy.set(row.propertyId,list);
       }
       const featuresBy=new Map<string,any[]>();
@@ -294,10 +311,10 @@ export function ServerObjectsPage(){
         documentsBy.set(row.propertyId,list);
       }
 
-      const properties:PulseProperty[]=objectRows.map((row,index)=>({
+      const properties:AdminCatalogImportProperty[]=objectRows.map((row,index)=>({
         id:row.id||crypto.randomUUID(),name:row.name||"Новый ЖК",city:row.city||"Владивосток",district:row.district||"",
         address:row.address||null,latitude:numberOrNull(row.latitude),longitude:numberOrNull(row.longitude),
-        ...(['commissioningDate','totalApartments','availableApartments','parkingSpaces','floorsFrom','floorsTo','areaFrom','areaTo','pricePerSqmFromRub'].some(key=>key in row)?{projectDetails:{commissioningDate:row.commissioningDate||null,totalApartments:numberOrNull(row.totalApartments),availableApartments:numberOrNull(row.availableApartments),...Object.fromEntries(['parkingSpaces','floorsFrom','floorsTo','areaFrom','areaTo','pricePerSqmFromRub'].filter(key=>key in row).map(key=>[key,numberOrNull(row[key])]))}}:{}),
+        ...(['commissioningDate','totalApartments','availableApartments','parkingSpaces','floorsFrom','floorsTo','areaFrom','areaTo','pricePerSqmFromRub','masterplanUrl','constructionType','ceilingHeight','parkingType'].some(key=>key in row)||parsed.has('buildings')?{projectDetails:{...('masterplanUrl' in row?{masterplanUrl:row.masterplanUrl||null}:{}),...('constructionType' in row?{constructionType:row.constructionType||null}:{}),...('ceilingHeight' in row?{ceilingHeight:numberOrNull(row.ceilingHeight)}:{}),...('parkingType' in row?{parkingType:(row.parkingType||null) as 'underground'|'multilevel'|'surface'|'mixed'|null}:{}),...(parsed.has('buildings')?{buildings:buildingsBy.get(row.id)||[]}:{}),...('commissioningDate' in row?{commissioningDate:row.commissioningDate||null}:{}),...('totalApartments' in row?{totalApartments:numberOrNull(row.totalApartments)}:{}),...('availableApartments' in row?{availableApartments:numberOrNull(row.availableApartments)}:{}),...Object.fromEntries(['parkingSpaces','floorsFrom','floorsTo','areaFrom','areaTo','pricePerSqmFromRub'].filter(key=>key in row).map(key=>[key,numberOrNull(row[key])]))}}:{}),
         priceFrom:numberOr(row.priceFrom,0),delivery:row.delivery||"",className:row.className||"",
         status:row.status==="published"||row.status==="archived"?row.status:"draft",description:row.description||"",
         developerName:row.developerName||"",tags:(row.tags||"").split("|").map(x=>x.trim()).filter(Boolean),
@@ -307,7 +324,7 @@ export function ServerObjectsPage(){
       }));
 
       const replace={images:parsed.has("images"),features:parsed.has("features"),floorplans:parsed.has("floorplans"),documents:parsed.has("documents")};
-      const replacing=[replace.floorplans&&"планировки",replace.features&&"особенности",replace.images&&"фото по URL",replace.documents&&"документы по URL"].filter(Boolean).join(", ");
+      const replacing=[parsed.has("buildings")&&"корпуса",replace.floorplans&&"планировки",replace.features&&"особенности",replace.images&&"фото по URL",replace.documents&&"документы по URL"].filter(Boolean).join(", ");
       const confirmed=window.confirm(`Импортировать ${properties.length} ЖК?\n\nСуществующие объекты с тем же ID будут обновлены.${replacing?`\nБудут заменены: ${replacing}.`:"\nМедиа и дочерние данные без отдельного CSV сохранятся."}`);
       if(!confirmed){setNotice("Импорт отменён");return}
       const result=await importAdminCatalog(properties,replace);
@@ -345,7 +362,7 @@ export function ServerObjectsPage(){
         <p>Данные импортируются отдельно от фото и PDF. Уже загруженные медиа не удаляются, если вы обновляете только основной CSV.</p>
       </div>
       <div className="catalogImportActions">
-        <button onClick={downloadTemplates}><span><Download size={19}/></span><div><b>Скачать шаблоны</b><small>5 CSV-файлов для Excel</small></div><ChevronRight size={17}/></button>
+        <button onClick={downloadTemplates}><span><Download size={19}/></span><div><b>Скачать шаблоны</b><small>6 CSV-файлов для Excel</small></div><ChevronRight size={17}/></button>
         <label><span><FileSpreadsheet size={19}/></span><div><b>Импортировать данные</b><small>ЖК, планировки, параметры</small></div><ChevronRight size={17}/><input type="file" accept=".csv,text/csv" multiple onChange={e=>void importCsv(e.target.files)}/></label>
         <label><span><Images size={19}/></span><div><b>Загрузить медиа</b><small>Фото и PDF пачкой</small></div><ChevronRight size={17}/><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple onChange={e=>void importMediaBatch(e.target.files)}/></label>
       </div>
@@ -384,7 +401,7 @@ export function ServerObjectsPage(){
               <span><small>Цена от</small><b>{formatPrice(item.priceFrom)}</b></span>
               <span><small>Срок</small><b>{item.delivery||"Не указан"}</b></span>
             </div>
-            <CatalogFreshnessBadge value={item.freshness}/><div className="catalogObjectDeveloper">{item.developerName||"Застройщик не указан"}</div>
+            {(item.projectDetails?.buildings?.length??0)>0&&<span className="catalogBuildingCount">Корпусов: {item.projectDetails!.buildings!.length}</span>}<CatalogFreshnessBadge value={item.freshness}/><div className="catalogObjectDeveloper">{item.developerName||"Застройщик не указан"}</div>
           </div>
         </button>)}</div>:
         <div className="emptyState"><PackageOpen size={26}/><strong>Объекты не найдены</strong><span>Измените фильтр или добавьте новый ЖК.</span>{(city||query||status!=="all"||reviewOnly)&&<button className="secondaryAction" onClick={()=>{setCity("");setQuery("");setStatus("all");setReviewOnly(false);setPage(1)}}>Сбросить фильтры</button>}</div>}
@@ -412,10 +429,11 @@ export function ServerObjectsPage(){
 
       <div className="editorStickyActions">
         <span>{dirty?"Есть несохранённые изменения":"Все изменения сохранены"}</span>
-        <button className="primaryAction" disabled={!dirty||busy||!detailsValid} onClick={()=>void save()}><Save size={15}/>{busy?"Сохраняем…":"Сохранить"}</button>
+        <button className="primaryAction" disabled={!dirty||busy||!detailsValid||!structureValid} onClick={()=>void save()}><Save size={15}/>{busy?"Сохраняем…":"Сохранить"}</button>
       </div>
 
       <CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} disabled={busy}/>
+      <ProjectStructureEditor property={p} onChange={patch} onValidityChange={setStructureValid}/>
       <ProjectDetailsEditor key={p.id} value={p.projectDetails} onValidityChange={setDetailsValid} onChange={projectDetails=>patch({projectDetails})}/>
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>То, что формирует карточку и страницу ЖК</small></div></div>
@@ -446,7 +464,7 @@ export function ServerObjectsPage(){
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:"1",areaFrom:null,areaTo:null,priceFrom:null,priceTo:null,isExact:true,imageUrl:null,finishType:null,finishOptions:[],sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
         <div className="catalogEditorStack">{p.floorplans.map((plan,i)=><div className="editorRow floorplanEditor" key={plan.id||i}>
-          <PlanDimensionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/>
+          <PlanBuildingEditor property={p} plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/><PlanDimensionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/>
           <PlanFinishOptionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/>
           <div className="rowActions">
             <label className="secondaryAction fileButton"><Upload size={14}/>Фото планировки<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>void uploadFloorplan(e.target.files?.[0],plan.id)}/></label>
@@ -475,7 +493,7 @@ export function ServerObjectsPage(){
         {!p.documents?.length&&<div className="catalogEditorEmpty">Презентаций пока нет.</div>}
       </section>
 
-      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Изменения появятся в каталоге после сохранения</span></div><button className="secondaryAction" disabled={busy} onClick={()=>{if(!dirty||window.confirm("Закрыть карточку и отменить несохранённые правки?"))setSelected(null)}}>Закрыть карточку</button><button className="primaryAction" disabled={!dirty||busy||!detailsValid} onClick={()=>void save()}><Save size={16}/>Сохранить объект</button></div>
+      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Изменения появятся в каталоге после сохранения</span></div><button className="secondaryAction" disabled={busy} onClick={()=>{if(!dirty||window.confirm("Закрыть карточку и отменить несохранённые правки?"))setSelected(null)}}>Закрыть карточку</button><button className="primaryAction" disabled={!dirty||busy||!detailsValid||!structureValid} onClick={()=>void save()}><Save size={16}/>Сохранить объект</button></div>
     </fieldset></section></div>}
   </PageFrame>;
 }

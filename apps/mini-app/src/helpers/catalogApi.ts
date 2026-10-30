@@ -43,7 +43,7 @@ function localPage(filters:CatalogFilters):CatalogPageResult{
     if(filters.delivery&&filters.delivery!=="Любой"&&filters.delivery!=="Не важно"&&!deliveryMatches(property,filters.delivery))return false;
     if(filters.sea&&!hasSea(property))return false;
     if((filters.rooms&&filters.rooms!=="Все")||filters.min!==undefined||filters.max!==undefined){
-      if(!matchesBudgetAndRooms(property,{rooms:filters.rooms||"Все",min:filters.min??0,max:filters.max??Number.MAX_SAFE_INTEGER}))return false;
+      if(!matchesBudgetAndRooms(property,{rooms:filters.rooms||"Все",delivery:filters.delivery,min:filters.min??0,max:filters.max??Number.MAX_SAFE_INTEGER}))return false;
     }
     return true;
   });

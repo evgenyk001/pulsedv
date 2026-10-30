@@ -1,3 +1,4 @@
+import {plansForDelivery,buildingMatchesDelivery,anyDelivery} from './projectBuildings';
 import type { ApartmentFinish, MortgageProgramRule, PulseProperty, PulseSelectConfig } from '../pulse-data/model';
 import { calculateMortgageScenario, newbuildHasIncreasedLimit, type MortgageScenarioSettings } from './mortgagePolicy';
 import {housingClassMatches} from './housingClass';
@@ -61,12 +62,13 @@ export function roomMatches(label:string,rooms:string){
   return /^\d+\+$/.test(rooms)?count>=parseInt(rooms):count===Number(rooms);
 }
 
-export function matchingPlans(property:PulseProperty,c:Pick<Criteria,'rooms'|'min'|'max'>){
-  return property.floorplans.filter(p=>roomMatches(p.roomLabel,c.rooms)&&p.priceFrom!==null&&(p.priceTo??p.priceFrom)*1_000_000>=c.min&&p.priceFrom*1_000_000<=c.max);
+export function matchingPlans(property:PulseProperty,c:Pick<Criteria,'rooms'|'min'|'max'>&Partial<Pick<Criteria,'delivery'>>){
+  return plansForDelivery(property,c.delivery).filter(p=>roomMatches(p.roomLabel,c.rooms)&&p.priceFrom!==null&&(p.priceTo??p.priceFrom)*1_000_000>=c.min&&p.priceFrom*1_000_000<=c.max);
 }
 
-export function matchesBudgetAndRooms(property:PulseProperty,c:Pick<Criteria,'rooms'|'min'|'max'>){
+export function matchesBudgetAndRooms(property:PulseProperty,c:Pick<Criteria,'rooms'|'min'|'max'>&Partial<Pick<Criteria,'delivery'>>){
   if(property.floorplans.length)return matchingPlans(property,c).length>0;
+  if(property.projectDetails?.buildings?.length&&!anyDelivery(c.delivery))return false;
   return (c.rooms==='Все'||c.rooms==='Не важно')&&property.priceFrom*1_000_000>=c.min&&property.priceFrom*1_000_000<=c.max;
 }
 
@@ -161,7 +163,8 @@ export function bestMortgageFit(
 }
 
 export function deliveryMatches(property:PulseProperty,delivery:string){
-  if(delivery==='Любой'||delivery==='Не важно')return true;
+  if(anyDelivery(delivery))return true;
+  if(property.projectDetails?.buildings?.length)return property.projectDetails.buildings.some(b=>buildingMatchesDelivery(b,delivery));
   if(delivery==='Сдан')return [property.delivery,...property.tags].some(text=>/сдан|готов|введ[её]н/i.test(text)&&! /не\s+(?:сдан|готов|введ)/i.test(text));
   return property.delivery.includes(delivery);
 }
@@ -182,7 +185,7 @@ export function selectionMatch(
   const finishRequired=!criteria.finishType&&(criteria.requiredPreferences??criteria.preferences).includes('finish');
   const isReadyFinish=(finish:ApartmentFinish)=>['white_box','finished'].includes(canonicalApartmentFinish(finish)!);
   const hasFinish=(plan:PulseProperty['floorplans'][number])=>criteria.finishType?planFinishOffers(plan).some(o=>canonicalApartmentFinish(o.finishType)===canonicalApartmentFinish(criteria.finishType)):!finishRequired||planFinishOffers(plan).some(o=>isReadyFinish(o.finishType));
-  const candidates=property.floorplans.filter(plan=>roomMatches(plan.roomLabel,criteria.rooms)&&overlaps(plan)&&hasFinish(plan));
+  const candidates=plansForDelivery(property,criteria.delivery).filter(plan=>roomMatches(plan.roomLabel,criteria.rooms)&&overlaps(plan)&&hasFinish(plan));
   const areaOk=!areaSelected||candidates.length>0;
   const finishOk=!criteria.finishType||candidates.length>0;
   const offers:Array<{plan?:PulseProperty['floorplans'][number];from:number;to:number}>=candidates.flatMap(plan=>{
@@ -191,7 +194,7 @@ export function selectionMatch(
     const from=criteria.finishType?planPriceForFinish(pricedPlan,criteria.finishType):planStartingPrice(pricedPlan);
     return from!=null&&from>0?[{plan,from:from*1_000_000,to:(range.to??from)*1_000_000}]:[];
   });
-  if(!property.floorplans.length&&!areaSelected&&!criteria.finishType&&!finishRequired&&(criteria.rooms==='Все'||criteria.rooms==='Не важно')&&property.priceFrom>0){
+  if(!(property.projectDetails?.buildings?.length&&!anyDelivery(criteria.delivery))&&!property.floorplans.length&&!areaSelected&&!criteria.finishType&&!finishRequired&&(criteria.rooms==='Все'||criteria.rooms==='Не важно')&&property.priceFrom>0){
     offers.push({plan:undefined,from:property.priceFrom*1_000_000,to:property.priceFrom*1_000_000});
   }
   const roomsOk=offers.length>0;
@@ -238,7 +241,7 @@ export function selectionMatch(
   if(roomsOk&&criteria.rooms!=='Все'&&criteria.rooms!=='Не важно')reasons.push(criteria.rooms==='Студия'?'Студия':criteria.rooms+' комн.');
   if(financeOk&&criteria.purchaseMode==='cash')reasons.push('Укладывается в бюджет');
   if(financeOk&&criteria.purchaseMode==='mortgage')reasons.push('Может уложиться в ваш платёж');
-  if(deliveryOk&&criteria.delivery!=='Любой'&&criteria.delivery!=='Не важно')reasons.push(criteria.delivery==='Сдан'?'Дом уже сдан':'Сдача '+criteria.delivery);
+  if(deliveryOk&&criteria.delivery!=='Любой'&&criteria.delivery!=='Не важно')reasons.push(criteria.delivery==='Сдан'?(property.projectDetails?.buildings?.length?'Есть сданный корпус':'Дом уже сдан'):'Сдача '+criteria.delivery);
   if(classOk&&criteria.housingClasses?.length)reasons.push(property.className);
   if(areaSelected&&areaOk)reasons.push('Есть нужная площадь');
   if(criteria.finishType&&finishOk)reasons.push(apartmentFinishLabel(criteria.finishType));
@@ -271,7 +274,7 @@ export function matchScore(property:PulseProperty,c:Criteria,weights:PulseSelect
   const possible=Object.values(weights).reduce((a,b)=>a+b,0);
   if(c.city==='Все'||property.city===c.city)score+=weights.city;
   if(matchesBudgetAndRooms(property,c))score+=weights.budget+weights.rooms;
-  if(c.delivery==='Любой'||property.delivery.includes(c.delivery))score+=weights.delivery;
+  if(deliveryMatches(property,c.delivery))score+=weights.delivery;
   if(!c.sea||hasSea(property))score+=weights.preferences;
   return Math.round(score/Math.max(1,possible)*100);
 }

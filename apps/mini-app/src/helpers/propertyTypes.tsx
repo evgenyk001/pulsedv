@@ -16,6 +16,7 @@ export type PropertyFeature={
 };
 
 export type PropertyFloorplan={
+  buildingId?:string|null;sectionLabel?:string|null;
   id?:string;
   roomLabel:string;
   areaFrom:number|null;
