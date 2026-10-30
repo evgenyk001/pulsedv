@@ -1,0 +1,61 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,rm} from 'node:fs/promises';
+import {join} from 'node:path';
+import {tmpdir} from 'node:os';
+import {complexProject} from '../../tests/fixtures/project-buildings';
+import {buildingDelivery,buildingPrice,plansForDelivery} from '../../packages/domain/projectBuildings';
+import {deliveryMatches,matchesBudgetAndRooms,selectionMatch,type SelectionCriteria} from '../../packages/domain/propertyMatch';
+import {publishedCatalogFacets} from '../../packages/domain/catalogFacets';
+import {DEFAULT_STATE} from '../../packages/pulse-data/model';
+import {catalogPropertySchema,safeLeadContext} from '../src/validation';
+import {describeLeadRequestContext} from '../../packages/pulse-data/leadContext';
+import {testDatabase} from './database';
+import {migrate} from '../src/migrate';
+import {listCatalog,catalogMeta,upsertCatalogProperty,getCatalogProperty} from '../src/catalogRepository';
+import {createApp} from '../src/app';
+import {readConfig} from '../src/config';
+import {hashPassword} from '../src/security';
+
+test('Buildings validate references, ranges, dates and optional legacy projects',()=>{
+ const p=complexProject();assert.equal(catalogPropertySchema.safeParse(p).success,true);assert.equal(catalogPropertySchema.safeParse(DEFAULT_STATE.properties[0]).success,true);
+ const bad=()=>structuredClone(p);
+ let q=bad();q.floorplans[0].buildingId='foreign';assert.equal(catalogPropertySchema.safeParse(q).success,false);
+ q=bad();q.projectDetails!.buildings![0].handoverDate='2026-01-01';assert.equal(catalogPropertySchema.safeParse(q).success,false);
+ q=bad();q.projectDetails!.buildings![0].availableApartments=241;assert.equal(catalogPropertySchema.safeParse(q).success,false);
+ q=bad();q.projectDetails!.buildings![0].deliveryYear=null;assert.equal(catalogPropertySchema.safeParse(q).success,false);
+ q=bad();q.projectDetails!.buildings![1].id='early';assert.equal(catalogPropertySchema.safeParse(q).success,false);
+ q=bad();q.projectDetails!.masterplanUrl='javascript:alert(1)';assert.equal(catalogPropertySchema.safeParse(q).success,false);
+});
+test('Delivery, price, room and mortgage candidates must belong to the same building',()=>{
+ const p=complexProject();assert.equal(buildingDelivery(p.projectDetails!.buildings![0]),'IV кв. 2027');assert.equal(buildingPrice(p,'early'),8);
+ assert.deepEqual(plansForDelivery(p,'2027').map(p=>p.id),['early-plan']);assert.deepEqual(plansForDelivery(p,'Сдан').map(p=>p.id),['ready-plan']);
+ assert.deepEqual(publishedCatalogFacets([p]).deliveries,['Сдан','2027','2030']);assert.equal(deliveryMatches(p,'2030'),true);
+ assert.equal(matchesBudgetAndRooms(p,{delivery:'2027',rooms:'1',min:0,max:6e6}),false);assert.equal(matchesBudgetAndRooms(p,{delivery:'2030',rooms:'1',min:0,max:6e6}),true);
+ const criteria:SelectionCriteria={city:'Владивосток',delivery:'2027',rooms:'1',purchaseMode:'cash',min:0,max:6e6,downPayment:0,monthlyPayment:0,preferences:[]};
+ assert.equal(selectionMatch(p,criteria,DEFAULT_STATE.mortgagePrograms,DEFAULT_STATE.select.weights).eligible,false);
+ assert.equal(selectionMatch(p,{...criteria,delivery:'2030'},DEFAULT_STATE.mortgagePrograms,DEFAULT_STATE.select.weights).eligible,true);
+ assert.equal(selectionMatch(p,{...criteria,purchaseMode:'mortgage',mortgageProgram:'standard',downPayment:2e6,monthlyPayment:10000},DEFAULT_STATE.mortgagePrograms,DEFAULT_STATE.select.weights).eligible,false);
+ const context=safeLeadContext({buildingId:'early',buildingName:'Корпус Восток',phase:'Первая очередь',section:'1',floorplanId:'early-plan'});
+ assert.equal(context.buildingId,'early');assert.ok(describeLeadRequestContext(context,'floorplan').lines.includes('Корпус: Корпус Восток'));
+});
+test('Building database/API round trip, correlated filters, old-client saves and import preservation',async t=>{
+ const db=await testDatabase();await migrate(db);const root=await mkdtemp(join(tmpdir(),'pulse-buildings-'));
+ const config=readConfig({NODE_ENV:'test',DATABASE_URL:'unused',PUBLIC_ORIGIN:'http://localhost:8080',MEDIA_ROOT:root});const app=await createApp(db,config);await app.ready();
+ t.after(async()=>{await app.close();await db.close();await rm(root,{recursive:true,force:true})});
+ await db.query('delete from catalog_properties');const p=complexProject();await upsertCatalogProperty(db,p);
+ for(const view of ['match','full'] as const){const result=await listCatalog(db,{view});assert.equal(result.items[0].floorplans[0].buildingId,'early');}
+ assert.deepEqual((await catalogMeta(db)).deliveries,['Сдан','2027','2030']);
+ assert.equal((await listCatalog(db,{delivery:'2027',rooms:'1',max:6e6})).total,0);assert.equal((await listCatalog(db,{delivery:'2030',rooms:'1',max:6e6})).total,1);
+ assert.equal((await listCatalog(db,{delivery:'Сдан',rooms:'1'})).total,0);assert.equal((await listCatalog(db,{delivery:'Сдан',rooms:'2'})).total,1);
+ assert.equal((await listCatalog(db,{delivery:'2027',rooms:'Студия'})).total,0);
+ await db.query("insert into team_members(name,email,password_hash,role) values('Owner','building@test.example',$1,'owner')",[await hashPassword('buildings-long-password')]);
+ const headers={origin:config.PUBLIC_ORIGIN,'content-type':'application/json'};const login=await app.inject({method:'POST',url:'/api/v1/control/login',headers,payload:{email:'building@test.example',password:'buildings-long-password'}});const cookies={pulse_control:login.cookies[0].value};
+ const publicP=(await app.inject('/api/v1/public/catalog/'+p.id)).json().property;assert.equal(publicP.projectDetails.buildings.length,3);assert.equal(publicP.floorplans[0].sectionLabel,'1');
+ const current=(await getCatalogProperty(db,p.id,'any'))!;const old={...current,projectDetails:{commissioningDate:null,totalApartments:900,availableApartments:70},floorplans:current.floorplans.map(({buildingId,sectionLabel,...plan})=>plan)};
+ const saved=await app.inject({method:'PUT',url:'/api/v1/control/catalog/'+p.id,headers,cookies,payload:old});assert.equal(saved.statusCode,200,saved.body);assert.equal(saved.json().property.floorplans[0].buildingId,'early');assert.equal(saved.json().property.projectDetails.buildings.length,3);
+ const imported=await app.inject({method:'POST',url:'/api/v1/control/catalog/import',headers,cookies,payload:{properties:[{...old,name:'Новое имя ЖК'}],replace:{floorplans:true}}});assert.equal(imported.statusCode,200,imported.body);assert.equal((await getCatalogProperty(db,p.id,'any'))!.floorplans[0].buildingId,'early');
+ const partial=await app.inject({method:'POST',url:'/api/v1/control/catalog/import',headers,cookies,payload:{properties:[{...old,projectDetails:{buildings:p.projectDetails!.buildings}}],replace:{}}});assert.equal(partial.statusCode,200,partial.body);assert.equal((await getCatalogProperty(db,p.id,'any'))!.projectDetails!.totalApartments,900);
+ const clear={...(await getCatalogProperty(db,p.id,'any'))!,floorplans:(await getCatalogProperty(db,p.id,'any'))!.floorplans.map(plan=>({...plan,buildingId:null}))};
+ const cleared=await app.inject({method:'PUT',url:'/api/v1/control/catalog/'+p.id,headers,cookies,payload:clear});assert.equal(cleared.statusCode,200,cleared.body);assert.equal(cleared.json().property.floorplans[0].buildingId,null);
+});

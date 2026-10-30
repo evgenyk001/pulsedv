@@ -7,7 +7,13 @@ export type CatalogFreshness={source:string;responsible:string;verifiedAt:string
 export type DealFinance={commissionRub:number|null;agentPayoutRub:number|null;expectedPaymentOn:string|null;receivedOn:string|null;agentPaidOn:string|null};
 
 export type ApartmentFinish='rough'|'white_box'|'finished'|'unfinished';
-export type ProjectDetails={commissioningDate:string|null;totalApartments:number|null;availableApartments:number|null;pricePerSqmFromRub?:number|null;startingApartmentArea?:number|null;priceInputMode?:'total'|'per_sqm';finishes?:ApartmentFinish[];parkingSpaces?:number|null;floorsFrom?:number|null;floorsTo?:number|null;areaFrom?:number|null;areaTo?:number|null};
+export type ProjectBuilding={
+ constructionType?:string|null;ceilingHeight?:number|null;
+ id:string;name:string;phase:string;sections:string;status:'unknown'|'planned'|'building'|'completed';
+ address:string|null;deliveryYear:number|null;deliveryQuarter:number|null;commissioningDate:string|null;handoverDate:string|null;
+ floorsFrom:number|null;floorsTo:number|null;totalApartments:number|null;availableApartments:number|null;
+};
+export type ProjectDetails={buildings?:ProjectBuilding[];masterplanUrl?:string|null;constructionType?:string|null;ceilingHeight?:number|null;parkingType?:'underground'|'multilevel'|'surface'|'mixed'|null;commissioningDate:string|null;totalApartments:number|null;availableApartments:number|null;pricePerSqmFromRub?:number|null;startingApartmentArea?:number|null;priceInputMode?:'total'|'per_sqm';finishes?:ApartmentFinish[];parkingSpaces?:number|null;floorsFrom?:number|null;floorsTo?:number|null;areaFrom?:number|null;areaTo?:number|null};
 
 export type PulseProperty={
   projectDetails?:ProjectDetails;
@@ -19,7 +25,7 @@ export type PulseProperty={
   tags:string[]; coverImageUrl:string|null; sortOrder:number;
   images:{id?:string;url:string;alt:string;sortOrder:number}[];
   features:{id?:string;label:string;icon:string;sortOrder:number}[];
-  floorplans:{id?:string;roomLabel:string;areaFrom:number|null;areaTo:number|null;priceFrom:number|null;priceTo?:number|null;isExact?:boolean;imageUrl:string|null;finishType?:ApartmentFinish|null;finishOptions?:{finishType:ApartmentFinish;priceFrom:number|null;priceTo?:number|null}[];sortOrder:number}[];
+  floorplans:{buildingId?:string|null;sectionLabel?:string|null;id?:string;roomLabel:string;areaFrom:number|null;areaTo:number|null;priceFrom:number|null;priceTo?:number|null;isExact?:boolean;imageUrl:string|null;finishType?:ApartmentFinish|null;finishOptions?:{finishType:ApartmentFinish;priceFrom:number|null;priceTo?:number|null}[];sortOrder:number}[];
   documents?:{id?:string;kind:"presentation"|"document";name:string;url:string;mimeType:string|null;sizeBytes:number|null;sortOrder:number}[];
 };
 

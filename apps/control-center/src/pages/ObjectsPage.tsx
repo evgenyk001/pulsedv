@@ -1,3 +1,4 @@
+import {ProjectStructureEditor,PlanBuildingEditor} from '../components/ProjectStructureEditor';
 import {CatalogCover} from '../components/CatalogCover';
 import {useDialog} from '../components/useDialog';
 import {CatalogCityFilter,useCatalogCity} from '../components/CatalogCityFilter';
@@ -43,6 +44,7 @@ function PreviewObjectsPage(){
   const [reviewOnly,setReviewOnly]=React.useState(false);
   const [status,setStatus]=React.useState<'all'|'published'|'draft'|'archived'>('all');
   const [detailsValid,setDetailsValid]=React.useState(true);
+  const [structureValid,setStructureValid]=React.useState(true);
   const [notice,setNotice]=React.useState('');
   useDialog(!!selected,()=>setSelected(null));
   const p=state.properties.find(x=>x.id===selected);
@@ -123,7 +125,7 @@ function PreviewObjectsPage(){
             <span><small>Цена от</small><b>{formatPrice(item.priceFrom)}</b></span>
             <span><small>Срок</small><b>{item.delivery||'Не указан'}</b></span>
           </div>
-          <CatalogFreshnessBadge value={item.freshness}/><div className="catalogObjectDeveloper">{item.developerName||'Застройщик не указан'}</div>
+          {(item.projectDetails?.buildings?.length??0)>0&&<span className="catalogBuildingCount">Корпусов: {item.projectDetails!.buildings!.length}</span>}<CatalogFreshnessBadge value={item.freshness}/><div className="catalogObjectDeveloper">{item.developerName||'Застройщик не указан'}</div>
         </div>
       </button>)}</div>:<div className="emptyState"><PackageOpen size={26}/><strong>Объекты не найдены</strong><span>Измените фильтр или добавьте новый ЖК.</span></div>}
     </section>
@@ -141,6 +143,7 @@ function PreviewObjectsPage(){
       </div>
 
       <CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} autoSave/>
+      <ProjectStructureEditor property={p} onChange={patch} onValidityChange={setStructureValid}/>
       <ProjectDetailsEditor key={p.id} value={p.projectDetails} onValidityChange={setDetailsValid} onChange={projectDetails=>patch({projectDetails})}/>
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>Карточка и страница ЖК</small></div></div>
@@ -160,7 +163,7 @@ function PreviewObjectsPage(){
 
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:'1',areaFrom:null,areaTo:null,priceFrom:null,priceTo:null,isExact:true,imageUrl:null,finishType:null,finishOptions:[],sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
-        <div className="catalogEditorStack">{p.floorplans.map((plan,i)=><div className="editorRow floorplanEditor" key={plan.id||i}><PlanDimensionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/><PlanFinishOptionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/><button className="textDanger" onClick={()=>patch({floorplans:p.floorplans.filter((_,j)=>i!==j)})}>Удалить планировку</button></div>)}
+        <div className="catalogEditorStack">{p.floorplans.map((plan,i)=><div className="editorRow floorplanEditor" key={plan.id||i}><PlanBuildingEditor property={p} plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/><PlanDimensionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/><PlanFinishOptionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/><button className="textDanger" onClick={()=>patch({floorplans:p.floorplans.filter((_,j)=>i!==j)})}>Удалить планировку</button></div>)}
         {!p.floorplans.length&&<div className="catalogEditorEmpty">Планировок пока нет.</div>}</div>
       </section>
 
@@ -170,7 +173,7 @@ function PreviewObjectsPage(){
         {!p.features.length&&<div className="catalogEditorEmpty">Добавьте преимущества ЖК.</div>}</div>
       </section>
 
-      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Preview · сохранение в браузере</span></div><button className="primaryAction" disabled={!detailsValid} onClick={()=>setSelected(null)}><Save size={16}/>Готово</button></div>
+      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Preview · сохранение в браузере</span></div><button className="primaryAction" disabled={!detailsValid||!structureValid} onClick={()=>setSelected(null)}><Save size={16}/>Готово</button></div>
     </section></div>}
   </PageFrame>;
 }

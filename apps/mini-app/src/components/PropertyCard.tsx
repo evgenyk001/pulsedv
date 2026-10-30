@@ -45,7 +45,7 @@ export function PropertyCard({property,compact=false,returnTo}:PropertyCardProps
       </div>
       <div className={styles.body}>
         <strong>{property.name}</strong>
-        <span>{property.city} · {property.district}</span>
+        <span>{property.city} · {property.district}{property.projectDetails?.buildings?.length?' · корпусов: '+property.projectDetails.buildings.length:''}</span>
         <div><div className={styles.priceStack}><b>от {formatPropertyMillions(property.priceFrom)} млн ₽</b>{propertyPricePerSqmLabel(property)&&<small className={styles.squareMetre}>{propertyPricePerSqmLabel(property)}</small>}</div><small>{property.delivery}</small></div>
       </div>
     </Link>

@@ -57,7 +57,7 @@ async function bestEffortDelete(db:Database,config:RuntimeConfig,url:string|null
   if(!url)return;
   const relative=internalMediaPath(url);
   if(!relative)return;
-  const used=(await db.query(`select 1 from catalog_properties where cover_image_url=$1
+  const used=(await db.query(`select 1 from catalog_properties where cover_image_url=$1 or project_details->>'masterplanUrl'=$1
    union all select 1 from catalog_property_images where url=$1
    union all select 1 from catalog_property_floorplans where image_url=$1
    union all select 1 from catalog_property_documents where url=$1 limit 1`,[url])).rows.length;
@@ -157,6 +157,11 @@ export async function registerCatalogRoutes(
           floorplans:input.replace.floorplans?incoming.floorplans:exists.floorplans,
           documents:input.replace.documents?incoming.documents:(exists.documents??[]),
         }:incoming;
+        // Schema defaults must not turn an omitted global total/date into an explicit clear during a buildings-only import.
+        const rawDetails=(request.body as {properties:{id:string;projectDetails?:Record<string,unknown>}[]}).properties.find(item=>item.id===incoming.id)?.projectDetails;
+        if(exists?.projectDetails&&property.projectDetails&&rawDetails){
+          property.projectDetails={...property.projectDetails,...Object.fromEntries((['commissioningDate','totalApartments','availableApartments'] as const).filter(key=>!Object.hasOwn(rawDetails,key)).map(key=>[key,exists.projectDetails![key]]))};
+        }
         await upsertCatalogProperty(sql,property);
         exists?updated++:created++;
       }

@@ -30,8 +30,9 @@ export async function saveAdminProperty(property:PulseProperty){
   return (await api<{property:PulseProperty}>("/control/catalog/"+encodeURIComponent(property.id),{method:"PUT",body:JSON.stringify(property)})).property;
 }
 
+export type AdminCatalogImportProperty=Omit<PulseProperty,'projectDetails'>&{projectDetails?:Partial<NonNullable<PulseProperty['projectDetails']>>};
 export async function importAdminCatalog(
-  properties:PulseProperty[],
+  properties:AdminCatalogImportProperty[],
   replace:{images:boolean;features:boolean;floorplans:boolean;documents:boolean}
 ){
   return api<{ok:true;total:number;created:number;updated:number}>("/control/catalog/import",{

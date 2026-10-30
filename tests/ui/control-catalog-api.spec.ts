@@ -1,3 +1,4 @@
+import {complexProject} from '../fixtures/project-buildings';
 import {test,expect} from '@playwright/test';
 import {build} from 'vite';
 import react from '@vitejs/plugin-react';
@@ -68,4 +69,22 @@ test('Real Control API: complete city choices, pagination, search, create/save a
  await pendingDialog.getByRole('button',{name:'Закрыть редактор'}).click();page.once('dialog',d=>d.accept());await page.locator('.saveBar').getByRole('button',{name:'Отменить',exact:true}).click();await expect(page.locator('.saveBar')).toHaveCount(0);
  await page.clock.install();let stalled=false;await page.route('**/api/v1/control/catalog?**',()=>{stalled=true});await city.selectOption('Уссурийск');await expect.poll(()=>stalled).toBe(true);await page.clock.fastForward(12010);await expect(page.getByRole('button',{name:'Повторить загрузку'})).toBeVisible();await page.unroute('**/api/v1/control/catalog?**');
  expect(issues).toEqual([]);
+});
+
+test('Real Control CSV imports corps and plan bindings, preserves totals and saves edits',async({page})=>{
+ test.setTimeout(90000);await page.setViewportSize({width:390,height:900});
+ await upsertCatalogProperty(db,complexProject());
+ await page.goto(origin+'/pulsedv/control-center/#/objects');await page.getByLabel('Электронная почта').fill('owner@polish.test');await page.getByLabel('Пароль',{exact:true}).fill(password);await page.getByRole('button',{name:'Войти',exact:true}).click();
+ await expect(page.getByLabel('Город объектов')).toBeVisible();await page.locator('.catalogImportHub>summary').click();
+ const files=[
+  {name:'pulse-objects.csv',mimeType:'text/csv',buffer:Buffer.from('id;name;city;priceFrom;delivery;developerName;status;coverImageUrl\nmulti-project;ЖК CSV;Владивосток;6;2031;Застройщик;published;https://images.test/cover.svg')},
+  {name:'pulse-buildings.csv',mimeType:'text/csv',buffer:Buffer.from('propertyId;id;name;phase;status;deliveryYear;deliveryQuarter;floorsFrom;floorsTo;totalApartments;availableApartments\nmulti-project;csv-b1;Корпус Импорт;Вторая очередь;building;2031;3;12;24;300;0')},
+  {name:'pulse-floorplans.csv',mimeType:'text/csv',buffer:Buffer.from('propertyId;id;roomLabel;areaFrom;areaTo;priceFrom;priceTo;isExact;buildingId;sectionLabel\nmulti-project;csv-plan;1;40;40;6;6;true;csv-b1;А')}
+ ];
+ page.once('dialog',d=>d.accept());await page.locator('input[type=file][accept=".csv,text/csv"]').setInputFiles(files);await expect(page.getByRole('status')).toContainText('Импортировано 1');
+ await page.getByLabel('Поиск объектов').fill('ЖК CSV');await expect(page.locator('.catalogObjectCard')).toHaveCount(1);await page.locator('.catalogObjectCard').click();const editor=page.getByRole('dialog',{name:'Редактор объекта'});
+ await expect(editor.getByLabel('Корпус планировки',{exact:true})).toHaveValue('csv-b1');await expect(editor.getByLabel('Секция планировки',{exact:true})).toHaveValue('А');await expect(editor.getByLabel('Всего квартир в ЖК',{exact:true})).toHaveValue('900');
+ await editor.getByLabel('Название корпуса',{exact:true}).fill('Корпус после правки');await editor.getByLabel('Всего квартир в ЖК',{exact:true}).fill('901');await editor.getByLabel('Всего квартир в ЖК',{exact:true}).blur();await editor.getByRole('button',{name:'Сохранить',exact:true}).click();await expect(editor.getByText('Все изменения сохранены',{exact:true})).toBeVisible();
+ const response=await app.inject('/api/v1/public/catalog/multi-project');expect(response.statusCode).toBe(200);const saved=response.json().property;expect(saved.projectDetails.totalApartments).toBe(901);expect(saved.projectDetails.buildings[0].name).toBe('Корпус после правки');expect(saved.projectDetails.buildings[0].availableApartments).toBe(0);expect(saved.floorplans[0].buildingId).toBe('csv-b1');
+ await editor.getByRole('button',{name:'Закрыть редактор'}).click();await page.reload();await page.getByLabel('Поиск объектов').fill('ЖК CSV');await expect(page.locator('.catalogObjectCard')).toHaveCount(1);await page.locator('.catalogObjectCard').click();await expect(editor.getByLabel('Корпус планировки',{exact:true})).toHaveValue('csv-b1');
 });

@@ -21,7 +21,7 @@ export function parseLegacyLeadContext(comment:string|null|undefined):Record<str
   try{
     const value=JSON.parse(comment);
     if(!value||typeof value!=="object"||Array.isArray(value))return null;
-    const known=["program","price","down","years","rate","payment","rooms","areaFrom","areaTo","floorplanId","propertyName"];
+    const known=["program","price","down","years","rate","payment","rooms","areaFrom","areaTo","floorplanId","propertyName","buildingId","buildingName","phase","section"];
     return known.some(key=>key in value)?value:null;
   }catch{return null}
 }
@@ -39,6 +39,7 @@ export function describeLeadRequestContext(context:Record<string,unknown>,source
   const lines:string[]=[];
   const propertyName=text(context.propertyName);
   if(propertyName)lines.push(propertyName);
+  const building=text(context.buildingName);if(building)lines.push('Корпус: '+building);const phase=text(context.phase);if(phase)lines.push('Очередь: '+phase);const section=text(context.section);if(section)lines.push('Секция: '+section);
   if(['rough','white_box','finished'].includes(String(context.finishType)))lines.push(apartmentFinishLabel(context.finishType as 'rough'|'white_box'|'finished'));
   if(source.startsWith("mortgage")||context.program||context.payment){
     const program=text(context.program);

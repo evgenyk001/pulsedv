@@ -20,7 +20,23 @@ export const financeSchema=z.object({commissionRub:money,agentPayoutRub:money,ex
  if([v.receivedOn,v.agentPaidOn].some(d=>d&&d>today))ctx.addIssue({code:'custom',message:'Фактическая оплата не может быть в будущем'});
 });
 const finishTypeSchema=z.enum(['rough','white_box','finished','unfinished']);
+export const projectBuildingSchema=z.object({
+ constructionType:nullableText(200).optional(),ceilingHeight:z.number().min(1.8).max(10).nullable().optional(),
+ id,name:text(120).min(1),phase:text(120).default(''),sections:text(120).default(''),
+ status:z.enum(['unknown','planned','building','completed']).default('unknown'),
+ address:nullableText(400).default(null),deliveryYear:z.number().int().min(2000).max(2200).nullable().default(null),deliveryQuarter:z.number().int().min(1).max(4).nullable().default(null),
+ commissioningDate:z.iso.date().nullable().default(null),handoverDate:z.iso.date().nullable().default(null),
+ floorsFrom:z.number().int().min(1).max(200).nullable().default(null),floorsTo:z.number().int().min(1).max(200).nullable().default(null),
+ totalApartments:z.number().int().nonnegative().max(2000000).nullable().default(null),availableApartments:z.number().int().nonnegative().max(2000000).nullable().default(null)
+}).strict().superRefine((b,ctx)=>{
+ if(b.deliveryQuarter!==null&&b.deliveryYear===null)ctx.addIssue({code:'custom',message:'Для квартала укажите год сдачи'});
+ if(b.floorsFrom!==null&&b.floorsTo!==null&&b.floorsFrom>b.floorsTo)ctx.addIssue({code:'custom',message:'Проверьте диапазон этажности корпуса'});
+ if(b.totalApartments!==null&&b.availableApartments!==null&&b.availableApartments>b.totalApartments)ctx.addIssue({code:'custom',message:'В продаже не может быть больше квартир, чем всего в корпусе'});
+ if(b.commissioningDate&&b.handoverDate&&b.handoverDate<b.commissioningDate)ctx.addIssue({code:'custom',message:'Передача ключей не может быть раньше ввода корпуса'});
+});
 export const projectDetailsSchema=z.object({
+ buildings:z.array(projectBuildingSchema).max(100).refine(list=>new Set(list.map(b=>b.id)).size===list.length,'ID корпусов не должны повторяться').refine(list=>new Set(list.map(b=>b.name.toLowerCase())).size===list.length,'Названия корпусов должны различаться').optional(),
+ masterplanUrl:https.nullable().optional(),constructionType:nullableText(200).optional(),ceilingHeight:z.number().min(1.8).max(10).nullable().optional(),parkingType:z.enum(['underground','multilevel','surface','mixed']).nullable().optional(),
  startingApartmentArea:z.number().positive().max(10000).nullable().optional(),
  priceInputMode:z.enum(['total','per_sqm']).optional(),
  pricePerSqmFromRub:z.number().positive().max(1_000_000_000).nullable().optional(),
@@ -42,10 +58,11 @@ const property=z.object({
  id,name:text().min(1),city:text(100).min(1),district:text(100),address:nullableText(400),latitude:z.number().min(-90).max(90).nullable(),longitude:z.number().min(-180).max(180).nullable(),priceFrom:z.number().min(0).max(10000),delivery:text(100),className:text(100),status:z.enum(['draft','published','archived']),description:text(10000),developerName:text(),tags:z.array(text(100)).max(20),coverImageUrl:image,sortOrder:z.number().int(),
  images:z.array(z.object({id:id.optional(),url:https,alt:text(),sortOrder:z.number().int()})).max(50),
  features:z.array(z.object({id:id.optional(),label:text(),icon:text(50),sortOrder:z.number().int()})).max(30),
- floorplans:z.array(z.object({id:id.optional(),roomLabel:text(30).min(1),areaFrom:z.number().positive().nullable(),areaTo:z.number().positive().nullable(),priceFrom:z.number().positive().nullable(),priceTo:z.number().positive().nullable().optional(),isExact:z.boolean().optional(),finishType:finishTypeSchema.nullable().optional(),finishOptions:z.array(z.object({finishType:finishTypeSchema,priceFrom:z.number().positive().nullable(),priceTo:z.number().positive().nullable().optional()})).max(4).optional(),imageUrl:image,sortOrder:z.number().int()})).max(200)
+ floorplans:z.array(z.object({buildingId:id.nullable().optional(),sectionLabel:nullableText(80).optional(),id:id.optional(),roomLabel:text(30).min(1),areaFrom:z.number().positive().nullable(),areaTo:z.number().positive().nullable(),priceFrom:z.number().positive().nullable(),priceTo:z.number().positive().nullable().optional(),isExact:z.boolean().optional(),finishType:finishTypeSchema.nullable().optional(),finishOptions:z.array(z.object({finishType:finishTypeSchema,priceFrom:z.number().positive().nullable(),priceTo:z.number().positive().nullable().optional()})).max(4).optional(),imageUrl:image,sortOrder:z.number().int()})).max(200)
 }).superRefine((p,ctx)=>{
  if(p.status==='published'&&(!p.coverImageUrl||!p.developerName||!p.delivery||p.priceFrom<=0))ctx.addIssue({code:'custom',message:'Для публикации нужны обложка, застройщик, срок сдачи и цена'});
  if((p.latitude===null)!==(p.longitude===null))ctx.addIssue({code:'custom',message:'Укажите обе координаты'});
+ if(p.projectDetails?.buildings){const ids=new Set(p.projectDetails.buildings.map(b=>b.id));for(const plan of p.floorplans)if(plan.buildingId&&!ids.has(plan.buildingId))ctx.addIssue({code:'custom',message:'Планировка ссылается на отсутствующий корпус'});}
  for(const plan of p.floorplans){
   if(plan.areaFrom&&plan.areaTo&&plan.areaFrom>plan.areaTo)ctx.addIssue({code:'custom',message:'Минимальная площадь больше максимальной'});
   if(plan.priceTo!=null&&(plan.priceFrom===null||plan.priceTo<plan.priceFrom))ctx.addIssue({code:'custom',message:'Цена до должна быть не меньше цены от; укажите обе границы'});
@@ -91,7 +108,7 @@ export const leadSchema=z.object({idempotencyKey:z.uuid(),source:text(100).min(1
 
 export const eventsSchema=z.object({events:z.array(z.object({idempotencyKey:z.uuid(),eventType:z.enum(publicEventTypes),entityType:nullableText(80).optional(),entityId:nullableText(200).optional(),metadata:z.record(z.string(),z.unknown()).default({}),occurredAt:z.iso.datetime()})).min(1).max(100)});
 export function safeMetadata(input:Record<string,unknown>){
- const allowed=['medium','campaign','propertyIds','city','district','priceFrom','min','max','rooms','delivery','sea','mortgage','topScore','strongCount','program','price','down','years','rate','payment','results','source','policyVersion','purchaseMode','housingClasses','districtRequired','requiredPreferences','preferences','method','outcome','propertyName','floorplanId','areaFrom','areaTo','finishType','kind','position','target','propertyKind','preferredRate','marketRate','subsidizedLimit','marketPrincipal','status','blockReason','largeArea','futureRate','scenarioVersion'];
+ const allowed=['medium','campaign','propertyIds','city','district','priceFrom','min','max','rooms','delivery','sea','mortgage','topScore','strongCount','program','price','down','years','rate','payment','results','source','policyVersion','purchaseMode','housingClasses','districtRequired','requiredPreferences','preferences','method','outcome','propertyName','floorplanId','buildingId','buildingName','phase','section','areaFrom','areaTo','finishType','kind','position','target','propertyKind','preferredRate','marketRate','subsidizedLimit','marketPrincipal','status','blockReason','largeArea','futureRate','scenarioVersion'];
  const entries:[string,unknown][]=[];
  for(const [key,value] of Object.entries(input)){
   if(!allowed.includes(key))continue;
@@ -145,7 +162,7 @@ export const catalogPropertySchema=z.object({
  sortOrder:z.number().int(),
  images:z.array(z.object({id:id.optional(),url:mediaUrl,alt:text(),sortOrder:z.number().int()})).max(100),
  features:z.array(z.object({id:id.optional(),label:text(),icon:text(50),sortOrder:z.number().int()})).max(50),
- floorplans:z.array(z.object({id:id.optional(),roomLabel:text(30).min(1),areaFrom:z.number().positive().nullable(),areaTo:z.number().positive().nullable(),priceFrom:z.number().positive().nullable(),priceTo:z.number().positive().nullable().optional(),isExact:z.boolean().optional(),finishType:finishTypeSchema.nullable().optional(),finishOptions:z.array(z.object({finishType:finishTypeSchema,priceFrom:z.number().positive().nullable(),priceTo:z.number().positive().nullable().optional()})).max(4).optional(),imageUrl:mediaUrl.nullable(),sortOrder:z.number().int()})).max(500),
+ floorplans:z.array(z.object({buildingId:id.nullable().optional(),sectionLabel:nullableText(80).optional(),id:id.optional(),roomLabel:text(30).min(1),areaFrom:z.number().positive().nullable(),areaTo:z.number().positive().nullable(),priceFrom:z.number().positive().nullable(),priceTo:z.number().positive().nullable().optional(),isExact:z.boolean().optional(),finishType:finishTypeSchema.nullable().optional(),finishOptions:z.array(z.object({finishType:finishTypeSchema,priceFrom:z.number().positive().nullable(),priceTo:z.number().positive().nullable().optional()})).max(4).optional(),imageUrl:mediaUrl.nullable(),sortOrder:z.number().int()})).max(500),
  documents:z.array(z.object({
   id:id.optional(),kind:z.enum(['presentation','document']),name:text(300).min(1),url:mediaUrl,
   mimeType:nullableText(120),sizeBytes:z.number().int().nonnegative().nullable(),sortOrder:z.number().int()
@@ -153,6 +170,7 @@ export const catalogPropertySchema=z.object({
 }).superRefine((p,ctx)=>{
  if(p.status==='published'&&(!p.coverImageUrl||!p.developerName||!p.delivery||p.priceFrom<=0))ctx.addIssue({code:'custom',message:'Для публикации нужны обложка, застройщик, срок сдачи и цена'});
  if((p.latitude===null)!==(p.longitude===null))ctx.addIssue({code:'custom',message:'Укажите обе координаты'});
+ if(p.projectDetails?.buildings){const ids=new Set(p.projectDetails.buildings.map(b=>b.id));for(const plan of p.floorplans)if(plan.buildingId&&!ids.has(plan.buildingId))ctx.addIssue({code:'custom',message:'Планировка ссылается на отсутствующий корпус'});}
  for(const plan of p.floorplans){
   if(plan.areaFrom&&plan.areaTo&&plan.areaFrom>plan.areaTo)ctx.addIssue({code:'custom',message:'Минимальная площадь больше максимальной'});
   if(plan.priceTo!=null&&(plan.priceFrom===null||plan.priceTo<plan.priceFrom))ctx.addIssue({code:'custom',message:'Цена до должна быть не меньше цены от; укажите обе границы'});

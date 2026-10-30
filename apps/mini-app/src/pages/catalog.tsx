@@ -2,7 +2,7 @@ import {safeLocalStorage,safeSessionStorage} from '../../../../packages/browser/
 import {rememberCityInterest} from '../helpers/cityInterest';
 import {LoadRecovery} from '../components/LoadRecovery';
 import {IconTile} from '../components/IconTile';
-import { hasSea, matchScore, matchesBudgetAndRooms } from "../../../../packages/domain/propertyMatch";
+import { hasSea, matchScore, matchesBudgetAndRooms, deliveryMatches } from "../../../../packages/domain/propertyMatch";
 import { usePulseControlState } from "../helpers/usePulseControlState";
 import {Switch} from "../components/Switch";
 import {NativeSelect} from "../components/NativeSelect";
@@ -130,12 +130,8 @@ export default function CatalogPage(){
   })=>{
     const matchesQuery=(item.name+" "+item.city+" "+item.district+" "+item.developerName).toLowerCase().includes((params.get("q")||"").trim().toLowerCase());
     const matchesCity=filter.city==="Все"||item.city===filter.city;
-    const matchesDelivery=filter.delivery==="Любой"||filter.delivery==="Не важно"||(
-      filter.delivery==="Сдан"
-        ?/сдан|готов|введ[её]н/i.test(item.delivery)
-        :item.delivery.includes(filter.delivery)
-    );
-    const matchesPriceAndRooms=matchesBudgetAndRooms(item,{rooms:filter.rooms,min:filter.min,max:filter.max});
+    const matchesDelivery=deliveryMatches(item,filter.delivery);
+    const matchesPriceAndRooms=matchesBudgetAndRooms(item,{rooms:filter.rooms,min:filter.min,max:filter.max,delivery:filter.delivery});
     const matchesSea=!filter.sea||hasSea(item);
     return matchesQuery&&matchesCity&&matchesDelivery&&matchesPriceAndRooms&&matchesSea;
   },[params]);

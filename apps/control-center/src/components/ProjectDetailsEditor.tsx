@@ -17,7 +17,7 @@ export function ProjectDetailsEditor({value,onChange,onValidityChange}:{value?:P
    const max=key==='pricePerSqmFromRub'?1000000000:key==='parkingSpaces'?2000000:key.startsWith('floors')?200:10000;
    if(n>max||(key==='pricePerSqmFromRub'&&n<=0)||(key==='parkingSpaces'&&n<0)||(!key.startsWith('area')&&key!=='pricePerSqmFromRub'&&!Number.isInteger(n))){setError('Проверьте значения: этажи и парковочные места указываются целым числом в допустимом диапазоне.');return}
   }
-  setError('');onChange(next);
+  setError('');const keys=['commissioningDate','totalApartments','availableApartments','parkingSpaces','floorsFrom','floorsTo','areaFrom','areaTo','pricePerSqmFromRub','startingApartmentArea','priceInputMode','finishes'] as const;onChange({...value,...Object.fromEntries(keys.map(key=>[key,next[key]]))} as ProjectDetails);
  };
  return <section className="catalogEditorSection"><div className="catalogEditorSectionHead"><div><b>Характеристики ЖК</b><small>Точные данные для страницы ЖК. Пустое поле означает, что данные ещё не подтверждены.</small></div></div>
   <div className="formGrid">

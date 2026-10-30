@@ -2588,3 +2588,9 @@ main{
  .runtimeBar>span{flex:1 1 0;width:0}
  .runtimeBar>div{flex:0 0 auto}
 }
+/* Optional project structure is kept separate from project-wide totals. */
+.projectStructure .structureHint{font-size:12px;line-height:1.65;color:var(--pc-muted);margin:12px 0}
+.buildingEditorList{display:grid;gap:12px}.buildingEditor{min-width:0;border:1px solid var(--pc-line);border-radius:16px;background:rgba(0,0,0,.09)}
+.buildingEditor>summary{list-style:none;display:flex;align-items:center;gap:12px;min-height:64px;padding:14px;cursor:pointer}.buildingEditor>summary::-webkit-details-marker{display:none}.buildingEditor>summary>div{display:grid;gap:5px;min-width:0;flex:1}.buildingEditor>summary b{font-size:14px;overflow-wrap:anywhere}.buildingEditor>summary small{color:var(--pc-muted);font-size:11px;line-height:1.5}.buildingEditor>summary>svg{flex:none;color:#a5adb7}.buildingEditor[open]>summary{border-bottom:1px solid var(--pc-line)}.buildingEditorBody{padding:16px}.buildingEditorActions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.buildingEditorActions>span{margin-right:auto;font-size:12px;color:var(--pc-muted)}.buildingEditorActions button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:44px;border:1px solid var(--pc-line);border-radius:12px;padding:8px;background:var(--pc-surface);color:var(--pc-text);font-size:12px}.buildingEditorActions button.textDanger{color:#ff8993}.projectExtraFields{margin-top:18px}.projectExtraFields>summary{padding:12px 0;cursor:pointer;font-weight:650;font-size:13px}.projectExtraFields .formGrid{padding-top:12px}.planBuildingFields{padding-bottom:16px;margin-bottom:12px;border-bottom:1px solid var(--pc-line)}
+.buildingEditor>summary:focus-visible,.projectExtraFields>summary:focus-visible{outline:2px solid #ff6975;outline-offset:3px;border-radius:10px}
+.catalogBuildingCount{display:block;font-size:12px;color:#e5b4bc;padding-top:10px}
