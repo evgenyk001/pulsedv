@@ -258,3 +258,17 @@ export async function featuredCatalog(sql:Sql,city:string|null=null,limit=3){
  const items=(await listCatalog(sql,{ids:rows.map(row=>row.id),limit:count,view:'card'})).items;
  return rows.flatMap(row=>{const item=items.find(p=>p.id===row.id);if(!item)return [];const {freshness,...publicItem}=item;return [publicItem]});
 }
+
+/** Editor-only summary: all statuses and cities, independent of the current page/search. */
+export async function adminCatalogSummary(sql:Sql){
+  const result=await sql.query("select city,status,count(*)::int as total from catalog_properties group by city,status order by city,status");
+  const cities=new Map<string,{city:string;all:number;published:number;draft:number;archived:number}>();
+  const counts={all:0,published:0,draft:0,archived:0};
+  for(const row of result.rows){
+    const status=row.status as 'published'|'draft'|'archived',total=Number(row.total);
+    const entry=cities.get(row.city)??{city:row.city,all:0,published:0,draft:0,archived:0};
+    entry.all+=total;entry[status]+=total;cities.set(row.city,entry);
+    counts.all+=total;counts[status]+=total;
+  }
+  return {counts,cities:Array.from(cities.values()).sort((a,b)=>a.city.localeCompare(b.city,'ru'))};
+}

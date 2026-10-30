@@ -9,8 +9,13 @@ const query=(input:Record<string,string|number|undefined>)=>{
   return params.toString();
 };
 
-export async function listAdminCatalog(input:{page:number;limit:number;q?:string;needsReview?:"1";status?:"draft"|"published"|"archived"|"all"}){
-  return api<AdminCatalogPage>("/control/catalog?"+query({...input,view:"card"}));
+export async function listAdminCatalog(input:{page:number;limit:number;q?:string;city?:string;needsReview?:"1";status?:"draft"|"published"|"archived"|"all"},signal?:AbortSignal){
+  const controller=new AbortController();
+  const abort=()=>controller.abort(signal?.reason);
+  signal?.addEventListener('abort',abort,{once:true});if(signal?.aborted)abort();
+  const timer=setTimeout(()=>controller.abort(new DOMException('Request timed out','TimeoutError')),12000);
+  try{return await api<AdminCatalogPage>("/control/catalog?"+query({...input,view:"card"}),{signal:controller.signal})}
+  finally{clearTimeout(timer);signal?.removeEventListener('abort',abort)}
 }
 
 export async function getAdminProperty(id:string){
@@ -77,3 +82,6 @@ export async function deleteAdminMedia(
   );
   return response.property;
 }
+
+export type CatalogSummary={counts:{all:number;published:number;draft:number;archived:number};cities:({city:string;all:number;published:number;draft:number;archived:number})[]};
+export const getAdminCatalogSummary=()=>api<CatalogSummary>("/control/catalog-summary");

@@ -1,3 +1,5 @@
+import {CatalogCover} from '../components/CatalogCover';
+import {CatalogCityFilter,useCatalogCity} from '../components/CatalogCityFilter';
 import {StartingPriceEditor} from '../components/StartingPriceEditor';
 import {PlanDimensionsEditor} from '../components/PlanDimensionsEditor';
 import {PropertyLocationEditor} from '../components/PropertyLocationEditor';
@@ -17,12 +19,11 @@ import { PageFrame } from "../components/PageFrame";
 import type { PulseProperty } from "../../../../packages/pulse-data";
 import {
   createAdminProperty,deleteAdminMedia,getAdminProperty,importAdminCatalog,listAdminCatalog,
-  saveAdminProperty,uploadAdminMedia,uploadAdminMediaCompact
+  saveAdminProperty,uploadAdminMedia,uploadAdminMediaCompact,getAdminCatalogSummary,type CatalogSummary
 } from "../catalogApi";
 
 type StatusFilter="all"|"draft"|"published"|"archived";
 type CsvRow=Record<string,string>;
-type CatalogCounts={all:number;published:number;draft:number;archived:number};
 
 const fresh=():PulseProperty=>({
   id:crypto.randomUUID(),name:"Новый ЖК",city:"Владивосток",district:"",address:null,
@@ -109,13 +110,17 @@ function readiness(property:PulseProperty){
 }
 
 export function ServerObjectsPage(){
+  const [city,setCity]=useCatalogCity();
+  const [summary,setSummary]=React.useState<CatalogSummary>({cities:[],counts:{all:0,published:0,draft:0,archived:0}});
+  const cities=summary.cities;
+  const counts=city?(cities.find(item=>item.city===city)??{all:0,published:0,draft:0,archived:0}):summary.counts;
   const [page,setPage]=React.useState(1);
   const [status,setStatus]=React.useState<StatusFilter>("all");
   const [query,setQuery]=React.useState("");
   const [reviewOnly,setReviewOnly]=React.useState(false);
-  const deferredQuery=React.useDeferredValue(query);
+  const [deferredQuery,setDeferredQuery]=React.useState(query);
+  React.useEffect(()=>{const timer=window.setTimeout(()=>setDeferredQuery(query.trim()),220);return()=>window.clearTimeout(timer)},[query]);
   const [data,setData]=React.useState<{items:PulseProperty[];total:number;hasMore:boolean}>({items:[],total:0,hasMore:false});
-  const [counts,setCounts]=React.useState<CatalogCounts>({all:0,published:0,draft:0,archived:0});
   const [selected,setSelected]=React.useState<PulseProperty|null>(null);
   const [dirty,setDirty]=React.useState(false);
   const [loading,setLoading]=React.useState(true);
@@ -123,33 +128,34 @@ export function ServerObjectsPage(){
   const [error,setError]=React.useState("");
   const [detailsValid,setDetailsValid]=React.useState(true);
   const [notice,setNotice]=React.useState("");
+  const [summaryError,setSummaryError]=React.useState("");
 
   useDialog(!!selected,()=>{if(!busy&&(!dirty||window.confirm("Закрыть карточку без сохранения правок?")))setSelected(null)});
   React.useEffect(()=>{if(!dirty)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn)},[dirty]);
+  const summarySequence=React.useRef(0);
   const loadCounts=React.useCallback(async()=>{
-    const [all,published,draft,archived]=await Promise.all([
-      listAdminCatalog({page:1,limit:1,status:"all"}),
-      listAdminCatalog({page:1,limit:1,status:"published"}),
-      listAdminCatalog({page:1,limit:1,status:"draft"}),
-      listAdminCatalog({page:1,limit:1,status:"archived"}),
-    ]);
-    setCounts({all:all.total,published:published.total,draft:draft.total,archived:archived.total});
+    const sequence=++summarySequence.current;
+    setSummaryError("");
+    const summary=await getAdminCatalogSummary().catch(e=>{if(sequence===summarySequence.current)setSummaryError(e instanceof Error?e.message:"Не удалось загрузить города");throw e});
+    if(sequence!==summarySequence.current)return;
+    setSummary(summary);
   },[]);
 
   const loadSequence=React.useRef(0);
-  const load=React.useCallback(async()=>{
+  const load=React.useCallback(async(signal?:AbortSignal)=>{
     const sequence=++loadSequence.current;
     setLoading(true);setError("");
     try{
-      const result=await listAdminCatalog({page,limit:24,q:deferredQuery||undefined,status,needsReview:reviewOnly?"1":undefined});
-      if(sequence===loadSequence.current)setData({items:result.items,total:result.total,hasMore:result.hasMore});
-    }catch(e){if(sequence===loadSequence.current)setError(e instanceof Error?e.message:"Не удалось загрузить каталог")}
-    finally{if(sequence===loadSequence.current)setLoading(false)}
-  },[page,status,deferredQuery,reviewOnly]);
+      const result=await listAdminCatalog({page,limit:24,q:deferredQuery||undefined,city:city||undefined,status,needsReview:reviewOnly?"1":undefined},signal);
+      if(sequence===loadSequence.current&&page>Math.max(1,Math.ceil(result.total/24))){setPage(Math.max(1,Math.ceil(result.total/24)));return}
+      if(sequence===loadSequence.current&&!signal?.aborted)setData({items:result.items,total:result.total,hasMore:result.hasMore});
+    }catch(e){if(sequence===loadSequence.current&&!signal?.aborted)setError(e instanceof Error?e.message:"Не удалось загрузить каталог")}
+    finally{if(sequence===loadSequence.current&&!signal?.aborted)setLoading(false)}
+  },[page,status,deferredQuery,reviewOnly,city]);
 
-  React.useEffect(()=>{void load()},[load]);
+  React.useEffect(()=>{const controller=new AbortController();void load(controller.signal);return()=>controller.abort()},[load]);
   React.useEffect(()=>{void loadCounts().catch(()=>{})},[loadCounts]);
-  React.useEffect(()=>{setPage(1)},[status,deferredQuery,reviewOnly]);
+  React.useEffect(()=>{setPage(1)},[status,deferredQuery,reviewOnly,city]);
 
   const reload=async()=>{await Promise.all([load(),loadCounts()])};
 
@@ -183,7 +189,7 @@ export function ServerObjectsPage(){
   const add=async()=>{
     setBusy(true);setError("");
     try{
-      const created=await createAdminProperty(fresh());
+      const created=await createAdminProperty({...fresh(),...(city?{city}:{})});
       setSelected(created);setDirty(false);await reload();
     }catch(e){setError(e instanceof Error?e.message:"Не удалось создать ЖК")}
     finally{setBusy(false)}
@@ -321,16 +327,18 @@ export function ServerObjectsPage(){
     description="Добавляйте ЖК, импортируйте список объектов, загружайте фотографии, планировки и документы."
     action={<button className="primaryAction catalogPrimaryCreate" disabled={busy} onClick={()=>void add()}><Plus size={16}/>Добавить ЖК</button>}
   >
-    {(error||notice)&&<div className={error?"errorNotice":"successNotice"}>{error||notice}</div>}
+    {(error||notice)&&<div className={error?"errorNotice":"successNotice"} role={error?"alert":"status"}>{error||notice}</div>}
 
+    {summaryError&&<div className="errorNotice" role="alert">Не удалось загрузить список городов. <button className="secondaryAction" onClick={()=>void loadCounts().catch(()=>{})}>Обновить города</button></div>}
+    <CatalogCityFilter city={city} cities={cities} onChange={setCity}/>
     <section className="catalogOverview">
-      <article><span><Building2 size={17}/></span><div><small>Всего в каталоге</small><strong>{counts.all}</strong><p>ЖК в рабочей базе</p></div></article>
+      <article><span><Building2 size={17}/></span><div><small>Всего ЖК</small><strong>{counts.all}</strong><p>{city||"Все города"}</p></div></article>
       <article><span className="success"><CheckCircle2 size={17}/></span><div><small>Опубликовано</small><strong>{counts.published}</strong><p>Видят пользователи</p></div></article>
       <article><span className="warning"><Clock3 size={17}/></span><div><small>Черновики</small><strong>{counts.draft}</strong><p>Требуют подготовки</p></div></article>
       <article><span className="muted"><Archive size={17}/></span><div><small>Архив</small><strong>{counts.archived}</strong><p>Скрыты из Mini App</p></div></article>
     </section>
 
-    <section className="catalogImportHub">
+    <details className="catalogImportHub"><summary><span><PackageOpen size={19}/></span><div><b>Массовая загрузка</b><small>CSV, фотографии, планировки и документы</small></div><ChevronRight size={18}/></summary><div className="catalogImportContent">
       <div className="catalogImportIntro">
         <span className="kicker">МАССОВАЯ ЗАГРУЗКА</span>
         <h2>Добавляйте десятки и сотни ЖК за один проход</h2>
@@ -342,15 +350,15 @@ export function ServerObjectsPage(){
         <label><span><Images size={19}/></span><div><b>Загрузить медиа</b><small>Фото и PDF пачкой</small></div><ChevronRight size={17}/><input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple onChange={e=>void importMediaBatch(e.target.files)}/></label>
       </div>
       <div className="catalogImportFoot"><HardDrive size={14}/><span>Фото: JPG, PNG, WebP · документы: PDF.</span></div>
-    </section>
+    </div></details>
 
-    <section className="catalogWorkspace">
+    <section className="catalogWorkspace" aria-busy={loading}>
       <div className="catalogWorkspaceTop">
         <div>
           <span className="kicker">БАЗА ОБЪЕКТОВ</span>
           <h2>{status==="all"?"Все ЖК":status==="published"?"Опубликованные":status==="draft"?"Черновики":"Архив"}</h2>
         </div>
-        <label className="controlSearch catalogSearch"><Search size={17}/><input placeholder="ЖК, город, застройщик" value={query} onChange={e=>setQuery(e.target.value)}/></label>
+        <label className="controlSearch catalogSearch"><Search size={17}/><input aria-label="Поиск объектов" placeholder="Название ЖК или застройщик" value={query} onChange={e=>setQuery(e.target.value)}/></label>
       </div>
 
       <div className="catalogFilters">
@@ -363,10 +371,11 @@ export function ServerObjectsPage(){
         <div className="catalogPageMeta"><b>{data.total}</b><span>объектов · страница {page} из {totalPages}</span></div>
       </div>
 
-      {loading?<div className="emptyState catalogLoading"><PackageOpen size={26}/><strong>Загружаем каталог</strong><span>Получаем только текущую страницу — каталог не перегружает Control даже при 1000+ ЖК.</span></div>:
-        data.items.length?<div className="catalogObjectGrid">{data.items.map(item=><button key={item.id} className="catalogObjectCard" onClick={()=>void open(item.id)}>
+      {loading?<div className="emptyState catalogLoading"><PackageOpen size={26}/><strong>Загружаем каталог…</strong></div>:
+        error?<div className="emptyState"><strong>Не удалось обновить каталог</strong><span>Проверьте соединение и повторите загрузку.</span><button className="secondaryAction" onClick={()=>void reload().catch(()=>{})}>Повторить загрузку</button></div>:
+        data.items.length?<div className="catalogObjectGrid">{data.items.map(item=><button key={item.id} className="catalogObjectCard" disabled={busy} onClick={()=>void open(item.id)}>
           <div className="catalogObjectImage">
-            {item.coverImageUrl?<img src={item.coverImageUrl} alt=""/>:<div className="objectPlaceholder"><Building2 size={24}/><span>PULSEDV.RU</span></div>}
+            <CatalogCover url={item.coverImageUrl}/>
             <span className={"statusChip "+item.status}>{item.status==="published"?"Опубликован":item.status==="draft"?"Черновик":"Архив"}</span>
           </div>
           <div className="catalogObjectBody">
@@ -378,7 +387,7 @@ export function ServerObjectsPage(){
             <CatalogFreshnessBadge value={item.freshness}/><div className="catalogObjectDeveloper">{item.developerName||"Застройщик не указан"}</div>
           </div>
         </button>)}</div>:
-        <div className="emptyState"><PackageOpen size={26}/><strong>Объекты не найдены</strong><span>Измените фильтр или добавьте новый ЖК.</span></div>}
+        <div className="emptyState"><PackageOpen size={26}/><strong>Объекты не найдены</strong><span>Измените фильтр или добавьте новый ЖК.</span>{(city||query||status!=="all"||reviewOnly)&&<button className="secondaryAction" onClick={()=>{setCity("");setQuery("");setStatus("all");setReviewOnly(false);setPage(1)}}>Сбросить фильтры</button>}</div>}
 
       <div className="catalogPager">
         <button disabled={page<=1||loading} onClick={()=>setPage(value=>Math.max(1,value-1))}><ChevronLeft size={16}/>Назад</button>
@@ -411,7 +420,7 @@ export function ServerObjectsPage(){
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>То, что формирует карточку и страницу ЖК</small></div></div>
         <div className="formGrid">
-          {([["name","Название"],["city","Город"],["district","Район"],["address","Адрес"],["developerName","Застройщик"],["delivery","Срок сдачи"],["className","Класс"],["coverImageUrl","Обложка · URL"]] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input value={(p as any)[key]||""} onChange={e=>patch({[key]:e.target.value||(["address","coverImageUrl"].includes(key)?null:"")} as any)}/></label>)}
+          {([["name","Название"],["city","Город"],["district","Район"],["address","Адрес"],["developerName","Застройщик"],["delivery","Срок сдачи"],["className","Класс"],["coverImageUrl","Обложка · URL"]] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input list={key==='city'?'catalog-city-options':undefined} value={(p as any)[key]||""} onChange={e=>patch({[key]:e.target.value||(["address","coverImageUrl"].includes(key)?null:"")} as any)}/></label>)}
           <StartingPriceEditor property={p} onChange={patch}/>
           <label className="controlField"><span>Порядок</span><input type="number" value={p.sortOrder} onChange={e=>patch({sortOrder:Number(e.target.value)})}/></label>
           <label className="controlField"><span>Статус</span><select value={p.status} onChange={e=>patch({status:e.target.value as PulseProperty["status"]})}><option value="draft">Черновик</option><option value="published">Опубликован</option><option value="archived">Архив</option></select></label>
@@ -420,6 +429,7 @@ export function ServerObjectsPage(){
         </div>
       </section>
 
+      <datalist id="catalog-city-options">{cities.map(item=><option key={item.city} value={item.city}/>)}</datalist>
       <PropertyLocationEditor key={p.id} property={p} onChange={patch}/>
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Images size={16}/></span><div><b>Фото объекта</b><small>Обложка + галерея для страницы ЖК</small></div></div>
@@ -465,7 +475,7 @@ export function ServerObjectsPage(){
         {!p.documents?.length&&<div className="catalogEditorEmpty">Презентаций пока нет.</div>}
       </section>
 
-      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Изменения появятся в каталоге после сохранения</span></div><button className="primaryAction" disabled={!dirty||busy||!detailsValid} onClick={()=>void save()}><Save size={16}/>Сохранить объект</button></div>
+      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Изменения появятся в каталоге после сохранения</span></div><button className="secondaryAction" disabled={busy} onClick={()=>{if(!dirty||window.confirm("Закрыть карточку и отменить несохранённые правки?"))setSelected(null)}}>Закрыть карточку</button><button className="primaryAction" disabled={!dirty||busy||!detailsValid} onClick={()=>void save()}><Save size={16}/>Сохранить объект</button></div>
     </fieldset></section></div>}
   </PageFrame>;
 }

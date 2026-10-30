@@ -1,3 +1,4 @@
+import {useDialog} from './components/useDialog';
 import React from 'react';
 import { LogOut, RefreshCw, Save, ShieldCheck } from 'lucide-react';
 import { runtime, subscribeRuntime, restoreLogin, login, verifyLogin, setMfa, logout, refreshControl, refreshControlPulse, refreshLoadedControlData, saveState, discardState, api } from '../../../packages/pulse-data/runtime';
@@ -6,11 +7,24 @@ export function useRuntime(){const [,render]=React.useReducer(x=>x+1,0);React.us
 
 export function RuntimeShell({children}:{children:React.ReactNode}){
  const current=useRuntime();const [checking,setChecking]=React.useState(current.enabled);const [busy,setBusy]=React.useState(false);const [error,setError]=React.useState('');
+ const runtimeBarRef=React.useRef<HTMLDivElement>(null),saveBarRef=React.useRef<HTMLDivElement>(null);
  const [showPassword,setShowPassword]=React.useState(false);const [currentPassword,setCurrentPassword]=React.useState('');const [newPassword,setNewPassword]=React.useState('');
  const [mfaPassword,setMfaPassword]=React.useState('');const [telegramId,setTelegramId]=React.useState('');
  const [email,setEmail]=React.useState('');const [password,setPassword]=React.useState('');
  const [challengeId,setChallengeId]=React.useState('');const [mfaCode,setMfaCode]=React.useState('');const [challengeExpires,setChallengeExpires]=React.useState('');
 
+ useDialog(showPassword,()=>{if(!busy){setShowPassword(false);setError('')}});
+ React.useLayoutEffect(()=>{
+  const root=document.documentElement;
+  const measure=()=>{
+   if(runtimeBarRef.current)root.style.setProperty('--control-runtime-height',runtimeBarRef.current.getBoundingClientRect().height+'px');
+   root.style.setProperty('--control-save-height',(saveBarRef.current?.getBoundingClientRect().height||0)+'px');
+  };
+  measure();const observer=typeof ResizeObserver==='undefined'?null:new ResizeObserver(measure);
+  if(runtimeBarRef.current)observer?.observe(runtimeBarRef.current);if(saveBarRef.current)observer?.observe(saveBarRef.current);
+  window.addEventListener('resize',measure);
+  return()=>{observer?.disconnect();window.removeEventListener('resize',measure)};
+ },[checking,!!current.member,current.dirty,challengeId]);
  React.useEffect(()=>{if(current.enabled)void restoreLogin().catch(()=>{}).finally(()=>setChecking(false));},[]);
  React.useEffect(()=>{if(!current.enabled||!current.member)return;const id=window.setInterval(()=>{if(!document.hidden)void refreshControlPulse().catch(()=>{});},30000);return()=>window.clearInterval(id);},[current.member?.id]);
  React.useEffect(()=>{const guard=(event:BeforeUnloadEvent)=>{if(current.dirty){event.preventDefault();event.returnValue='';}};window.addEventListener('beforeunload',guard);return()=>window.removeEventListener('beforeunload',guard);},[]);
@@ -42,14 +56,14 @@ export function RuntimeShell({children}:{children:React.ReactNode}){
  </form></div>;
  if(current.enabled&&!current.member)return <div className="loginPage"><form className="loginCard" onSubmit={submit}><span className="loginMark"><ShieldCheck/></span><span className="kicker">PULSEDV.RU</span><h1>Вход в Control</h1><p>Рабочее пространство вашей команды.</p><label className="controlField"><span>Электронная почта</span><input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required/></label><label className="controlField"><span>Пароль</span><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required/></label>{error&&<p className="errorNotice" role="alert">{error}</p>}<button className="primaryAction" disabled={busy}>{busy?'Входим…':'Войти'}</button></form></div>;
  return <>
-  <div className="runtimeBar">
+  <div className="runtimeBar" ref={runtimeBarRef}>
    <span><i className={current.enabled?'liveDot':'previewDot'}/>{current.enabled?(current.member?.name+' · '+(current.member?.role==='owner'?'Владелец':current.member?.role==='admin'?'Администратор':'Менеджер')):'Локальные данные'}</span>
    <div>{current.enabled&&<><button style={{width:"auto",padding:"0 9px"}} onClick={()=>{setShowPassword(!showPassword);setError('');setMfaPassword('');}}>Защита</button><small>{current.lastSync?'Обновлено '+new Date(current.lastSync).toLocaleTimeString('ru-RU'):''}</small><button aria-label="Обновить данные" onClick={()=>void refreshLoadedControlData().catch(()=>{})}><RefreshCw size={16}/></button><button aria-label="Выйти" onClick={()=>{if(!current.dirty||window.confirm('Выйти и потерять несохранённые настройки?'))void logout().catch(e=>setError(e.message));}}><LogOut size={16}/></button></>}</div>
   </div>
   {current.error&&<div className="runtimeError" role="alert">{current.error}</div>}
   {current.snapshot.limited&&<div className="runtimeError">Показаны последние записи. Статистика списка ограничена загруженной выборкой.</div>}
-  {current.dirty&&<div className="saveBar"><div><b>Есть несохранённые настройки</b><small>Они появятся в мини‑аппе после сохранения.</small></div><button disabled={current.saving} onClick={()=>{if(window.confirm('Отменить несохранённые изменения?'))void discardState().catch(()=>{});}}>Отменить</button><button className="primaryAction" disabled={current.saving} onClick={()=>void saveState().catch(()=>{})}><Save size={16}/>{current.saving?'Сохраняем…':'Сохранить'}</button></div>}
-  {showPassword&&<div className="drawerBackdrop"><div className="detailDrawer">
+  {current.dirty&&<div className="saveBar" ref={saveBarRef}><div><b>Есть несохранённые настройки</b><small>Они появятся в мини‑аппе после сохранения.</small></div><button disabled={current.saving} onClick={()=>{if(window.confirm('Отменить несохранённые изменения?'))void discardState().catch(()=>{});}}>Отменить</button><button className="primaryAction" disabled={current.saving} onClick={()=>void saveState().catch(()=>{})}><Save size={16}/>{current.saving?'Сохраняем…':'Сохранить'}</button></div>}
+  {showPassword&&<div className="drawerBackdrop"><div className="detailDrawer accountSecurityDrawer" role="dialog" aria-modal="true" aria-label="Защита аккаунта">
    <h2>Защита аккаунта</h2>
    <p>Пароль и двухэтапный вход управляются отдельно. Для изменения потребуется текущий пароль.</p>
    <form onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');try{await api('/control/password',{method:'POST',body:JSON.stringify({currentPassword,newPassword})});setCurrentPassword('');setNewPassword('');setShowPassword(false);runtime.member=null;runtime.ready=false;}catch(err){setError(err instanceof Error?err.message:'Ошибка');}finally{setBusy(false);}}}>

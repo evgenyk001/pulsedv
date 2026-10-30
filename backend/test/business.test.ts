@@ -36,6 +36,12 @@ test('Catalog freshness and finance API persist safely and respect CRM scope',as
  const members=(await db.query("insert into team_members(name,email,password_hash,role) values('Owner','business-owner@test.example',$1,'owner'),('Manager','business-manager@test.example',$1,'manager') returning id,email,role",[hash])).rows;
  async function login(email:string){const r=await app.inject({method:'POST',url:'/api/v1/control/login',headers,payload:{email,password}});assert.equal(r.statusCode,200,r.body);return {pulse_control:r.cookies.find(c=>c.name==='pulse_control')!.value};}
  const owner=await login(members[0].email),manager=await login(members[1].email);
+ await t.test('catalog city summary requires editor access and never leaks to anonymous/manager',async()=>{
+  assert.equal((await app.inject({url:'/api/v1/control/catalog-summary'})).statusCode,401);
+  assert.equal((await app.inject({url:'/api/v1/control/catalog-summary',cookies:manager})).statusCode,403);
+  const response=await app.inject({url:'/api/v1/control/catalog-summary',cookies:owner});assert.equal(response.statusCode,200,response.body);
+  assert.ok(Array.isArray(response.json().cities));assert.equal(typeof response.json().counts.all,'number');
+ });
  const today=businessDay(),future=businessDay(new Date(Date.now()+7*86400000));
  const freshness={source:'Закрытый прайс застройщика',responsible:'Евгений',verifiedAt:new Date().toISOString(),reviewDueOn:future};
  const property={...DEFAULT_STATE.properties[0],id:'business-fresh',freshness,documents:[]};

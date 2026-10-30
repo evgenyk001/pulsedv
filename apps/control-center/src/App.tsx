@@ -1,3 +1,4 @@
+import {useDialog} from './components/useDialog';
 import {PartnersPage} from "./pages/PartnersPage";
 import {BroadcastsPage} from './pages/BroadcastsPage';
 import { JourneyPage } from './pages/JourneyPage';
@@ -41,7 +42,10 @@ const groups=["Работа","Продукт","Контроль"] as const;
 
 export function App(){
   const [menu,setMenu]=React.useState(false);
+  const [compact,setCompact]=React.useState(()=>window.matchMedia('(max-width:1024px)').matches);
   const location=useLocation();
+  useDialog(menu,()=>setMenu(false));
+  React.useEffect(()=>{const media=window.matchMedia('(max-width:1024px)');const update=()=>{setCompact(media.matches);if(!media.matches)setMenu(false)};media.addEventListener('change',update);return()=>media.removeEventListener('change',update)},[]);
   const current=useRuntime();
   const counts=usePulseCounts();
   const overdue=counts.overdueTasks;
@@ -52,11 +56,12 @@ export function App(){
   React.useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close)},[]);
   return <div className={"control"+(menu?" menuOpen":"")}>
     {menu&&<button className="menuScrim" aria-label="Закрыть меню" onClick={()=>setMenu(false)}/>}
-    <aside className="sidebar">
+    <aside className="sidebar" inert={(compact&&!menu)||undefined} aria-hidden={compact&&!menu?true:undefined} role={menu?"dialog":undefined} aria-modal={menu?true:undefined} aria-label="Навигация PULSE Control" id="control-navigation">
       <div className="brand">
         <span className="mark"><i/><i/><i/></span>
         <div><b>PULSE Control</b><small>Command Center</small></div>
       </div>
+      <button type="button" className="mobileNavClose" aria-label="Закрыть навигацию" onClick={()=>setMenu(false)}><X size={20}/></button>
       <div className="sidebarNav">
         <nav aria-label="Разделы CRM" className="groupedNav">
           {groups.map(group=>{
@@ -84,10 +89,10 @@ export function App(){
         <div><b>PULSEDV.RU</b><small>{current.enabled?(current.member?.role==="owner"?"Владелец":current.member?.role==="admin"?"Администратор":"Менеджер"):"Локальный режим"}</small></div>
       </div>
     </aside>
-    <main>
+    <main inert={menu||undefined}>
       <div className="workspaceBar">
         <div className="workspaceLeft">
-          <button className="mobileMenu" aria-label={menu?"Скрыть меню":"Открыть меню"} aria-expanded={menu} onClick={()=>setMenu(!menu)}>{menu?<X size={20}/>:<Menu size={20}/>}</button>
+          <button className="mobileMenu" aria-label={menu?"Скрыть меню":"Открыть меню"} aria-controls="control-navigation" aria-expanded={menu} onClick={()=>setMenu(!menu)}>{menu?<X size={20}/>:<Menu size={20}/>}</button>
           <div className="workspaceSectionIcon"><activeSection.icon size={17}/></div>
           <div className="workspaceContext"><small>PULSE CONTROL</small><b>{activeSection.label}</b></div>
         </div>

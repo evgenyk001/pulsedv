@@ -1,3 +1,6 @@
+import {CatalogCover} from '../components/CatalogCover';
+import {useDialog} from '../components/useDialog';
+import {CatalogCityFilter,useCatalogCity} from '../components/CatalogCityFilter';
 import {StartingPriceEditor} from '../components/StartingPriceEditor';
 import {PlanDimensionsEditor} from '../components/PlanDimensionsEditor';
 import {PropertyLocationEditor} from '../components/PropertyLocationEditor';
@@ -32,26 +35,30 @@ const readiness=(property:PulseProperty)=>{
 
 function PreviewObjectsPage(){
   const state=usePulseState();
+  const [city,setCity]=useCatalogCity();
+  const cities=Array.from(new Set(state.properties.map(p=>p.city))).sort((a,b)=>a.localeCompare(b,'ru')).map(city=>({city,all:state.properties.filter(p=>p.city===city).length}));
+  const cityProperties=state.properties.filter(p=>!city||p.city===city);
   const [selected,setSelected]=React.useState<string|null>(null);
   const [query,setQuery]=React.useState('');
   const [reviewOnly,setReviewOnly]=React.useState(false);
   const [status,setStatus]=React.useState<'all'|'published'|'draft'|'archived'>('all');
   const [detailsValid,setDetailsValid]=React.useState(true);
   const [notice,setNotice]=React.useState('');
+  useDialog(!!selected,()=>setSelected(null));
   const p=state.properties.find(x=>x.id===selected);
 
   const patch=(change:Partial<PulseProperty>)=>updatePulseState(s=>({...s,properties:s.properties.map(x=>x.id===selected?{...x,...change}:x)}));
-  const add=()=>{const property=fresh();updatePulseState(s=>({...s,properties:[...s.properties,property]}));setSelected(property.id);};
-  const list=state.properties.filter(property=>{
+  const add=()=>{const property={...fresh(),...(city?{city}:{})};updatePulseState(s=>({...s,properties:[...s.properties,property]}));setSelected(property.id);};
+  const list=cityProperties.filter(property=>{
     if(status!=='all'&&property.status!==status)return false;
     if(reviewOnly&&!needsCatalogReview(property.freshness))return false;
     return (property.name+' '+property.city+' '+property.developerName).toLowerCase().includes(query.toLowerCase());
   });
   const counts={
-    all:state.properties.length,
-    published:state.properties.filter(p=>p.status==='published').length,
-    draft:state.properties.filter(p=>p.status==='draft').length,
-    archived:state.properties.filter(p=>p.status==='archived').length,
+    all:cityProperties.length,
+    published:cityProperties.filter(p=>p.status==='published').length,
+    draft:cityProperties.filter(p=>p.status==='draft').length,
+    archived:cityProperties.filter(p=>p.status==='archived').length,
   };
 
   const previewServerFeature=(name:string)=>{
@@ -67,14 +74,15 @@ function PreviewObjectsPage(){
   >
     {notice&&<div className="successNotice">{notice}</div>}
 
+    <CatalogCityFilter city={city} cities={cities} onChange={setCity}/>
     <section className="catalogOverview">
-      <article><span><Building2 size={17}/></span><div><small>Всего в каталоге</small><strong>{counts.all}</strong><p>ЖК в рабочей базе</p></div></article>
+      <article><span><Building2 size={17}/></span><div><small>Всего ЖК</small><strong>{counts.all}</strong><p>{city||"Все города"}</p></div></article>
       <article><span className="success"><CheckCircle2 size={17}/></span><div><small>Опубликовано</small><strong>{counts.published}</strong><p>Видят пользователи</p></div></article>
       <article><span className="warning"><Clock3 size={17}/></span><div><small>Черновики</small><strong>{counts.draft}</strong><p>Требуют подготовки</p></div></article>
       <article><span className="muted"><Archive size={17}/></span><div><small>Архив</small><strong>{counts.archived}</strong><p>Скрыты из Mini App</p></div></article>
     </section>
 
-    <section className="catalogImportHub">
+    <details className="catalogImportHub"><summary><span><PackageOpen size={19}/></span><div><b>Массовая загрузка</b><small>CSV, фотографии, планировки и документы</small></div><ChevronRight size={18}/></summary><div className="catalogImportContent">
       <div className="catalogImportIntro">
         <span className="kicker">МАССОВАЯ ЗАГРУЗКА</span>
         <h2>Добавляйте десятки и сотни ЖК за один проход</h2>
@@ -86,12 +94,12 @@ function PreviewObjectsPage(){
         <button onClick={()=>previewServerFeature('Пакетная загрузка медиа')}><span><Images size={19}/></span><div><b>Загрузить медиа</b><small>Фото, планировки и PDF</small></div><ChevronRight size={17}/></button>
       </div>
       <div className="catalogImportFoot"><HardDrive size={14}/><span>Тестовая версия · загрузка файлов недоступна.</span></div>
-    </section>
+    </div></details>
 
     <section className="catalogWorkspace">
       <div className="catalogWorkspaceTop">
         <div><span className="kicker">БАЗА ОБЪЕКТОВ</span><h2>{status==='all'?'Все ЖК':status==='published'?'Опубликованные':status==='draft'?'Черновики':'Архив'}</h2></div>
-        <label className="controlSearch catalogSearch"><Search size={17}/><input placeholder="ЖК, город, застройщик" value={query} onChange={e=>setQuery(e.target.value)}/></label>
+        <label className="controlSearch catalogSearch"><Search size={17}/><input aria-label="Поиск объектов" placeholder="Название ЖК или застройщик" value={query} onChange={e=>setQuery(e.target.value)}/></label>
       </div>
 
       <div className="catalogFilters">
@@ -106,7 +114,7 @@ function PreviewObjectsPage(){
 
       {list.length?<div className="catalogObjectGrid">{list.map(item=><button key={item.id} className="catalogObjectCard" onClick={()=>setSelected(item.id)}>
         <div className="catalogObjectImage">
-          {item.coverImageUrl?<img src={item.coverImageUrl} alt=""/>:<div className="objectPlaceholder"><Building2 size={24}/><span>PULSEDV.RU</span></div>}
+          <CatalogCover url={item.coverImageUrl}/>
           <span className={'statusChip '+item.status}>{item.status==='published'?'Опубликован':item.status==='draft'?'Черновик':'Архив'}</span>
         </div>
         <div className="catalogObjectBody">
@@ -137,7 +145,7 @@ function PreviewObjectsPage(){
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>Карточка и страница ЖК</small></div></div>
         <div className="formGrid">
-          {([['name','Название'],['city','Город'],['district','Район'],['address','Адрес'],['developerName','Застройщик'],['delivery','Срок сдачи'],['className','Класс'],['coverImageUrl','Обложка · HTTPS URL']] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input value={(p as any)[key]||''} onChange={e=>patch({[key]:e.target.value||(['address','coverImageUrl'].includes(key)?null:'')} as any)}/></label>)}
+          {([['name','Название'],['city','Город'],['district','Район'],['address','Адрес'],['developerName','Застройщик'],['delivery','Срок сдачи'],['className','Класс'],['coverImageUrl','Обложка · HTTPS URL']] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input list={key==='city'?'catalog-city-options':undefined} value={(p as any)[key]||''} onChange={e=>patch({[key]:e.target.value||(['address','coverImageUrl'].includes(key)?null:'')} as any)}/></label>)}
           <StartingPriceEditor property={p} onChange={patch}/>
           <label className="controlField"><span>Порядок</span><input type="number" value={p.sortOrder} onChange={e=>patch({sortOrder:Number(e.target.value)})}/></label>
           <label className="controlField"><span>Статус</span><select value={p.status} onChange={e=>patch({status:e.target.value as PulseProperty['status']})}><option value="draft">Черновик</option><option value="published">Опубликован</option><option value="archived">Архив</option></select></label>
@@ -146,6 +154,7 @@ function PreviewObjectsPage(){
         </div>
       </section>
 
+      <datalist id="catalog-city-options">{cities.map(item=><option key={item.city} value={item.city}/>)}</datalist>
       <PropertyLocationEditor key={p.id} property={p} onChange={patch}/>
       <section className="catalogEditorSection"><div className="catalogEditorSectionHead"><span><Images size={16}/></span><div><b>Фото объекта</b><small>Галерея, порядок и подписи</small></div></div><CatalogPhotosEditor key={p.id} property={p} onChange={images=>patch({images})} onRemove={index=>patch({images:p.images.filter((_,i)=>i!==index)})}/></section>
 
