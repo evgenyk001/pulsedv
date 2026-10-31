@@ -2594,3 +2594,23 @@ main{
 .buildingEditor>summary{list-style:none;display:flex;align-items:center;gap:12px;min-height:64px;padding:14px;cursor:pointer}.buildingEditor>summary::-webkit-details-marker{display:none}.buildingEditor>summary>div{display:grid;gap:5px;min-width:0;flex:1}.buildingEditor>summary b{font-size:14px;overflow-wrap:anywhere}.buildingEditor>summary small{color:var(--pc-muted);font-size:11px;line-height:1.5}.buildingEditor>summary>svg{flex:none;color:#a5adb7}.buildingEditor[open]>summary{border-bottom:1px solid var(--pc-line)}.buildingEditorBody{padding:16px}.buildingEditorActions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}.buildingEditorActions>span{margin-right:auto;font-size:12px;color:var(--pc-muted)}.buildingEditorActions button{display:flex;align-items:center;justify-content:center;gap:6px;min-height:44px;min-width:44px;border:1px solid var(--pc-line);border-radius:12px;padding:8px;background:var(--pc-surface);color:var(--pc-text);font-size:12px}.buildingEditorActions button.textDanger{color:#ff8993}.projectExtraFields{margin-top:18px}.projectExtraFields>summary{padding:12px 0;cursor:pointer;font-weight:650;font-size:13px}.projectExtraFields .formGrid{padding-top:12px}.planBuildingFields{padding-bottom:16px;margin-bottom:12px;border-bottom:1px solid var(--pc-line)}
 .buildingEditor>summary:focus-visible,.projectExtraFields>summary:focus-visible{outline:2px solid #ff6975;outline-offset:3px;border-radius:10px}
 .catalogBuildingCount{display:block;font-size:12px;color:#e5b4bc;padding-top:10px}
+
+/* Native dropdown popups need their own opaque colors, separate from the select field. */
+.control select{color-scheme:dark}
+.control select option,.control select optgroup{
+ background-color:#252a31!important;
+ color:#f2f4f7!important;
+}
+.control select option:disabled{color:#9ba5b1!important}
+.control select option:checked{background-color:#4b2730!important;color:#fff!important}
+@media(forced-colors:active){
+ .control select option,.control select optgroup{background-color:Canvas!important;color:CanvasText!important}
+ .control select option:checked{background-color:Highlight!important;color:HighlightText!important}
+ .control select option:disabled{color:GrayText!important}
+}
+
+.catalogObjectItem{position:relative;display:flex;min-width:0}.catalogObjectItem>.catalogObjectCard{flex:1}.catalogObjectItem>.catalogObjectCard[aria-pressed=true]{outline:2px solid #ff6472;outline-offset:2px}
+.catalogSelectionBar{margin:14px 0 18px;min-width:0}.catalogSelectionActions{display:flex;align-items:center;flex-wrap:wrap;gap:10px}.catalogSelectionActions>strong{margin-right:auto;font-size:13px;color:var(--pc-text)}.catalogSelectionBar p,.catalogSelectionBar>small{font-size:12px;line-height:1.6;color:var(--pc-muted);margin:10px 0 0}.catalogSelectionBar>details{margin-top:12px}.catalogSelectionBar summary{font-size:12px;cursor:pointer;padding:10px 0}.catalogSelectionBar ul{list-style:none;padding:0;margin:0;max-height:220px;overflow:auto;border:1px solid var(--pc-line);border-radius:14px}.catalogSelectionBar li{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--pc-line)}.catalogSelectionBar li>span{display:grid;gap:4px;flex:1;min-width:0}.catalogSelectionBar li b{font-size:12px;overflow-wrap:anywhere}.catalogSelectionBar li small{font-size:11px;color:var(--pc-muted)}.catalogSelectionBar li button{width:44px;height:44px;flex:none;border:1px solid var(--pc-line);border-radius:12px;background:var(--pc-surface);color:var(--pc-text)}
+.control .catalogDeleteAction{min-height:44px;padding:10px 14px;display:flex;align-items:center;justify-content:center;gap:8px;font:inherit;font-size:13px;font-weight:650;line-height:1.4;border-radius:14px;border:1px solid rgba(255,100,114,.35);background:rgba(255,64,82,.12);color:#ff9aa4;cursor:pointer}.control .catalogDeleteAction:hover{background:rgba(255,64,82,.2)}.control .catalogDeleteAction:disabled{opacity:.45;cursor:not-allowed}
+.catalogSelectionCheck{position:absolute;right:10px;top:10px;width:44px;height:44px;display:grid;place-items:center;background:#23272df2;border:1px solid #69717d;border-radius:13px;cursor:pointer;z-index:2;box-shadow:0 4px 12px #0003}.catalogSelectionCheck input{accent-color:#f20d1d}
+@media(max-width:600px){.catalogSelectionActions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.catalogSelectionActions>strong{grid-column:1/-1}.catalogSelectionActions>.catalogDeleteAction{grid-column:1/-1;grid-row:3}.catalogSelectionBar .secondaryAction{min-width:0;width:100%}.catalogEditorFooter>.catalogDeleteAction{width:100%}}

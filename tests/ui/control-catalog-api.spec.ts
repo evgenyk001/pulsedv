@@ -88,3 +88,23 @@ test('Real Control CSV imports corps and plan bindings, preserves totals and sav
  const response=await app.inject('/api/v1/public/catalog/multi-project');expect(response.statusCode).toBe(200);const saved=response.json().property;expect(saved.projectDetails.totalApartments).toBe(901);expect(saved.projectDetails.buildings[0].name).toBe('Корпус после правки');expect(saved.projectDetails.buildings[0].availableApartments).toBe(0);expect(saved.floorplans[0].buildingId).toBe('csv-b1');
  await editor.getByRole('button',{name:'Закрыть редактор'}).click();await page.reload();await page.getByLabel('Поиск объектов').fill('ЖК CSV');await expect(page.locator('.catalogObjectCard')).toHaveCount(1);await page.locator('.catalogObjectCard').click();await expect(editor.getByLabel('Корпус планировки',{exact:true})).toHaveValue('csv-b1');
 });
+
+test('Real Control deletion: retains remaining selection after failure, retries and deletes a single card',async({page})=>{
+ test.setTimeout(90000);await page.setViewportSize({width:390,height:900});
+ for(let i=0;i<3;i++)await upsertCatalogProperty(db,{...structuredClone(DEFAULT_STATE.properties[0]),id:'delete-check-'+i,name:'ЖК Удаление '+i,city:'Уссурийск',status:'published',coverImageUrl:null});
+ await page.goto(origin+'/pulsedv/control-center/#/objects');await page.getByLabel('Электронная почта').fill('owner@polish.test');await page.getByLabel('Пароль',{exact:true}).fill(password);await page.getByRole('button',{name:'Войти',exact:true}).click();
+ await expect(page.locator('.catalogObjectCard')).toHaveCount(24);
+ await page.getByRole('button',{name:'Выбрать объекты',exact:true}).click();await page.getByRole('checkbox').first().check();
+ await page.getByRole('button',{name:'Дальше',exact:true}).click();await expect(page.locator('.catalogPager')).toContainText('2 /');await expect(page.locator('.catalogSelectionActions>strong')).toHaveText('Выбрано: 1 / 100');
+ await page.getByRole('button',{name:'Назад',exact:true}).click();await expect(page.getByRole('checkbox').first()).toBeChecked();
+ await page.getByLabel('Поиск объектов').fill('ЖК Удаление');await expect(page.locator('.catalogObjectCard')).toHaveCount(3);await expect(page.locator('.catalogSelectionActions>strong')).toHaveText('Выбрано: 0 / 100');
+ await page.getByRole('button',{name:'Выбрать страницу',exact:true}).click();
+ await page.getByRole('checkbox',{name:'Выбрать ЖК: ЖК Удаление 2',exact:true}).uncheck();
+ await page.route('**/api/v1/control/catalog/delete-check-1',r=>r.request().method()==='DELETE'?r.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Проверочная ошибка удаления'})}):r.continue());
+ page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Удалить выбранные · 2',exact:true}).click();
+ await expect(page.getByRole('alert')).toContainText('Подтверждённо удалено: 1 из 2');await expect(page.locator('.catalogObjectCard')).toHaveCount(2);await expect(page.getByRole('checkbox',{name:'Выбрать ЖК: ЖК Удаление 1',exact:true})).toBeChecked();await expect(page.getByRole('checkbox',{name:'Выбрать ЖК: ЖК Удаление 2',exact:true})).not.toBeChecked();
+ await page.unroute('**/api/v1/control/catalog/delete-check-1');page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Удалить выбранные · 1',exact:true}).click();await expect(page.locator('.catalogObjectCard')).toHaveCount(1);
+ await page.getByRole('button',{name:'Отмена выбора',exact:true}).click();await page.locator('.catalogObjectCard').click();const editor=page.getByRole('dialog',{name:'Редактор объекта'});await expect(editor).toBeVisible();
+ page.once('dialog',d=>d.accept());await editor.getByRole('button',{name:'Удалить ЖК',exact:true}).click();await expect(editor).toHaveCount(0);await expect(page.locator('.catalogObjectCard')).toHaveCount(0);
+ expect(Number((await db.query("select count(*) as n from catalog_properties where id like 'delete-check-%'")).rows[0].n)).toBe(0);
+});

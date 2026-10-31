@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 const source=await readFile(resolve('deploy/update-project-buildings.sh'),'utf8');
+const selectsSource=await readFile(resolve('deploy/update-control-catalog.sh'),'utf8');
 const docker=`#!/usr/bin/env python3
 import sys,os,json,gzip
 from pathlib import Path
@@ -56,7 +57,7 @@ if command=='run':
   s['migrated']=True
  finish()
 if command=='up':
- override=json.loads(Path(files[-1]).read_text());rollback='rollback-images' in files[-1]
+ override=json.loads(Path(files[-1]).read_text());rollback='rollback-image' in files[-1]
  for service in services:
   ref=override['services'][service]['image'];s['containers'][service]={'image':s['refs'].get(ref,ref),'running':True}
   if failure=='activation' and not rollback:finish(43)
@@ -64,7 +65,7 @@ if command=='up':
 if command=='exec':
  if 'pg_dump' in a:sys.stdout.buffer.write(b'PGDMP database fixture');finish()
  if 'pg_restore' in a:sys.stdin.buffer.read();finish()
- if 'cat' in a:emit('<!doctype html><script src="/assets/test.js"></script>');finish()
+ if 'cat' in a:emit('.control select option{background-color:#252a31;color:#f2f4f7}' if a[-1].endswith('.css') else '<!doctype html><link href="/pulsedv/control-center/assets/test.css" rel="stylesheet"><script src="/assets/test.js"></script>');finish()
  if 'api' in a and failure=='schema':finish(44)
  finish()
 finish(94)
@@ -81,28 +82,29 @@ import sys,os
 from pathlib import Path
 a=sys.argv[1:]
 if os.environ.get('MOCK_FAILURE')=='https':sys.exit(22)
-url=next(x for x in a if x.startswith('https://'));body='{"status":"ready"}' if url.endswith('/ready') else '<!doctype html><script src="/assets/test.js"></script>\\n'
+url=next(x for x in a if x.startswith('https://'));body='{"status":"ready"}' if url.endswith('/ready') else '.control select option{background-color:#252a31;color:#f2f4f7}\\n' if url.endswith('.css') else '<!doctype html><link href="/pulsedv/control-center/assets/test.css" rel="stylesheet"><script src="/assets/test.js"></script>\\n'
 Path(a[a.index('-o')+1]).write_text(body)
 `;
-for(const failure of ['', 'build','migration','activation','schema','https','immutable'])test(`Installer recovery: ${failure||'success with stopped ID-based containers'}`,async()=>{
+for(const [kind,installer] of [['buildings',source],['selects',selectsSource]])for(const failure of kind==='buildings'?['', 'build','migration','activation','schema','https','immutable']:['','build','activation','https'])test(`Installer ${kind}: ${failure||'success'}`,async()=>{
  const root=await mkdtemp(join(tmpdir(),'pulse-installer-'));
  try{
   await mkdir(join(root,'deploy'));await mkdir(join(root,'bin'));await writeFile(join(root,'.env'),'SITE_DOMAIN=pulsedv.ru\n');await writeFile(join(root,'compose.yaml'),'name: pulsedv\n');await writeFile(join(root,'deploy/Caddyfile'),'pulsedv.ru {\n respond "OK"\n}\n');
   const old={api:'sha256:'+'1'.repeat(64),worker:'sha256:'+'2'.repeat(64),web:'sha256:'+'3'.repeat(64)};
   const next={api:'sha256:'+'4'.repeat(64),worker:'sha256:'+'5'.repeat(64),web:'sha256:'+'6'.repeat(64)};
-  const state={containers:Object.fromEntries(Object.entries(old).map(([service,image])=>[service,{image,running:service==='web'}])),refs:Object.fromEntries(Object.entries(old).map(([service,image])=>['pulsedv-'+service,image])),new:next,calls:[],migrated:false};
+  const state={containers:Object.fromEntries(Object.entries(old).map(([service,image])=>[service,{image,running:kind==='selects'||service==='web'}])),refs:Object.fromEntries(Object.entries(old).map(([service,image])=>['pulsedv-'+service,image])),new:next,calls:[],migrated:false};
   const statePath=join(root,'state.json');await writeFile(statePath,JSON.stringify(state));
   for(const [name,content] of Object.entries({docker,git,curl})){const path=join(root,'bin',name);await writeFile(path,content);await chmod(path,0o700)}
-  const script=source.replaceAll('/opt/pulsedv',root).replaceAll('/var/lock/pulsedv-update.lock',join(root,'update.lock')).replaceAll('/root/pulsedv-buildings-recovery.',join(root,'backup.'));
+  const script=installer.replaceAll('/opt/pulsedv',root).replaceAll('/var/lock/pulsedv-update.lock',join(root,'update.lock')).replaceAll('/root/pulsedv-buildings-recovery.',join(root,'backup.')).replaceAll('/root/pulsedv-control-catalog.',join(root,'backup.'));
   await writeFile(join(root,'installer.sh'),script);
   const run=spawnSync('bash',[join(root,'installer.sh'),'f'.repeat(40)],{env:{...process.env,PATH:join(root,'bin')+':'+process.env.PATH,MOCK_STATE:statePath,MOCK_TARGET:'f'.repeat(40),MOCK_FAILURE:failure},encoding:'utf8',timeout:30000});
   const final=JSON.parse(await readFile(statePath,'utf8'));
-  if(!failure){assert.equal(run.status,0,run.stdout+run.stderr);assert.match(run.stdout,/ГОТОВО/);assert.equal(final.migrated,true);for(const service of Object.keys(old))assert.equal(final.containers[service].image,next[service]);}
+  if(!failure){assert.equal(run.status,0,run.stdout+run.stderr);assert.match(run.stdout,/ГОТОВО/);assert.equal(final.migrated,kind==='buildings');for(const service of Object.keys(old))assert.equal(final.containers[service].image,kind==='buildings'||service==='web'?next[service]:old[service]);}
   else{assert.notEqual(run.status,0);assert.match(run.stdout,/ОШИБКА на этапе:/);assert.doesNotMatch(run.stdout,/ГОТОВО/);for(const service of Object.keys(old)){assert.equal(final.containers[service].image,old[service]);assert.equal(final.refs['pulsedv-'+service],old[service]);}}
   for(const service of Object.keys(old))assert.equal(final.containers[service].running,true,service+' must be running');
   assert.ok(final.calls.some(call=>call.includes('ps')&&call.includes('-a')));
   assert.ok(!final.calls.some(call=>call.join(' ').includes('.Config.Image')));
   const start=final.calls.findIndex(call=>call.includes('start')),build=final.calls.findIndex(call=>call.includes('build'));
-  if(build>=0)assert.ok(start<build,'restore service before attempting build');
+  if(build>=0&&kind==='buildings')assert.ok(start<build,'restore service before attempting build');
+  if(kind==='selects'){assert.equal(final.migrated,false);for(const service of ['api','worker'])assert.deepEqual(final.containers[service],state.containers[service]);assert.ok(!final.calls.some(call=>['start','stop'].some(command=>call.includes(command))))}
  }finally{await rm(root,{recursive:true,force:true})}
 });
