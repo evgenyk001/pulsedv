@@ -43,9 +43,12 @@ function ScreenContent({children}:{children:React.ReactNode}){
  return <ScreenBoundary key={location.pathname}>{children}</ScreenBoundary>;
 }
 function ScreenReady(){React.useEffect(()=>dismissLaunchScreen(),[]);return null}
+function IdentityQueries(){
+ React.useEffect(()=>{const refresh=()=>void queryClient.invalidateQueries();window.addEventListener("pulse:identity-ready",refresh);return()=>window.removeEventListener("pulse:identity-ready",refresh)},[]);return null;
+}
 function App(){
   return <QueryClientProvider client={queryClient}>
-    <HashRouter>
+    <IdentityQueries/><HashRouter>
       <AppShell>
         <ScreenContent><React.Suspense fallback={<BrandLoading/>}><Routes>
           <Route path="/" element={<HomePage/>}/>

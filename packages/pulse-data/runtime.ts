@@ -1,4 +1,4 @@
-import {loadTelegramSdk} from '../browser/telegramSdk';
+import {loadTelegramSdk,telegramLaunchExpected,telegramInitData} from '../browser/telegramSdk';
 import {safeLocalStorage} from '../browser/storage';
 import {pageIsLeaving,pageRequestSignal} from './pageLifecycle';
 import {partnerGrant} from '../partners/securityState';
@@ -15,7 +15,7 @@ export type PageMeta={page:number;limit:number;total:number;hasMore:boolean;load
 const empty:Snapshot={state:{...DEFAULT_STATE,properties:[],banners:[]},version:0,leads:[],tasks:[],events:[],profiles:[],members:[],notifications:[],limited:false};
 const emptyCounts:ControlCounts={leadsTotal:0,activeLeads:0,newLeads:0,unassignedLeads:0,openTasks:0,overdueTasks:0,hotProfiles:0,leadStages:{new:0,contacted:0,qualified:0,showing:0,booking:0,deal:0,closed:0,lost:0}};
 const emptyPage=(limit:number):PageMeta=>({page:0,limit,total:0,hasMore:false,loading:false});
-export const runtime={requiresPhone:false,enabled:false,base:'/api/v1',role:'public' as 'public'|'control',snapshot:empty,member:null as TeamMember|null,counts:emptyCounts,pages:{leads:emptyPage(300),tasks:emptyPage(300),events:emptyPage(500),profiles:emptyPage(300)} as Record<ControlResource,PageMeta>,dirty:false,saving:false,error:null as string|null,ready:false,consentVersion:'2026-09-25',lastSync:null as string|null};
+export const runtime={requiresPhone:false,enabled:false,base:'/api/v1',role:'public' as 'public'|'control',snapshot:empty,member:null as TeamMember|null,counts:emptyCounts,pages:{leads:emptyPage(300),tasks:emptyPage(300),events:emptyPage(500),profiles:emptyPage(300)} as Record<ControlResource,PageMeta>,dirty:false,saving:false,error:null as string|null,ready:false,publicIdentity:'idle' as 'idle'|'loading'|'ready'|'error',publicIdentityError:null as string|null,consentVersion:'2026-09-25',lastSync:null as string|null};
 const notify=(names:ControlResource[]|['state']|null=null)=>{
  if(typeof window==='undefined')return;
  const list=names??['state','leads','tasks','events','profiles'];
@@ -59,26 +59,48 @@ async function session():Promise<Session>{
   return value;
  })();try{return await sessionPromise;}catch(error){sessionPromise=null;throw error;}
 }
-export async function visitorApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
+async function sessionApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
  const identity=await session();
  try{return await api<T>(path,{...options,headers:{...options.headers,Authorization:'Bearer '+identity.accessToken,...(path.startsWith('/me/partner')&&partnerGrant()?{'X-Partner-Unlock':partnerGrant()}:{})}});}catch(error){
   if(error instanceof ApiError&&error.status===423&&path.startsWith('/me/partner'))window.dispatchEvent(new Event('pulse:partner-locked'));
-  if(error instanceof ApiError&&error.status===401){sessionPromise=null;telegramBound=false;visitorCookieBound=false;try{safeLocalStorage.removeItem(SESSION);}catch{}}
+  if(error instanceof ApiError&&error.status===401){sessionPromise=null;telegramBound=false;visitorCookieBound=false;runtime.publicIdentity='idle';try{safeLocalStorage.removeItem(SESSION);}catch{}}
   throw error;
  }
 }
-export async function initializePublic(){
+// All account reads/writes wait for verified identity, independently of public catalog rendering.
+export async function visitorApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
+ if(runtime.enabled&&runtime.role==='public'){
+  if(runtime.publicIdentity==='error')throw new ApiError(0,runtime.publicIdentityError||'Не удалось подключить аккаунт');
+  await connectPublicIdentity();
+ }
+ return sessionApi<T>(path,options);
+}
+export async function initializePublicState(){
  if(pageIsLeaving())return;
  const data=await api('/public/state');runtime.snapshot={...empty,state:{...empty.state,...data.state},version:data.version};runtime.requiresPhone=!!data.requiresPhone;runtime.consentVersion=data.consentVersion;runtime.ready=true;runtime.error=null;notify();
- if(pageIsLeaving())return;
- await session();
- if(!visitorCookieBound){await visitorApi('/auth/cookie',{method:'POST',body:'{}'});visitorCookieBound=true;}
- await loadTelegramSdk();
- const initData=(window as any).Telegram?.WebApp?.initData;
- if(initData&&!telegramBound){await visitorApi('/auth/telegram',{method:'POST',body:JSON.stringify({initData})});telegramBound=true;}
- // Analytics must not block the application or reset its authenticated identity.
- void visitorApi('/me/acquisition',{method:'POST',body:JSON.stringify({id:visitId('miniapp'),search:entrySearch().slice(0,3000),referrer:document.referrer.slice(0,2000),...(initData?{initData}:{})})}).catch(()=>{});
 }
+let identityPending:Promise<void>|null=null;
+export function connectPublicIdentity():Promise<void>{
+ if(identityPending)return identityPending;
+ if(runtime.publicIdentity==='ready')return Promise.resolve();
+ runtime.publicIdentity='loading';runtime.publicIdentityError=null;notify();
+ const task=(async()=>{
+  try{
+   await loadTelegramSdk();
+   const initData=telegramInitData();
+   if(telegramLaunchExpected()&&!initData)throw new Error('Не удалось подтвердить вход в Telegram. Повторите подключение.');
+   await session();
+   if(!visitorCookieBound){await sessionApi('/auth/cookie',{method:'POST',body:'{}'});visitorCookieBound=true;}
+   if(initData&&!telegramBound){await sessionApi('/auth/telegram',{method:'POST',body:JSON.stringify({initData})});telegramBound=true;}
+   runtime.publicIdentity='ready';runtime.publicIdentityError=null;notify();
+   void sessionApi('/me/acquisition',{method:'POST',body:JSON.stringify({id:visitId('miniapp'),search:entrySearch().slice(0,3000),referrer:document.referrer.slice(0,2000),...(initData?{initData}:{})})}).catch(()=>{});
+  }catch(e){runtime.publicIdentity='error';runtime.publicIdentityError=e instanceof Error?e.message:'Не удалось подключить аккаунт';notify();throw e}
+ })();
+ identityPending=task;
+ void task.then(()=>{identityPending=null},()=>{identityPending=null});
+ return task;
+}
+export async function initializePublic(){await initializePublicState();if(!pageIsLeaving())await connectPublicIdentity();}
 type Bootstrap={state:PulseState;version:number;members:TeamMember[];notifications:Delivery[];counts:ControlCounts};
 type Paged<T>={items:T[];page:number;limit:number;total:number;hasMore:boolean};
 const resourceLoads=new Map<string,Promise<void>>();
