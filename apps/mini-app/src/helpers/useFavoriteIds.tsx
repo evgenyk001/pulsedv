@@ -26,9 +26,9 @@ export function FavoriteSync(){
  React.useEffect(()=>{
   const refresh=()=>{if(!document.hidden)void syncFavorites()};refresh();
   const reconnect=()=>{if(document.hidden)return;void syncFavorites().then(()=>{if(error&&navigator.onLine&&!document.hidden)void syncFavorites()})};
-  window.addEventListener('online',reconnect);window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);
+  window.addEventListener('pulse:identity-ready',refresh);window.addEventListener('online',reconnect);window.addEventListener('focus',refresh);document.addEventListener('visibilitychange',refresh);
   const tick=setInterval(refresh,30000);
-  return()=>{clearInterval(tick);window.removeEventListener('online',reconnect);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh)};
+  return()=>{window.removeEventListener('pulse:identity-ready',refresh);clearInterval(tick);window.removeEventListener('online',reconnect);window.removeEventListener('focus',refresh);document.removeEventListener('visibilitychange',refresh)};
  },[]);return null;
 }
 export function useFavoriteIds(){

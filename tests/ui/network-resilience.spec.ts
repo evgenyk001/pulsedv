@@ -130,7 +130,7 @@ test('The top-level boundary catches an AppShell failure outside the route bound
  await expect(page.locator('#pulse-launch')).toHaveCount(0);
 });
 
-test('A stalled SDK does not block public API reads, times out visibly, and retries Telegram authentication',async({page})=>{
+test('A stalled SDK keeps public navigation open, blocks private requests, and retries authentication',async({page})=>{
  setupApi();let reads=0,bindings=0,attempts=0;const held:any[]=[];
  await page.route('**/api/v1/public/state',route=>{reads++;return route.fulfill({contentType:'application/json',body:JSON.stringify({state:DEFAULT_STATE,version:1,requiresPhone:true})})});
  await page.route('**/api/v1/me/account',route=>route.fulfill({contentType:'application/json',body:JSON.stringify({registered:true})}));
@@ -143,10 +143,12 @@ test('A stalled SDK does not block public API reads, times out visibly, and retr
  try{
   await page.goto(origin+'/pulsedv/mini-app/?tgWebAppVersion=8.0',{waitUntil:'domcontentloaded'});
   await expect.poll(()=>reads).toBeGreaterThan(0);expect(bindings).toBe(0);
-  await expect(page.getByRole('button',{name:'Попробовать снова'})).toBeVisible({timeout:12000});
-  await page.getByRole('button',{name:'Попробовать снова'}).click();
+  await expect(page.getByRole('button',{name:'Каталог',exact:true})).toBeVisible({timeout:5000});
+  await page.getByRole('button',{name:'Каталог',exact:true}).click();await expect(page).toHaveURL(/#\/catalog/);
+  await expect(page.getByRole('button',{name:'Повторить подключение'})).toBeVisible({timeout:12000});
+  await page.getByRole('button',{name:'Повторить подключение'}).click();
   await expect(page.getByRole('button',{name:'Каталог',exact:true})).toBeVisible();
-  expect(attempts).toBe(2);expect(bindings).toBe(1);
+  await expect.poll(()=>bindings).toBe(1);expect(attempts).toBe(2);
  }finally{for(const route of held)await route.abort().catch(()=>{})}
 });
 
@@ -178,8 +180,9 @@ test('A Telegram reload with cached launch data still waits for the SDK before a
  await page.route('**/api/v1/me/account',route=>{accountReads++;return route.fulfill({contentType:'application/json',body:'{"registered":true}'})});
  try{
   await page.goto(origin+'/pulsedv/mini-app/#/favorites',{waitUntil:'domcontentloaded'});
-  await expect(page.getByRole('button',{name:'Попробовать снова'})).toBeVisible({timeout:12000});
-  expect(accountReads).toBe(0);
+  await expect(page.getByRole('button',{name:'Повторить подключение'})).toBeVisible({timeout:12000});
+  expect(accountReads).toBe(0);await expect(page.getByRole('button',{name:'Убрать из избранного'})).toHaveCount(0);
+  await page.getByRole('link',{name:'Перейти в каталог',exact:true}).click();await expect(page.getByRole('button',{name:'Каталог',exact:true})).toBeVisible();
  }finally{await held?.abort().catch(()=>{})}
 });
 
@@ -197,4 +200,33 @@ test('A failed notification dismiss returns the rounded row and a repeated tap c
  await expect(row.getByRole('alert')).toContainText('Не удалось сохранить');expect(attempts).toBe(1);
  await expect(row).toHaveAttribute('data-open','true');await expect(remove).toBeEnabled();
  await remove.click();await expect(row).toHaveCount(0);expect(attempts).toBe(2);await expect(page).not.toHaveURL(/journey/);
+});
+
+test('A delayed Telegram launch fragment survives public navigation and binds the original signed data',async({page})=>{
+ setupApi();await page.setViewportSize({width:320,height:844});let held:any,bindings=0,privateReads=0;
+ await page.addInitScript(()=>{(window as any).bridgeEvents=[];(window as any).TelegramWebviewProxy={postEvent:(type:string)=>(window as any).bridgeEvents.push(type)}});
+ await page.route('**/api/v1/public/state',r=>r.fulfill({json:{state:DEFAULT_STATE,version:1,requiresPhone:true}}));
+ await page.route('**/api/v1/auth/telegram',r=>{bindings++;expect(r.request().postDataJSON()).toEqual({initData:'signed-fragment'});return r.fulfill({json:{ok:true}})});
+ await page.route('**/api/v1/me/account',r=>{privateReads++;expect(bindings).toBe(1);return r.fulfill({json:{registered:true}})});
+ await page.route('https://telegram.org/js/telegram-web-app.js**',r=>{held=r});
+ try{
+  await page.goto(origin+'/pulsedv/mini-app/#tgWebAppData=signed-fragment&tgWebAppVersion=8.0',{waitUntil:'domcontentloaded'});
+  await expect(page.getByRole('button',{name:'Каталог',exact:true})).toBeVisible({timeout:5000});
+  expect(bindings).toBe(0);expect(privateReads).toBe(0);expect(await page.evaluate(()=>(window as any).bridgeEvents)).toContain('web_app_ready');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+  await page.getByRole('button',{name:'Каталог',exact:true}).click();
+  await held.fulfill({contentType:'text/javascript',body:`const stored=JSON.parse(sessionStorage.getItem('__telegram__initParams'));window.Telegram={WebApp:{initData:stored.tgWebAppData,ready(){},expand(){}}}`});held=null;
+  await expect.poll(()=>bindings).toBe(1);await expect.poll(()=>privateReads).toBe(1);
+  await expect(page.locator('.telegramConnectionNotice')).toHaveCount(0);
+ }finally{await held?.abort().catch(()=>{})}
+});
+
+test('Failed Telegram authentication never opens private screens, while the catalog remains available',async({page})=>{
+ setupApi();let privateRequests=0;
+ await page.addInitScript(()=>{(window as any).Telegram={WebApp:{initData:'invalid-signature',ready(){},expand(){}}}});
+ await page.route('**/api/v1/auth/telegram',r=>r.fulfill({status:401,json:{error:'Invalid Telegram signature'}}));
+ await page.route('**/api/v1/me/**',r=>{privateRequests++;return r.fulfill({json:{registered:true,items:[],ids:[]}})});
+ await page.goto(origin+'/pulsedv/mini-app/#/profile');await expect(page.getByRole('button',{name:'Повторить подключение'})).toBeVisible();
+ expect(privateRequests).toBe(0);await expect(page.getByRole('switch',{name:'Получать анонсы PULSEDV.RU'})).toHaveCount(0);
+ await page.getByRole('link',{name:'Перейти в каталог',exact:true}).click();await expect(page.getByRole('button',{name:'Каталог',exact:true})).toBeVisible();expect(privateRequests).toBe(0);
 });

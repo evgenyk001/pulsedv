@@ -45,13 +45,14 @@ test('Mandatory phone blocks direct routes, cancellation and forged client succe
  const button=page.getByRole('button',{name:'Поделиться номером и войти'});
  await expect(button).toBeDisabled();await expect(page.getByRole('heading',{name:'Избранное',exact:true})).toHaveCount(0);expect(privateReads).toBe(0);
  await page.getByRole('link',{name:'Политика конфиденциальности'}).click();await expect(page.getByRole('heading',{name:'Политика обработки персональных данных',exact:true})).toBeVisible();
- await page.evaluate(()=>location.hash='/catalog');await expect(button).toBeVisible();
+ await page.evaluate(()=>location.hash='/catalog');await expect(page.getByRole('heading',{name:'Новостройки',exact:true})).toBeVisible();
+ await page.getByRole('link',{name:'Войти в аккаунт',exact:true}).click();await expect(button).toBeVisible();
  await page.getByRole('checkbox').check();await button.click();await expect.poll(()=>requests).toBe(1);await expect.poll(()=>page.evaluate(()=>typeof (window as any).contactCallback)).toBe('function');
  await page.evaluate(()=>(window as any).contactCallback(false));await expect(page.getByRole('alert')).toContainText('Без передачи');
  await expect(page.getByRole('heading',{name:'Каталог',exact:true})).toHaveCount(0);
  await button.click();await expect.poll(()=>requests).toBe(2);await expect.poll(()=>page.evaluate(()=>typeof (window as any).contactCallback)).toBe('function');
  verified=true;await page.evaluate(()=>(window as any).contactCallback(true));
- await expect(button).toHaveCount(0);await expect(page.getByRole('heading',{name:'Новостройки',exact:true})).toBeVisible();
+ await expect(button).toHaveCount(0);await expect(page.getByRole('heading',{name:'Помощь с покупкой',exact:true})).toBeVisible();
 });
 test('Favorites has no stray zero when synchronization queue is empty',async({page})=>{
  // This isolated API-mode server omits the flag to exercise existing non-gated installations.

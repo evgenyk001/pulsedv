@@ -2,7 +2,20 @@ import {safeSessionStorage} from './storage';
 let pending:Promise<void>|null=null;
 const message='Не удалось подключить Telegram. Повторите загрузку.';
 
-function telegramLaunchExpected(){
+// Capture before HashRouter changes the launch fragment. Values remain untrusted until API verification.
+const launchParams:Record<string,string>={};
+if(typeof window!=='undefined'){
+ for(const source of [window.location.search,window.location.hash.replace(/^#(?:\/?\?)?/, '')]){
+  for(const [key,value] of new URLSearchParams(source))if(key.startsWith('tgWebApp'))launchParams[key]=value;
+ }
+ if(Object.keys(launchParams).length){
+  let cached:Record<string,string>={};try{cached=JSON.parse(safeSessionStorage.getItem('__telegram__initParams')||'{}')}catch{}
+  safeSessionStorage.setItem('__telegram__initParams',JSON.stringify({...cached,...launchParams}));
+ }
+}
+export function telegramInitData(){return (window as any).Telegram?.WebApp?.initData||launchParams.tgWebAppData;}
+export function telegramLaunchExpected(){
+ if(Object.keys(launchParams).length)return true;
  const params=new URLSearchParams(window.location.search);
  const hash=new URLSearchParams(window.location.hash.replace(/^#(?:\/?\?)?/,''));
  if(['tgWebAppData','tgWebAppVersion','tgWebAppPlatform'].some(key=>params.has(key)||hash.has(key)))return true;
