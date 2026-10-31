@@ -5,6 +5,7 @@ for(const width of [320,390,1440])test(`Broadcasts ${width}px: draft, preview co
  await page.addInitScript(state=>{localStorage.setItem('pulse_onboarding_version',state.content.onboardingVersion);localStorage.setItem('pulse_mortgage_intro_version','mortgage_intro_v5')},DEFAULT_STATE);
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/pulsedv/control-center/#/broadcasts');await expect(page.getByRole('heading',{name:'Рассылки',exact:true})).toBeVisible();
+ const preview=page.getByLabel('Предпросмотр сообщения').first();await expect(preview.locator('.broadcastPreviewButton')).toHaveCount(1);await expect(preview).not.toContainText('Настроить анонсы');
  const editor=page.getByRole('region',{name:'Редактор рассылки'});
  await editor.getByRole('button',{name:'Квартира дня',exact:true}).click();
  await editor.getByLabel('Заголовок',{exact:true}).fill('Квартира дня во Владивостоке');

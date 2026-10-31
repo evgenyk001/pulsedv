@@ -7,7 +7,6 @@ export function telegramSender(config:Pick<RuntimeConfig,'BOT_TOKEN'|'PUBLIC_ORI
   const button=(url:string)=>miniApp(url)&&/^[1-9]\d*$/.test(input.chatId)?{web_app:{url}}:{url};
   const links:{text:string;url?:string;web_app?:{url:string}}[][]=[];
   if(input.deepLink&&(input.buttonLabel||local(input.deepLink)))links.push([{text:input.buttonLabel|| (input.deepLink.includes('/control-center/')?'Открыть PULSE Control':input.deepLink.includes('/my-search')?'Открыть мой поиск':'Открыть обращение'),...button(input.deepLink)}]);
-  if(input.preferencesLink&&local(input.preferencesLink))links.push([{text:'Настроить анонсы',...button(input.preferencesLink)}]);
   const photo=input.imageUrl?config.PUBLIC_ORIGIN+input.imageUrl:null;
   const escape=(text:string)=>text.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;');
   const [title,...body]=input.text.split('\n\n');

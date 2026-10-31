@@ -49,7 +49,7 @@ export async function registerBroadcastRoutes(app:FastifyInstance,db:Database,co
    await audit(sql,r.member!.id,'broadcast.edit',id);return {item:await broadcastView(sql,row)};
   });
  });
- const delivery=(c:BroadcastContent)=>({...c,deepLink:c.buttonPath.startsWith('/')?config.PUBLIC_ORIGIN+'/pulsedv/mini-app/#'+c.buttonPath:c.buttonPath,preferencesLink:config.PUBLIC_ORIGIN+'/pulsedv/mini-app/#/profile'});
+ const delivery=(c:BroadcastContent)=>({...c,deepLink:c.buttonPath.startsWith('/')?config.PUBLIC_ORIGIN+'/pulsedv/mini-app/#'+c.buttonPath:c.buttonPath});
  app.post('/api/v1/control/broadcasts/:id/test',{preHandler:editor,config:{rateLimit:{max:3,timeWindow:'1 minute'}}},async r=>{
   const id=idOf(r),input=z.object({version:z.number().int().positive(),requestId:z.uuid()}).strict().parse(r.body);
   if(!config.BOT_TOKEN)throw new HttpError(409,'Подключите Telegram-бота на сервере');
