@@ -86,3 +86,5 @@ export async function deleteAdminMedia(
 
 export type CatalogSummary={counts:{all:number;published:number;draft:number;archived:number};cities:({city:string;all:number;published:number;draft:number;archived:number})[]};
 export const getAdminCatalogSummary=()=>api<CatalogSummary>("/control/catalog-summary");
+
+export const deleteAdminProperty=(id:string)=>api<{ok:true}>("/control/catalog/"+encodeURIComponent(id),{method:'DELETE',body:JSON.stringify({})});

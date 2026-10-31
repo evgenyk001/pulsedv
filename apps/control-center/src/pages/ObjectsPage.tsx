@@ -1,3 +1,4 @@
+import {useCatalogSelection,CatalogSelectionBar,CatalogSelectionCheck,confirmCatalogDelete,type CatalogSelectionItem} from '../components/CatalogSelection';
 import {ProjectStructureEditor,PlanBuildingEditor} from '../components/ProjectStructureEditor';
 import {CatalogCover} from '../components/CatalogCover';
 import {useDialog} from '../components/useDialog';
@@ -45,6 +46,7 @@ function PreviewObjectsPage(){
   const [status,setStatus]=React.useState<'all'|'published'|'draft'|'archived'>('all');
   const [detailsValid,setDetailsValid]=React.useState(true);
   const [structureValid,setStructureValid]=React.useState(true);
+  const selection=useCatalogSelection(JSON.stringify([city,status,query,reviewOnly]));
   const [notice,setNotice]=React.useState('');
   useDialog(!!selected,()=>setSelected(null));
   const p=state.properties.find(x=>x.id===selected);
@@ -63,6 +65,12 @@ function PreviewObjectsPage(){
     archived:cityProperties.filter(p=>p.status==='archived').length,
   };
 
+  const removeObjects=(items:CatalogSelectionItem[])=>{
+    if(!confirmCatalogDelete(items))return;
+    const ids=new Set(items.map(p=>p.id));
+    updatePulseState(current=>({...current,properties:current.properties.filter(p=>!ids.has(p.id))}));
+    selection.remove([...ids]);if(selected&&ids.has(selected))setSelected(null);setNotice('Удалено ЖК: '+ids.size);
+  };
   const previewServerFeature=(name:string)=>{
     setNotice(name+': доступно в рабочем кабинете. В тестовой версии файлы не загружаются.');
     window.setTimeout(()=>setNotice(''),4200);
@@ -114,7 +122,8 @@ function PreviewObjectsPage(){
         <div className="catalogPageMeta"><b>{list.length}</b><span>объектов в каталоге</span></div>
       </div>
 
-      {list.length?<div className="catalogObjectGrid">{list.map(item=><button key={item.id} className="catalogObjectCard" onClick={()=>setSelected(item.id)}>
+      <CatalogSelectionBar selection={selection} visible={list} onDelete={()=>removeObjects(Array.from(selection.items.values()))}/>
+      {list.length?<div className="catalogObjectGrid">{list.map(item=><div className="catalogObjectItem" key={item.id}><button className="catalogObjectCard" aria-pressed={selection.mode?selection.items.has(item.id):undefined} onClick={()=>{if(selection.mode)selection.toggle(item);else setSelected(item.id)}}>
         <div className="catalogObjectImage">
           <CatalogCover url={item.coverImageUrl}/>
           <span className={'statusChip '+item.status}>{item.status==='published'?'Опубликован':item.status==='draft'?'Черновик':'Архив'}</span>
@@ -127,7 +136,7 @@ function PreviewObjectsPage(){
           </div>
           {(item.projectDetails?.buildings?.length??0)>0&&<span className="catalogBuildingCount">Корпусов: {item.projectDetails!.buildings!.length}</span>}<CatalogFreshnessBadge value={item.freshness}/><div className="catalogObjectDeveloper">{item.developerName||'Застройщик не указан'}</div>
         </div>
-      </button>)}</div>:<div className="emptyState"><PackageOpen size={26}/><strong>Объекты не найдены</strong><span>Измените фильтр или добавьте новый ЖК.</span></div>}
+      </button><CatalogSelectionCheck selection={selection} item={item}/></div>)}</div>:<div className="emptyState"><PackageOpen size={26}/><strong>Объекты не найдены</strong><span>Измените фильтр или добавьте новый ЖК.</span></div>}
     </section>
 
     {p&&<div className="drawerBackdrop"><section className="detailDrawer wideDrawer catalogEditor" role="dialog" aria-modal="true" aria-label="Редактор объекта">
@@ -142,6 +151,7 @@ function PreviewObjectsPage(){
         <small>{readiness(p)===100?'Основные данные заполнены — объект можно публиковать.':'Для публикации нужны обложка, цена, застройщик и срок сдачи.'}</small>
       </div>
 
+      <div className="editorStickyActions"><span>Действия с объектом</span><button type="button" className="catalogDeleteAction" onClick={()=>removeObjects([p])}>Удалить ЖК</button></div>
       <CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} autoSave/>
       <ProjectStructureEditor property={p} onChange={patch} onValidityChange={setStructureValid}/>
       <ProjectDetailsEditor key={p.id} value={p.projectDetails} onValidityChange={setDetailsValid} onChange={projectDetails=>patch({projectDetails})}/>

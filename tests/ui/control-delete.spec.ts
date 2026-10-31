@@ -1,0 +1,28 @@
+import {test,expect} from '@playwright/test';
+import {DEFAULT_STATE} from '../../packages/pulse-data/model';
+for(const width of [390,1440])test(`Control deletion ${width}px: confirmation, selected only, single card and readable options`,async({page})=>{
+ await page.setViewportSize({width,height:900});
+ await page.addInitScript(state=>localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(state)),{...DEFAULT_STATE,properties:[0,1,2].map(i=>({...DEFAULT_STATE.properties[0],id:'delete-'+i,name:'ЖК Проверка '+i,city:'Уссурийск'}))});
+ await page.goto('/pulsedv/control-center/#/objects');
+ await expect(page.locator('.catalogObjectCard')).toHaveCount(3);
+ const option=page.getByLabel('Город объектов').locator('option').first();
+ expect(await option.evaluate(e=>getComputedStyle(e).backgroundColor)).toBe('rgb(75, 39, 48)');
+ await page.getByRole('button',{name:'Выбрать объекты',exact:true}).click();
+ await page.getByRole('checkbox',{name:'Выбрать ЖК: ЖК Проверка 0',exact:true}).check();
+ await page.locator('.catalogObjectCard').filter({hasText:'ЖК Проверка 1'}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
+ await expect(page.getByRole('checkbox',{name:'Выбрать ЖК: ЖК Проверка 1',exact:true})).toBeChecked();
+ await page.getByRole('region',{name:'Управление выбором объектов'}).scrollIntoViewIfNeeded();
+ await page.screenshot({path:`test-results/control-selection-${width}.png`});
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+ await page.getByText('Проверить выбранные объекты · 2',{exact:true}).click();
+ await expect(page.locator('.catalogSelectionBar li')).toHaveCount(2);
+ page.once('dialog',async d=>{expect(d.message()).toContain('ЖК Проверка 0');expect(d.message()).not.toContain('ЖК Проверка 2');await d.dismiss()});
+ await page.getByRole('button',{name:'Удалить выбранные · 2',exact:true}).click();await expect(page.locator('.catalogObjectCard')).toHaveCount(3);
+ page.once('dialog',d=>d.accept());await page.getByRole('button',{name:'Удалить выбранные · 2',exact:true}).click();await expect(page.locator('.catalogObjectCard')).toHaveCount(1);await expect(page.locator('.catalogObjectCard')).toContainText('ЖК Проверка 2');
+ await page.getByRole('button',{name:'Отмена выбора',exact:true}).click();await page.locator('.catalogObjectCard').click();
+ const editor=page.getByRole('dialog',{name:'Редактор объекта'});await expect(editor).toBeVisible();
+ expect(await editor.evaluate(e=>e.scrollWidth-e.clientWidth)).toBeLessThanOrEqual(1);
+ page.once('dialog',d=>d.accept());await editor.getByRole('button',{name:'Удалить ЖК',exact:true}).click();await expect(editor).toHaveCount(0);await expect(page.locator('.catalogObjectCard')).toHaveCount(0);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+});

@@ -12,9 +12,9 @@ export function useCatalogCity(){
   });
   return [city,setCity] as const;
 }
-export function CatalogCityFilter({city,cities,onChange}:{city:string;cities:{city:string;all:number}[];onChange:(city:string)=>void}){
+export function CatalogCityFilter({city,cities,onChange,disabled=false}:{disabled?:boolean;city:string;cities:{city:string;all:number}[];onChange:(city:string)=>void}){
   return <label className="catalogCityFilter"><MapPin size={18}/><span>Город</span>
-    <select aria-label="Город объектов" value={city} onChange={e=>onChange(e.target.value)}>
+    <select disabled={disabled} aria-label="Город объектов" value={city} onChange={e=>onChange(e.target.value)}>
       <option value="">Все города</option>
       {city&&!cities.some(item=>item.city===city)&&<option value={city}>{city}</option>}
       {cities.map(item=><option key={item.city} value={item.city}>{item.city} · {item.all}</option>)}

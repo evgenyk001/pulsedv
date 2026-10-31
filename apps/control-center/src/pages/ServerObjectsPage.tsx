@@ -1,3 +1,5 @@
+import {runtime,ApiError} from '../../../../packages/pulse-data/runtime';
+import {useCatalogSelection,CatalogSelectionBar,CatalogSelectionCheck,confirmCatalogDelete,type CatalogSelectionItem} from '../components/CatalogSelection';
 import {ProjectStructureEditor,PlanBuildingEditor} from '../components/ProjectStructureEditor';
 import {CatalogCover} from '../components/CatalogCover';
 import {CatalogCityFilter,useCatalogCity} from '../components/CatalogCityFilter';
@@ -20,7 +22,7 @@ import { PageFrame } from "../components/PageFrame";
 import type { ProjectBuilding, PulseProperty } from "../../../../packages/pulse-data";
 import {
   createAdminProperty,deleteAdminMedia,getAdminProperty,importAdminCatalog,listAdminCatalog,
-  saveAdminProperty,uploadAdminMedia,uploadAdminMediaCompact,getAdminCatalogSummary,type CatalogSummary,type AdminCatalogImportProperty
+  saveAdminProperty,uploadAdminMedia,uploadAdminMediaCompact,deleteAdminProperty,getAdminCatalogSummary,type CatalogSummary,type AdminCatalogImportProperty
 } from "../catalogApi";
 
 type StatusFilter="all"|"draft"|"published"|"archived";
@@ -133,6 +135,10 @@ export function ServerObjectsPage(){
   const [error,setError]=React.useState("");
   const [detailsValid,setDetailsValid]=React.useState(true);
   const [structureValid,setStructureValid]=React.useState(true);
+  const canDelete=runtime.member?.role==='owner';
+  const selection=useCatalogSelection(JSON.stringify([city,status,query,reviewOnly]));
+  const [deleteError,setDeleteError]=React.useState(''),[deleteProgress,setDeleteProgress]=React.useState('');
+  const deleting=React.useRef(false);
   const [notice,setNotice]=React.useState("");
   const [summaryError,setSummaryError]=React.useState("");
 
@@ -334,6 +340,24 @@ export function ServerObjectsPage(){
     finally{setBusy(false)}
   };
 
+  const removeObjects=async(items:CatalogSelectionItem[],unsaved=false)=>{
+    if(deleting.current||busy||!canDelete||!confirmCatalogDelete(items,unsaved))return;
+    deleting.current=true;setBusy(true);setDeleteError('');setNotice('');
+    const removed:string[]=[];let failure='';
+    try{
+      for(const item of items){
+        setDeleteProgress('Удаляем '+(removed.length+1)+' из '+items.length+'…');
+        try{await deleteAdminProperty(item.id);removed.push(item.id)}
+        catch(e){if(e instanceof ApiError&&e.status===404){removed.push(item.id);continue}failure=e instanceof Error?e.message:'Не удалось удалить объект';break}
+      }
+      selection.remove(removed);
+      if(selected&&removed.includes(selected.id)){setSelected(null);setDirty(false)}
+      try{await reload()}catch{failure=failure||'Не удалось обновить список после удаления. Перезагрузите страницу.'}
+      if(removed.length)setNotice('Удалено ЖК: '+removed.length+' из '+items.length);
+      if(failure)setDeleteError(failure+' Подтверждённо удалено: '+removed.length+' из '+items.length+'. Оставшиеся объекты сохранены в выборе; можно повторить удаление.');
+    }finally{deleting.current=false;setBusy(false);setDeleteProgress('')}
+  };
+
   const totalPages=Math.max(1,Math.ceil(data.total/24));
   const p=selected;
   const ready=p?readiness(p):0;
@@ -346,8 +370,9 @@ export function ServerObjectsPage(){
   >
     {(error||notice)&&<div className={error?"errorNotice":"successNotice"} role={error?"alert":"status"}>{error||notice}</div>}
 
+    {deleteError&&!selected&&<div className="errorNotice" role="alert">{deleteError}</div>}
     {summaryError&&<div className="errorNotice" role="alert">Не удалось загрузить список городов. <button className="secondaryAction" onClick={()=>void loadCounts().catch(()=>{})}>Обновить города</button></div>}
-    <CatalogCityFilter city={city} cities={cities} onChange={setCity}/>
+    <CatalogCityFilter disabled={busy} city={city} cities={cities} onChange={setCity}/>
     <section className="catalogOverview">
       <article><span><Building2 size={17}/></span><div><small>Всего ЖК</small><strong>{counts.all}</strong><p>{city||"Все города"}</p></div></article>
       <article><span className="success"><CheckCircle2 size={17}/></span><div><small>Опубликовано</small><strong>{counts.published}</strong><p>Видят пользователи</p></div></article>
@@ -375,22 +400,23 @@ export function ServerObjectsPage(){
           <span className="kicker">БАЗА ОБЪЕКТОВ</span>
           <h2>{status==="all"?"Все ЖК":status==="published"?"Опубликованные":status==="draft"?"Черновики":"Архив"}</h2>
         </div>
-        <label className="controlSearch catalogSearch"><Search size={17}/><input aria-label="Поиск объектов" placeholder="Название ЖК или застройщик" value={query} onChange={e=>setQuery(e.target.value)}/></label>
+        <label className="controlSearch catalogSearch"><Search size={17}/><input disabled={busy} aria-label="Поиск объектов" placeholder="Название ЖК или застройщик" value={query} onChange={e=>setQuery(e.target.value)}/></label>
       </div>
 
       <div className="catalogFilters">
         <div className="segmented">
           {([["all","Все"],["published","Опубликованы"],["draft","Черновики"],["archived","Архив"]] as [StatusFilter,string][]).map(([value,label])=>
-            <button key={value} className={status===value?"active":""} onClick={()=>setStatus(value)}>{label}</button>
+            <button key={value} className={status===value?"active":""} disabled={busy} onClick={()=>setStatus(value)}>{label}</button>
           )}
         </div>
-        <button type="button" className="secondaryAction" aria-pressed={reviewOnly} onClick={()=>setReviewOnly(v=>!v)}>{reviewOnly?"Показать весь каталог":"Требуют проверки"}</button>
+        <button type="button" className="secondaryAction" disabled={busy} aria-pressed={reviewOnly} onClick={()=>setReviewOnly(v=>!v)}>{reviewOnly?"Показать весь каталог":"Требуют проверки"}</button>
         <div className="catalogPageMeta"><b>{data.total}</b><span>объектов · страница {page} из {totalPages}</span></div>
       </div>
 
+      {canDelete&&<CatalogSelectionBar selection={selection} visible={data.items} busy={busy} loading={loading||query.trim()!==deferredQuery} progress={deleteProgress} onDelete={()=>void removeObjects(Array.from(selection.items.values()))}/>}
       {loading?<div className="emptyState catalogLoading"><PackageOpen size={26}/><strong>Загружаем каталог…</strong></div>:
         error?<div className="emptyState"><strong>Не удалось обновить каталог</strong><span>Проверьте соединение и повторите загрузку.</span><button className="secondaryAction" onClick={()=>void reload().catch(()=>{})}>Повторить загрузку</button></div>:
-        data.items.length?<div className="catalogObjectGrid">{data.items.map(item=><button key={item.id} className="catalogObjectCard" disabled={busy} onClick={()=>void open(item.id)}>
+        data.items.length?<div className="catalogObjectGrid">{data.items.map(item=><div className="catalogObjectItem" key={item.id}><button className="catalogObjectCard" disabled={busy} aria-pressed={selection.mode?selection.items.has(item.id):undefined} onClick={()=>{if(selection.mode)selection.toggle(item);else void open(item.id)}}>
           <div className="catalogObjectImage">
             <CatalogCover url={item.coverImageUrl}/>
             <span className={"statusChip "+item.status}>{item.status==="published"?"Опубликован":item.status==="draft"?"Черновик":"Архив"}</span>
@@ -403,13 +429,13 @@ export function ServerObjectsPage(){
             </div>
             {(item.projectDetails?.buildings?.length??0)>0&&<span className="catalogBuildingCount">Корпусов: {item.projectDetails!.buildings!.length}</span>}<CatalogFreshnessBadge value={item.freshness}/><div className="catalogObjectDeveloper">{item.developerName||"Застройщик не указан"}</div>
           </div>
-        </button>)}</div>:
+        </button><CatalogSelectionCheck selection={selection} item={item} busy={busy}/></div>)}</div>:
         <div className="emptyState"><PackageOpen size={26}/><strong>Объекты не найдены</strong><span>Измените фильтр или добавьте новый ЖК.</span>{(city||query||status!=="all"||reviewOnly)&&<button className="secondaryAction" onClick={()=>{setCity("");setQuery("");setStatus("all");setReviewOnly(false);setPage(1)}}>Сбросить фильтры</button>}</div>}
 
       <div className="catalogPager">
-        <button disabled={page<=1||loading} onClick={()=>setPage(value=>Math.max(1,value-1))}><ChevronLeft size={16}/>Назад</button>
+        <button disabled={page<=1||loading||busy} onClick={()=>setPage(value=>Math.max(1,value-1))}><ChevronLeft size={16}/>Назад</button>
         <span>{page} / {totalPages}</span>
-        <button disabled={!data.hasMore||loading} onClick={()=>setPage(value=>value+1)}>Дальше<ChevronRight size={16}/></button>
+        <button disabled={!data.hasMore||loading||busy} onClick={()=>setPage(value=>value+1)}>Дальше<ChevronRight size={16}/></button>
       </div>
     </section>
 
@@ -420,6 +446,8 @@ export function ServerObjectsPage(){
       </div>
 
       {error&&<div className="errorNotice" role="alert">{error}<button className="secondaryAction" disabled={busy} onClick={()=>{if(window.confirm("Загрузить актуальную карточку? Несохранённые правки в форме будут отменены."))void open(p.id)}}>Загрузить актуальную версию</button></div>}
+      {deleteError&&<div className="errorNotice" role="alert">{deleteError}</div>}
+      {deleteProgress&&<div role="status">{deleteProgress}</div>}
       <fieldset className="editorFieldset" disabled={busy}>
       <div className="catalogReadiness">
         <div><span>Готовность карточки</span><b>{ready}%</b></div>
@@ -427,9 +455,9 @@ export function ServerObjectsPage(){
         <small>{ready===100?"Основные данные заполнены — объект можно публиковать.":"Для публикации нужны обложка, цена, застройщик и срок сдачи."}</small>
       </div>
 
-      <div className="editorStickyActions">
+      <div className="editorStickyActions">{canDelete&&<button type="button" className="catalogDeleteAction" disabled={busy} onClick={()=>void removeObjects([p],dirty)}><Trash2 size={16}/>Удалить ЖК</button>}
         <span>{dirty?"Есть несохранённые изменения":"Все изменения сохранены"}</span>
-        <button className="primaryAction" disabled={!dirty||busy||!detailsValid||!structureValid} onClick={()=>void save()}><Save size={15}/>{busy?"Сохраняем…":"Сохранить"}</button>
+        <button className="primaryAction" disabled={!dirty||busy||!detailsValid||!structureValid} onClick={()=>void save()}><Save size={15}/>{busy?(deleting.current?"Удаляем…":"Сохраняем…"):"Сохранить"}</button>
       </div>
 
       <CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} disabled={busy}/>
