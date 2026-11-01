@@ -27,7 +27,7 @@ recover(){
   if [ "$sources_changed" -eq 1 ]; then cp -p "$backup/Caddyfile" deploy/Caddyfile || true; fi
   if [ -n "$image_ref" ] && [ -n "$old_id" ]; then docker image tag "$old_id" "$image_ref" || true; fi
   if [ "$activated" -eq 1 ]; then
-   rollback_compose up -d --no-deps --no-build --wait --wait-timeout 180 web || echo 'Не удалось вернуть прежний web; сохраните вывод.'
+   rollback_compose up -d --force-recreate --no-deps --no-build --wait --wait-timeout 180 web || echo 'Не удалось вернуть прежний web; сохраните вывод.'
   fi
  fi
  exit "$status"
@@ -40,6 +40,10 @@ stage='1/4. Сохраняем прежний веб-образ'; echo "$stage"
 container=$(compose ps -a -q web)
 if [ -z "$container" ] || [[ "$container" == *$'\n'* ]]; then echo 'Ожидался один контейнер web.'; exit 1; fi
 old_id=$(docker inspect --format '{{.Image}}' "$container")
+if ! docker image inspect --format '{{.Id}}' "$old_id" > /dev/null 2>&1; then
+ echo 'Образ прежнего web недоступен для отката; обновление не начато.'; exit 1
+fi
+docker image tag "$old_id" "pulsedv-recovery:$(basename "$backup")-web"
 printf '%s\n' "$old_id" > "$backup/old-image.txt"
 compose config --format json > "$backup/effective-compose.json"
 python3 - "$backup" <<'PY'
@@ -80,7 +84,7 @@ new_compose build web
 expected_id=$(docker image inspect --format '{{.Id}}' "$image_ref")
 new_compose run --rm -T --no-deps --entrypoint caddy web validate --config /etc/caddy/Caddyfile --adapter caddyfile
 activated=1
-new_compose up -d --no-deps --no-build --wait --wait-timeout 180 web
+new_compose up -d --force-recreate --no-deps --no-build --wait --wait-timeout 180 web
 container=$(compose ps -q web)
 test -n "$container"
 test "$(docker inspect --format '{{.Image}}' "$container")" = "$expected_id"

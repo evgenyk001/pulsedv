@@ -31,7 +31,7 @@ recover(){
    for service in api worker web; do docker image tag "${old_ids[$service]}" "${image_refs[$service]}" || true; done
   fi
   if [ "$activated" -eq 1 ]; then
-   if rollback_compose up -d --no-deps --no-build --wait --wait-timeout 180 api worker web; then
+   if rollback_compose up -d --force-recreate --no-deps --no-build --wait --wait-timeout 180 api worker web; then
     echo 'Прежние образы возвращены. Добавочные столбцы базы могут остаться; данные не восстанавливались поверх новых записей.'
    else echo 'Не удалось полностью вернуть прежние контейнеры; сохраните весь вывод.'; fi
   elif [ "$paused" -eq 1 ]; then
@@ -49,6 +49,12 @@ for service in api worker web; do
  container=$(compose ps -a -q "$service")
  if [ -z "$container" ] || [[ "$container" == *$'\n'* ]]; then echo "Ожидался один существующий контейнер $service; ничего не остановлено."; exit 1; fi
  old_ids[$service]=$(docker inspect --format '{{.Image}}' "$container")
+ # A running container may outlive its image metadata. Never begin an upgrade without rollback images.
+ if ! docker image inspect --format '{{.Id}}' "${old_ids[$service]}" > /dev/null 2>&1; then
+  echo "Образ прежнего $service недоступен для отката. Сервисы не остановлены; обновление не начато."
+  exit 1
+ fi
+ docker image tag "${old_ids[$service]}" "pulsedv-recovery:$(basename "$backup")-$service"
  printf '%s\t%s\n' "$service" "${old_ids[$service]}" >> "$backup/old-images.tsv"
 done
 compose start api worker
@@ -121,7 +127,7 @@ step '5/8. Применяем недостающую миграцию; повт�
 new_compose run --rm -T --no-deps api node --import tsx backend/src/migrate.ts
 step '6/8. Запускаем новые контейнеры и сверяем фактические ID образов'
 activated=1
-new_compose up -d --no-deps --no-build --wait --wait-timeout 180 api worker web
+new_compose up -d --force-recreate --no-deps --no-build --wait --wait-timeout 180 api worker web
 paused=0
 for service in api worker web; do
  container=$(compose ps -q "$service")
