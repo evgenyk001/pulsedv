@@ -117,3 +117,19 @@ for(const [kind,installer] of [['buildings',source],['selects',selectsSource],['
   if(kind!=='buildings'){assert.equal(final.migrated,false);for(const service of ['api','worker'])assert.deepEqual(final.containers[service],state.containers[service]);assert.ok(!final.calls.some(call=>['start','stop'].some(command=>call.includes(command))))}
  }finally{await rm(root,{recursive:true,force:true})}
 });
+
+// Exercise the actual allow/deny gate against real Git histories. Mock Docker
+// tests cannot detect a path accidentally placed in the protected set.
+for(const [changed,allowed] of [['apps/mini-app/src/entry.tsx',true],['apps/control-center/src/entry.tsx',false],['backend/src/app.ts',false],['packages/pulse-data/runtime.ts',false],['compose.yaml',false]])test(`Phone entry Git scope: ${changed}`,async()=>{
+ const root=await mkdtemp(join(tmpdir(),'pulse-entry-git-'));
+ try{
+  const git=(...args)=>{const run=spawnSync('git',args,{cwd:root,encoding:'utf8'});assert.equal(run.status,0,run.stderr);return run.stdout.trim()};
+  git('init','-q');git('config','user.email','test@example.invalid');git('config','user.name','Installer test');
+  await writeFile(join(root,'README.md'),'baseline\n');git('add','.');git('commit','-qm','baseline');const base=git('rev-parse','HEAD');
+  await mkdir(join(root,changed.substring(0,changed.lastIndexOf('/'))||'.'),{recursive:true});
+  await writeFile(join(root,changed),'changed\n');git('add','.');git('commit','-qm','candidate');const target=git('rev-parse','HEAD');git('checkout','-q',base);
+  const gate=entrySource.split('\n').find(line=>line.startsWith('git diff --quiet HEAD "$target" -- '));assert.ok(gate,'installer must keep its scope check');
+  const run=spawnSync('bash',['-c',gate],{cwd:root,env:{...process.env,target},encoding:'utf8'});
+  assert.equal(run.status,allowed?0:1,run.stdout+run.stderr);
+ }finally{await rm(root,{recursive:true,force:true})}
+});
