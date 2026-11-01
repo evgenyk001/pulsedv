@@ -53,3 +53,24 @@ test('Onboarding keeps controls inside Telegram safe areas and supports swiping'
  await expect(first).toHaveAttribute('aria-current','step');
  await intro.getByRole('button',{name:'Пропустить онбординг'}).click();await expect(intro).toHaveCount(0);
 });
+
+test('Startup reserves image traffic for onboarding; the hidden home and mortgage art wait',async({page})=>{
+ const images:string[]=[];let held:any;
+ page.on('request',r=>{if(r.url().endsWith('.webp'))images.push(r.url())});
+ await page.route('**/fbe56ba1-f7be-4c7e-a604-dd6a20ae71c8-onboarding-final-01.webp',r=>{held=r});
+ try{
+  await page.goto('/pulsedv/mini-app/',{waitUntil:'domcontentloaded'});
+  const intro=page.getByRole('region',{name:'Онбординг PULSEDV'});await expect(intro).toBeVisible();await expect(intro.getByRole('button',{name:'Пропустить онбординг'})).toBeEnabled();
+  await expect.poll(()=>!!held).toBe(true);await page.waitForTimeout(1100);
+  expect(images).toHaveLength(1);expect(images[0]).toContain('onboarding-final-01.webp');
+  await held.continue();held=null;
+  await expect.poll(()=>images.some(s=>s.includes('onboarding-final-02.webp'))).toBe(true);
+  expect(images.filter(s=>!s.includes('onboarding-final-'))).toEqual([]);
+  await intro.getByRole('button',{name:'Пропустить онбординг'}).click();await expect(intro).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'Каталог',exact:true})).toBeVisible();
+  await expect.poll(()=>images.some(s=>!s.includes('onboarding-final-'))).toBe(true);
+  await page.waitForTimeout(1100);expect(images.some(s=>s.includes('mortgage-v5-'))).toBe(false);
+  await page.evaluate(()=>location.hash='/mortgage');await expect(page.locator('dialog[aria-label="Знакомство с ипотекой"]')).toBeVisible();
+  await expect.poll(()=>images.some(s=>s.includes('mortgage-v5-programs.webp'))).toBe(true);
+ }finally{await held?.abort().catch(()=>{})}
+});

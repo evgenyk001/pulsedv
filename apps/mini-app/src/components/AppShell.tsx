@@ -8,7 +8,6 @@ import {NavigationMemory,useAppBack} from "../helpers/navigationMemory";
 import { useLocation } from "react-router-dom";
 import { BottomNav } from "./BottomNav";
 import { Onboarding } from "./Onboarding";
-import {warmMortgageArtwork,MORTGAGE_STORY_STORAGE,MORTGAGE_STORY_VERSION} from './MortgageStoryOnboarding';
 import { usePulseControlState } from "../helpers/usePulseControlState";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./AppShell.module.css";
@@ -24,12 +23,12 @@ function ContextBack(){
 export function AppShell({children}:{children:React.ReactNode}){
   const location=useLocation();
   const control=usePulseControlState();
-  const [showOnboarding,setShowOnboarding]=React.useState(false);
+  const [showOnboarding,setShowOnboarding]=React.useState(()=>control.content.onboardingEnabled&&safeLocalStorage.getItem("pulse_onboarding_version")!==control.content.onboardingVersion);
   const [storyOverlayOpen,setStoryOverlayOpen]=React.useState(false);
-  const mortgageWarmed=React.useRef(false);
   const chatRoute=location.pathname==="/journey"&&(new URLSearchParams(location.search).has("lead")||new URLSearchParams(location.search).has("compose"));
   const propertyRoute=location.pathname.startsWith("/property/");
   const hideNav=propertyRoute||chatRoute;
+  const onboardingVisible=showOnboarding&&!['/privacy','/personal-data-consent'].includes(location.pathname)&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled;
 
   React.useEffect(()=>{
     const version=control.content.onboardingVersion;
@@ -41,13 +40,6 @@ export function AppShell({children}:{children:React.ReactNode}){
     window.addEventListener("pulse:show-onboarding",replay);
     return()=>window.removeEventListener("pulse:show-onboarding",replay);
   },[control.content.onboardingEnabled]);
-
-  React.useEffect(()=>{
-    if(showOnboarding||location.pathname==='/mortgage'||mortgageWarmed.current)return;
-    try{if(safeLocalStorage.getItem(MORTGAGE_STORY_STORAGE)===MORTGAGE_STORY_VERSION)return}catch{/* Storage may be unavailable. */}
-    const timer=window.setTimeout(()=>{mortgageWarmed.current=true;warmMortgageArtwork()},700);
-    return()=>window.clearTimeout(timer);
-  },[showOnboarding,location.pathname]);
 
   React.useLayoutEffect(()=>{
     const handleStoryOverlay=(event:Event)=>{
@@ -88,9 +80,9 @@ export function AppShell({children}:{children:React.ReactNode}){
   return <NavigationMemory><div className={styles.viewport}><FavoriteSync/>
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
     <main className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
-      <ContextBack/><div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:propertyRoute?styles.propertyFrame:""}`}>{children}</div>
+      <ContextBack/><div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:propertyRoute?styles.propertyFrame:""}`}>{!onboardingVisible&&children}</div>
     </main>
     {!hideNav&&!storyOverlayOpen&&<BottomNav/>}
-    {showOnboarding&&!['/privacy','/personal-data-consent'].includes(location.pathname)&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}
+    {onboardingVisible&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}
   </div></NavigationMemory>
 }
