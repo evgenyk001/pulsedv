@@ -45,16 +45,28 @@ test('Mandatory phone blocks direct routes, cancellation and forged client succe
  const button=page.getByRole('button',{name:'Поделиться номером и войти'});
  await expect(button).toBeDisabled();await expect(page.getByRole('heading',{name:'Избранное',exact:true})).toHaveCount(0);expect(privateReads).toBe(0);
  await page.getByRole('link',{name:'Политика конфиденциальности'}).click();await expect(page.getByRole('heading',{name:'Политика обработки персональных данных',exact:true})).toBeVisible();
- await page.evaluate(()=>location.hash='/catalog');await expect(page.getByRole('heading',{name:'Новостройки',exact:true})).toBeVisible();
- await page.getByRole('link',{name:'Войти в аккаунт',exact:true}).click();await expect(button).toBeVisible();
+ for(const path of ['/','/catalog','/map','/mortgage','/property/example','/profile','/favorites']){
+  await page.evaluate(path=>location.hash=path,path);await expect(button).toBeVisible();
+  await expect(page.getByRole('button',{name:'Каталог',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('link',{name:'Вернуться в каталог',exact:true})).toHaveCount(0);
+ }
+ for(const size of [{width:320,height:568},{width:390,height:844},{width:844,height:390}]){
+  await page.setViewportSize(size);expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+  await button.scrollIntoViewIfNeeded();await expect(button).toBeVisible();
+ }
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:'/tmp/pulse-phone-entry.png',fullPage:true});
  await page.getByRole('checkbox').check();await button.click();await expect.poll(()=>requests).toBe(1);await expect.poll(()=>page.evaluate(()=>typeof (window as any).contactCallback)).toBe('function');
  await page.evaluate(()=>(window as any).contactCallback(false));await expect(page.getByRole('alert')).toContainText('Без передачи');
  await expect(page.getByRole('heading',{name:'Каталог',exact:true})).toHaveCount(0);
  await button.click();await expect.poll(()=>requests).toBe(2);await expect.poll(()=>page.evaluate(()=>typeof (window as any).contactCallback)).toBe('function');
- verified=true;await page.evaluate(()=>(window as any).contactCallback(true));
- await expect(button).toHaveCount(0);await expect(page.getByRole('heading',{name:'Помощь с покупкой',exact:true})).toBeVisible();
+ // A successful client callback alone must not grant access.
+ await page.evaluate(()=>(window as any).contactCallback(true));
+ await expect(page.getByRole('button',{name:'Подтверждаем номер…'})).toBeVisible();await page.waitForTimeout(1100);await expect(page.getByRole('button',{name:'Подтверждаем номер…'})).toBeDisabled();expect(privateReads).toBe(0);
+ verified=true;
+ await expect(button).toHaveCount(0);await expect(page.getByRole('heading',{name:'Избранное',exact:true})).toBeVisible();
 });
 test('Favorites has no stray zero when synchronization queue is empty',async({page})=>{
+ await page.addInitScript(version=>localStorage.setItem('pulse_onboarding_version',version),DEFAULT_STATE.content.onboardingVersion);
  // This isolated API-mode server omits the flag to exercise existing non-gated installations.
  apiHandler=request=>{const path=new URL(request.url!,origin).pathname.replace('/api/v1','');if(path==='/public/state')return {state:DEFAULT_STATE,version:1};if(path==='/auth/session')return {sessionId:'s',accessToken:'t',expiresAt:new Date(Date.now()+86400000).toISOString()};if(path==='/me/favorites')return {ids:[],authenticated:true};if(path.includes('catalog'))return {items:[],total:0};return {items:[]}};
  await page.route('https://telegram.org/js/telegram-web-app.js**',r=>r.fulfill({body:''}));

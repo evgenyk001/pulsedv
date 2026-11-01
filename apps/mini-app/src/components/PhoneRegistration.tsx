@@ -7,6 +7,7 @@ export function PhoneRegistration({onRegistered}:{onRegistered:()=>void}){
  const active=React.useRef(true);
  React.useEffect(()=>()=>{active.current=false},[]);
  const submit=async()=>{
+  if(busy||!consent)return;
   const tg=(window as any).Telegram?.WebApp;
   if(!tg?.initData||typeof tg.requestContact!=='function'){setError('Откройте PULSEDV.RU через бота в мобильном Telegram.');return;}
   setBusy(true);setError('');
@@ -24,5 +25,5 @@ export function PhoneRegistration({onRegistered}:{onRegistered:()=>void}){
  };
  React.useEffect(()=>{active.current=true;prepareTelegramWindow((window as any).Telegram?.WebApp)},[]);
  const tg=(window as any).Telegram?.WebApp;
- return <main className="phoneRegistration"><section><img src={import.meta.env.BASE_URL+'pulse-app-180-v3.png'} alt=""/><small>PULSEDV.RU</small><h1>Добро пожаловать</h1><p>Подтвердите свой номер в Telegram, чтобы войти и сохранить ваши подборки в одном аккаунте.</p><label><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/><span>Соглашаюсь на обработку персональных данных для регистрации и связи по моим обращениям.</span></label><nav><a href="#/catalog">Вернуться в каталог</a><a href="#/personal-data-consent">Условия обработки данных</a><a href="#/privacy">Политика конфиденциальности</a></nav>{error&&<p role="alert">{error}</p>}{tg?.initData?<button disabled={busy||!consent} onClick={()=>void submit()}>{busy?'Подтверждаем номер…':'Поделиться номером и войти'}</button>:<a className="phoneRegistrationOpen" href="https://t.me/pulsedvbot">Открыть в Telegram</a>}</section></main>;
+ return <main className="phoneRegistration"><section aria-labelledby="phone-entry-title"><header><img src={import.meta.env.BASE_URL+'pulse-app-180-v3.png'} alt=""/><span>PULSEDV.RU<small>Новостройки Приморья</small></span></header><div className="phoneRegistrationBadge">Ваш личный аккаунт</div><h1 id="phone-entry-title">Ваш новый дом<br/>начинается здесь</h1><p>Подтвердите номер в Telegram, чтобы войти в PULSE.</p><ul className="phoneRegistrationBenefits"><li>Подборки и избранное всегда под рукой</li><li>Общение с менеджером в одном месте</li></ul><div className="phoneRegistrationAction"><label><input type="checkbox" checked={consent} disabled={busy} onChange={e=>setConsent(e.target.checked)}/><span>Соглашаюсь на обработку персональных данных для регистрации и связи по моим обращениям.</span></label>{error&&<p role="alert">{error}</p>}{tg?.initData?<button disabled={busy||!consent} onClick={()=>void submit()}>{busy?'Подтверждаем номер…':'Поделиться номером и войти'}</button>:<a className="phoneRegistrationOpen" href="https://t.me/pulsedvbot">Открыть в Telegram</a>}<p className="phoneRegistrationHint">Номер передаст Telegram после вашего подтверждения.</p></div><nav aria-label="Документы"><a href="#/personal-data-consent">Условия обработки данных</a><a href="#/privacy">Политика конфиденциальности</a></nav></section></main>;
 }

@@ -7,7 +7,7 @@ import {pageIsLeaving} from '../../../../packages/pulse-data/pageLifecycle';
 import React from 'react';
 import {initializePublicState,connectPublicIdentity,runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import './telegramConnection.css';
-const publicRoute=(path:string)=>/^\/?tgWebApp(?:Data|Version|Platform)=/.test(path)||['/','/catalog','/map','/mortgage','/privacy','/personal-data-consent'].includes(path)||/^\/property\/[^/]+$/.test(path);
+
 export function RuntimeGate({children}:{children:React.ReactNode}){
  const startApplied=React.useRef(false),active=React.useRef(true),identityTask=React.useRef<Promise<void>|null>(null);
  const [ready,setReady]=React.useState(!runtime.enabled),[registered,setRegistered]=React.useState(false),[connected,setConnected]=React.useState(!runtime.enabled);
@@ -44,10 +44,12 @@ export function RuntimeGate({children}:{children:React.ReactNode}){
   const sdk=()=>{prepareTelegramWindow((window as any).Telegram?.WebApp);if(ready&&!connected)void connect()};window.addEventListener('pulse:telegram-sdk-ready',sdk);
   return()=>{window.removeEventListener('online',retry);document.removeEventListener('visibilitychange',retry);window.removeEventListener('pulse:telegram-sdk-ready',sdk)};
  },[ready,connected,connect,load]);
- const path=(window.location.hash.slice(1)||'/').split('?')[0],isPublic=publicRoute(path);
+ const path=(window.location.hash.slice(1)||'/').split('?')[0];
  if(!ready)return <BrandLoading fullScreen error={error} onRetry={()=>void load()}/>;
- const notice=<section className="telegramConnectionNotice" role={connectionError?'alert':'status'} aria-label="Подключение аккаунта"><p>{connectionError?'Не удалось подключить аккаунт. Каталог доступен — попробуйте подключиться ещё раз.':'Подключаем аккаунт. Каталог уже доступен.'}</p>{connectionError&&<button onClick={()=>void connect()}>Повторить подключение</button>}{!isPublic&&<a href="#/catalog">Перейти в каталог</a>}</section>;
- if(runtime.enabled&&!connected)return isPublic?<>{notice}{children}</>:notice;
- if(runtime.enabled&&runtime.requiresPhone&&!registered&&!['/privacy','/personal-data-consent'].includes(path))return isPublic?<><section className="telegramConnectionNotice"><p>Подтвердите номер, чтобы сохранять подборки и общаться с менеджером.</p><a href="#/profile">Войти в аккаунт</a></section>{children}</>:<PhoneRegistration onRegistered={()=>setRegistered(true)}/>;
+ // Only legal documents may render before identity and phone verification.
+ if(runtime.enabled&&!['/privacy','/personal-data-consent'].includes(path)){
+  if(!connected)return <main className="telegramConnectionGate"><section role={connectionError?'alert':'status'} aria-label="Подключение аккаунта"><img src={import.meta.env.BASE_URL+'pulse-app-180-v3.png'} alt=""/><small>PULSEDV.RU</small><h1>{connectionError?'Давайте попробуем ещё раз':'Подключаем Telegram'}</h1><p>{connectionError?'Не удалось подключить аккаунт. Проверьте соединение и повторите вход.':'Проверяем ваш аккаунт, чтобы безопасно продолжить вход.'}</p>{connectionError?<button onClick={()=>void connect()}>Повторить подключение</button>:<span className="telegramConnectionSpinner" aria-hidden="true"/>}</section></main>;
+  if(runtime.requiresPhone&&!registered)return <PhoneRegistration onRegistered={()=>setRegistered(true)}/>;
+ }
  return children;
 }
