@@ -18,7 +18,12 @@ if a[:2]==['image','tag']:
  source,target=a[2:4]
  if target.startswith('sha256:'):finish(91)
  s['refs'][target]=s['refs'].get(source,source);finish()
-if a[:2]==['image','inspect']:emit(s['refs'][a[-1]]);finish()
+if a[:2]==['image','inspect']:
+ ref=a[-1]
+ if failure=='missing-image' and ref.startswith('sha256:'):finish(95)
+ if ref in s['refs']:emit(s['refs'][ref]);finish()
+ if ref in s['refs'].values():emit(ref);finish()
+ finish(95)
 if a[0]=='inspect':
  if '.Config.Image' in a[2]:finish(92)
  emit(s['containers'][a[-1].replace('container-','')]['image']);finish()
@@ -57,6 +62,7 @@ if command=='run':
   s['migrated']=True
  finish()
 if command=='up':
+ if failure=='compose-cache' and '--force-recreate' not in a:finish()
  override=json.loads(Path(files[-1]).read_text());rollback='rollback-image' in files[-1]
  for service in services:
   ref=override['services'][service]['image'];s['containers'][service]={'image':s['refs'].get(ref,ref),'running':True}
@@ -85,22 +91,23 @@ if os.environ.get('MOCK_FAILURE')=='https':sys.exit(22)
 url=next(x for x in a if x.startswith('https://'));body='{"status":"ready"}' if url.endswith('/ready') else '.control select option{background-color:#252a31;color:#f2f4f7}\\n' if url.endswith('.css') else '<!doctype html><link href="/pulsedv/control-center/assets/test.css" rel="stylesheet"><script src="/assets/test.js"></script>\\n'
 Path(a[a.index('-o')+1]).write_text(body)
 `;
-for(const [kind,installer] of [['buildings',source],['selects',selectsSource]])for(const failure of kind==='buildings'?['', 'build','migration','activation','schema','https','immutable']:['','build','activation','https'])test(`Installer ${kind}: ${failure||'success'}`,async()=>{
+for(const [kind,installer] of [['buildings',source],['selects',selectsSource]])for(const failure of kind==='buildings'?['', 'build','migration','activation','schema','https','immutable','missing-image','compose-cache']:['','build','activation','https','missing-image','compose-cache'])test(`Installer ${kind}: ${failure||'success'}`,async()=>{
  const root=await mkdtemp(join(tmpdir(),'pulse-installer-'));
  try{
   await mkdir(join(root,'deploy'));await mkdir(join(root,'bin'));await writeFile(join(root,'.env'),'SITE_DOMAIN=pulsedv.ru\n');await writeFile(join(root,'compose.yaml'),'name: pulsedv\n');await writeFile(join(root,'deploy/Caddyfile'),'pulsedv.ru {\n respond "OK"\n}\n');
   const old={api:'sha256:'+'1'.repeat(64),worker:'sha256:'+'2'.repeat(64),web:'sha256:'+'3'.repeat(64)};
   const next={api:'sha256:'+'4'.repeat(64),worker:'sha256:'+'5'.repeat(64),web:'sha256:'+'6'.repeat(64)};
-  const state={containers:Object.fromEntries(Object.entries(old).map(([service,image])=>[service,{image,running:kind==='selects'||service==='web'}])),refs:Object.fromEntries(Object.entries(old).map(([service,image])=>['pulsedv-'+service,image])),new:next,calls:[],migrated:false};
+  const state={containers:Object.fromEntries(Object.entries(old).map(([service,image])=>[service,{image,running:kind==='selects'||failure==='missing-image'||service==='web'}])),refs:Object.fromEntries(Object.entries(old).map(([service,image])=>['pulsedv-'+service,image])),new:next,calls:[],migrated:false};
   const statePath=join(root,'state.json');await writeFile(statePath,JSON.stringify(state));
   for(const [name,content] of Object.entries({docker,git,curl})){const path=join(root,'bin',name);await writeFile(path,content);await chmod(path,0o700)}
   const script=installer.replaceAll('/opt/pulsedv',root).replaceAll('/var/lock/pulsedv-update.lock',join(root,'update.lock')).replaceAll('/root/pulsedv-buildings-recovery.',join(root,'backup.')).replaceAll('/root/pulsedv-control-catalog.',join(root,'backup.'));
   await writeFile(join(root,'installer.sh'),script);
   const run=spawnSync('bash',[join(root,'installer.sh'),'f'.repeat(40)],{env:{...process.env,PATH:join(root,'bin')+':'+process.env.PATH,MOCK_STATE:statePath,MOCK_TARGET:'f'.repeat(40),MOCK_FAILURE:failure},encoding:'utf8',timeout:30000});
   const final=JSON.parse(await readFile(statePath,'utf8'));
-  if(!failure){assert.equal(run.status,0,run.stdout+run.stderr);assert.match(run.stdout,/ГОТОВО/);assert.equal(final.migrated,kind==='buildings');for(const service of Object.keys(old))assert.equal(final.containers[service].image,kind==='buildings'||service==='web'?next[service]:old[service]);}
+  if(!failure||failure==='compose-cache'){assert.equal(run.status,0,run.stdout+run.stderr);assert.match(run.stdout,/ГОТОВО/);assert.equal(final.migrated,kind==='buildings');for(const service of Object.keys(old))assert.equal(final.containers[service].image,kind==='buildings'||service==='web'?next[service]:old[service]);}
   else{assert.notEqual(run.status,0);assert.match(run.stdout,/ОШИБКА на этапе:/);assert.doesNotMatch(run.stdout,/ГОТОВО/);for(const service of Object.keys(old)){assert.equal(final.containers[service].image,old[service]);assert.equal(final.refs['pulsedv-'+service],old[service]);}}
   for(const service of Object.keys(old))assert.equal(final.containers[service].running,true,service+' must be running');
+  if(failure==='missing-image')assert.ok(!final.calls.some(call=>['build','stop','up'].some(command=>call.includes(command))),'missing rollback image must stop before mutation');
   assert.ok(final.calls.some(call=>call.includes('ps')&&call.includes('-a')));
   assert.ok(!final.calls.some(call=>call.join(' ').includes('.Config.Image')));
   const start=final.calls.findIndex(call=>call.includes('start')),build=final.calls.findIndex(call=>call.includes('build'));
