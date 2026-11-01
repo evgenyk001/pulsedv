@@ -27,6 +27,7 @@ export function AppShell({children}:{children:React.ReactNode}){
   const [storyOverlayOpen,setStoryOverlayOpen]=React.useState(false);
   const chatRoute=location.pathname==="/journey"&&(new URLSearchParams(location.search).has("lead")||new URLSearchParams(location.search).has("compose"));
   const propertyRoute=location.pathname.startsWith("/property/");
+  const legalRoute=['/privacy','/personal-data-consent'].includes(location.pathname);
   const hideNav=propertyRoute||chatRoute;
   const onboardingVisible=showOnboarding&&!['/privacy','/personal-data-consent'].includes(location.pathname)&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled;
 
@@ -77,12 +78,12 @@ export function AppShell({children}:{children:React.ReactNode}){
     recordPulseEvent({eventType:"page_view",entityType:"route",entityId:location.pathname,metadata:{search:location.search}});
   },[location.pathname,location.search]);
 
-  return <NavigationMemory><div className={styles.viewport}><FavoriteSync/>
+  return <NavigationMemory><div className={styles.viewport}>{!legalRoute&&<FavoriteSync/>}
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
     <main className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
       <ContextBack/><div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:propertyRoute?styles.propertyFrame:""}`}>{!onboardingVisible&&children}</div>
     </main>
-    {!hideNav&&!storyOverlayOpen&&<BottomNav/>}
+    {!hideNav&&!legalRoute&&!storyOverlayOpen&&<BottomNav/>}
     {onboardingVisible&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}
   </div></NavigationMemory>
 }
