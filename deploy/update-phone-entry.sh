@@ -66,7 +66,7 @@ umask 022
 git fetch origin "$target"
 umask 077
 git merge-base --is-ancestor HEAD "$target" || { echo 'Текущий коммит не предок обновления.'; exit 1; }
-git diff --quiet HEAD "$target" -- backend/src backend/migrations backend/package.json packages apps/mini-app compose.yaml deploy/Caddyfile || { echo 'Обнаружены дополнительные изменения; этот блок обновляет только вход в Mini App.'; exit 1; }
+git diff --quiet HEAD "$target" -- backend/src backend/migrations backend/package.json packages apps/control-center compose.yaml deploy/Caddyfile || { echo 'Обнаружены дополнительные изменения; этот блок обновляет только вход в Mini App.'; exit 1; }
 git show HEAD:deploy/Caddyfile > "$backup/tracked.Caddyfile"
 python3 - "$backup" <<'PY'
 from pathlib import Path
