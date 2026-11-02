@@ -1,13 +1,12 @@
+import {FloorplansEditor} from '../components/FloorplansEditor';
 import {runtime,ApiError} from '../../../../packages/pulse-data/runtime';
 import {useCatalogSelection,CatalogSelectionBar,CatalogSelectionCheck,confirmCatalogDelete,type CatalogSelectionItem} from '../components/CatalogSelection';
-import {ProjectStructureEditor,PlanBuildingEditor} from '../components/ProjectStructureEditor';
+import {ProjectStructureEditor} from '../components/ProjectStructureEditor';
 import {CatalogCover} from '../components/CatalogCover';
 import {CatalogCityFilter,useCatalogCity} from '../components/CatalogCityFilter';
 import {StartingPriceEditor} from '../components/StartingPriceEditor';
-import {PlanDimensionsEditor} from '../components/PlanDimensionsEditor';
 import {PropertyLocationEditor} from '../components/PropertyLocationEditor';
 import {ProjectDetailsEditor} from '../components/ProjectDetailsEditor';
-import {PlanFinishOptionsEditor} from '../components/PlanFinishOptionsEditor';
 import {CatalogFreshnessEditor,CatalogFreshnessBadge} from '../components/CatalogFreshnessEditor';
 import {CatalogPhotosEditor} from '../components/CatalogPhotosEditor';
 import {propertyPriceRub} from '../../../../packages/domain/propertyPresentation';
@@ -489,20 +488,7 @@ export function ServerObjectsPage(){
         <CatalogPhotosEditor key={p.id} property={p} disabled={busy} onChange={images=>patch({images})} onRemove={index=>{const photo=p.images[index];if(photo.id&&photo.url.startsWith('/media/'))void removeMedia(photo.id,'gallery');else patch({images:p.images.filter((_,i)=>i!==index)})}}/>
       </section>
 
-      <section className="catalogEditorSection">
-        <div className="catalogEditorSectionHead"><span><PackageOpen size={16}/></span><div><b>Планировки</b><small>Комнатность, площадь, цена и изображение</small></div><button onClick={()=>patch({floorplans:[...p.floorplans,{id:crypto.randomUUID(),roomLabel:"1",areaFrom:null,areaTo:null,priceFrom:null,priceTo:null,isExact:true,imageUrl:null,finishType:null,finishOptions:[],sortOrder:p.floorplans.length}]})}><Plus size={15}/>Добавить</button></div>
-        <div className="catalogEditorStack">{p.floorplans.map((plan,i)=><div className="editorRow floorplanEditor" key={plan.id||i}>
-          <PlanBuildingEditor property={p} plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/><PlanDimensionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/>
-          <PlanFinishOptionsEditor plan={plan} onChange={next=>patch({floorplans:p.floorplans.map((x,j)=>j===i?next:x)})}/>
-          <div className="rowActions">
-            <label className="secondaryAction fileButton"><Upload size={14}/>Фото планировки<input type="file" accept="image/jpeg,image/png,image/webp" onChange={e=>void uploadFloorplan(e.target.files?.[0],plan.id)}/></label>
-            {plan.imageUrl&&plan.id&&plan.imageUrl.startsWith("/media/")&&<button className="textDanger" onClick={()=>void removeMedia(plan.id,"floorplan")}>Удалить фото</button>}
-            <button className="textDanger" onClick={()=>patch({floorplans:p.floorplans.filter((_,j)=>i!==j)})}>Удалить планировку</button>
-          </div>
-        </div>)}
-        {!p.floorplans.length&&<div className="catalogEditorEmpty">Планировок пока нет. Добавьте первую вручную или импортируйте CSV.</div>}
-        </div>
-      </section>
+      <FloorplansEditor key={p.id} property={p} onChange={floorplans=>patch({floorplans})} onUpload={(file,id)=>void uploadFloorplan(file,id)} onRemoveImage={id=>void removeMedia(id,"floorplan")} disabled={busy}/>
 
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><CheckCircle2 size={16}/></span><div><b>Особенности</b><small>Преимущества ЖК для карточки и PULSE Select</small></div><button onClick={()=>patch({features:[...p.features,{id:crypto.randomUUID(),label:"",icon:"building",sortOrder:p.features.length}]})}><Plus size={15}/>Добавить</button></div>

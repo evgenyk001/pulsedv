@@ -34,6 +34,6 @@ export function PlanDimensionsEditor({plan,onChange}:{plan:Plan;onChange:(next:P
   }}/></label>}
   {!exact&&numberField('priceTo','Цена до, ₽')}
   <label className="controlField"><span>Изображение · URL</span><input value={plan.imageUrl??''} onChange={e=>onChange({...plan,imageUrl:e.target.value||null})}/></label>
-  <small style={{gridColumn:'1/-1'}}>{exact?'Одна планировка: своё изображение, точная площадь и цена. Другую планировку добавьте отдельной строкой.':'Группа вариантов: укажите границы площади и цены. Если верхняя цена неизвестна, оставьте её пустой.'}</small>
+  <small style={{gridColumn:'1/-1'}}>{exact?'Одна планировка: своё изображение, точная площадь и цена. Другую планировку добавьте отдельной карточкой.':'Группа вариантов: укажите границы площади и цены. Если верхняя цена неизвестна, оставьте её пустой.'}</small>
  </div>;
 }

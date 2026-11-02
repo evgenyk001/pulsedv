@@ -77,18 +77,10 @@
 .planPanelHeader span{display:none}.planPanelHeader h3{font-size:15px;line-height:1.3;margin:0}
 .planPanelHeader button{display:flex;align-items:center;gap:5px;min-height:40px;border:0;background:transparent;color:var(--muted-foreground);font:inherit;font-size:11px;cursor:pointer}
 .planPanelHeader button svg{transform:rotate(-90deg)}
-.planRail{display:grid;gap:10px;margin-top:9px;min-width:0}
-.planCard{display:grid;grid-template-columns:108px minmax(0,1fr);overflow:hidden;border-radius:17px;border:1px solid var(--border);background:var(--app-card);min-width:0}
-.planImage,.planImageMissing{min-height:155px;background:var(--muted);border-right:1px solid var(--border);display:grid;min-width:0}
-.planImage :global(.pulsePlanTrigger),.planImageMissing :global(.pulsePlanTrigger){width:100%;height:100%;font-size:10px;line-height:1.5;min-width:0;padding:8px}
-.planImage :global(.pulsePlanTrigger img){width:100%;height:100%;object-fit:contain;padding:2px}
-.planImage :global(.pulsePlanTrigger small),.planImageMissing :global(.pulsePlanTrigger small){font-size:9px;line-height:1.35;padding:5px;left:5px;right:5px;bottom:5px}
-.planCopy{padding:13px 11px;display:flex;flex-direction:column;min-width:0}
-.planCopy>span{font-size:10px;color:var(--muted-foreground)}.planCopy>strong{font-size:14px;line-height:1.4;margin-top:3px}
-.planCopy .planFinishes{font-size:10px;line-height:1.45;margin-top:5px;overflow-wrap:anywhere}
-.planCopy>b{font-size:14px;color:var(--foreground);margin-top:7px;letter-spacing:-.025em;font-variant-numeric:tabular-nums}
-.planCopy>a{margin-top:11px;min-height:40px;display:flex;align-items:center;justify-content:space-between;gap:3px;color:var(--primary);font-size:11px;font-weight:700;text-decoration:none}
-.planCopy>small,.emptyPlans{font-size:11px;line-height:1.5;color:var(--muted-foreground)}
+.planRail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px;min-width:0}
+.planCard{overflow:hidden;border-radius:19px;border:1px solid var(--border);background:var(--app-card);min-width:0;display:flex}
+.planCount{display:inline-grid;place-items:center;min-width:24px;height:24px;margin-left:5px;padding:0 6px;border-radius:8px;background:var(--muted);color:var(--muted-foreground);font-size:11px;font-weight:600;vertical-align:middle}
+.emptyPlans{font-size:11px;line-height:1.5;color:var(--muted-foreground)}
 .emptyPlans{margin:12px 0 0;padding:14px;border-radius:14px;background:var(--muted)}
 .financeSummary{margin-top:17px;padding-top:15px;border-top:1px solid var(--border)}
 .financeSummary>a{min-height:54px;display:grid;grid-template-columns:20px minmax(0,1fr) 17px;gap:10px;align-items:center;color:var(--foreground);text-decoration:none}
@@ -113,7 +105,7 @@
 .projectMaterials{margin-top:16px;padding-top:18px;border-top:1px solid var(--border);scroll-margin-top:16px}.projectMaterials h2{font-size:15px}
 .materials{display:grid;gap:8px;margin-top:9px}.materials a{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;min-height:56px;padding:8px 0;color:var(--foreground);text-decoration:none}.materials a>div{display:flex;flex-direction:column;gap:3px;min-width:0}.materials strong{font-size:12px;line-height:1.4;overflow-wrap:anywhere}.materials small{font-size:10px;color:var(--muted-foreground)}
 @keyframes roomReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
-@media(max-width:360px){.page{--property-hero-height:clamp(280px,50dvh,370px);margin-left:-14px;margin-right:-14px}.content{padding-left:14px;padding-right:14px}.intro h1{font-size:26px}.startingPrice strong{font-size:25px}.apartmentSummary,.section{padding:18px 13px}.sectionHead h2{font-size:19px}.roomCards strong{font-size:12px}.planCard{grid-template-columns:94px minmax(0,1fr)}.planCopy{padding:12px 9px}.planCopy>b{font-size:13px}.projectFacts{gap:14px 10px}}
+@media(max-width:360px){.page{--property-hero-height:clamp(280px,50dvh,370px);margin-left:-14px;margin-right:-14px}.content{padding-left:14px;padding-right:14px}.intro h1{font-size:26px}.startingPrice strong{font-size:25px}.apartmentSummary,.section{padding:18px 13px}.sectionHead h2{font-size:19px}.roomCards strong{font-size:12px}.planRail{gap:8px}.planCard{border-radius:16px}.projectFacts{gap:14px 10px}}
 @media(prefers-reduced-motion:reduce){.heroSlide img,.planPanel{animation:none}.roomCards button,.finishPills button,.moreDetails summary svg,.ctaBar button{transition:none}}
 
 .ctaBar{position:fixed;z-index:90;left:50%;transform:translateX(-50%);bottom:calc(10px + var(--pulse-safe-bottom));width:min(calc(100% - 64px),350px);height:60px;padding:3px;display:grid;grid-template-columns:minmax(0,.38fr) minmax(0,.62fr);gap:6px;isolation:isolate;border-radius:var(--app-radius-pill);background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(242,246,250,.48));border:1px solid rgba(255,255,255,.86);box-shadow:0 11px 30px rgba(43,55,72,.115),inset 0 1px 0 rgba(255,255,255,.96),inset 0 -1px 0 rgba(116,132,151,.065);backdrop-filter:blur(30px) saturate(1.32);-webkit-backdrop-filter:blur(30px) saturate(1.32)}
@@ -134,3 +126,5 @@
 .financeSummary small{display:flex;flex-direction:column;gap:2px}
 
 .startingPrice .squareMetre{font-size:12px;line-height:1.4;font-weight:450;font-variant-numeric:tabular-nums}
+
+.planPagination{display:grid;gap:10px;margin-top:14px;text-align:center}.planPagination>span{font-size:11px;color:var(--muted-foreground)}.planPagination>button{display:flex;align-items:center;justify-content:center;gap:8px;min-height:46px;width:100%;padding:12px;border:1px solid var(--border);border-radius:15px;background:var(--app-card);color:var(--foreground);font:600 12px var(--font-family-base);cursor:pointer}.planPagination>button:focus-visible{outline:2px solid var(--primary);outline-offset:3px}.planPagination>button svg{transform:rotate(90deg)}

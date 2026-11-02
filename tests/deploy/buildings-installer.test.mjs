@@ -5,6 +5,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve} from 'node:path';
 import {spawnSync} from 'node:child_process';
 const source=await readFile(resolve('deploy/update-project-buildings.sh'),'utf8');
+const gridSource=await readFile(resolve('deploy/update-floorplans-grid.sh'),'utf8');
 const entrySource=await readFile(resolve('deploy/update-phone-entry.sh'),'utf8');
 const selectsSource=await readFile(resolve('deploy/update-control-catalog.sh'),'utf8');
 const docker=`#!/usr/bin/env python3
@@ -72,7 +73,7 @@ if command=='up':
 if command=='exec':
  if 'pg_dump' in a:sys.stdout.buffer.write(b'PGDMP database fixture');finish()
  if 'pg_restore' in a:sys.stdin.buffer.read();finish()
- if 'cat' in a:emit('.control select option{background-color:#252a31;color:#f2f4f7}' if a[-1].endswith('.css') else '<!doctype html><link href="/pulsedv/mini-app/assets/test.css" rel="stylesheet"><link href="/pulsedv/control-center/assets/test.css" rel="stylesheet"><script src="/pulsedv/mini-app/assets/test.js"></script>');finish()
+ if 'cat' in a:emit('.control select option{background-color:#252a31;color:#f2f4f7}' if a[-1].endswith('.css') else '<!doctype html><link href="/pulsedv/mini-app/assets/test.css" rel="stylesheet"><link href="/pulsedv/control-center/assets/test.css" rel="stylesheet"><script src="/pulsedv/mini-app/assets/test.js"></script><script src="/pulsedv/control-center/assets/test.js"></script>');finish()
  if 'api' in a and failure=='schema':finish(44)
  if 'api' in a and failure=='phone-disabled':finish(45)
  finish()
@@ -90,10 +91,10 @@ import sys,os
 from pathlib import Path
 a=sys.argv[1:]
 if os.environ.get('MOCK_FAILURE')=='https':sys.exit(22)
-url=next(x for x in a if x.startswith('https://'));body='{"status":"ready"}' if url.endswith('/ready') else '.control select option{background-color:#252a31;color:#f2f4f7}\\n' if url.endswith('.css') else '<!doctype html><link href="/pulsedv/mini-app/assets/test.css" rel="stylesheet"><link href="/pulsedv/control-center/assets/test.css" rel="stylesheet"><script src="/pulsedv/mini-app/assets/test.js"></script>\\n'
+url=next(x for x in a if x.startswith('https://'));body='{"status":"ready"}' if url.endswith('/ready') else '.control select option{background-color:#252a31;color:#f2f4f7}\\n' if url.endswith('.css') else '<!doctype html><link href="/pulsedv/mini-app/assets/test.css" rel="stylesheet"><link href="/pulsedv/control-center/assets/test.css" rel="stylesheet"><script src="/pulsedv/mini-app/assets/test.js"></script><script src="/pulsedv/control-center/assets/test.js"></script>\\n'
 Path(a[a.index('-o')+1]).write_text(body)
 `;
-for(const [kind,installer] of [['buildings',source],['selects',selectsSource],['entry',entrySource]])for(const failure of kind==='buildings'?['', 'build','migration','activation','schema','https','immutable','missing-image','compose-cache']:['','build','activation','https','missing-image','compose-cache',...(kind==='entry'?['phone-disabled']:[])])test(`Installer ${kind}: ${failure||'success'}`,async()=>{
+for(const [kind,installer] of [['buildings',source],['selects',selectsSource],['entry',entrySource],['grid',gridSource]])for(const failure of kind==='buildings'?['', 'build','migration','activation','schema','https','immutable','missing-image','compose-cache']:['','build','activation','https','missing-image','compose-cache',...(['entry','grid'].includes(kind)?['phone-disabled']:[])])test(`Installer ${kind}: ${failure||'success'}`,async()=>{
  const root=await mkdtemp(join(tmpdir(),'pulse-installer-'));
  try{
   await mkdir(join(root,'deploy'));await mkdir(join(root,'bin'));await writeFile(join(root,'.env'),'SITE_DOMAIN=pulsedv.ru\n');await writeFile(join(root,'compose.yaml'),'name: pulsedv\n');await writeFile(join(root,'deploy/Caddyfile'),'pulsedv.ru {\n respond "OK"\n}\n');
@@ -102,7 +103,7 @@ for(const [kind,installer] of [['buildings',source],['selects',selectsSource],['
   const state={containers:Object.fromEntries(Object.entries(old).map(([service,image])=>[service,{image,running:kind!=='buildings'||failure==='missing-image'||service==='web'}])),refs:Object.fromEntries(Object.entries(old).map(([service,image])=>['pulsedv-'+service,image])),new:next,calls:[],migrated:false};
   const statePath=join(root,'state.json');await writeFile(statePath,JSON.stringify(state));
   for(const [name,content] of Object.entries({docker,git,curl})){const path=join(root,'bin',name);await writeFile(path,content);await chmod(path,0o700)}
-  const script=installer.replaceAll('/opt/pulsedv',root).replaceAll('/var/lock/pulsedv-update.lock',join(root,'update.lock')).replaceAll('/root/pulsedv-buildings-recovery.',join(root,'backup.')).replaceAll('/root/pulsedv-control-catalog.',join(root,'backup.')).replaceAll('/root/pulsedv-phone-entry.',join(root,'backup.'));
+  const script=installer.replaceAll('/opt/pulsedv',root).replaceAll('/var/lock/pulsedv-update.lock',join(root,'update.lock')).replaceAll('/root/pulsedv-buildings-recovery.',join(root,'backup.')).replaceAll('/root/pulsedv-control-catalog.',join(root,'backup.')).replaceAll('/root/pulsedv-phone-entry.',join(root,'backup.')).replaceAll('/root/pulsedv-floorplans-grid.',join(root,'backup.'));
   await writeFile(join(root,'installer.sh'),script);
   const run=spawnSync('bash',[join(root,'installer.sh'),'f'.repeat(40)],{env:{...process.env,PATH:join(root,'bin')+':'+process.env.PATH,MOCK_STATE:statePath,MOCK_TARGET:'f'.repeat(40),MOCK_FAILURE:failure},encoding:'utf8',timeout:30000});
   const final=JSON.parse(await readFile(statePath,'utf8'));
@@ -120,7 +121,7 @@ for(const [kind,installer] of [['buildings',source],['selects',selectsSource],['
 
 // Exercise the actual allow/deny gate against real Git histories. Mock Docker
 // tests cannot detect a path accidentally placed in the protected set.
-for(const [changed,allowed] of [['apps/mini-app/src/entry.tsx',true],['apps/control-center/src/entry.tsx',false],['backend/src/app.ts',false],['packages/pulse-data/runtime.ts',false],['compose.yaml',false]])test(`Phone entry Git scope: ${changed}`,async()=>{
+for(const [kind,installer] of [['entry',entrySource],['grid',gridSource]])for(const [changed,allowed] of [['apps/mini-app/src/entry.tsx',true],['apps/control-center/src/entry.tsx',kind==='grid'],['backend/src/app.ts',false],['packages/pulse-data/runtime.ts',false],['compose.yaml',false]])test(`${kind} Git scope: ${changed}`,async()=>{
  const root=await mkdtemp(join(tmpdir(),'pulse-entry-git-'));
  try{
   const git=(...args)=>{const run=spawnSync('git',args,{cwd:root,encoding:'utf8'});assert.equal(run.status,0,run.stderr);return run.stdout.trim()};
@@ -128,7 +129,7 @@ for(const [changed,allowed] of [['apps/mini-app/src/entry.tsx',true],['apps/cont
   await writeFile(join(root,'README.md'),'baseline\n');git('add','.');git('commit','-qm','baseline');const base=git('rev-parse','HEAD');
   await mkdir(join(root,changed.substring(0,changed.lastIndexOf('/'))||'.'),{recursive:true});
   await writeFile(join(root,changed),'changed\n');git('add','.');git('commit','-qm','candidate');const target=git('rev-parse','HEAD');git('checkout','-q',base);
-  const gate=entrySource.split('\n').find(line=>line.startsWith('git diff --quiet HEAD "$target" -- '));assert.ok(gate,'installer must keep its scope check');
+  const gate=installer.split('\n').find(line=>line.startsWith('git diff --quiet HEAD "$target" -- '));assert.ok(gate,'installer must keep its scope check');
   const run=spawnSync('bash',['-c',gate],{cwd:root,env:{...process.env,target},encoding:'utf8'});
   assert.equal(run.status,allowed?0:1,run.stdout+run.stderr);
  }finally{await rm(root,{recursive:true,force:true})}

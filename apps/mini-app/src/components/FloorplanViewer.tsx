@@ -8,15 +8,21 @@ import {Sheet,SheetTrigger,SheetContent,SheetHeader,SheetTitle,SheetDescription}
 import {LeadSheet} from './LeadSheet';
 import './clientPolish.css';
 
-export function FloorplanViewer({property,plan,preferredFinish}:{property:PulseProperty;plan:PulseProperty['floorplans'][number];preferredFinish?:ApartmentFinish|null}){
+export function FloorplanViewer({property,plan,preferredFinish,tile=false}:{property:PulseProperty;plan:PulseProperty['floorplans'][number];preferredFinish?:ApartmentFinish|null;tile?:boolean}){
  const offers=planFinishOffers(plan);
+ const [open,setOpen]=React.useState(false);
+ const descriptionId=React.useId();
  const preferred=offers.find(option=>option.finishType===preferredFinish)?.finishType??offers.find(option=>canonicalApartmentFinish(option.finishType)===canonicalApartmentFinish(preferredFinish))?.finishType??[...offers].filter(option=>option.priceFrom!==null).sort((a,b)=>(a.priceFrom??Infinity)-(b.priceFrom??Infinity))[0]?.finishType??offers[0]?.finishType??null;
  const [finish,setFinish]=React.useState<ApartmentFinish|null>(preferred);
  const [zoom,setZoom]=React.useState(1),[broken,setBroken]=React.useState(false);
  React.useEffect(()=>setFinish(preferred),[preferred]);
+ React.useEffect(()=>setBroken(false),[plan.imageUrl]);
  const price=finish?planPriceForFinish(plan,finish):planStartingPrice(plan);
  const context={buildingId:plan.buildingId,buildingName:buildingName(property,plan.buildingId),section:plan.sectionLabel,phase:property.projectDetails?.buildings?.find(b=>b.id===plan.buildingId)?.phase,floorplanId:plan.id,rooms:plan.roomLabel,areaFrom:plan.areaFrom,areaTo:plan.areaTo,finishType:finish,price:price===null?null:propertyPriceRub(price)};
- return <Sheet onOpenChange={()=>setZoom(1)}><SheetTrigger asChild><button className="pulsePlanTrigger" aria-label={'Открыть планировку '+plan.roomLabel}>{plan.imageUrl&&!broken?<img src={plan.imageUrl} alt={'Планировка '+plan.roomLabel} loading="lazy" onError={()=>setBroken(true)}/>:<span>Изображение уточняется</span>}<small>Подробнее о планировке</small></button></SheetTrigger>
+ const area=plan.areaFrom===null?'Площадь уточняется':plan.areaFrom.toLocaleString('ru-RU')+(plan.areaTo&&plan.areaTo!==plan.areaFrom?'–'+plan.areaTo.toLocaleString('ru-RU'):'')+' м²';
+ const corpus=buildingName(property,plan.buildingId);
+ const image=plan.imageUrl&&!broken?<img src={plan.imageUrl} alt={'Планировка '+plan.roomLabel} loading="lazy" decoding="async" onError={()=>setBroken(true)}/>:<span className="pulsePlanPlaceholder">Изображение уточняется</span>;
+ return <Sheet open={open} onOpenChange={next=>{setOpen(next);setZoom(1)}}><SheetTrigger asChild><button className={tile?'pulsePlanTrigger pulsePlanTileTrigger':'pulsePlanTrigger'} aria-describedby={tile?descriptionId:undefined} aria-label={'Открыть планировку '+plan.roomLabel}>{tile?<><span className="pulsePlanTileImage">{image}<span className="pulsePlanTileHint" aria-hidden="true">↗</span></span><span className="pulsePlanTileCopy" id={descriptionId}><span className="pulsePlanTileRoom">{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'}</span><strong>{area}</strong><b>{planPriceLabel(plan,preferredFinish)}</b>{offers.length>0&&<span className="pulsePlanTileFinish">{preferredFinish?apartmentFinishLabel(preferredFinish):offers.length>1?offers.length+' варианта отделки':apartmentFinishLabel(offers[0].finishType)}</span>}{corpus&&<span className="pulsePlanTileBuilding" title={corpus+(plan.sectionLabel?' · секция '+plan.sectionLabel:'')}>{corpus}{plan.sectionLabel?' · секция '+plan.sectionLabel:''}</span>}</span></>:<>{image}<small>Подробнее о планировке</small></>}</button></SheetTrigger>
  <SheetContent side="right" className="pulsePlanViewer">
   <SheetHeader><SheetTitle>{property.name} · {plan.roomLabel}{plan.roomLabel==='Студия'?'':' комн.'}</SheetTitle>
    <SheetDescription>{plan.areaFrom===null?'Площадь уточняется':plan.areaFrom+(plan.areaTo&&plan.areaTo!==plan.areaFrom?'–'+plan.areaTo:'')+' м²'} · {planPriceLabel(plan,finish)}</SheetDescription>
@@ -29,7 +35,7 @@ export function FloorplanViewer({property,plan,preferredFinish}:{property:PulseP
     <span>{apartmentFinishLabel(offer.finishType)}</span><strong>{planPriceLabel(offer)}</strong>
    </button>)}
   </div>}
-  {price!==null?<Link className="pulseClientAction" to={propertyMortgageLink(property,plan,finish)}>Рассчитать эту планировку</Link>:<p>Стоимость выбранной отделки уточняется. Расчёт ипотеки появится после подтверждения цены.</p>}
+  {price!==null?<Link className="pulseClientAction" onClick={()=>setOpen(false)} to={propertyMortgageLink(property,plan,finish)}>Рассчитать эту планировку</Link>:<p>Стоимость выбранной отделки уточняется. Расчёт ипотеки появится после подтверждения цены.</p>}
   <LeadSheet title="Интересует эта планировка" project={property.name} propertyId={property.id} source="floorplan" context={context}><button className="pulseClientAction">Уточнить наличие и цену</button></LeadSheet>
  </SheetContent></Sheet>;
 }
