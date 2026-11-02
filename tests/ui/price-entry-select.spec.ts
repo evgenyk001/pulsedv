@@ -20,7 +20,7 @@ test('Control calculates in both directions, saves reference area and displays t
  await editor.getByLabel('Стартовая стоимость квартиры',{exact:true}).fill('6057060');
  await editor.getByLabel('Площадь квартиры по стартовой цене',{exact:true}).fill('40');
  await expect(editor.getByLabel('Стартовая цена за квадратный метр',{exact:true})).toHaveValue('151426.5');
- await editor.getByRole('button',{name:'Добавить',exact:true}).first().click();
+ await editor.getByRole('button',{name:'Добавить планировку',exact:true}).click();
  const plan=editor.locator('.floorplanEditor').last();
  await plan.getByLabel('Площадь, м²',{exact:true}).fill('38.6');
  const unit=plan.getByLabel('Цена планировки за квадратный метр',{exact:true});

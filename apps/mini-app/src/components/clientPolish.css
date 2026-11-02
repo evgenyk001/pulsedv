@@ -34,3 +34,18 @@
 .pulseUpdatesToolbar button:disabled{opacity:.55}
 
 .pulseUpdatesList>[data-swipe-row]{flex-shrink:0}.pulseNotifications .pulseUpdatesList{max-height:min(42dvh,360px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}.pulseUpdatesList [data-swipe-row] .pulseUpdateRow{margin:0}
+
+/* Compact floorplan tiles: keep the drawing uncropped, details in the viewer. */
+.pulsePlanTrigger.pulsePlanTileTrigger{display:flex;flex-direction:column;align-items:stretch;width:100%;height:100%;padding:0;min-width:0;border:0;border-radius:0;text-align:left;background:var(--app-card);color:var(--foreground);font:inherit;cursor:pointer}
+.pulsePlanTileImage{position:relative;display:grid;place-items:center;aspect-ratio:1/1;width:100%;padding:10px;box-sizing:border-box;background:#fff;overflow:hidden}
+.pulsePlanTrigger.pulsePlanTileTrigger .pulsePlanTileImage>img{width:100%;height:100%;min-height:0;object-fit:contain;padding:0}
+.pulsePlanTileImage .pulsePlanPlaceholder{font-size:11px;line-height:1.5;text-align:center;color:#929aa6;padding:8px}
+.pulsePlanTileHint{position:absolute;right:8px;bottom:8px;display:grid;place-items:center;width:27px;height:27px;border-radius:50%;background:#f0f2f5;color:#596576;font-size:17px}
+.pulsePlanTileCopy{display:flex;flex-direction:column;gap:5px;padding:12px;min-width:0;width:100%;box-sizing:border-box}
+.pulsePlanTileRoom{font-size:10px;line-height:1.4;color:var(--muted-foreground)}
+.pulsePlanTileCopy>strong{font-size:17px;line-height:1.25;font-weight:700;letter-spacing:-.4px;overflow-wrap:anywhere}
+.pulsePlanTileCopy>b{font-size:13px;line-height:1.4;font-weight:700;letter-spacing:-.25px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.pulsePlanTileFinish,.pulsePlanTileBuilding{font-size:10px;line-height:1.4;color:var(--muted-foreground)}
+.pulsePlanTileBuilding{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pulsePlanTileTrigger:focus-visible{outline:3px solid var(--primary);outline-offset:-3px}
+@media(max-width:360px){.pulsePlanTileCopy{padding:10px;gap:4px}.pulsePlanTileCopy>strong{font-size:15px}.pulsePlanTileCopy>b{font-size:12px}.pulsePlanTileImage{padding:8px}}

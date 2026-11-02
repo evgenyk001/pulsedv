@@ -83,10 +83,10 @@ test('Real Control CSV imports corps and plan bindings, preserves totals and sav
  ];
  page.once('dialog',d=>d.accept());await page.locator('input[type=file][accept=".csv,text/csv"]').setInputFiles(files);await expect(page.getByRole('status')).toContainText('Импортировано 1');
  await page.getByLabel('Поиск объектов').fill('ЖК CSV');await expect(page.locator('.catalogObjectCard')).toHaveCount(1);await page.locator('.catalogObjectCard').click();const editor=page.getByRole('dialog',{name:'Редактор объекта'});
- await expect(editor.getByLabel('Корпус планировки',{exact:true})).toHaveValue('csv-b1');await expect(editor.getByLabel('Секция планировки',{exact:true})).toHaveValue('А');await expect(editor.getByLabel('Всего квартир в ЖК',{exact:true})).toHaveValue('900');
+ await editor.getByRole('button',{name:'Редактировать планировку 1',exact:true}).click();await expect(editor.getByLabel('Корпус планировки',{exact:true})).toHaveValue('csv-b1');await expect(editor.getByLabel('Секция планировки',{exact:true})).toHaveValue('А');await expect(editor.getByLabel('Всего квартир в ЖК',{exact:true})).toHaveValue('900');
  await editor.getByLabel('Название корпуса',{exact:true}).fill('Корпус после правки');await editor.getByLabel('Всего квартир в ЖК',{exact:true}).fill('901');await editor.getByLabel('Всего квартир в ЖК',{exact:true}).blur();await editor.getByRole('button',{name:'Сохранить',exact:true}).click();await expect(editor.getByText('Все изменения сохранены',{exact:true})).toBeVisible();
  const response=await app.inject('/api/v1/public/catalog/multi-project');expect(response.statusCode).toBe(200);const saved=response.json().property;expect(saved.projectDetails.totalApartments).toBe(901);expect(saved.projectDetails.buildings[0].name).toBe('Корпус после правки');expect(saved.projectDetails.buildings[0].availableApartments).toBe(0);expect(saved.floorplans[0].buildingId).toBe('csv-b1');
- await editor.getByRole('button',{name:'Закрыть редактор'}).click();await page.reload();await page.getByLabel('Поиск объектов').fill('ЖК CSV');await expect(page.locator('.catalogObjectCard')).toHaveCount(1);await page.locator('.catalogObjectCard').click();await expect(editor.getByLabel('Корпус планировки',{exact:true})).toHaveValue('csv-b1');
+ await editor.getByRole('button',{name:'Закрыть редактор'}).click();await page.reload();await page.getByLabel('Поиск объектов').fill('ЖК CSV');await expect(page.locator('.catalogObjectCard')).toHaveCount(1);await page.locator('.catalogObjectCard').click();await editor.getByRole('button',{name:'Редактировать планировку 1',exact:true}).click();await expect(editor.getByLabel('Корпус планировки',{exact:true})).toHaveValue('csv-b1');
 });
 
 test('Real Control deletion: retains remaining selection after failure, retries and deletes a single card',async({page})=>{
@@ -107,4 +107,24 @@ test('Real Control deletion: retains remaining selection after failure, retries 
  await page.getByRole('button',{name:'Отмена выбора',exact:true}).click();await page.locator('.catalogObjectCard').click();const editor=page.getByRole('dialog',{name:'Редактор объекта'});await expect(editor).toBeVisible();
  page.once('dialog',d=>d.accept());await editor.getByRole('button',{name:'Удалить ЖК',exact:true}).click();await expect(editor).toHaveCount(0);await expect(page.locator('.catalogObjectCard')).toHaveCount(0);
  expect(Number((await db.query("select count(*) as n from catalog_properties where id like 'delete-check-%'")).rows[0].n)).toBe(0);
+});
+
+test('Real Control API: twenty compact plans preserve edits and uploaded media through save and reload',async({page})=>{
+ test.setTimeout(90000);await page.setViewportSize({width:390,height:844});await page.route('https://plans.test/**',r=>r.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"/>'}));
+ const property={...structuredClone(DEFAULT_STATE.properties[0]),id:'grid-api',name:'ЖК Планировки сетка',coverImageUrl:'https://plans.test/cover.svg',floorplans:Array.from({length:20},(_,i)=>({id:'grid-plan-'+i,roomLabel:'1',areaFrom:30+i,areaTo:30+i,priceFrom:5+i/10,priceTo:5+i/10,isExact:true,imageUrl:null,sortOrder:i}))};
+ await upsertCatalogProperty(db,property);
+ await page.goto(origin+'/pulsedv/control-center/#/objects');await page.getByLabel('Электронная почта').fill('owner@polish.test');await page.getByLabel('Пароль',{exact:true}).fill(password);await page.getByRole('button',{name:'Войти',exact:true}).click();
+ await page.getByLabel('Поиск объектов').fill(property.name);await expect(page.locator('.catalogObjectCard')).toHaveCount(1);await page.locator('.catalogObjectCard').click();const editor=page.getByRole('dialog',{name:'Редактор объекта'}),plans=editor.getByRole('region',{name:'Планировки объекта'});
+ await expect(plans.locator('.controlPlanTile')).toHaveCount(20);await expect(plans.locator('.floorplanEditor')).toHaveCount(0);
+ await plans.getByRole('button',{name:'Редактировать планировку 20',exact:true}).click();const fields=plans.getByRole('region',{name:'Параметры планировки'});
+ await fields.getByLabel('Площадь, м²',{exact:true}).fill('77.7');await fields.getByLabel('Цена, ₽',{exact:true}).fill('9876543');
+ const image=await readFile(resolve('apps/mini-app/public/pulse-app-180-v3.png'));
+ await fields.locator('input[type=file]').setInputFiles({name:'plan.png',mimeType:'image/png',buffer:image});
+ await expect(page.getByRole('status')).toContainText('Планировка загружена');
+ const stored=(await app.inject('/api/v1/public/catalog/grid-api')).json().property;
+ expect(stored.floorplans).toHaveLength(20);expect(stored.floorplans[19].areaFrom).toBe(77.7);expect(stored.floorplans[19].priceFrom).toBe(9.876543);expect(stored.floorplans[19].imageUrl).toMatch(/^\/media\//);
+ await editor.getByRole('button',{name:'Закрыть редактор'}).click();await page.reload();await page.getByLabel('Поиск объектов').fill(property.name);await expect(page.locator('.catalogObjectCard')).toHaveCount(1);await page.locator('.catalogObjectCard').click();
+ await plans.getByRole('button',{name:'Редактировать планировку 20',exact:true}).click();await expect(fields.getByLabel('Площадь, м²',{exact:true})).toHaveValue('77.7');await expect(fields.getByLabel('Цена, ₽',{exact:true})).toHaveValue('9876543');
+ page.once('dialog',d=>d.accept());await fields.getByRole('button',{name:'Удалить планировку',exact:true}).click();await expect(plans.locator('.controlPlanTile')).toHaveCount(19);await editor.getByRole('button',{name:'Сохранить',exact:true}).click();await expect(editor.getByText('Все изменения сохранены',{exact:true})).toBeVisible();
+ expect((await app.inject('/api/v1/public/catalog/grid-api')).json().property.floorplans).toHaveLength(19);
 });

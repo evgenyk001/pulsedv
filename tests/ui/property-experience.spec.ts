@@ -72,7 +72,7 @@ for(const width of [320,390,430])test(`Property experience ${width}px: fullscree
  await context.getByRole('button',{name:'Вернуться к ЖК'}).click();
  await page.getByRole('button',{name:'Выбрать планировки: 2',exact:true}).click();
  await expect(page.getByRole('region',{name:'Стоимость выбранного варианта'})).toContainText('от '+rub(8765432)+' ₽');
- await page.getByRole('region',{name:'Квартиры и планировки ЖК'}).getByRole('link',{name:'Рассчитать платёж'}).click();
+ await page.getByRole('button',{name:'Открыть планировку 2',exact:true}).click();await page.getByRole('dialog').last().getByRole('link',{name:'Рассчитать эту планировку'}).click();
  await expect(page.getByRole('textbox',{name:'Стоимость недвижимости',exact:true})).toHaveValue(rub(8765432));
  await expect(page.getByRole('textbox',{name:'Первоначальный взнос',exact:true})).toHaveValue(rub(1761852));
  await expect(context).toContainText('2 комн. · 62 м²');

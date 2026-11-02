@@ -46,7 +46,7 @@ const priceLabel=propertyPriceLabel;
 const counted=(n:number,one:string,few:string,many:string)=>n.toLocaleString('ru-RU')+' '+(n%100>=11&&n%100<=14?many:n%10===1?one:n%10>=2&&n%10<=4?few:many);
 
 // Restore this history entry's choices on Back, without carrying them into a new visit.
-type PropertySelection={room:string;finish:ApartmentFinish|null;building?:string};
+type PropertySelection={room:string;finish:ApartmentFinish|null;building?:string;planLimit?:number};
 const propertySelections=new Map<string,PropertySelection>();
 
 const formatProjectDate=(value:string|null|undefined)=>{
@@ -71,17 +71,18 @@ export default function PropertyPage(){
   const [selectedRoom,setSelectedRoom]=React.useState(()=>propertySelections.get(selectionKey)?.room??"");
   const [selectedFinish,setSelectedFinish]=React.useState<ApartmentFinish|null>(()=>propertySelections.get(selectionKey)?.finish??null);
   const [selectedBuilding,setSelectedBuilding]=React.useState(()=>propertySelections.get(selectionKey)?.building??"");
+  const [planLimit,setPlanLimit]=React.useState(()=>propertySelections.get(selectionKey)?.planLimit??6);
   const [shareNotice,setShareNotice]=React.useState("");
 
   const rememberSelection=(value:PropertySelection)=>{
     propertySelections.delete(selectionKey);propertySelections.set(selectionKey,value);
     if(propertySelections.size>60)propertySelections.delete(propertySelections.keys().next().value!);
   };
-  const selectRoom=(room:string)=>{setSelectedRoom(room);rememberSelection({room,finish:selectedFinish,building:selectedBuilding})};
-  const selectFinish=(finish:ApartmentFinish|null)=>{setSelectedFinish(finish);rememberSelection({room:selectedRoom,finish,building:selectedBuilding})};
+  const selectRoom=(room:string)=>{setPlanLimit(6);setSelectedRoom(room);rememberSelection({room,finish:selectedFinish,building:selectedBuilding})};
+  const selectFinish=(finish:ApartmentFinish|null)=>{setPlanLimit(6);setSelectedFinish(finish);rememberSelection({room:selectedRoom,finish,building:selectedBuilding})};
   React.useLayoutEffect(()=>{
     const saved=propertySelections.get(selectionKey);
-    setSelectedBuilding(saved?.building??"");setPhotoIndex(0);setSelectedRoom(saved?.room??"");setSelectedFinish(saved?.finish??null);setShareNotice("");
+    setPlanLimit(saved?.planLimit??6);setSelectedBuilding(saved?.building??"");setPhotoIndex(0);setSelectedRoom(saved?.room??"");setSelectedFinish(saved?.finish??null);setShareNotice("");
   },[selectionKey]);
 
   React.useEffect(()=>{
@@ -100,7 +101,7 @@ export default function PropertyPage(){
   const gallery=propertyPhotos(p);
   const activeBuilding=(p.projectDetails?.buildings??[]).find(b=>b.id===selectedBuilding);
   const scopedPlans=buildingPlans(p,activeBuilding?.id??'');
-  const selectBuilding=(building:string)=>{setSelectedBuilding(building);setSelectedRoom('');setSelectedFinish(null);rememberSelection({building,room:'',finish:null})};
+  const selectBuilding=(building:string)=>{setPlanLimit(6);setSelectedBuilding(building);setSelectedRoom('');setSelectedFinish(null);rememberSelection({building,room:'',finish:null})};
   const roomOptions=sortRoomLabels(scopedPlans.map(plan=>plan.roomLabel));
   const activeRoom=selectedRoom&&roomOptions.includes(selectedRoom)?selectedRoom:"";
   const mortgageRule=control.mortgagePrograms.find(rule=>rule.id===savedScenario?.programId)??control.mortgagePrograms[0];
@@ -210,23 +211,11 @@ export default function PropertyPage(){
           return <button type="button" key={room} aria-label={'Выбрать планировки: '+room} aria-expanded={open} aria-controls="room-plan-options" disabled={disabled} className={open?styles.selectedRoom:''} onClick={()=>selectRoom(open?'':room)}><span>{room==='Студия'?'Студии':room+' комн.'}<ChevronRight size={15}/></span><strong>{disabled?'Нет вариантов':prices.length?priceLabel(Math.min(...prices)):'Цена уточняется'}</strong><small>{disabled?'В выбранной отделке':(areas.length?'от '+Math.min(...areas).toLocaleString('ru-RU')+' м²':'Площадь уточняется')}</small></button>;
         })}</div>
         {activeRoom&&<div id="room-plan-options" className={styles.planPanel}>
-          <div className={styles.planPanelHeader}><div><span>ПЛАНИРОВКИ</span><h3>{activeRoom==='Студия'?'Студии':activeRoom+' комн.'}</h3></div><button type="button" aria-label="Скрыть планировки" onClick={()=>selectRoom('')}>Свернуть <ChevronRight size={15}/></button></div>
+          <div className={styles.planPanelHeader}><div><span>ПЛАНИРОВКИ</span><h3>{activeRoom==='Студия'?'Студии':activeRoom+' комн.'} <small className={styles.planCount}>{visiblePlans.length}</small></h3></div><button type="button" aria-label="Скрыть планировки" onClick={()=>selectRoom('')}>Свернуть <ChevronRight size={15}/></button></div>
           {visiblePlans.length?<div className={styles.planRail}>
-            {visiblePlans.map((plan,index)=>{
-              const planPrice=priceForPlan(plan);
-              const offers=planFinishOffers(plan);
-              return <TrackedFloorplan property={p} plan={plan} className={styles.planCard} key={plan.id||plan.roomLabel+'-'+index}>
-                <div className={plan.imageUrl?styles.planImage:styles.planImageMissing}><FloorplanViewer property={p} plan={plan} preferredFinish={selectedFinish}/></div>
-                <div className={styles.planCopy}>
-                  <span>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'}</span>{(p.projectDetails?.buildings??[]).length>0&&<small className="pulsePlanBuilding">{buildingName(p,plan.buildingId)||"Корпус уточняется"}{plan.sectionLabel?" · секция "+plan.sectionLabel:""}</small>}
-                  <strong>{plan.areaFrom!==null?plan.areaFrom+(plan.areaTo&&plan.areaTo!==plan.areaFrom?'–'+plan.areaTo:'')+' м²':'Площадь уточняется'}</strong>
-                  {offers.length>0&&<span className={styles.planFinishes}>{selectedFinish?apartmentFinishLabel(selectedFinish):[...new Set(offers.map(offer=>apartmentFinishLabel(offer.finishType)))].join(' · ')}</span>}
-                  <b>{planPriceLabel(plan,selectedFinish)}</b>
-                  {planPrice!==null?<Link to={propertyMortgageLink(p,plan,selectedFinish)}>Рассчитать платёж <ChevronRight size={14}/></Link>:<small>Уточните стоимость у менеджера</small>}
-                </div>
-              </TrackedFloorplan>;
-            })}
+            {visiblePlans.slice(0,planLimit).map((plan,index)=><TrackedFloorplan property={p} plan={plan} className={styles.planCard} key={plan.id||plan.roomLabel+'-'+index}><FloorplanViewer property={p} plan={plan} preferredFinish={selectedFinish} tile/></TrackedFloorplan>)}
           </div>:<div className={styles.emptyPlans}>Для этой комнатности пока нет подтверждённых вариантов с выбранной отделкой.</div>}
+          {visiblePlans.length>6&&<div className={styles.planPagination}><span role="status">Показано {Math.min(planLimit,visiblePlans.length)} из {visiblePlans.length}</span>{planLimit<visiblePlans.length&&<button type="button" onClick={()=>{const next=planLimit+6;setPlanLimit(next);rememberSelection({room:selectedRoom,finish:selectedFinish,building:selectedBuilding,planLimit:next})}}>Показать ещё {Math.min(6,visiblePlans.length-planLimit)} <ChevronRight size={15}/></button>}</div>}
         </div>}
         <div className={styles.financeSummary}>
           {selectedPrice!==null?<Link aria-label="Рассчитать ипотеку" aria-describedby="property-mortgage-hint" to={propertyMortgageLink(p,mortgagePlan,selectedFinish)}>
