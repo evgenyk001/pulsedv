@@ -49,3 +49,5 @@
 .pulsePlanTileBuilding{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pulsePlanTileTrigger:focus-visible{outline:3px solid var(--primary);outline-offset:-3px}
 @media(max-width:360px){.pulsePlanTileCopy{padding:10px;gap:4px}.pulsePlanTileCopy>strong{font-size:15px}.pulsePlanTileCopy>b{font-size:12px}.pulsePlanTileImage{padding:8px}}
+
+.pulsePlanUnitPrice{font-size:11px;line-height:1.45;color:var(--muted-foreground);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}.pulsePlanDetailUnitPrice{font-size:13px;margin:0}
