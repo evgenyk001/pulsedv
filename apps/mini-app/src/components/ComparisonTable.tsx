@@ -3,6 +3,7 @@ import React from 'react';
 import {Link,useLocation} from 'react-router-dom';
 import {Building2, Check, ChevronRight, MapPin, SlidersHorizontal, WalletCards, X} from 'lucide-react';
 import {calculateMortgageScenario} from '../../../../packages/domain/mortgagePolicy';
+import {sortRoomLabels} from '../../../../packages/domain/catalogFacets';
 import {usePulseControlState} from '../helpers/usePulseControlState';
 import type {PulseProperty} from '../../../../packages/pulse-data/model';
 import styles from './ComparisonTable.module.css';
@@ -50,7 +51,7 @@ export function ComparisonTable({properties,onReplace,onRemove}:{properties:Puls
   {name:'Застройщик',value:p=>p.developerName||'Уточняется'},
   {name:'Сдача',value:p=>p.delivery||'Уточняется'},
   {name:'Класс',value:p=>p.className||'Уточняется'},
-  {name:'Комнатность',value:p=>p.floorplans.map(f=>f.roomLabel).join(', ')||'Уточняется'},
+  {name:'Комнатность',value:p=>sortRoomLabels(p.floorplans.map(f=>f.roomLabel)).join(', ')||'Уточняется'},
   {name:'Отделка',value:p=>p.features.filter(f=>/отдел|ремонт/i.test(f.label)).map(f=>f.label).join(', ')||'Не указана'},
   {name:'Платёж по сценарию',value:p=>{
    const price=Math.round(p.priceFrom*1e6);
