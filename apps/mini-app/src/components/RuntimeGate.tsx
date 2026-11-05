@@ -28,6 +28,7 @@ export function RuntimeGate({children}:{children:React.ReactNode}){
     const start=(window as any).Telegram?.WebApp?.initDataUnsafe?.start_param||new URLSearchParams(window.location.search).get('tgWebAppStartParam');
     const referral=referralCodeFromStart(start);
     if(referral)window.location.hash='/partner-invite?code='+encodeURIComponent(referral);
+    else if(start==='giveaway')window.location.hash='/giveaway';
     else if(start==='partners')window.location.hash='/partners';
    }
    window.dispatchEvent(new Event('pulse:identity-ready'));

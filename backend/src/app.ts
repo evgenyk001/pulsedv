@@ -1,3 +1,4 @@
+import {registerGiveawayRoutes} from './giveawayRoutes';
 import {registerConversationRoutes} from './conversationRoutes';
 import {ensureAnnouncementSubscription} from './announcementSubscriptions';
 import {controlProfileSelect} from './controlProfiles';
@@ -92,6 +93,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  const cookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1/control',maxAge:8*3600};
  const visitorCookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1',maxAge:30*86400};
  registerAccountRoutes(app,db,config,visitor,editor);
+ registerGiveawayRoutes(app,db,config,visitor,editor);
  registerAcquisitionRoutes(app,db,config,visitor,control);
  app.get('/health',async()=>({status:'ok'}));
  app.get('/ready',async()=>{if(!await migrationsApplied(db))throw new HttpError(503,'Примените миграции перед запуском');await readState(db);return {status:'ready'};});

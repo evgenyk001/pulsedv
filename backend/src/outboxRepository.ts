@@ -6,6 +6,7 @@ export function outboxRepository(db:Database):NotificationOutboxRepository{
  const leases=new Map<string,string>();
  return {
   async canDeliver(event){
+   if(event.topic==='user.giveaway')return !!(await db.query('select id from giveaway_entries where id=$1 and user_id=$2 and status=$3',[event.payload.entryId,event.payload.userId,event.payload.status])).rows.length;
    if(event.topic==='user.partner_security_code')return !!(await db.query('select id from partner_biometric_recovery where id=$1 and user_id=$2 and expires_at>now() and attempts<5',[event.payload.challengeId,event.payload.userId])).rows.length;
    if(event.topic==='user.broadcast'){
     const row=(await db.query("select s.enabled,s.consent_key,b.status from announcement_subscriptions s join broadcasts b on b.id=$2 where s.user_id=$1",[event.payload.userId,event.payload.campaignId])).rows[0];

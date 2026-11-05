@@ -1,0 +1,62 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {testDatabase} from './database';
+import {migrate} from '../src/migrate';
+import {createApp} from '../src/app';
+import {readConfig} from '../src/config';
+import {issueToken} from '../src/security';
+import {outboxRepository} from '../src/outboxRepository';
+import {giveawayCountdown} from '../../packages/giveaway';
+test('Giveaway gates admission, freezes rules, binds own deal and creates one ticket and notification',async()=>{
+ const db=await testDatabase();await migrate(db);const config=readConfig({DATABASE_URL:'unused',NODE_ENV:'test',BOT_TOKEN:'test-token',REQUIRE_TELEGRAM_PHONE:'true'}),app=await createApp(db,config);
+ try{
+  const origin={origin:config.PUBLIC_ORIGIN};
+  const user=(await db.query("insert into app_users(telegram_user_id,first_name,phone) values(123,'Анна','+79991234567') returning id")).rows[0].id;
+  const session=randomUUID();await db.query('insert into sessions(id,user_id) values($1,$2)',[session,user]);
+  const visitor=await issueToken(db,'visitor',session),headers={...origin,authorization:'Bearer '+visitor.token};
+  const admins:Record<string,string>={};for(const role of ['owner','manager']){const member=(await db.query('insert into team_members(name,role) values($1,$1) returning id',[role])).rows[0].id;admins[role]=(await issueToken(db,'control',member)).token;}
+  const control=(url:string,method:any='GET',payload?:any,role='owner')=>app.inject({url:'/api/v1/control/giveaway'+url,method,headers:origin,cookies:{pulse_control:admins[role]},payload});
+  assert.equal((await app.inject('/api/v1/control/giveaway')).statusCode,401);
+  assert.equal((await control('','GET',undefined,'manager')).statusCode,403);
+  assert.equal((await app.inject({url:'/api/v1/me/giveaway',headers})).statusCode,403);
+  await db.query('insert into telegram_contact_consent(user_id,consent_version,accepted_at) values($1,$2,now())',[user,config.CONSENT_VERSION]);
+  let settings=(await control('')).json().settings;
+  assert.equal(settings.enabled,false);
+  const post=()=>app.inject({url:'/api/v1/me/giveaway',method:'POST',headers,payload:{version:settings.version,acceptedRules:true}});
+  assert.equal((await post()).statusCode,409);
+  settings={...settings,enabled:true,startsAt:new Date(Date.now()-86400000).toISOString(),endsAt:new Date(Date.now()+86400000).toISOString(),drawAt:new Date(Date.now()+172800000).toISOString()};
+  assert.equal((await control('','PUT',settings)).statusCode,400);
+  settings.rules='Полные правила акции с организатором, условиями покупки и государственной регистрации, порядком определения победителя, сроком вручения и налогами.';
+  const saved=await control('','PUT',settings);assert.equal(saved.statusCode,200,saved.body);settings=saved.json().settings;
+  const stale=await app.inject({url:'/api/v1/me/giveaway',method:'POST',headers,payload:{version:settings.version-1,acceptedRules:true}});assert.equal(stale.statusCode,409);
+  const first=await post();assert.equal(first.statusCode,200,first.body);const entry=first.json().entry;assert.equal(entry.status,'pending');assert.equal(entry.ticket,null);
+  assert.equal((await post()).json().entry.id,entry.id);
+  // Equivalent instants with different ISO offsets must not look like changed terms.
+  const unchanged=await control('','PUT',{...settings,startsAt:new Date(settings.startsAt).toISOString(),title:'Новый заголовок'});
+  assert.equal(unchanged.statusCode,200,unchanged.body);settings=unchanged.json().settings;
+  assert.equal((await control('','PUT',{...settings,rules:settings.rules+' Изменение'})).statusCode,409);
+  assert.equal((await db.query("select count(*)::int n from outbox_events where topic='user.giveaway'")).rows[0].n,1);
+  const foreign=(await db.query("insert into leads(source,name,phone,status) values('home','Чужой','+79990000000','deal') returning id")).rows[0].id;
+  const lead=(await db.query("insert into leads(user_id,session_id,source,name,phone,status) values($1,$2,'home','Анна','+79991234567','new') returning id",[user,session])).rows[0].id;
+  const confirm=(leadId:string,registeredAt:string)=>control('/'+entry.id+'/confirm','POST',{leadId,registeredAt,registrationReference:'Регистрация 25-001'});
+  await db.query("update giveaway_entries set created_at=now()-interval '1 hour' where id=$1",[entry.id]);
+  const registered=new Date(Date.now()-1000).toISOString();
+  assert.equal((await confirm(foreign,registered)).statusCode,400);
+  assert.equal((await confirm(lead,registered)).statusCode,400);
+  await db.query("update leads set status='deal' where id=$1",[lead]);
+  assert.equal((await confirm(lead,new Date(Date.now()-172800000).toISOString())).statusCode,400);
+  assert.equal((await confirm(lead,new Date(Date.now()+100000).toISOString())).statusCode,400);
+  const approved=await confirm(lead,registered);assert.equal(approved.statusCode,200,approved.body);const ticket=approved.json().entry.ticket;assert.match(ticket,/^PULSE-\d{4,}$/);
+  assert.equal((await confirm(lead,registered)).json().entry.ticket,ticket);
+  const notifications=(await db.query("select * from outbox_events where topic='user.giveaway' and payload->>'status'='confirmed'")).rows;assert.equal(notifications.length,1);
+  const list=(await control('?status=confirmed')).json();assert.equal(list.items[0].ticket,ticket);assert.equal(list.counts.confirmed,1);
+  assert.equal((await post()).json().entry.ticket,ticket);
+  const revoked=await control('/'+entry.id+'/reject','POST',{reason:'Сделка аннулирована'});assert.equal(revoked.statusCode,200,revoked.body);
+  assert.equal((await confirm(lead,registered)).statusCode,409);
+  assert.equal((await post()).json().entry.status,'rejected');
+  const repo=outboxRepository(db);assert.equal(await repo.canDeliver({id:notifications[0].id,topic:'user.giveaway',aggregateId:entry.id,aggregateType:'giveaway',payload:notifications[0].payload,attempts:0}),false);
+  assert.deepEqual(giveawayCountdown('2027-01-02T00:00:00+10:00',Date.parse('2027-01-01T23:59:59+10:00')),{days:0,hours:0,minutes:0,seconds:1});
+  assert.deepEqual(giveawayCountdown('2027-01-02T00:00:00+10:00',Date.parse('2027-01-03T00:00:00+10:00')),{days:0,hours:0,minutes:0,seconds:0});
+ }finally{await app.close();await db.close()}
+});

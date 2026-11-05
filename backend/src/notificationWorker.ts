@@ -105,7 +105,7 @@ export async function processNotificationOutbox(
         if(!userId)throw new Error("userId missing");
         const chatId=await repo.userTelegramUserId(userId);
         if(!chatId)throw new Error("user Telegram id missing");
-        if((isShowingReminder(event.topic)||event.topic==='user.partner_security_code'||event.topic==='user.search_updates'||event.topic==='user.broadcast')&&!await repo.canDeliver(event)){await repo.markSkipped(event.id,event.topic==='user.broadcast'?'Broadcast cancelled or subscription changed':event.topic==='user.search_updates'?'Search subscription changed':undefined);continue;}
+        if((isShowingReminder(event.topic)||event.topic==='user.partner_security_code'||event.topic==='user.search_updates'||event.topic==='user.broadcast'||event.topic==='user.giveaway')&&!await repo.canDeliver(event)){await repo.markSkipped(event.id,event.topic==='user.broadcast'?'Broadcast cancelled or subscription changed':event.topic==='user.search_updates'?'Search subscription changed':undefined);continue;}
         await telegram.sendMessage({
           chatId,
           text:userText(event),

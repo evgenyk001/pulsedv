@@ -12,6 +12,7 @@ import "./floot-runtime.css";
 import "./base.css";
 import { AppShell } from "./components/AppShell";
 import HomePage from "./pages/_index";
+const GiveawayPage=React.lazy(()=>import('./pages/giveaway'));
 const ComparePage=React.lazy(()=>import('./pages/compare'));
 const JourneyPage=React.lazy(()=>import('./pages/journey'));
 import CatalogPage from './pages/catalog';
@@ -57,6 +58,7 @@ function App(){
           <Route path="/mortgage" element={<MortgagePage/>}/>
           <Route path="/selection" element={<SelectionPage/>}/>
           <Route path="/favorites" element={<FavoritesPage/>}/>
+          <Route path="/giveaway" element={<GiveawayPage/>}/>
           <Route path="/compare" element={<ComparePage/>}/>
           <Route path="/journey" element={<JourneyPage/>}/>
           <Route path="/partner-offer" element={<PartnerOfferPage/>}/>
