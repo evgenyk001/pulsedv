@@ -1,3 +1,4 @@
+import {registerPropertyShareRoutes} from './propertyShareRoutes';
 import {registerConversationRoutes} from './conversationRoutes';
 import {ensureAnnouncementSubscription} from './announcementSubscriptions';
 import {controlProfileSelect} from './controlProfiles';
@@ -91,6 +92,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  const sessionLock=async(sql:Sql,id:string)=>{await sql.query('select id from sessions where id=$1 for update',[id]);};
  const cookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1/control',maxAge:8*3600};
  const visitorCookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1',maxAge:30*86400};
+ registerPropertyShareRoutes(app,db,config,visitor);
  registerAccountRoutes(app,db,config,visitor,editor);
  registerAcquisitionRoutes(app,db,config,visitor,control);
  app.get('/health',async()=>({status:'ok'}));

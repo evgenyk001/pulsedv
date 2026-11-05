@@ -1,3 +1,5 @@
+import {propertyTelegramLink} from '../../../../packages/browser/propertyLinks';
+import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import {ProjectBuildings} from '../components/ProjectBuildings';
 import {buildingPlans,buildingDelivery,buildingName} from '../../../../packages/domain/projectBuildings';
 import {safeLocalStorage} from '../../../../packages/browser/storage';
@@ -73,6 +75,8 @@ export default function PropertyPage(){
   const [selectedBuilding,setSelectedBuilding]=React.useState(()=>propertySelections.get(selectionKey)?.building??"");
   const [planLimit,setPlanLimit]=React.useState(()=>propertySelections.get(selectionKey)?.planLimit??6);
   const [shareNotice,setShareNotice]=React.useState("");
+  const [shareBusy,setShareBusy]=React.useState(false);
+  const sharing=React.useRef(false);
 
   const rememberSelection=(value:PropertySelection)=>{
     propertySelections.delete(selectionKey);propertySelections.set(selectionKey,value);
@@ -147,16 +151,29 @@ export default function PropertyPage(){
   ];
 
   const share=async()=>{
+    if(sharing.current)return;
+    sharing.current=true;setShareBusy(true);setShareNotice('');
+    const complete=(method:string)=>recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city,method,outcome:"completed"}});
     try{
-      if(navigator.share){
-        await navigator.share({title:p.name,text:p.name+" — "+p.city+", "+p.district,url:window.location.href});
-        recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city,method:"share",outcome:"completed"}});
-      }else if(navigator.clipboard){
-        await navigator.clipboard.writeText(window.location.href);
-        setShareNotice("Ссылка скопирована");
-        recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city,method:"clipboard",outcome:"completed"}});
+      const tg=(window as any).Telegram?.WebApp;
+      const prepare=typeof tg?.shareMessage==='function'&&(!tg.isVersionAtLeast||tg.isVersionAtLeast('8.0'));
+      const result=runtime.enabled?await visitorApi<{url:string;messageId?:string}>('/me/property-share',{method:'POST',body:JSON.stringify({propertyId:p.id,prepare})}):{url:propertyTelegramLink(p.id,'pulsedvbot'),messageId:undefined};
+      if(prepare&&result.messageId){
+        try{
+          const sent=await new Promise<boolean>((resolve,reject)=>{try{tg.shareMessage(result.messageId,(ok:boolean)=>resolve(ok))}catch(e){reject(e)}});
+          if(sent)complete('telegram_card');
+          return; // A dismissed Telegram dialog must never trigger a second sharing flow.
+        }catch{/* Older clients may expose the method but reject it. Use a launch link. */}
       }
-    }catch{/* Cancellation or denied clipboard access is not a completed action. */}
+      if(tg?.openTelegramLink){
+        tg.openTelegramLink('https://t.me/share/url?url='+encodeURIComponent(result.url)+'&text='+encodeURIComponent(p.name+' — '+p.city));
+      }else if(navigator.share){
+        await navigator.share({title:p.name,text:p.name+' — '+p.city,url:result.url});complete('share');
+      }else if(navigator.clipboard){
+        await navigator.clipboard.writeText(result.url);setShareNotice('Ссылка на ЖК в Telegram скопирована');complete('clipboard');
+      }else setShareNotice('Не удалось открыть отправку. Попробуйте в Telegram.');
+    }catch(e){if(!(e instanceof DOMException&&e.name==='AbortError'))setShareNotice('Не удалось подготовить ссылку. Попробуйте ещё раз.');}
+    finally{sharing.current=false;setShareBusy(false);}
   };
 
   return <div className={styles.page}>
@@ -166,7 +183,7 @@ export default function PropertyPage(){
       <BackLink to={returnTo} className={styles.back} hero aria-label="Назад"/>
       <div className={styles.actions}>
         <button onClick={()=>toggle(p.id)} className={favorite?styles.favorited:""} aria-pressed={favorite} aria-label={favorite?"Убрать из избранного":"В избранное"}><Heart size={18} fill={favorite?"currentColor":"none"}/></button>
-        <button onClick={share} aria-label="Поделиться"><Share2 size={18}/></button>
+        <button onClick={share} disabled={shareBusy} aria-busy={shareBusy} aria-label={shareBusy?"Готовим сообщение…":"Поделиться"}><Share2 size={18}/></button>
       </div>
     </section>
 
