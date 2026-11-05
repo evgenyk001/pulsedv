@@ -206,4 +206,4 @@ while IFS=$'\t' read -r service ref; do
  docker image tag "${image_refs[$service]}" "$ref"
 done < "$backup/default-refs.tsv"
 trap - EXIT HUP INT TERM
-echo "ГОТОВО: розыгрыш и анимация установлены; код API/worker, миграция, HTTPS и оба интерфейса проверены. Акция остаётся черновиком до публикации в Control. Резервная копия: $backup"
+echo "ГОТОВО: розыгрыш, анимация и отправка ЖК через Telegram установлены; код API/worker, миграция, HTTPS и оба интерфейса проверены. Настройки публикации акции сохранены; новую акцию включите в Control после заполнения правил. Резервная копия: $backup"

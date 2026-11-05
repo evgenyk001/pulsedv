@@ -1,3 +1,4 @@
+import {propertyFromStart} from '../../../../packages/browser/propertyLinks';
 import {prepareTelegramWindow} from '../helpers/telegramWindow';
 import {referralCodeFromStart} from '../../../../packages/partners/model';
 import {PhoneRegistration} from './PhoneRegistration';
@@ -27,7 +28,9 @@ export function RuntimeGate({children}:{children:React.ReactNode}){
     // Routing hints never authenticate: the API has already verified initData.
     const start=(window as any).Telegram?.WebApp?.initDataUnsafe?.start_param||new URLSearchParams(window.location.search).get('tgWebAppStartParam');
     const referral=referralCodeFromStart(start);
-    if(referral)window.location.hash='/partner-invite?code='+encodeURIComponent(referral);
+    const propertyId=propertyFromStart(start);
+    if(propertyId)window.location.hash='/property/'+encodeURIComponent(propertyId);
+    else if(referral)window.location.hash='/partner-invite?code='+encodeURIComponent(referral);
     else if(start==='giveaway')window.location.hash='/giveaway';
     else if(start==='partners')window.location.hash='/partners';
    }
