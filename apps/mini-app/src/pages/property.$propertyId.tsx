@@ -1,3 +1,4 @@
+import {usePresentationDelivery} from '../helpers/usePresentationDelivery';
 import {propertyTelegramLink} from '../../../../packages/browser/propertyLinks';
 import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import {ProjectBuildings} from '../components/ProjectBuildings';
@@ -60,6 +61,7 @@ const formatProjectDate=(value:string|null|undefined)=>{
 export default function PropertyPage(){
   const {propertyId=""}=useParams();
   const location=useLocation();
+  const pdfDelivery=usePresentationDelivery(propertyId);
   const stateReturn=typeof location.state?.returnTo==="string"&&/^\/(catalog|favorites|compare|selection|journey)?([?]|$)/.test(location.state.returnTo)?location.state.returnTo:null;
   const rememberedReturn=propertyReturn();
   const returnTo=stateReturn??rememberedReturn;
@@ -281,20 +283,20 @@ export default function PropertyPage(){
       {(p.documents??[]).length>0&&<div id="property-materials" className={styles.projectMaterials}>
         <div className={styles.sectionHead}><div><span>МАТЕРИАЛЫ</span><h2>Документы проекта</h2></div><small>{(p.documents??[]).length} файлов</small></div>
         <div className={styles.materials}>
-          {(p.documents??[]).map(doc=><a key={doc.id||doc.url} href={doc.url} target="_blank" rel="noreferrer">
-            <IconTile><FileText size={18}/></IconTile>
-            <div><strong>{doc.name}</strong><small>{doc.kind==="presentation"?"Презентация":"Документ"}{doc.sizeBytes?" · "+Math.round(doc.sizeBytes/1024/1024*10)/10+" МБ":""}</small></div>
-            <ChevronRight size={16}/>
-          </a>)}
+          {(p.documents??[]).map(doc=>{
+            const content=<><IconTile><FileText size={18}/></IconTile><div><strong>{doc.name}</strong><small>{doc.kind==='presentation'?'Получить PDF в Telegram':'Документ'}{doc.sizeBytes?' · '+Math.round(doc.sizeBytes/1024/1024*10)/10+' МБ':''}</small></div><ChevronRight size={16}/></>;
+            return doc.kind==='presentation'?<button key={doc.id||doc.url} type="button" disabled={pdfDelivery.busy} onClick={()=>void pdfDelivery.send(doc.id)}>{content}</button>:<a key={doc.id||doc.url} href={doc.url} target="_blank" rel="noreferrer">{content}</a>;
+          })}
         </div>
       </div>}
       </section>
 
     </main>
 
+    {pdfDelivery.notice&&<div className={styles.presentationNotice} role="status"><span>{pdfDelivery.notice}</span><div>{pdfDelivery.botUrl&&<a href={pdfDelivery.botUrl} onClick={e=>{const tg=(window as any).Telegram?.WebApp;if(tg?.openTelegramLink){e.preventDefault();tg.openTelegramLink(pdfDelivery.botUrl)}}}>Открыть бота</a>}<button type="button" onClick={pdfDelivery.dismiss}>Скрыть</button></div></div>}
     <div className={styles.ctaBar} role="region" aria-label="Действия с ЖК">
-      {presentation?<a className={styles.secondary} href={presentation.url} target="_blank" rel="noreferrer"><FileText size={17}/><span>Презентация</span></a>:<LeadSheet title="Получить презентацию" project={p.name} propertyId={p.id} source="presentation">
-        <button className={styles.secondary}><Send size={17}/><span>Презентация</span></button>
+      {presentation?<button className={styles.secondary+" "+styles.presentationAction} disabled={pdfDelivery.busy} aria-busy={pdfDelivery.busy} onClick={()=>void pdfDelivery.send(presentation.id)}><FileText size={17}/><span>{pdfDelivery.busy?"Отправляем…":"Получить презентацию"}</span></button>:<LeadSheet title="Получить презентацию" project={p.name} propertyId={p.id} source="presentation">
+        <button className={styles.secondary+" "+styles.presentationAction}><Send size={17}/><span>Получить презентацию</span></button>
       </LeadSheet>}
       <LeadSheet title="Узнать наличие" project={p.name} propertyId={p.id} source="property" context={activeBuilding?{buildingId:activeBuilding.id,buildingName:activeBuilding.name,phase:activeBuilding.phase}:undefined}>
         <button className={styles.primary}><span>Узнать наличие</span><ChevronRight size={18}/></button>

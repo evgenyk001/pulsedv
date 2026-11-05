@@ -21,6 +21,7 @@ export type NotificationOutboxRepository={
 };
 
 export type TelegramBotSender={
+  sendDocument?(input:{chatId:string;documentUrl:string;filename:string;caption:string;deepLink?:string|null}):Promise<void>;
   sendMessage(input:{chatId:string;text:string;deepLink?:string|null;imageUrl?:string|null;buttonLabel?:string|null;preferencesLink?:string|null;richTitle?:boolean}):Promise<void>;
 };
 export class TelegramDeliveryError extends Error{
@@ -100,13 +101,16 @@ export async function processNotificationOutbox(
           deepLink:asString(event.payload.deepLink),
           ...(event.topic==='manager.broadcast_test'?{imageUrl:asString(event.payload.imageUrl),buttonLabel:asString(event.payload.buttonLabel),preferencesLink:asString(event.payload.preferencesLink),richTitle:true}:{}),
         });
-      }else if(event.topic.startsWith("user.")){
+      }else if(event.topic.startsWith("user.")||event.topic==='document.presentation'){
         const userId=asString(event.payload.userId);
         if(!userId)throw new Error("userId missing");
         const chatId=await repo.userTelegramUserId(userId);
         if(!chatId)throw new Error("user Telegram id missing");
-        if((isShowingReminder(event.topic)||event.topic==='user.partner_security_code'||event.topic==='user.search_updates'||event.topic==='user.broadcast')&&!await repo.canDeliver(event)){await repo.markSkipped(event.id,event.topic==='user.broadcast'?'Broadcast cancelled or subscription changed':event.topic==='user.search_updates'?'Search subscription changed':undefined);continue;}
-        await telegram.sendMessage({
+        if((isShowingReminder(event.topic)||event.topic==='user.partner_security_code'||event.topic==='user.search_updates'||event.topic==='user.broadcast'||event.topic==='document.presentation')&&!await repo.canDeliver(event)){await repo.markSkipped(event.id,event.topic==='document.presentation'?'Presentation unavailable':event.topic==='user.broadcast'?'Broadcast cancelled or subscription changed':event.topic==='user.search_updates'?'Search subscription changed':undefined);continue;}
+        if(event.topic==='document.presentation'){
+          if(!telegram.sendDocument)throw new Error('Document delivery unavailable');
+          await telegram.sendDocument({chatId,documentUrl:asString(event.payload.documentUrl)??'',filename:asString(event.payload.filename)??'Presentation.pdf',caption:userText(event).slice(0,1000),deepLink:clientDeepLink(event)});
+        }else await telegram.sendMessage({
           chatId,
           text:userText(event),
           deepLink:clientDeepLink(event),

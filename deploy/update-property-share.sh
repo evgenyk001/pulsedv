@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reviewed property-sharing-only rollout. Preserve rollback images before changing services; verify runtime code, not manifest/config ID equality.
+# Reviewed property sharing and PDF delivery rollout. Preserve rollback images before changing services; verify runtime code, not manifest/config ID equality.
 set -Eeuo pipefail
 umask 077
 cd /opt/pulsedv
@@ -203,4 +203,4 @@ while IFS=$'\t' read -r service ref; do
  docker image tag "${image_refs[$service]}" "$ref"
 done < "$backup/default-refs.tsv"
 trap - EXIT HUP INT TERM
-echo "ГОТОВО: отправка ЖК через Telegram установлена; код API/worker, HTTPS и оба интерфейса проверены. Розыгрыш в этот релиз не входит. Резервная копия: $backup"
+echo "ГОТОВО: отправка ЖК и PDF-презентаций через Telegram установлена; код API/worker, HTTPS и оба интерфейса проверены. Розыгрыш в этот релиз не входит. Резервная копия: $backup"

@@ -1,3 +1,4 @@
+import {registerPresentationRoutes} from './presentationRoutes';
 import {registerPropertyShareRoutes} from './propertyShareRoutes';
 import {registerConversationRoutes} from './conversationRoutes';
 import {ensureAnnouncementSubscription} from './announcementSubscriptions';
@@ -93,6 +94,7 @@ export async function createApp(db:Database,config:RuntimeConfig){
  const cookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1/control',maxAge:8*3600};
  const visitorCookieOptions={httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict' as const,path:'/api/v1',maxAge:30*86400};
  registerPropertyShareRoutes(app,db,config,visitor);
+ registerPresentationRoutes(app,db,config,visitor);
  registerAccountRoutes(app,db,config,visitor,editor);
  registerAcquisitionRoutes(app,db,config,visitor,control);
  app.get('/health',async()=>({status:'ok'}));
