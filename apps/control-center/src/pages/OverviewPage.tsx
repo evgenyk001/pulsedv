@@ -19,7 +19,7 @@ const RANGE_OPTIONS:{id:TrendRange;label:string}[]=[
 const METRIC_META:Record<TrendMetric,{label:string;title:string;description:string;summary:string}>={
  leads:{label:'Обращения',title:'Динамика новых обращений',description:'Новые заявки клиентов за выбранный период.',summary:'новых обращений'},
  events:{label:'Активность',title:'Активность клиентов',description:'Все зафиксированные действия клиентов в Mini App.',summary:'действий клиентов'},
- visitors:{label:'Посетители',title:'Уникальные посетители',description:'Уникальные сессии с активностью за выбранный период.',summary:'уникальных посетителей'},
+ visitors:{label:'Сессии',title:'Сессии с активностью',description:'Технические сессии с действиями за выбранный период.',summary:'сессий с активностью'},
 };
 const isoDate=(date:Date)=>date.toISOString().slice(0,10);
 const parseIso=(value:string)=>new Date(value+'T00:00:00Z');
@@ -129,7 +129,10 @@ export function OverviewPage(){
  const periodText=safeFrom===safeTo?formatFull(safeFrom):formatShort(safeFrom)+' — '+formatShort(safeTo);
  const dealRate=counts.leadsTotal?Math.round((counts.leadStages.deal/counts.leadsTotal)*100):0;
 
- return <PageFrame eyebrow="PULSE CONTROL" title="Командный центр" description="Продажи, клиенты и работа команды — единая картина в реальном времени." action={<Link className="primaryAction" to="/leads">Открыть клиентов <ArrowUpRight size={16}/></Link>}>
+ return <PageFrame eyebrow="PULSE CONTROL" title="Обзор" description="Клиенты, приоритеты и работа команды." action={<Link className="primaryAction" to="/leads">Открыть клиентов <ArrowUpRight size={16}/></Link>}>
+  <section className="metrics crmMetrics">
+   {[{label:'Клиенты в работе',value:counts.activeLeads,detail:counts.newLeads+' новых обращений',to:'/leads',Icon:UserRound},{label:'Горячий интерес',value:counts.hotProfiles,detail:'Люди, готовые к диалогу',to:'/users?filter=hot',Icon:Flame},{label:'Просроченные задачи',value:counts.overdueTasks,detail:'Требуют внимания команды',to:'/tasks?filter=overdue',Icon:Clock3},{label:'Без ответственного',value:counts.unassignedLeads,detail:'Назначьте менеджера',to:'/leads?filter=unassigned',Icon:CheckCheck}].map(({label,value,detail,to,Icon})=><Link to={to} className="metricLink" key={label}><article><div className="metricHeading"><span>{label}</span><Icon size={17}/></div><strong>{value}<ArrowUpRight size={18}/></strong><small>{detail}</small></article></Link>)}
+  </section>
   <section className="commandHero">
    <article className="pulseChartCard">
     <div className="pulseChartTop">
@@ -152,6 +155,7 @@ export function OverviewPage(){
      <small>До 366 дней</small>
     </div>}
 
+    {trendMetric==='visitors'&&trend.days.length>31&&<p className="workspaceHint">Точки графика суммируют дневные значения. Итог за период считает сессии без повторов.</p>}
     <div className="pulseChartSummary">
      <strong>{currentTotal}</strong><span>{metric.summary} за период</span>
      <small className={changePct===null?'':changePct>0?'trendUp':changePct<0?'trendDown':'trendFlat'}><TrendingUp size={13}/>{changePct===null?(currentTotal>0?'Новый период':'Нет данных для сравнения'):`${changePct>0?'+':''}${changePct}% к прошлому периоду`}</small>
@@ -202,9 +206,6 @@ export function OverviewPage(){
    </div>
   </section>
 
-  <section className="metrics crmMetrics">
-   {[{label:'Клиенты в работе',value:counts.activeLeads,detail:counts.newLeads+' новых обращений',to:'/leads',Icon:UserRound},{label:'Горячий интерес',value:counts.hotProfiles,detail:'Люди, готовые к диалогу',to:'/users?filter=hot',Icon:Flame},{label:'Просроченные задачи',value:counts.overdueTasks,detail:'Требуют внимания команды',to:'/tasks?filter=overdue',Icon:Clock3},{label:'Без ответственного',value:counts.unassignedLeads,detail:'Назначьте менеджера',to:'/leads?filter=unassigned',Icon:CheckCheck}].map(({label,value,detail,to,Icon})=><Link to={to} className="metricLink" key={label}><article><div className="metricHeading"><span>{label}</span><Icon size={17}/></div><strong>{value}<ArrowUpRight size={18}/></strong><small>{detail}</small></article></Link>)}
-  </section>
   <section className="panel pipelinePanel"><div className="sectionHeading"><div><span className="kicker">ДВИЖЕНИЕ К СДЕЛКЕ</span><h2>Клиенты по этапам</h2></div><Link to="/leads?view=board">Открыть доску <ArrowRight size={15}/></Link></div><div className="pipelineStages">{stages.map(([status,label],i)=>{const count=counts.leadStages[status]||0;return <Link key={status} to={'/leads?status='+status}><span><i style={{background:['#8495b1','#6282e6','#9a79d4','#d8a35c','#e16c78','#43a084'][i]}}/>{label}</span><b>{count}</b><div><i style={{width:Math.max(3,count/Math.max(1,counts.leadsTotal)*100)+'%'}}/></div></Link>})}</div></section>
   <div className="dashboardGrid"><section className="panel priorityPanel"><div className="sectionHeading"><div><span className="kicker">ПРИОРИТЕТНАЯ ОЧЕРЕДЬ</span><h2>Что сделать сейчас</h2></div><span className="countBadge">{counts.openTasks}</span></div>
    {!open.length?<div className="emptyState"><CheckCheck size={28}/><strong>Нет открытых задач</strong><span>Новые задачи появятся после обращений клиентов.</span></div>:<div className="workQueue">{open.slice(0,5).map(task=>{const lead=leads.find(l=>l.id===task.leadId);const late=Date.parse(task.dueAt)<Date.now();return <Link to={lead?'/leads?lead='+lead.id:'/tasks'} key={task.id}><span className={'queueMarker '+(late?'late':'')}><Clock3 size={17}/></span><div><b>{lead?.name||'Клиент'}</b><p>{task.title}</p><small className={late?'overdue':''}>{late?'Просрочено · ':''}{new Date(task.dueAt).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</small></div><ArrowUpRight size={16}/></Link>})}</div>}

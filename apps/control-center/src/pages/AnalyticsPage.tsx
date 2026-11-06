@@ -21,11 +21,12 @@ export function AnalyticsPage(){
   const state=usePulseState();
   const paging=useControlPaging("events");
   const [remote,setRemote]=React.useState<Summary|null>(null);
+  const [summaryError,setSummaryError]=React.useState(false),[loading,setLoading]=React.useState(runtime.enabled);
 
   React.useEffect(()=>{
     if(!runtime.enabled)return;
     let live=true;
-    const load=()=>api<Summary>("/control/analytics-summary").then(value=>{if(live)setRemote(value)}).catch(()=>{});
+    const load=()=>api<Summary>("/control/analytics-summary").then(value=>{if(live){setRemote(value);setSummaryError(false)}}).catch(()=>{if(live)setSummaryError(true)}).finally(()=>{if(live)setLoading(false)});
     void load();const id=window.setInterval(()=>{if(!document.hidden)void load()},30000);
     return()=>{live=false;window.clearInterval(id)};
   },[]);
@@ -53,17 +54,19 @@ export function AnalyticsPage(){
     {label:"Оставили контакт",value:leadSessions,base:sessions},
   ];
 
-  return <PageFrame eyebrow="АНАЛИТИКА ПОВЕДЕНИЯ" title="Аналитика" description="Охват действий и обращения. Этапы считаются независимо и не означают последовательный путь одного клиента.">
-    <TrafficPanel/><FinancePanel/><LossReasonsPanel/><AcquisitionPanel/><section className="metrics">
-      <article><span>Сессии</span><strong>{sessions}</strong><small>технические сессии, не визиты</small></article>
-      <article><span>Тёплые и выше</span><strong>{priorities.warm+priorities.hot+priorities.urgent}</strong><small>заметный интерес</small></article>
-      <article><span>Лиды</span><strong>{leadsTotal}</strong><small>оставили контакты</small></article>
-      <article><span>Конверсия</span><strong>{conversion}%</strong><small>контакты / сессии</small></article>
+  return <PageFrame eyebrow="АНАЛИТИКА ПОВЕДЕНИЯ" title="Аналитика" description="У каждого блока свой охват и период. Визиты, технические сессии, аккаунты и заявки считаются отдельно.">
+    <section className="workspaceAnalysisScope" aria-label="Охват сводки"><div><strong>Сводка активности</strong><p>{runtime.enabled&&loading&&!remote?'Загружаем серверные итоги…':remote?'По всем доступным данным сервера. Это не период 90 дней из блоков источников ниже.':'По загруженным записям. Значения могут не охватывать всю историю.'}</p></div>{summaryError&&<span role="status">{remote?'Не удалось обновить: показана последняя полученная сводка.':'Серверная сводка недоступна: показана загруженная выборка.'}</span>}</section>
+    <section className="metrics">
+      <article><span>Сессии</span><strong>{loading&&!remote?'—':sessions}</strong><small>технические сессии, не визиты</small></article>
+      <article><span>Тёплые и выше</span><strong>{loading&&!remote?'—':priorities.warm+priorities.hot+priorities.urgent}</strong><small>заметный интерес</small></article>
+      <article><span>Заявки</span><strong>{loading&&!remote?'—':leadsTotal}</strong><small>обращения, не число людей</small></article>
+      <article><span>Сессии с заявкой</span><strong>{loading&&!remote?'—':conversion+'%'}</strong><small>{leadSessions} из {sessions} технических сессий</small></article>
     </section>
 
+    <TrafficPanel/><FinancePanel/><LossReasonsPanel/><AcquisitionPanel/>
     <section className="panel">
       <div className="kicker">ОХВАТ ДЕЙСТВИЙ</div>
-      <h2>Что делают в приложении</h2>
+      <h2>Что делают в приложении</h2><p className="workspaceHint">Действия считаются независимо. Это не последовательная воронка одного клиента.</p>
       <div className="funnelRows">
         {funnel.map((step,index)=>{
           const percent=step.base?Math.round(step.value/step.base*100):0;

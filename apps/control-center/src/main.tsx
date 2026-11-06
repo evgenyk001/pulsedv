@@ -6,6 +6,7 @@ import ReactDOM from "react-dom/client";
 import { HashRouter } from "react-router-dom";
 import { App } from "./App";
 import "./styles.css";
+import "./workspace.css";
 
 configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.meta.env.VITE_API_BASE_URL,role:"control"});
 
