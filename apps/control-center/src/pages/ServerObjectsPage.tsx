@@ -1,3 +1,6 @@
+import {confirmControl} from '../components/ControlConfirm';
+import {RecordWorkspace,SaveStatus} from '../components/RecordWorkspace';
+import {ControlSelect} from '../components/ControlSelect';
 import {FloorplansEditor} from '../components/FloorplansEditor';
 import {runtime,ApiError} from '../../../../packages/pulse-data/runtime';
 import {useCatalogSelection,CatalogSelectionBar,CatalogSelectionCheck,confirmCatalogDelete,type CatalogSelectionItem} from '../components/CatalogSelection';
@@ -141,7 +144,7 @@ export function ServerObjectsPage(){
   const [notice,setNotice]=React.useState("");
   const [summaryError,setSummaryError]=React.useState("");
 
-  useDialog(!!selected,()=>{if(!busy&&(!dirty||window.confirm("Закрыть карточку без сохранения правок?")))setSelected(null)});
+  useDialog(!!selected,async ()=>{if(!busy&&(!dirty||await confirmControl("Закрыть карточку без сохранения правок?")))setSelected(null)});
   React.useEffect(()=>{if(!dirty)return;const warn=(e:BeforeUnloadEvent)=>{e.preventDefault();e.returnValue='';};window.addEventListener('beforeunload',warn);return()=>window.removeEventListener('beforeunload',warn)},[dirty]);
   const summarySequence=React.useRef(0);
   const loadCounts=React.useCallback(async()=>{
@@ -330,7 +333,7 @@ export function ServerObjectsPage(){
 
       const replace={images:parsed.has("images"),features:parsed.has("features"),floorplans:parsed.has("floorplans"),documents:parsed.has("documents")};
       const replacing=[parsed.has("buildings")&&"корпуса",replace.floorplans&&"планировки",replace.features&&"особенности",replace.images&&"фото по URL",replace.documents&&"документы по URL"].filter(Boolean).join(", ");
-      const confirmed=window.confirm(`Импортировать ${properties.length} ЖК?\n\nСуществующие объекты с тем же ID будут обновлены.${replacing?`\nБудут заменены: ${replacing}.`:"\nМедиа и дочерние данные без отдельного CSV сохранятся."}`);
+      const confirmed=await confirmControl(`Импортировать ${properties.length} ЖК?\n\nСуществующие объекты с тем же ID будут обновлены.${replacing?`\nБудут заменены: ${replacing}.`:"\nМедиа и дочерние данные без отдельного CSV сохранятся."}`);
       if(!confirmed){setNotice("Импорт отменён");return}
       const result=await importAdminCatalog(properties,replace);
       setNotice(`Импортировано ${result.total}: новых ${result.created}, обновлено ${result.updated}`);
@@ -340,7 +343,7 @@ export function ServerObjectsPage(){
   };
 
   const removeObjects=async(items:CatalogSelectionItem[],unsaved=false)=>{
-    if(deleting.current||busy||!canDelete||!confirmCatalogDelete(items,unsaved))return;
+    if(deleting.current||busy||!canDelete||!await confirmCatalogDelete(items,unsaved))return;
     deleting.current=true;setBusy(true);setDeleteError('');setNotice('');
     const removed:string[]=[];let failure='';
     try{
@@ -438,45 +441,32 @@ export function ServerObjectsPage(){
       </div>
     </section>
 
-    {p&&<div className="drawerBackdrop"><section className="detailDrawer wideDrawer catalogEditor" role="dialog" aria-modal="true" aria-label="Редактор объекта" onClick={e=>e.stopPropagation()}>
-      <div className="drawerHeader catalogDrawerHeader">
-        <div><div className="catalogDrawerEyebrow"><span className={"statusChip "+p.status}>{p.status==="published"?"Опубликован":p.status==="draft"?"Черновик":"Архив"}</span><small>{p.id}</small></div><h2>{p.name}</h2></div>
-        <button aria-label="Закрыть редактор" disabled={busy} onClick={()=>{if(!dirty||window.confirm("Закрыть карточку и отменить несохранённые правки?"))setSelected(null)}}><X/></button>
-      </div>
-
-      {error&&<div className="errorNotice" role="alert">{error}<button className="secondaryAction" disabled={busy} onClick={()=>{if(window.confirm("Загрузить актуальную карточку? Несохранённые правки в форме будут отменены."))void open(p.id)}}>Загрузить актуальную версию</button></div>}
-      {deleteError&&<div className="errorNotice" role="alert">{deleteError}</div>}
-      {deleteProgress&&<div role="status">{deleteProgress}</div>}
-      <fieldset className="editorFieldset" disabled={busy}>
-      <div className="catalogReadiness">
-        <div><span>Готовность карточки</span><b>{ready}%</b></div>
-        <div><i style={{width:ready+"%"}}/></div>
-        <small>{ready===100?"Основные данные заполнены — объект можно публиковать.":"Для публикации нужны обложка, цена, застройщик и срок сдачи."}</small>
-      </div>
-
-      <div className="editorStickyActions">{canDelete&&<button type="button" className="catalogDeleteAction" disabled={busy} onClick={()=>void removeObjects([p],dirty)}><Trash2 size={16}/>Удалить ЖК</button>}
-        <span>{dirty?"Есть несохранённые изменения":"Все изменения сохранены"}</span>
-        <button className="primaryAction" disabled={!dirty||busy||!detailsValid||!structureValid} onClick={()=>void save()}><Save size={15}/>{busy?(deleting.current?"Удаляем…":"Сохраняем…"):"Сохранить"}</button>
-      </div>
-
-      <CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} disabled={busy}/>
-      <ProjectStructureEditor property={p} onChange={patch} onValidityChange={setStructureValid}/>
-      <ProjectDetailsEditor key={p.id} value={p.projectDetails} onValidityChange={setDetailsValid} onChange={projectDetails=>patch({projectDetails})}/>
-      <section className="catalogEditorSection">
+    {p&&<RecordWorkspace key={p.id} title={p.name} eyebrow={p.city+' · '+(p.status==='published'?'Опубликован':p.status==='draft'?'Черновик':'Архив')} label="Редактор объекта" issues={[...(!detailsValid?[{section:'main',message:'Проверьте характеристики ЖК во вкладке «Основное».'}]:[]),...(!structureValid?[{section:'buildings',message:'Проверьте параметры домов во вкладке «Корпуса».'}]:[])]} onClose={async ()=>{if(!busy&&(!dirty||await confirmControl("Закрыть карточку и отменить несохранённые правки?")))setSelected(null)}}
+      notice={<>{error&&<div className="errorNotice" role="alert">{error}<button className="secondaryAction" disabled={busy} onClick={async ()=>{if(await confirmControl("Загрузить актуальную карточку? Несохранённые правки в форме будут отменены."))void open(p.id)}}>Загрузить актуальную версию</button></div>}{deleteError&&<div className="errorNotice" role="alert">{deleteError}</div>}{deleteProgress&&<div role="status">{deleteProgress}</div>}</>}
+      footer={<><SaveStatus dirty={dirty} busy={busy}/>{canDelete&&<button type="button" className="recordDelete" disabled={busy} onClick={()=>void removeObjects([p],dirty)}><Trash2 size={16}/><span>Удалить ЖК</span></button>}<button type="button" className="secondaryAction recordCancel" disabled={busy} onClick={async ()=>{if(!busy&&(!dirty||await confirmControl("Закрыть карточку и отменить несохранённые правки?")))setSelected(null)}}>Закрыть</button><button type="button" className="primaryAction" disabled={!dirty||busy||!detailsValid||!structureValid} onClick={()=>void save()}><Save size={16}/>{busy?'Сохраняем…':'Сохранить объект'}</button></>}
+      sections={[
+        {id:'main',label:'Основное',content:<fieldset className="recordFieldset" disabled={busy}><section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Building2 size={16}/></span><div><b>Основная информация</b><small>То, что формирует карточку и страницу ЖК</small></div></div>
         <div className="formGrid">
           {([["name","Название"],["city","Город"],["district","Район"],["address","Адрес"],["developerName","Застройщик"],["delivery","Срок сдачи"],["className","Класс"],["coverImageUrl","Обложка · URL"]] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input list={key==='city'?'catalog-city-options':undefined} value={(p as any)[key]||""} onChange={e=>patch({[key]:e.target.value||(["address","coverImageUrl"].includes(key)?null:"")} as any)}/></label>)}
           <StartingPriceEditor property={p} onChange={patch}/>
           <label className="controlField"><span>Порядок</span><input type="number" value={p.sortOrder} onChange={e=>patch({sortOrder:Number(e.target.value)})}/></label>
-          <label className="controlField"><span>Статус</span><select value={p.status} onChange={e=>patch({status:e.target.value as PulseProperty["status"]})}><option value="draft">Черновик</option><option value="published">Опубликован</option><option value="archived">Архив</option></select></label>
+          <label className="controlField"><span>Статус</span><ControlSelect value={p.status} onChange={e=>patch({status:e.target.value as PulseProperty["status"]})}><option value="draft">Черновик</option><option value="published">Опубликован</option><option value="archived">Архив</option></ControlSelect></label>
           <label className="controlField"><span>Теги через запятую</span><input value={p.tags.join(", ")} onChange={e=>patch({tags:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)})}/></label>
           <label className="controlField wide"><span>Описание</span><textarea rows={5} value={p.description} onChange={e=>patch({description:e.target.value})}/></label>
         </div>
       </section>
 
       <datalist id="catalog-city-options">{cities.map(item=><option key={item.city} value={item.city}/>)}</datalist>
-      <PropertyLocationEditor key={p.id} property={p} onChange={patch}/>
-      <section className="catalogEditorSection">
+<ProjectDetailsEditor key={p.id} value={p.projectDetails} onValidityChange={setDetailsValid} onChange={projectDetails=>patch({projectDetails})}/>      <section className="catalogEditorSection">
+        <div className="catalogEditorSectionHead"><span><CheckCircle2 size={16}/></span><div><b>Особенности</b><small>Преимущества ЖК для карточки и PULSE Select</small></div><button onClick={()=>patch({features:[...p.features,{id:crypto.randomUUID(),label:"",icon:"building",sortOrder:p.features.length}]})}><Plus size={15}/>Добавить</button></div>
+        <div className="catalogEditorStack">{p.features.map((feature,i)=><div className="inlineEditor" key={feature.id||i}><input aria-label="Особенность" value={feature.label} onChange={e=>patch({features:p.features.map((x,j)=>i===j?{...x,label:e.target.value}:x)})}/><ControlSelect value={feature.icon} aria-label="Иконка особенности" onChange={e=>patch({features:p.features.map((x,j)=>i===j?{...x,icon:e.target.value}:x)})}>{[["building","Дом"],["waves","Море"],["trees","Парк"],["car","Парковка"],["baby","Дети"],["map-pin","Расположение"]].map(([value,label])=><option key={value} value={value}>{label}</option>)}</ControlSelect><button aria-label="Удалить особенность" onClick={()=>patch({features:p.features.filter((_,j)=>i!==j)})}><X size={16}/></button></div>)}
+        {!p.features.length&&<div className="catalogEditorEmpty">Добавьте преимущества: море, двор, парковка, инфраструктура и другие.</div>}
+        </div>
+      </section></fieldset>},
+        {id:'buildings',label:'Корпуса',count:p.projectDetails?.buildings?.length??0,content:<fieldset className="recordFieldset" disabled={busy}><ProjectStructureEditor property={p} onChange={patch} onValidityChange={setStructureValid}/></fieldset>},
+        {id:'plans',label:'Планировки',count:p.floorplans.length,content:<fieldset className="recordFieldset" disabled={busy}><FloorplansEditor key={p.id} property={p} onChange={floorplans=>patch({floorplans})} onUpload={(file,id)=>void uploadFloorplan(file,id)} onRemoveImage={id=>void removeMedia(id,"floorplan")} disabled={busy}/></fieldset>},
+        {id:'photos',label:'Фото',count:p.images.length,content:<fieldset className="recordFieldset" disabled={busy}><section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Images size={16}/></span><div><b>Фото объекта</b><small>Обложка + галерея для страницы ЖК</small></div></div>
         <div className="mediaUploader">
           <div><h3>Обложка и галерея</h3><p>JPG, PNG или WebP до 15 МБ. Можно выделить сразу несколько фотографий.</p></div>
@@ -486,18 +476,8 @@ export function ServerObjectsPage(){
           </div>
         </div>
         <CatalogPhotosEditor key={p.id} property={p} disabled={busy} onChange={images=>patch({images})} onRemove={index=>{const photo=p.images[index];if(photo.id&&photo.url.startsWith('/media/'))void removeMedia(photo.id,'gallery');else patch({images:p.images.filter((_,i)=>i!==index)})}}/>
-      </section>
-
-      <FloorplansEditor key={p.id} property={p} onChange={floorplans=>patch({floorplans})} onUpload={(file,id)=>void uploadFloorplan(file,id)} onRemoveImage={id=>void removeMedia(id,"floorplan")} disabled={busy}/>
-
-      <section className="catalogEditorSection">
-        <div className="catalogEditorSectionHead"><span><CheckCircle2 size={16}/></span><div><b>Особенности</b><small>Преимущества ЖК для карточки и PULSE Select</small></div><button onClick={()=>patch({features:[...p.features,{id:crypto.randomUUID(),label:"",icon:"building",sortOrder:p.features.length}]})}><Plus size={15}/>Добавить</button></div>
-        <div className="catalogEditorStack">{p.features.map((feature,i)=><div className="inlineEditor" key={feature.id||i}><input aria-label="Особенность" value={feature.label} onChange={e=>patch({features:p.features.map((x,j)=>i===j?{...x,label:e.target.value}:x)})}/><select value={feature.icon} aria-label="Иконка особенности" onChange={e=>patch({features:p.features.map((x,j)=>i===j?{...x,icon:e.target.value}:x)})}>{[["building","Дом"],["waves","Море"],["trees","Парк"],["car","Парковка"],["baby","Дети"],["map-pin","Расположение"]].map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><button aria-label="Удалить особенность" onClick={()=>patch({features:p.features.filter((_,j)=>i!==j)})}><X size={16}/></button></div>)}
-        {!p.features.length&&<div className="catalogEditorEmpty">Добавьте преимущества: море, двор, парковка, инфраструктура и другие.</div>}
-        </div>
-      </section>
-
-      <section className="catalogEditorSection">
+      </section></fieldset>},
+        {id:'documents',label:'Документы',count:p.documents?.length??0,content:<fieldset className="recordFieldset" disabled={busy}><section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><FileText size={16}/></span><div><b>Презентации и документы</b><small>PDF до 50 МБ — хранится рядом с объектом</small></div></div>
         <div className="mediaUploader documentUploader">
           <div><h3>Материалы ЖК</h3><p>Можно хранить несколько презентаций и рабочих документов.</p></div>
@@ -505,9 +485,9 @@ export function ServerObjectsPage(){
         </div>
         <div className="documentList">{(p.documents??[]).map(doc=><div key={doc.id||doc.url}><FileText size={17}/><span><b>{doc.name}</b><small>{doc.mimeType||"PDF"}{doc.sizeBytes?" · "+Math.round(doc.sizeBytes/1024/1024*10)/10+" МБ":""}</small></span><a href={doc.url} target="_blank" rel="noreferrer">Открыть</a>{doc.id&&<button aria-label="Удалить документ" onClick={()=>void removeMedia(doc.id,doc.kind)}><Trash2 size={14}/></button>}</div>)}</div>
         {!p.documents?.length&&<div className="catalogEditorEmpty">Презентаций пока нет.</div>}
-      </section>
-
-      <div className="catalogEditorFooter"><div><HardDrive size={15}/><span>Изменения появятся в каталоге после сохранения</span></div><button className="secondaryAction" disabled={busy} onClick={()=>{if(!dirty||window.confirm("Закрыть карточку и отменить несохранённые правки?"))setSelected(null)}}>Закрыть карточку</button><button className="primaryAction" disabled={!dirty||busy||!detailsValid||!structureValid} onClick={()=>void save()}><Save size={16}/>Сохранить объект</button></div>
-    </fieldset></section></div>}
+      </section></fieldset>},
+        {id:'map',label:'На карте',content:<fieldset className="recordFieldset" disabled={busy}><PropertyLocationEditor key={p.id} property={p} onChange={patch}/></fieldset>},
+        {id:'freshness',label:'Проверка',content:<fieldset className="recordFieldset" disabled={busy}><CatalogFreshnessEditor value={p.freshness} onChange={freshness=>patch({freshness})} disabled={busy}/></fieldset>},
+      ]}/>}
   </PageFrame>;
 }

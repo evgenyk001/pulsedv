@@ -1,5 +1,7 @@
+import {confirmControl} from '../components/ControlConfirm';
+import {ControlSelect} from '../components/ControlSelect';
 import React from "react";
-import { ArrowDown, ArrowUp, Copy, ExternalLink, Gift, Handshake, ImageUp, Megaphone, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Copy, ExternalLink, Gift, Handshake, ImageUp, Megaphone, Plus, Trash2 } from "lucide-react";
 import { PageFrame } from "../components/PageFrame";
 import { usePulseEvents, usePulseState } from "../data";
 import { updatePulseState, type PulseBanner, type PulseBannerKind } from "../../../../packages/pulse-data";
@@ -38,6 +40,7 @@ export function ContentPage(){
   const events=usePulseEvents();
   const [uploading,setUploading]=React.useState<string|null>(null);
   const [error,setError]=React.useState("");
+  const [editing,setEditing]=React.useState<string|null>(null);
 
   const setBanners=(updater:(items:PulseBanner[])=>PulseBanner[])=>updatePulseState(current=>({
     ...current,banners:updater(current.banners)
@@ -52,7 +55,7 @@ export function ContentPage(){
       actionUrl:"/catalog",city:null,audience:null,enabled:false,sortOrder:max+1,
       kind:"promo",eyebrow:"PULSEDV.RU",startsAt:null,endsAt:null,
     };
-    setBanners(items=>[...items,banner]);
+    setBanners(items=>[...items,banner]);setEditing(banner.id);
   };
 
   const duplicate=(source:PulseBanner)=>{
@@ -60,8 +63,8 @@ export function ContentPage(){
     setBanners(items=>[...items,{...source,id:"banner-"+crypto.randomUUID(),title:source.title+" — копия",enabled:false,sortOrder:max+1}]);
   };
 
-  const remove=(banner:PulseBanner)=>{
-    if(!window.confirm('Удалить баннер «'+banner.title+'»? Изменение применится после сохранения.'))return;
+  const remove=async (banner:PulseBanner)=>{
+    if(!await confirmControl('Удалить баннер «'+banner.title+'»? Изменение применится после сохранения.'))return;
     setBanners(items=>items.filter(item=>item.id!==banner.id).sort((a,b)=>a.sortOrder-b.sortOrder).map((item,index)=>({...item,sortOrder:index+1})));
   };
 
@@ -160,10 +163,11 @@ export function ContentPage(){
               </div>
             </div>
 
-            <div className="bannerCampaignGrid">
+            <button type="button" className="bannerOpenEditor" aria-expanded={editing===banner.id} onClick={()=>setEditing(editing===banner.id?null:banner.id)}><span><strong>{banner.title||'Без названия'}</strong><small>{banner.body||'Добавьте описание кампании'}</small></span><span>{editing===banner.id?'Свернуть':'Настроить'}<ChevronDown size={17} style={{transform:editing===banner.id?'rotate(180deg)':undefined}}/></span></button>
+            <div className="bannerCampaignGrid" hidden={editing!==banner.id}>
               <div className="bannerCampaignEditor">
                 <div className="formGrid">
-                  <label className="controlField"><span>Тип кампании</span><select value={kind} onChange={e=>patchBanner(banner.id,{kind:e.target.value as PulseBannerKind})}><option value="promo">Промо PULSEDV.RU</option><option value="giveaway">Розыгрыш</option><option value="partner">Партнёрская реклама</option></select><small>{kinds[kind].hint}</small></label>
+                  <label className="controlField"><span>Тип кампании</span><ControlSelect value={kind} onChange={e=>patchBanner(banner.id,{kind:e.target.value as PulseBannerKind})}><option value="promo">Промо PULSEDV.RU</option><option value="giveaway">Розыгрыш</option><option value="partner">Партнёрская реклама</option></ControlSelect><small>{kinds[kind].hint}</small></label>
                   <label className="switchControl"><span><b>Показывать баннер</b><small>Выключенный баннер остаётся в системе.</small></span><input aria-label={"Показывать "+banner.title} type="checkbox" checked={banner.enabled} onChange={e=>patchBanner(banner.id,{enabled:e.target.checked})}/></label>
                   <label className="controlField wide"><span>Метка над заголовком</span><input value={banner.eyebrow??banner.city??""} maxLength={120} placeholder={kind==="partner"?"Партнёр PULSEDV.RU":kind==="giveaway"?"Розыгрыш":"PULSEDV.RU"} onChange={e=>patchBanner(banner.id,{eyebrow:e.target.value||null,city:null})}/></label>
                   <label className="controlField wide"><span>Заголовок</span><input value={banner.title} maxLength={250} onChange={e=>patchBanner(banner.id,{title:e.target.value})}/></label>
@@ -179,9 +183,9 @@ export function ContentPage(){
                 <div className="bannerActionBox">
                   <div className="bannerSectionTitle"><ExternalLink size={16}/><div><b>Действие по нажатию</b><small>Весь баннер кликабелен. Если действие отключено, кнопка в баннере не показывается.</small></div></div>
                   <div className="formGrid">
-                    <label className="controlField"><span>Куда ведёт</span><select value={preset} onChange={e=>applyActionPreset(banner,e.target.value)}><option value="/catalog">Каталог</option><option value="/selection">PULSE Select</option><option value="/mortgage">Ипотека</option><option value="/journey">Мои подборки и показы</option><option value="/partners">Партнёрская программа</option><option value="property">Конкретный ЖК</option><option value="external">Внешний сайт HTTPS</option><option value="custom">Другой экран Mini App</option><option value="none">Без перехода</option></select></label>
+                    <label className="controlField"><span>Куда ведёт</span><ControlSelect value={preset} onChange={e=>applyActionPreset(banner,e.target.value)}><option value="/catalog">Каталог</option><option value="/selection">PULSE Select</option><option value="/mortgage">Ипотека</option><option value="/journey">Мои подборки и показы</option><option value="/partners">Партнёрская программа</option><option value="property">Конкретный ЖК</option><option value="external">Внешний сайт HTTPS</option><option value="custom">Другой экран Mini App</option><option value="none">Без перехода</option></ControlSelect></label>
                     <label className="controlField"><span>Текст кнопки</span><input value={banner.ctaLabel||""} disabled={!banner.actionUrl} maxLength={100} onChange={e=>patchBanner(banner.id,{ctaLabel:e.target.value||null})}/></label>
-                    {preset==="property"&&<label className="controlField wide"><span>Жилой комплекс</span><select value={(banner.actionUrl||"").replace("/property/","")} onChange={e=>patchBanner(banner.id,{actionUrl:"/property/"+e.target.value})}>{state.properties.filter(item=>item.status==="published").map(property=><option key={property.id} value={property.id}>{property.name}</option>)}</select></label>}
+                    {preset==="property"&&<label className="controlField wide"><span>Жилой комплекс</span><ControlSelect value={(banner.actionUrl||"").replace("/property/","")} onChange={e=>patchBanner(banner.id,{actionUrl:"/property/"+e.target.value})}>{state.properties.filter(item=>item.status==="published").map(property=><option key={property.id} value={property.id}>{property.name}</option>)}</ControlSelect></label>}
                     {(preset==="external"||preset==="custom")&&<label className="controlField wide"><span>{preset==="external"?"HTTPS-ссылка":"Внутренний путь"}</span><input value={banner.actionUrl||""} placeholder={preset==="external"?"https://example.com":"/catalog?city=Владивосток"} onChange={e=>patchBanner(banner.id,{actionUrl:e.target.value||null})}/></label>}
                   </div>
                 </div>

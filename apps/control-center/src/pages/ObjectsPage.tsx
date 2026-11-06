@@ -1,3 +1,4 @@
+import {ControlSelect} from '../components/ControlSelect';
 import {FloorplansEditor} from '../components/FloorplansEditor';
 import {useCatalogSelection,CatalogSelectionBar,CatalogSelectionCheck,confirmCatalogDelete,type CatalogSelectionItem} from '../components/CatalogSelection';
 import {ProjectStructureEditor} from '../components/ProjectStructureEditor';
@@ -64,8 +65,8 @@ function PreviewObjectsPage(){
     archived:cityProperties.filter(p=>p.status==='archived').length,
   };
 
-  const removeObjects=(items:CatalogSelectionItem[])=>{
-    if(!confirmCatalogDelete(items))return;
+  const removeObjects=async (items:CatalogSelectionItem[])=>{
+    if(!await confirmCatalogDelete(items))return;
     const ids=new Set(items.map(p=>p.id));
     updatePulseState(current=>({...current,properties:current.properties.filter(p=>!ids.has(p.id))}));
     selection.remove([...ids]);if(selected&&ids.has(selected))setSelected(null);setNotice('Удалено ЖК: '+ids.size);
@@ -160,7 +161,7 @@ function PreviewObjectsPage(){
           {([['name','Название'],['city','Город'],['district','Район'],['address','Адрес'],['developerName','Застройщик'],['delivery','Срок сдачи'],['className','Класс'],['coverImageUrl','Обложка · HTTPS URL']] as const).map(([key,label])=><label key={key} className="controlField"><span>{label}</span><input list={key==='city'?'catalog-city-options':undefined} value={(p as any)[key]||''} onChange={e=>patch({[key]:e.target.value||(['address','coverImageUrl'].includes(key)?null:'')} as any)}/></label>)}
           <StartingPriceEditor property={p} onChange={patch}/>
           <label className="controlField"><span>Порядок</span><input type="number" value={p.sortOrder} onChange={e=>patch({sortOrder:Number(e.target.value)})}/></label>
-          <label className="controlField"><span>Статус</span><select value={p.status} onChange={e=>patch({status:e.target.value as PulseProperty['status']})}><option value="draft">Черновик</option><option value="published">Опубликован</option><option value="archived">Архив</option></select></label>
+          <label className="controlField"><span>Статус</span><ControlSelect value={p.status} onChange={e=>patch({status:e.target.value as PulseProperty['status']})}><option value="draft">Черновик</option><option value="published">Опубликован</option><option value="archived">Архив</option></ControlSelect></label>
           <label className="controlField"><span>Теги через запятую</span><input value={p.tags.join(', ')} onChange={e=>patch({tags:e.target.value.split(',').map(s=>s.trim()).filter(Boolean)})}/></label>
           <label className="controlField wide"><span>Описание</span><textarea rows={5} value={p.description} onChange={e=>patch({description:e.target.value})}/></label>
         </div>
@@ -174,7 +175,7 @@ function PreviewObjectsPage(){
 
       <section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><CheckCircle2 size={16}/></span><div><b>Особенности</b><small>Преимущества проекта</small></div><button onClick={()=>patch({features:[...p.features,{id:crypto.randomUUID(),label:'',icon:'building',sortOrder:p.features.length}]})}><Plus size={15}/>Добавить</button></div>
-        <div className="catalogEditorStack">{p.features.map((feature,i)=><div className="inlineEditor" key={feature.id||i}><input aria-label="Особенность" value={feature.label} onChange={e=>patch({features:p.features.map((x,j)=>i===j?{...x,label:e.target.value}:x)})}/><select value={feature.icon} aria-label="Иконка особенности" onChange={e=>patch({features:p.features.map((x,j)=>i===j?{...x,icon:e.target.value}:x)})}>{[['building','Дом'],['waves','Море'],['trees','Парк'],['car','Парковка'],['baby','Дети'],['map-pin','Расположение']].map(([value,label])=><option key={value} value={value}>{label}</option>)}</select><button aria-label="Удалить особенность" onClick={()=>patch({features:p.features.filter((_,j)=>i!==j)})}><X size={16}/></button></div>)}
+        <div className="catalogEditorStack">{p.features.map((feature,i)=><div className="inlineEditor" key={feature.id||i}><input aria-label="Особенность" value={feature.label} onChange={e=>patch({features:p.features.map((x,j)=>i===j?{...x,label:e.target.value}:x)})}/><ControlSelect value={feature.icon} aria-label="Иконка особенности" onChange={e=>patch({features:p.features.map((x,j)=>i===j?{...x,icon:e.target.value}:x)})}>{[['building','Дом'],['waves','Море'],['trees','Парк'],['car','Парковка'],['baby','Дети'],['map-pin','Расположение']].map(([value,label])=><option key={value} value={value}>{label}</option>)}</ControlSelect><button aria-label="Удалить особенность" onClick={()=>patch({features:p.features.filter((_,j)=>i!==j)})}><X size={16}/></button></div>)}
         {!p.features.length&&<div className="catalogEditorEmpty">Добавьте преимущества ЖК.</div>}</div>
       </section>
 

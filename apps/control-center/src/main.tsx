@@ -1,3 +1,4 @@
+import {ControlConfirmHost} from './components/ControlConfirm';
 import {AppBoundary} from '../../../packages/browser/AppBoundary';
 import { configureRuntime } from "../../../packages/pulse-data/runtime";
 import { RuntimeShell } from "./RuntimeShell";
@@ -12,6 +13,6 @@ configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.me
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AppBoundary><HashRouter><RuntimeShell><App/></RuntimeShell></HashRouter></AppBoundary>
+    <AppBoundary><HashRouter><RuntimeShell><App/></RuntimeShell><ControlConfirmHost/></HashRouter></AppBoundary>
   </React.StrictMode>
 );

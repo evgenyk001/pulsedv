@@ -1,3 +1,4 @@
+import {ControlSelect} from './ControlSelect';
 import React from 'react';
 import type {PulseProperty,ApartmentFinish} from '../../../../packages/pulse-data/model';
 import {APARTMENT_FINISHES,canonicalApartmentFinish} from '../../../../packages/domain/propertyFinish';
@@ -21,9 +22,9 @@ export function PlanFinishOptionsEditor({plan,onChange}:{plan:Floorplan;onChange
   <p style={{fontSize:11,opacity:.72,margin:'6px 0 10px'}}>При наличии вариантов покупатель увидит их цены вместо общей цены планировки. Цена без подтверждения не подставляется автоматически.</p>
   {offers.map((offer,index)=><div key={index} className="formGrid" style={{marginBottom:9}}>
    <label className="controlField"><span>Тип отделки</span>
-    <select aria-label={'Отделка варианта '+(index+1)} value={canonicalApartmentFinish(offer.finishType)??''} onChange={e=>{const finishType=e.target.value as ApartmentFinish;if(!offers.some((item,i)=>i!==index&&canonicalApartmentFinish(item.finishType)===finishType))update(index,{...offer,finishType})}}>
+    <ControlSelect aria-label={'Отделка варианта '+(index+1)} value={canonicalApartmentFinish(offer.finishType)??''} onChange={e=>{const finishType=e.target.value as ApartmentFinish;if(!offers.some((item,i)=>i!==index&&canonicalApartmentFinish(item.finishType)===finishType))update(index,{...offer,finishType})}}>
      {APARTMENT_FINISHES.filter(([key])=>key===canonicalApartmentFinish(offer.finishType)||!offers.some((item,i)=>i!==index&&canonicalApartmentFinish(item.finishType)===key)).map(([key,label])=><option key={key} value={key}>{label}</option>)}
-    </select>
+    </ControlSelect>
    </label>
    {plan.isExact&&<label className="controlField"><span>Цена за м² для этой отделки, ₽</span><input aria-label={'Цена за квадратный метр отделки варианта '+(index+1)} type="number" min="0.01" step="0.01" disabled={!plan.areaFrom} placeholder="Укажите точную площадь" value={unitDraft?.index===index?unitDraft.value:squareMetreFromTotal(offer.priceFrom==null?null:propertyPriceRub(offer.priceFrom),plan.areaFrom)??''} onFocus={e=>setUnitDraft({index,value:e.target.value})} onBlur={()=>setUnitDraft(null)} onChange={e=>{
     setUnitDraft({index,value:e.target.value});

@@ -1,3 +1,4 @@
+import {confirmControl} from './ControlConfirm';
 import React from 'react';
 import {CheckSquare,Trash2,X} from 'lucide-react';
 import type {PulseProperty} from '../../../../packages/pulse-data/model';
@@ -12,9 +13,9 @@ export function useCatalogSelection(resetKey:string){
  const cancel=()=>{setMode(false);setItems(new Map())};
  return {mode,setMode,items,toggle,remove,page,cancel};
 }
-export function confirmCatalogDelete(items:CatalogSelectionItem[],dirty=false){
+export async function confirmCatalogDelete(items:CatalogSelectionItem[],dirty=false){
  if(!items.length)return false;
- return window.confirm('Удалить '+items.length+' ЖК из каталога?\n\n'+items.slice(0,10).map(p=>'• '+p.name+' · '+p.city).join('\n')+(items.length>10?'\n…и ещё '+(items.length-10):'')+'\n\nУдалятся карточки ЖК, их фото, планировки и документы. Обращения и переписка сохранятся, но карточки удалённых ЖК станут недоступны. Отменить удаление нельзя.'+(dirty?'\nНесохранённые правки карточки будут потеряны.':''));
+ return await confirmControl('Удалить '+items.length+' ЖК из каталога?\n\n'+items.slice(0,10).map(p=>'• '+p.name+' · '+p.city).join('\n')+(items.length>10?'\n…и ещё '+(items.length-10):'')+'\n\nУдалятся карточки ЖК, их фото, планировки и документы. Обращения и переписка сохранятся, но карточки удалённых ЖК станут недоступны. Отменить удаление нельзя.'+(dirty?'\nНесохранённые правки карточки будут потеряны.':''));
 }
 export function CatalogSelectionBar({selection,visible,busy=false,loading=false,progress,onDelete}:{selection:ReturnType<typeof useCatalogSelection>;visible:CatalogSelectionItem[];busy?:boolean;loading?:boolean;progress?:string;onDelete:()=>void}){
  const entries=Array.from(selection.items.values()),all=visible.length>0&&visible.every(p=>selection.items.has(p.id));

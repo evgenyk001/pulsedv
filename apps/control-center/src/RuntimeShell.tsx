@@ -1,6 +1,7 @@
+import {confirmControl} from './components/ControlConfirm';
 import {useDialog} from './components/useDialog';
 import React from 'react';
-import { LogOut, RefreshCw, Save, ShieldCheck } from 'lucide-react';
+import { LogOut, RefreshCw, Save, ShieldCheck, X } from 'lucide-react';
 import { runtime, subscribeRuntime, restoreLogin, login, verifyLogin, setMfa, logout, refreshControl, refreshControlPulse, refreshLoadedControlData, saveState, discardState, api } from '../../../packages/pulse-data/runtime';
 
 export function useRuntime(){const [,render]=React.useReducer(x=>x+1,0);React.useEffect(()=>subscribeRuntime(render),[]);return runtime;}
@@ -58,13 +59,13 @@ export function RuntimeShell({children}:{children:React.ReactNode}){
  return <>
   <div className="runtimeBar" ref={runtimeBarRef}>
    <span><i className={current.enabled?'liveDot':'previewDot'}/>{current.enabled?(current.member?.name+' · '+(current.member?.role==='owner'?'Владелец':current.member?.role==='admin'?'Администратор':'Менеджер')):'Локальные данные'}</span>
-   <div>{current.enabled&&<><button style={{width:"auto",padding:"0 9px"}} onClick={()=>{setShowPassword(!showPassword);setError('');setMfaPassword('');}}>Защита</button><small>{current.lastSync?'Обновлено '+new Date(current.lastSync).toLocaleTimeString('ru-RU'):''}</small><button aria-label="Обновить данные" onClick={()=>void refreshLoadedControlData().catch(()=>{})}><RefreshCw size={16}/></button><button aria-label="Выйти" onClick={()=>{if(!current.dirty||window.confirm('Выйти и потерять несохранённые настройки?'))void logout().catch(e=>setError(e.message));}}><LogOut size={16}/></button></>}</div>
+   <div>{current.enabled&&<><button style={{width:"auto",padding:"0 9px"}} onClick={()=>{setShowPassword(!showPassword);setError('');setMfaPassword('');}}>Защита</button><small>{current.lastSync?'Обновлено '+new Date(current.lastSync).toLocaleTimeString('ru-RU'):''}</small><button aria-label="Обновить данные" onClick={()=>void refreshLoadedControlData().catch(()=>{})}><RefreshCw size={16}/></button><button aria-label="Выйти" onClick={async ()=>{if(!current.dirty||await confirmControl('Выйти и потерять несохранённые настройки?'))void logout().catch(e=>setError(e.message));}}><LogOut size={16}/></button></>}</div>
   </div>
   {current.error&&<div className="runtimeError" role="alert">{current.error}</div>}
   {current.snapshot.limited&&<details className="workspaceScope"><summary>Загружена часть записей</summary><p>Счётчики в списках относятся к загруженной выборке. Используйте поиск и «Показать ещё». Серверные сводки в аналитике могут охватывать больше записей.</p></details>}
-  {current.dirty&&<div className="saveBar" ref={saveBarRef}><div><b>Есть несохранённые настройки</b><small>Они появятся в мини‑аппе после сохранения.</small></div><button disabled={current.saving} onClick={()=>{if(window.confirm('Отменить несохранённые изменения?'))void discardState().catch(()=>{});}}>Отменить</button><button className="primaryAction" disabled={current.saving} onClick={()=>void saveState().catch(()=>{})}><Save size={16}/>{current.saving?'Сохраняем…':'Сохранить'}</button></div>}
-  {showPassword&&<div className="drawerBackdrop"><div className="detailDrawer accountSecurityDrawer" role="dialog" aria-modal="true" aria-label="Защита аккаунта">
-   <h2>Защита аккаунта</h2>
+  {current.dirty&&<div className="saveBar" ref={saveBarRef}><div><b>Есть несохранённые настройки</b><small>Они появятся в мини‑аппе после сохранения.</small></div><button disabled={current.saving} onClick={async ()=>{if(await confirmControl('Отменить несохранённые изменения?'))void discardState().catch(()=>{});}}>Отменить</button><button className="primaryAction" disabled={current.saving} onClick={()=>void saveState().catch(()=>{})}><Save size={16}/>{current.saving?'Сохраняем…':'Сохранить'}</button></div>}
+  {showPassword&&<div className="control controlOverlayRoot"><div className="drawerBackdrop"><div className="detailDrawer accountSecurityDrawer" role="dialog" aria-modal="true" aria-label="Защита аккаунта">
+   <header className="drawerHeader"><h2>Защита аккаунта</h2><button type="button" aria-label="Закрыть защиту аккаунта" disabled={busy} onClick={()=>{setShowPassword(false);setError('')}}><X size={19}/></button></header>
    <p>Пароль и двухэтапный вход управляются отдельно. Для изменения потребуется текущий пароль.</p>
    <form onSubmit={async e=>{e.preventDefault();setBusy(true);setError('');try{await api('/control/password',{method:'POST',body:JSON.stringify({currentPassword,newPassword})});setCurrentPassword('');setNewPassword('');setShowPassword(false);runtime.member=null;runtime.ready=false;}catch(err){setError(err instanceof Error?err.message:'Ошибка');}finally{setBusy(false);}}}>
     <h3>Сменить пароль</h3>
@@ -81,8 +82,8 @@ export function RuntimeShell({children}:{children:React.ReactNode}){
     <button className="primaryAction" disabled={busy}>{current.member?.mfaEnabled?'Выключить 2FA':'Включить 2FA через Telegram'}</button>
    </form>
    {error&&<p className={error.includes('включён')||error.includes('выключен')?'':'errorNotice'} role="status">{error}</p>}
-   <button type="button" onClick={()=>{setShowPassword(false);setError('');}}>Закрыть</button>
-  </div></div>}
+   <button type="button" className="secondaryAction" disabled={busy} onClick={()=>{setShowPassword(false);setError('');}}>Закрыть</button>
+  </div></div></div>}
   {children}
  </>;
 }

@@ -47,7 +47,7 @@ const groups=["Работа","Продукт","Контроль"] as const;
 export function App(){
   const [menu,setMenu]=React.useState(false);
   const [navigator,setNavigator]=React.useState(false);
-  React.useEffect(()=>{const open=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'&&!document.querySelector('[role="dialog"],dialog[open]')){e.preventDefault();setMenu(false);setNavigator(true)}};window.addEventListener('keydown',open);return()=>window.removeEventListener('keydown',open)},[]);
+  React.useEffect(()=>{const open=(e:KeyboardEvent)=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'&&!document.querySelector('[role="dialog"],[role="alertdialog"],dialog[open]')){e.preventDefault();setMenu(false);setNavigator(true)}};window.addEventListener('keydown',open);return()=>window.removeEventListener('keydown',open)},[]);
   const [compact,setCompact]=React.useState(()=>window.matchMedia('(max-width:1024px)').matches);
   const location=useLocation();
   const workspaceRef=React.useRef<HTMLDivElement>(null);
@@ -60,7 +60,7 @@ export function App(){
   const newLeads=counts.newLeads;
   const activeSection=sections.find(s=>s.to===location.pathname)||sections[0];
   const visibleSections=sections.filter(section=>!runtime.enabled||runtime.member?.role!=="manager"||["/","/leads","/users","/tasks","/analytics","/journey"].includes(section.to));
-  React.useEffect(()=>{setMenu(false);setNavigator(false);window.scrollTo({top:0,left:0,behavior:'auto'});},[location.pathname]);
+  React.useLayoutEffect(()=>{setMenu(false);setNavigator(false);window.scrollTo({top:0,left:0,behavior:'auto'});},[location.pathname]);
   React.useEffect(()=>{const close=(e:KeyboardEvent)=>{if(e.key==='Escape')setMenu(false)};window.addEventListener('keydown',close);return()=>window.removeEventListener('keydown',close)},[]);
   return <div className={"control"+(menu?" menuOpen":"")}>
     {menu&&<button className="menuScrim" aria-label="Закрыть меню" onClick={()=>setMenu(false)}/>}
@@ -79,7 +79,7 @@ export function App(){
               <div className="navCaption">{group}</div>
               <div className="navGroupLinks">
                 {items.map(({to,label,icon:Icon,end})=>
-                  <NavLink key={to} to={to} end={end} className={({isActive})=>isActive?"active":undefined}>
+                  <NavLink key={to} onClick={()=>setMenu(false)} to={to} end={end} className={({isActive})=>isActive?"active":undefined}>
                     <span className="navIcon"><Icon size={17}/></span>
                     <span>{label}</span>
                     {to==="/tasks"&&overdue>0&&<em>{overdue}</em>}
@@ -98,7 +98,8 @@ export function App(){
       </div>
     </aside>
     {navigator&&<SectionNavigator sections={visibleSections} onClose={()=>setNavigator(false)}/>}
-    <main inert={(menu||navigator)||undefined} id="control-main">
+    <div id="control-record-root"/>
+    <main id="control-main">
       <div className="workspaceBar" ref={workspaceRef}>
         <div className="workspaceLeft">
           <button className="mobileMenu" aria-label={menu?"Скрыть меню":"Открыть меню"} aria-controls="control-navigation" aria-expanded={menu} onClick={()=>setMenu(!menu)}>{menu?<X size={20}/>:<Menu size={20}/>}</button>

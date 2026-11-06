@@ -1,3 +1,4 @@
+@layer legacy {
 /* Match Control's shared charcoal surfaces, including the review drawer. */
 .partnersWorkspace { color:var(--pc-text); }
 .partnersWorkspace .pageFlow { min-width:0; }
@@ -9,11 +10,11 @@
 .partnersWorkspace .toolbar { min-width:0; }
 .partnersWorkspace .segmented { max-width:100%; overflow-x:auto; scrollbar-width:none; }
 .partnersWorkspace .segmented::-webkit-scrollbar { display:none; }
-.partnersWorkspace .segmented button { flex:none; min-height:44px!important; }
+.partnersWorkspace .segmented button { flex:none; min-height:44px; }
 .partnerReferralList { min-width:0; display:grid; gap:10px; }
 .partnersGrid { display:grid; grid-template-columns:minmax(0,1.1fr) repeat(4,minmax(0,1fr)); }
-.partnersWorkspace .tableHead.partnersGrid { padding:10px 18px!important; border:0!important; }
-.partnersWorkspace .partnerReferralRow { width:100%; padding:18px!important; gap:16px; align-items:center; text-align:left; background:var(--pc-surface)!important; border:1px solid var(--pc-line)!important; border-radius:18px!important; color:var(--pc-text)!important; font:inherit; font-size:12px; line-height:1.5; box-shadow:none; transition:background .2s ease,border-color .2s ease,transform .18s ease; }
+.partnersWorkspace .tableHead.partnersGrid { padding:10px 18px; border:0; }
+.partnersWorkspace .partnerReferralRow { width:100%; padding:18px; gap:16px; align-items:center; text-align:left; background:var(--pc-surface); border:1px solid var(--pc-line); border-radius:18px; color:var(--pc-text); font:inherit; font-size:12px; line-height:1.5; box-shadow:none; transition:background .2s ease,border-color .2s ease,transform .18s ease; }
 .partnerReferralRow>span { min-width:0; overflow-wrap:anywhere; }
 .partnerCellClient b { font-size:13px; font-weight:700; }
 .partnerCellMeta { display:block; color:var(--pc-muted); font-size:11px; margin-top:5px; font-weight:400; }
@@ -62,15 +63,15 @@
 .partnerHistory b { color:var(--pc-text); font-weight:600; line-height:1.5; }
 .partnerHistory small { display:block; margin-top:5px; color:var(--pc-muted); font-size:10px; }
 .partnersWorkspace button:focus-visible,.partnerDrawer button:focus-visible { outline:2px solid #ff7783; outline-offset:3px; }
-@media(hover:hover) { .partnersWorkspace .partnerReferralRow:hover { background:var(--pc-surface-raised)!important; border-color:var(--pc-line-strong)!important; } }
+@media(hover:hover) { .partnersWorkspace .partnerReferralRow:hover { background:var(--pc-surface-raised); border-color:var(--pc-line-strong); } }
 .partnersWorkspace .partnerReferralRow:active { transform:scale(.992); }
 @media(max-width:760px) {
- .partnersWorkspace .metrics { grid-template-columns:repeat(2,minmax(0,1fr))!important; gap:10px!important; }
- .partnersWorkspace .metrics article { padding:15px!important; min-height:112px!important; }
- .partnersWorkspace .metrics article strong { font-size:28px!important; }
- .partnersWorkspace .metrics article small { line-height:1.45!important; }
- .partnersWorkspace .tableHead.partnersGrid { display:none!important; }
- .partnersWorkspace .partnerReferralRow { grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-areas:"client review" "source stage" "reward reward"; gap:15px 12px; padding:16px!important; }
+ .partnersWorkspace .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+ .partnersWorkspace .metrics article { padding:15px; min-height:112px; }
+ .partnersWorkspace .metrics article strong { font-size:28px; }
+ .partnersWorkspace .metrics article small { line-height:1.45; }
+ .partnersWorkspace .tableHead.partnersGrid { display:none; }
+ .partnersWorkspace .partnerReferralRow { grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-areas:"client review" "source stage" "reward reward"; gap:15px 12px; padding:16px; }
  .partnerCellClient { grid-area:client; }
  .partnerCellSource { grid-area:source; }
  .partnerCellStage { grid-area:stage; }
@@ -83,17 +84,17 @@
  .partnersRules { padding:17px; gap:11px; }
  .partnerProfileRow { flex-wrap:wrap; }
  .partnerProfileRow .secondaryAction { min-height:44px; }
- .partnerDrawer { padding:20px!important; padding-bottom:calc(24px + env(safe-area-inset-bottom))!important; }
- .partnerDrawer .primaryAction,.partnerDrawer .secondaryAction { min-height:46px!important; white-space:normal; text-align:center; line-height:1.45; }
+ .partnerDrawer { padding:20px; padding-bottom:calc(24px + env(safe-area-inset-bottom)); }
+ .partnerDrawer .primaryAction,.partnerDrawer .secondaryAction { min-height:46px; white-space:normal; text-align:center; line-height:1.45; }
  .partnerDrawer .partnerIdentity .secondaryAction { width:100%; }
- .control .partnerDrawer .controlField input,.control .partnerDrawer .controlField select,.control .partnerDrawer .controlField textarea { font-size:16px!important; width:100%; }
- .control .partnerDrawer input[type=date] { min-height:48px!important; -webkit-appearance:none; appearance:none; }
+ .control .partnerDrawer .controlField input,.control .partnerDrawer .controlField select,.control .partnerDrawer .controlField textarea { font-size:16px; width:100%; }
+ .control .partnerDrawer input[type=date] { min-height:48px; -webkit-appearance:none; appearance:none; }
  .control .partnerDrawer input[type=date]::-webkit-date-and-time-value { text-align:left; }
  .partnerCalculation>div { gap:10px; align-items:start; }
  .partnerForm .partnerForm { padding:15px; }
 }
 @media(max-width:380px) {
- .partnersWorkspace .segmented { display:grid!important; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; overflow:visible; }
+ .partnersWorkspace .segmented { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); width:100%; overflow:visible; }
  .partnersWorkspace .segmented button { width:100%; white-space:normal; }
 }
 @media(prefers-reduced-motion:reduce) { .partnersWorkspace .partnerReferralRow { transition:none; } }
@@ -128,10 +129,12 @@
 .partnerPayoutPanel{display:grid;gap:12px}.partnerPayoutPanel>.partnerSectionTitle{margin-bottom:0}.partnerPayoutPanel>p,.partnerPayoutPanel>small{font-size:12px;line-height:1.6;color:var(--pc-muted);margin:0}
 .partnerContactActions{margin:0}.partnerContactActions>b{flex-basis:100%;font-size:14px}.partnerContactActions a{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;max-width:100%}
 .partnerFinanceFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.partnerSaved{padding:14px 16px;border:1px solid rgba(66,184,140,.3);background:rgba(66,184,140,.08);border-radius:14px;color:#a6e3c4!important;font-size:13px;line-height:1.6}
+.partnerSaved{padding:14px 16px;border:1px solid rgba(66,184,140,.3);background:rgba(66,184,140,.08);border-radius:14px;color:#a6e3c4;font-size:13px;line-height:1.6}
 .partnerRowNext{display:block;margin-top:8px;color:#ffb2ba;font-size:11px;line-height:1.45}
 .partnerConflictPreview{padding:14px;margin-top:12px;border:1px solid var(--pc-line);border-radius:12px;background:var(--pc-surface)}
 .partnerDrawer [id^=partner-]{scroll-margin-top:18px}.partnerDrawer #partner-history{border-top:1px solid var(--pc-line);margin-top:24px;padding-top:10px}
 @media(max-width:600px){.partnerFinanceFields{grid-template-columns:minmax(0,1fr)}.partnerNextAction{padding:17px}.partnerStepNav button{flex:1 0 30%}.partnerContactActions a{flex:1 0 100%}.partnerNextAction .primaryAction{width:100%}}
 .control .partnerDrawer .partnerForm>*{min-width:0;max-width:100%;box-sizing:border-box}
 @media(max-width:380px){.partnerAntifraud{padding:14px}.partnerAntifraud .sectionHeading>b{flex-basis:100%;font-size:12px}.partnerAntifraud .partnerCheckbox>span{flex:1;min-width:0}}
+
+}

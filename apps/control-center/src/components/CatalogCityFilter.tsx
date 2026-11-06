@@ -1,3 +1,4 @@
+import {ControlSelect} from './ControlSelect';
 import {MapPin} from 'lucide-react';
 import {useSearchParams} from 'react-router-dom';
 
@@ -14,10 +15,10 @@ export function useCatalogCity(){
 }
 export function CatalogCityFilter({city,cities,onChange,disabled=false}:{disabled?:boolean;city:string;cities:{city:string;all:number}[];onChange:(city:string)=>void}){
   return <label className="catalogCityFilter"><MapPin size={18}/><span>Город</span>
-    <select disabled={disabled} aria-label="Город объектов" value={city} onChange={e=>onChange(e.target.value)}>
+    <ControlSelect disabled={disabled} aria-label="Город объектов" value={city} onChange={e=>onChange(e.target.value)}>
       <option value="">Все города</option>
       {city&&!cities.some(item=>item.city===city)&&<option value={city}>{city}</option>}
       {cities.map(item=><option key={item.city} value={item.city}>{item.city} · {item.all}</option>)}
-    </select>
+    </ControlSelect>
   </label>;
 }

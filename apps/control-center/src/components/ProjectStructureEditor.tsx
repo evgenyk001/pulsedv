@@ -1,3 +1,5 @@
+import {confirmControl} from './ControlConfirm';
+import {ControlSelect} from './ControlSelect';
 import React from 'react';
 import {Building2,Plus,Trash2,ChevronDown,ArrowUp,ArrowDown} from 'lucide-react';
 import type {PulseProperty,ProjectBuilding} from '../../../../packages/pulse-data/model';
@@ -27,9 +29,9 @@ export function ProjectStructureEditor({property,onChange,onValidityChange}:{pro
  React.useEffect(()=>onValidityChange(!error),[error,onValidityChange]);
  const patch=(values:Partial<typeof details>)=>onChange({projectDetails:{...details,...values}});
  const update=(id:string,values:Partial<ProjectBuilding>)=>patch({buildings:buildings.map(b=>b.id===id?{...b,...values}:b)});
- const remove=(b:ProjectBuilding)=>{
+ const remove=async (b:ProjectBuilding)=>{
   const linked=property.floorplans.filter(p=>p.buildingId===b.id).length;
-  if(!window.confirm('Удалить «'+b.name+'»?'+(linked?' Его планировки сохранятся без привязки к корпусу.':'')))return;
+  if(!await confirmControl('Удалить «'+b.name+'»?'+(linked?' Его планировки сохранятся без привязки к корпусу.':'')))return;
   onChange({projectDetails:{...details,buildings:buildings.filter(x=>x.id!==b.id)},floorplans:property.floorplans.map(p=>p.buildingId===b.id?{...p,buildingId:null}:p)});
  };
  const move=(index:number,delta:number)=>{const next=[...buildings];[next[index],next[index+delta]]=[next[index+delta],next[index]];patch({buildings:next})};
@@ -43,8 +45,8 @@ export function ProjectStructureEditor({property,onChange,onValidityChange}:{pro
    <summary><Building2 size={18}/><div><b>{b.name||'Без названия'}</b><small>{[b.phase,buildingDelivery(b)].filter(Boolean).join(' · ')}</small></div><ChevronDown size={17}/></summary>
    <div className="buildingEditorBody"><div className="formGrid">
     {([['name','Название корпуса'],['phase','Очередь / этап'],['sections','Секции корпуса'],['address','Адрес корпуса']] as const).map(([key,label])=><label className="controlField" key={key}><span>{label}</span><input maxLength={key==='address'?400:120} value={b[key]??''} onChange={e=>update(b.id,{[key]:e.target.value||(key==='address'?null:'')})}/></label>)}
-    <label className="controlField"><span>Состояние корпуса</span><select value={b.status} onChange={e=>update(b.id,{status:e.target.value as ProjectBuilding['status']})}>{BUILDING_STATUSES.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
-    <label className="controlField"><span>Квартал сдачи</span><select value={b.deliveryQuarter??''} onChange={e=>update(b.id,{deliveryQuarter:e.target.value?Number(e.target.value):null})}><option value="">Уточняется</option>{[1,2,3,4].map(q=><option key={q} value={q}>{q} квартал</option>)}</select></label>
+    <label className="controlField"><span>Состояние корпуса</span><ControlSelect value={b.status} onChange={e=>update(b.id,{status:e.target.value as ProjectBuilding['status']})}>{BUILDING_STATUSES.map(([value,label])=><option key={value} value={value}>{label}</option>)}</ControlSelect></label>
+    <label className="controlField"><span>Квартал сдачи</span><ControlSelect value={b.deliveryQuarter??''} onChange={e=>update(b.id,{deliveryQuarter:e.target.value?Number(e.target.value):null})}><option value="">Уточняется</option>{[1,2,3,4].map(q=><option key={q} value={q}>{q} квартал</option>)}</ControlSelect></label>
     <label className="controlField"><span>Год сдачи</span><input type="number" min={2000} max={2200} value={b.deliveryYear??''} onChange={e=>update(b.id,{deliveryYear:e.target.value?Number(e.target.value):null})}/></label>
     {([['commissioningDate','Плановый ввод корпуса'],['handoverDate','Передача ключей по договору']] as const).map(([key,label])=><label className="controlField" key={key}><span>{label}</span><input type="date" value={b[key]??''} onChange={e=>update(b.id,{[key]:e.target.value||null})}/></label>)}
     {([['floorsFrom','Этажность от'],['floorsTo','Этажность до'],['totalApartments','Всего квартир в корпусе'],['availableApartments','Квартир в продаже в корпусе']] as const).map(([key,label])=><label className="controlField" key={key}><span>{label}</span><input type="number" min={key.startsWith('floors')?1:0} max={key.startsWith('floors')?200:2000000} value={b[key]??''} onChange={e=>update(b.id,{[key]:e.target.value!==''?Number(e.target.value):null})}/></label>)}
@@ -59,7 +61,7 @@ export function ProjectStructureEditor({property,onChange,onValidityChange}:{pro
    <datalist id="project-gallery-images">{property.images.map(image=><option key={image.url} value={image.url}>{image.alt}</option>)}</datalist>
    <label className="controlField"><span>Технология строительства</span><input maxLength={200} placeholder="Например, монолитно-кирпичный" value={details.constructionType??''} onChange={e=>patch({constructionType:e.target.value||null})}/></label>
    <label className="controlField"><span>Высота потолков от, м</span><input type="number" min={1.8} max={10} step={0.01} value={details.ceilingHeight??''} onChange={e=>patch({ceilingHeight:e.target.value?Number(e.target.value):null})}/></label>
-   <label className="controlField"><span>Парковка</span><select value={details.parkingType??''} onChange={e=>patch({parkingType:(e.target.value||null) as typeof details.parkingType})}><option value="">Уточняется</option><option value="underground">Подземная</option><option value="multilevel">Многоуровневая</option><option value="surface">Наземная</option><option value="mixed">Несколько видов</option></select></label>
+   <label className="controlField"><span>Парковка</span><ControlSelect value={details.parkingType??''} onChange={e=>patch({parkingType:(e.target.value||null) as typeof details.parkingType})}><option value="">Уточняется</option><option value="underground">Подземная</option><option value="multilevel">Многоуровневая</option><option value="surface">Наземная</option><option value="mixed">Несколько видов</option></ControlSelect></label>
   </div></details>
   {error&&<p className="errorNotice" role="alert">{error}</p>}
  </section>;
@@ -67,5 +69,5 @@ export function ProjectStructureEditor({property,onChange,onValidityChange}:{pro
 export function PlanBuildingEditor({property,plan,onChange}:{property:PulseProperty;plan:PulseProperty['floorplans'][number];onChange:(plan:PulseProperty['floorplans'][number])=>void}){
  const buildings=property.projectDetails?.buildings??[];
  if(!buildings.length)return null;
- return <div className="formGrid planBuildingFields"><label className="controlField"><span>Корпус планировки</span><select aria-label="Корпус планировки" value={plan.buildingId??''} onChange={e=>onChange({...plan,buildingId:e.target.value||null})}><option value="">Не привязана к корпусу</option>{buildings.map(b=><option key={b.id} value={b.id}>{b.name}{b.phase?' · '+b.phase:''}</option>)}</select></label><label className="controlField"><span>Секция планировки</span><input aria-label="Секция планировки" maxLength={80} value={plan.sectionLabel??''} onChange={e=>onChange({...plan,sectionLabel:e.target.value||null})}/></label></div>;
+ return <div className="formGrid planBuildingFields"><label className="controlField"><span>Корпус планировки</span><ControlSelect aria-label="Корпус планировки" value={plan.buildingId??''} onChange={e=>onChange({...plan,buildingId:e.target.value||null})}><option value="">Не привязана к корпусу</option>{buildings.map(b=><option key={b.id} value={b.id}>{b.name}{b.phase?' · '+b.phase:''}</option>)}</ControlSelect></label><label className="controlField"><span>Секция планировки</span><input aria-label="Секция планировки" maxLength={80} value={plan.sectionLabel??''} onChange={e=>onChange({...plan,sectionLabel:e.target.value||null})}/></label></div>;
 }

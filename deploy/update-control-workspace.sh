@@ -7,7 +7,7 @@ target=${1:?Pass the reviewed 40-character release SHA}
 [[ "$target" =~ ^[0-9a-f]{40}$ ]] || exit 2
 exec 9>/var/lock/pulsedv-update.lock
 flock -n 9 || { echo 'Другое обновление уже выполняется.'; exit 1; }
-backup=$(mktemp -d /root/pulsedv-control-workspace.XXXXXX)
+backup=$(mktemp -d /root/pulsedv-control-native.XXXXXX)
 cp -p compose.yaml deploy/Caddyfile "$backup/"
 git rev-parse HEAD > "$backup/previous-commit.txt"
 git diff --binary > "$backup/local-changes.patch"
@@ -59,7 +59,7 @@ from pathlib import Path
 import sys
 allowed=('apps/control-center/','apps/mini-app/','tests/')
 for p in Path(sys.argv[1]).read_text().splitlines():
- if not p.startswith(allowed) and p not in ('deploy/update-control-workspace.sh','deploy/update-giveaway-page.sh','docs/giveaway.md','docs/control-workspace.md'):
+ if not p.startswith(allowed) and p not in ('deploy/update-control-workspace.sh','deploy/update-giveaway-page.sh','docs/giveaway.md','docs/control-workspace.md','packages/journey/ControlJourneyPanel.tsx'):
   raise SystemExit('Обнаружены дополнительные изменения: '+p+'. Установите объединённый релиз сначала.')
 PY
 git show HEAD:deploy/Caddyfile > "$backup/tracked.Caddyfile"
@@ -112,4 +112,4 @@ if json.load(open(sys.argv[1])).get('status')!='ready':raise SystemExit('API н�
 PY
 docker image tag "$ref" "$(cat "$backup/default-ref.txt")"
 trap - EXIT HUP INT TERM
-echo "ГОТОВО: обновлённый PULSE Control установлен; HTML, JS/CSS обоих интерфейсов и API ready проверены. База, API, worker, правила и заявки не изменялись. Копия прежнего web: $backup"
+echo "ГОТОВО: новый рабочий интерфейс PULSE Control установлен; HTML, JS/CSS обоих интерфейсов и API ready проверены. База, API, worker, правила и заявки не изменялись. Копия прежнего web: $backup"

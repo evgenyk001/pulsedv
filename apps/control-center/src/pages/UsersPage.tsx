@@ -1,3 +1,4 @@
+import {RecordWorkspace} from '../components/RecordWorkspace';
 import {runtime} from '../../../../packages/pulse-data/runtime';
 import {clientName,clientSearch} from '../clientIdentity';
 import {RegisteredClients} from '../components/RegisteredClients';
@@ -31,13 +32,15 @@ export function UsersPage(){
   </section>
   {paging.hasMore&&<div className="pagedLoadMore"><span>Загружено {profiles.length} из {paging.total}</span><button className="secondaryAction" disabled={paging.loading} onClick={()=>void paging.loadMore()}>{paging.loading?'Загружаем…':'Показать ещё'}</button></div>}
   </>}
-  {profile&&<div className="drawerBackdrop" onClick={close}><section className="detailDrawer userDetailDrawer" role="dialog" aria-modal="true" aria-label="Профиль посетителя" onClick={e=>e.stopPropagation()}><div className="drawerHeader"><div><span className="kicker">ПУТЬ КЛИЕНТА</span><h2>{clientName(profile)}</h2></div><button aria-label="Закрыть профиль" onClick={close}><X/></button></div>{profile.client&&<div className="profileSummary" aria-label="Контакты клиента">
+  {profile&&<RecordWorkspace key={profile.id} title={clientName(profile)} eyebrow="Посетитель · история интереса" label="Профиль посетителя" onClose={close} sections={[
+   {id:'profile',label:'Профиль',content:<>{profile.client&&<div className="profileSummary" aria-label="Контакты клиента">
     {profile.client.phone&&<p>Телефон: <a href={'tel:'+profile.client.phone}>{profile.client.phone}</a></p>}
     {profile.client.username&&<p>Telegram: <a href={'https://t.me/'+encodeURIComponent(profile.client.username)} target="_blank" rel="noreferrer">@{profile.client.username}</a></p>}
     {profile.client.telegramId&&<p>Telegram ID: {profile.client.telegramId}</p>}
    </div>}<div className="profileSummary"><span className={'scoreBadge '+profile.priority}><b>{profile.score}</b>{priorityName(profile.priority)}</span><p>{profile.city||'Город не указан'} · {propertyName(profile.topPropertyId)}</p><b>{profile.nextAction}</b></div>
    {leads.filter(l=>l.sessionId===profile.sessionId||!!profile.userId&&l.userId===profile.userId).map(l=><Link className="relatedLead" key={l.id} to={'/leads?lead='+l.id}><div><small>ЗАЯВКА КЛИЕНТА</small><b>{l.name} · {l.phone}</b></div><ArrowUpRight size={18}/></Link>)}
-   <InterestPanel sessionId={profile.sessionId} userId={profile.userId} events={events} state={state}/>
-  </section></div>}
+</>},
+   {id:'interest',label:'Интерес и история',content:<>   <InterestPanel sessionId={profile.sessionId} userId={profile.userId} events={events} state={state}/></>},
+  ]}/>}
  </PageFrame>;
 }

@@ -44,11 +44,14 @@ for(let n=0;n<names.length;n++){
  for(let day=0;day<7;day++)await db.query("insert into user_events(idempotency_key,session_id,user_id,event_type,entity_type,entity_id,occurred_at) values($1,$2,$3,'property_view','property',$4,$5)",[randomUUID(),session,uid,'fixture-project-'+n,new Date(Date.now()-day*86400000).toISOString()]);
 }
 await db.query('insert into giveaway_campaign(id,settings) values(true,$1::jsonb)',[JSON.stringify({...DEFAULT_GIVEAWAY,rules:'Тестовые правила для проверки интерфейса. Акция в этой изолированной среде не проводится.'})]);
+// Each preview navigation represents an isolated test client, avoiding cross-case rate-limit state.
+let fixtureClient=1;
 const server=createServer(async(req,res)=>{
  try{
-  if(req.url?.startsWith('/api/v1/')){const chunks:Buffer[]=[];for await(const chunk of req)chunks.push(chunk);const response=await app.inject({method:req.method as any,url:req.url,headers:req.headers as any,...(chunks.length?{payload:Buffer.concat(chunks)}:{})});res.writeHead(response.statusCode,response.headers);res.end(response.rawPayload);return;}
+  if(req.url?.startsWith('/api/v1/')){const chunks:Buffer[]=[];for await(const chunk of req)chunks.push(chunk);const response=await app.inject({remoteAddress:'127.1.'+Math.floor(fixtureClient/250)+'.'+(fixtureClient%250+1),method:req.method as any,url:req.url,headers:req.headers as any,...(chunks.length?{payload:Buffer.concat(chunks)}:{})});res.writeHead(response.statusCode,response.headers);res.end(response.rawPayload);return;}
   const url=new URL(req.url||'/',origin);
   if(url.pathname==='/'){
+   fixtureClient=(fixtureClient+1)%60000;
    res.setHeader('set-cookie','pulse_control='+token+'; HttpOnly; SameSite=Strict; Path=/api/v1/control');
    const route=(url.searchParams.get('route')||'').replace(/[^a-z0-9/-]/g,'');
    const width=Number(url.searchParams.get('width'));

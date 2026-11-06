@@ -1,26 +1,32 @@
-# Control workspace rebuild
+# Control record workspaces
 
-Web-only release based on the giveaway page polish release. The Mini App's existing giveaway, sharing and presentation delivery remain in the web build. There are no API, worker, schema or business-setting changes.
+Web-only release following the first workspace polish. The Mini App, API, worker, database schema, authentication rules, permissions and financial calculations retain their existing behavior. The shared journey panel accepts an optional select renderer; its default and API commands are unchanged.
 
-## Workspace
+## Interaction and layout
 
-- Unified graphite surfaces, readable forms, restrained accent, fixed navigation and consistent spacing across all fourteen sections.
-- Fast section navigation with Ctrl/Cmd+K, Enter and Escape, restricted to sections already allowed for the current role. This searches section names, not client records.
-- Mobile navigation and drawers keep page content inert where appropriate. Drawer positioning follows the actual workspace bar height. Reduced-motion preferences are respected.
-- Overview prioritizes work queues above the activity chart.
-- Registered accounts and visitor activity have separate views. Account search shows loading and error states without flashing a false zero.
-- Tasks support list and board views. Phones default to a list; search, overdue filters and pagination keep working.
-- Lead financial fields are collapsed by default. No finance calculations were changed.
-- Analytics identifies sessions, applications, loaded subsets and differing reporting periods. This release does not reconstruct historical identities or introduce a shared reporting-period filter.
+- Legacy styles are isolated in a CSS cascade layer. The current workspace stylesheet owns typography, controls, surfaces and responsive geometry instead of fighting historical `!important` overrides.
+- Object and client editors fill the available desktop workspace. On phones they fill the viewport. Header, section navigation and save actions are outside the single scrolling body. Visual viewport changes are observed for mobile keyboard geometry.
+- Object fields are organized into Main, Buildings, Plans, Photos, Documents, Map and Review. Sections remain mounted so draft values and validation are retained between switches. Mobile objects use a section menu instead of a row of inaccessible off-screen tabs.
+- Client details have Overview, Communication, Interest and Deal sections. Visitor profiles separate identity from interest history. Existing save, conflict and access checks remain in effect.
+- A common select renderer supplies an opaque popover, selected marker, keyboard navigation and form value semantics. The underlying select remains for existing controlled-value handlers. Native platform date inputs remain available.
+- Confirmation dialogs use the same interface. The original messages and decisions are preserved, including warnings about irreversible deletions. Nested dialogs own focus; cancel/Escape returns to the existing draft.
+- Page help explains the workflow and metric scope. Price and freshness details offer contextual field explanations.
+- Plans support room filters and area/building search. The grid uses four desktop columns, three at intermediate widths and two on phones. Original plan indices/IDs are retained when filtering.
+- Content campaigns are collapsed by default. Expanding a campaign edits the existing draft; settings are still published through the global save bar.
+- Mobile task lists use rows rather than inheriting the board's horizontal layout. Client table rows show status, manager and next step explicitly.
 
 ## Verification
 
-Run `npm run check -w apps/control-center` and an API-mode Vite build.
+`npm run check -w apps/control-center` and an API-mode production build validate the changed Control sources. Browser QA uses the real built interface, actual API routes and a synthetic in-memory PGlite database. It does not touch production records, send messages to real clients or change account security settings.
 
-For isolated browser verification build Control with `VITE_PULSE_MODE=api VITE_API_BASE_URL=/api/v1 npm run build -w apps/control-center`, then run `node --import tsx tests/fixtures/control-workspace/server.ts`. This fixture always uses an in-memory PGlite database, temporary media and synthetic accounts/projects. It never requires production credentials and is not included in Docker images. Default port: 4173. The root opens the real built Control app with a fixture-only session; `/?width=390&route=leads` provides a phone-sized frame. Stop the server to discard all fixture records.
+Validated workflows include object name + plan price persistence across section switches and page reload, client next-step persistence, task stage persistence, plan room/empty-result filters, draft-exit cancellation, keyboard select/Escape behavior, content draft discard, section help, mobile navigation and quick section search. All fourteen routes were inspected on desktop and at 320/390/768/1024px. Record body/footer bounds were checked independently of page overflow.
 
-Browser verification covered fourteen routes on desktop and at 320/390/768/1024px, client and object persistence after reload, task status persistence, empty search and keyboard section navigation. Scope labels do not imply unique-person counts.
+This is Chromium browser QA at responsive viewport sizes, not a run on a physical iPhone/Safari. The latter remains a release acceptance check. These checks do not claim every possible data combination is pixel-perfect.
 
-## Installation
+## Isolated QA server
 
-`deploy/update-control-workspace.sh <reviewed-40-character-release-SHA>` runs from `/opt/pulsedv` and uses the shared deployment lock. It accepts only the reviewed web/test/documentation scope, preserves the current effective Compose configuration, tags or snapshots the old web for rollback, builds a unique new web image, validates Caddy and verifies served HTML/JS/CSS for both interfaces plus `/ready` over HTTPS. It does not restart API/worker or modify the database. An activation or verification failure attempts to restore the previous web image. Keep the printed recovery directory until the updated interface has been checked.
+Build with `VITE_PULSE_MODE=api VITE_API_BASE_URL=/api/v1 npm run build -w apps/control-center`, then run `node --import tsx tests/fixtures/control-workspace/server.ts`. Default port: 4173. `/?width=390&route=objects` opens a phone frame. Every preview navigation represents a separate synthetic client for rate-limit isolation. All records, sessions and media are disposable; stopping the process discards them. The fixture is not copied into production Docker images.
+
+## Deployment
+
+`deploy/update-control-workspace.sh <reviewed-40-character-release-SHA>` retains the shared deployment lock, previous web snapshot/tag, effective Compose configuration, unique web image and rollback on activation/verification failure. It validates Caddy and compares installed HTML/JS/CSS for both interfaces through HTTPS, then checks `/ready`. No API/worker restart or database migration is performed. Scope accepts Control and the explicit shared journey UI path, plus the preceding web-only giveaway page release. Keep the printed recovery directory until acceptance testing is complete.

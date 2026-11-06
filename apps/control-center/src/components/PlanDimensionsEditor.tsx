@@ -1,3 +1,5 @@
+import {confirmControl} from './ControlConfirm';
+import {ControlSelect} from './ControlSelect';
 import React from 'react';
 import type {PulseProperty} from '../../../../packages/pulse-data/model';
 import {propertyPriceRub} from '../../../../packages/domain/propertyPresentation';
@@ -18,11 +20,11 @@ export function PlanDimensionsEditor({plan,onChange}:{plan:Plan;onChange:(next:P
   }}/></label>;
  };
  return <div className="formGrid">
-  <label className="controlField"><span>Что добавляем</span><select aria-label="Что добавляем" value={exact?'exact':'range'} onChange={e=>{
+  <label className="controlField"><span>Что добавляем</span><ControlSelect aria-label="Что добавляем" value={exact?'exact':'range'} onChange={async e=>{
    const isExact=e.target.value==='exact';
-   if(isExact&&(plan.areaTo!=null&&plan.areaTo!==plan.areaFrom||plan.priceTo!=null&&plan.priceTo!==plan.priceFrom||plan.finishOptions?.some(offer=>offer.priceTo!=null&&offer.priceTo!==offer.priceFrom))&&!window.confirm('Оставить начальную площадь и цену как точные значения этой планировки? Верхние границы диапазонов будут заменены.'))return;
+   if(isExact&&(plan.areaTo!=null&&plan.areaTo!==plan.areaFrom||plan.priceTo!=null&&plan.priceTo!==plan.priceFrom||plan.finishOptions?.some(offer=>offer.priceTo!=null&&offer.priceTo!==offer.priceFrom))&&!await confirmControl('Оставить начальную площадь и цену как точные значения этой планировки? Верхние границы диапазонов будут заменены.'))return;
    onChange({...plan,isExact,...(isExact?{areaTo:plan.areaFrom,priceTo:plan.priceFrom,finishOptions:plan.finishOptions?.map(offer=>({...offer,priceTo:offer.priceFrom}))}:{})});
-  }}><option value="exact">Конкретная планировка</option><option value="range">Группа планировок · диапазон</option></select></label>
+  }}><option value="exact">Конкретная планировка</option><option value="range">Группа планировок · диапазон</option></ControlSelect></label>
   <label className="controlField"><span>Комнатность</span><input value={plan.roomLabel} onChange={e=>onChange({...plan,roomLabel:e.target.value})}/></label>
   {numberField('areaFrom',exact?'Площадь, м²':'Площадь от, м²')}
   {!exact&&numberField('areaTo','Площадь до, м²')}
