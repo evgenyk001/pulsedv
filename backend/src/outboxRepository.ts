@@ -7,6 +7,7 @@ export function outboxRepository(db:Database):NotificationOutboxRepository{
  return {
   async canDeliver(event){
    if(event.topic==='document.presentation')return !!(await db.query("select d.id from catalog_property_documents d join catalog_properties p on p.id=d.property_id join app_users u on u.id=$4 where d.id::text=$1 and d.property_id=$2 and d.url=$3 and d.kind='presentation' and p.status='published' and u.phone is not null and u.telegram_user_id is not null",[event.payload.documentId,event.payload.propertyId,event.payload.documentUrl,event.payload.userId])).rows.length;
+   if(event.topic==='user.giveaway')return !!(await db.query('select id from giveaway_entries where id=$1 and user_id=$2 and status=$3',[event.payload.entryId,event.payload.userId,event.payload.status])).rows.length;
    if(event.topic==='user.partner_security_code')return !!(await db.query('select id from partner_biometric_recovery where id=$1 and user_id=$2 and expires_at>now() and attempts<5',[event.payload.challengeId,event.payload.userId])).rows.length;
    if(event.topic==='user.broadcast'){
     const row=(await db.query("select s.enabled,s.consent_key,b.status from announcement_subscriptions s join broadcasts b on b.id=$2 where s.user_id=$1",[event.payload.userId,event.payload.campaignId])).rows[0];

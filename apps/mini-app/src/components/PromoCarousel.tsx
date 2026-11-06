@@ -5,6 +5,9 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "./Car
 import Autoplay from "embla-carousel-autoplay";
 import { usePromoBanners } from "../helpers/usePromoBanners";
 import { recordPulseEvent, DEFAULT_PARTNER_BANNER } from "../../../../packages/pulse-data";
+import {useGiveaway} from '../helpers/useGiveaway';
+import {GiveawayCountdown} from './GiveawayCountdown';
+import '../pages/giveaway.css';
 import styles from "./PromoCarousel.module.css";
 
 type Slide={
@@ -46,7 +49,9 @@ function BannerLink({to,className,children,label,onActivate}:{to:string|null;cla
 
 export function PromoCarousel(){
   const {data:managed=[]}=usePromoBanners();
-  const slides=React.useMemo<Slide[]>(()=>managed.length?managed.map((banner,index)=>({
+  const {data:giveaway}=useGiveaway();
+  const showGiveaway=!!giveaway?.settings.enabled;
+  const regularSlides=React.useMemo<Slide[]>(()=>managed.length?managed.map((banner,index)=>({
     id:banner.id,
     image:banner.imageUrl===DEFAULT_PARTNER_BANNER.imageUrl?asset("_cdn/static/partner-referral.webp"):optimizedImage(banner.imageUrl||'')||(fallbackSlides.find(slide=>slide.to===banner.actionUrl)||fallbackSlides[index%fallbackSlides.length]).image,
     eyebrow:banner.eyebrow||banner.city||banner.audience||(banner.kind==="partner"?"Партнёр PULSEDV.RU":banner.kind==="giveaway"?"Специальное предложение":"PULSEDV.RU"),
@@ -57,10 +62,12 @@ export function PromoCarousel(){
     kind:banner.kind||"promo",
   })):[],[managed]);
 
+  const slides=React.useMemo<Slide[]>(()=>showGiveaway&&giveaway?[{id:'new-year-giveaway',image:asset('_cdn/static/giveaway-burgundy.webp'),eyebrow:'НОВОГОДНИЙ РОЗЫГРЫШ',title:giveaway.settings.title,text:'Разыгрываем '+giveaway.settings.prize,cta:giveaway.entry?.status==='confirmed'?(giveaway.entry.tickets.length>1?'Ваши номера участников':'Ваш номер '+giveaway.entry.ticket):giveaway.entry?.status==='pending'?'Заявка принята':'Условия и участие',to:'/giveaway',kind:'giveaway'},...regularSlides]:regularSlides,[showGiveaway,giveaway,regularSlides]);
+
   const wrap=React.useRef<HTMLDivElement>(null);
   const [inView,setInView]=React.useState(false);
   const [foreground,setForeground]=React.useState(!document.hidden);
-  React.useEffect(()=>{const el=wrap.current;if(!el)return;const observer=new IntersectionObserver(([entry])=>setInView(entry.isIntersecting&&entry.intersectionRatio>=.5),{threshold:[0,.5]});observer.observe(el);const visibility=()=>setForeground(!document.hidden);document.addEventListener("visibilitychange",visibility);return()=>{observer.disconnect();document.removeEventListener("visibilitychange",visibility)}},[managed.length]);
+  React.useEffect(()=>{const el=wrap.current;if(!el)return;const observer=new IntersectionObserver(([entry])=>setInView(entry.isIntersecting&&entry.intersectionRatio>=.5),{threshold:[0,.5]});observer.observe(el);const visibility=()=>setForeground(!document.hidden);document.addEventListener("visibilitychange",visibility);return()=>{observer.disconnect();document.removeEventListener("visibilitychange",visibility)}},[slides.length]);
   const [api,setApi]=React.useState<CarouselApi>();
   const [selected,setSelected]=React.useState(0);
   const [navigationReady,setNavigationReady]=React.useState(false);
@@ -142,8 +149,9 @@ export function PromoCarousel(){
           const isCurrent=selected===index;
           return <CarouselItem key={id} className={styles.slide}>
             <BannerLink to={to} className={styles.bannerLink} label={title} onActivate={()=>recordPulseEvent({eventType:"banner_click",entityType:"banner",entityId:id,metadata:{kind,position:index+1,target:to}})}>
-              <article className={styles.banner+" "+styles[kind]+" "+(to&&/^\/partners(?:[/?#]|$)/.test(to)?styles.partnerProgram+" ":"")+(isCurrent?styles.bannerActive:"")}>
+              <article className={styles.banner+" "+(id==='new-year-giveaway'?styles.contest+" ":"")+styles[kind]+" "+(to&&/^\/partners(?:[/?#]|$)/.test(to)?styles.partnerProgram+" ":"")+(isCurrent?styles.bannerActive:"")}>
                 <img src={image} alt="" loading={index===0?"eager":"lazy"} decoding="async" fetchPriority={index===0?"high":"auto"}/>
+                {id==='new-year-giveaway'&&<div className={styles.festiveMotion} aria-hidden="true" data-running={isCurrent&&inView&&foreground}><i className={styles.phoneGlint}/>{Array.from({length:8},(_,flake)=><i className={styles.snowflake} key={flake} style={{'--flake-x':(8+flake*12)+'%','--flake-delay':(-flake*1.7)+'s','--flake-duration':(9+flake%4*2)+'s','--flake-size':(2+flake%3)+'px'} as React.CSSProperties}/>)}</div>}
                 <div className={styles.scrim}/>
                 <div className={styles.ambient}/>
                 <div className={styles.edge}/>
@@ -151,6 +159,7 @@ export function PromoCarousel(){
                   <div className={styles.eyebrow}>{eyebrow}</div>
                   <h1>{title}</h1>
                   <p>{text}</p>
+                  {id==='new-year-giveaway'&&giveaway&&<div className={styles.liveTimer}><small>{Date.parse(giveaway.serverNow)<Date.parse(giveaway.settings.startsAt)?'До начала акции':'До конца акции'}</small><GiveawayCountdown deadline={Date.parse(giveaway.serverNow)<Date.parse(giveaway.settings.startsAt)?giveaway.settings.startsAt:giveaway.settings.endsAt} serverNow={giveaway.serverNow} observedAt={giveaway.observedAt}/></div>}
                   {to&&<div className={styles.cta}><span>{cta}</span><ArrowUpRight size={15}/></div>}
                 </div>
               </article>

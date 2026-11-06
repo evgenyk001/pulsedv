@@ -31,6 +31,7 @@ export function RuntimeGate({children}:{children:React.ReactNode}){
     const propertyId=propertyFromStart(start);
     if(propertyId)window.location.hash='/property/'+encodeURIComponent(propertyId);
     else if(referral)window.location.hash='/partner-invite?code='+encodeURIComponent(referral);
+    else if(start==='giveaway')window.location.hash='/giveaway';
     else if(start==='partners')window.location.hash='/partners';
    }
    window.dispatchEvent(new Event('pulse:identity-ready'));
