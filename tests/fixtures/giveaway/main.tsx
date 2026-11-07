@@ -10,6 +10,7 @@ import {DEFAULT_GIVEAWAY,type GiveawayState,type GiveawayEntry} from '../../../p
 import '../../../apps/mini-app/src/floot-runtime.css';
 import '../../../apps/mini-app/src/base.css';
 const params=new URLSearchParams(location.search),state=params.get('state')||'new';
+if(params.get('theme')==='dark')document.documentElement.classList.add('dark');
 localStorage.setItem('pulse_onboarding_version',DEFAULT_STATE.content.onboardingVersion);
 localStorage.setItem('pulse.dv.control.state.v1',JSON.stringify(DEFAULT_STATE));
 if(params.get('native')!=='0'){
@@ -20,7 +21,7 @@ const rules='ПРАВИЛА НОВОГОДНЕГО РОЗЫГРЫША PULSEDV.RU
 const entry:GiveawayEntry={id:'00000000-0000-4000-8000-000000000001',status:state==='confirmed'||state==='multiple'?'confirmed':state==='rejected'?'rejected':'pending',ticket:null,createdAt:new Date().toISOString(),registeredAt:null,leadId:null,reason:state==='rejected'?'Регистрация сделки за пределами периода акции.':null,tickets:[]};
 if(entry.status==='confirmed'){entry.tickets=[{id:'ticket-1',ticket:'PULSE-0017',leadId:'deal-1',registeredAt:new Date().toISOString()}];entry.ticket='PULSE-0017';if(state==='multiple')entry.tickets.push({id:'ticket-2',ticket:'PULSE-0024',leadId:'deal-2',registeredAt:new Date().toISOString()})}
 const campaign:GiveawayState={settings:{...DEFAULT_GIVEAWAY,enabled:state!=='paused',title:params.get('long')?'Новая квартира для вашей семьи и новогодний подарок от PULSEDV.RU':DEFAULT_GIVEAWAY.title,rules},entry:['new','paused','ended','future'].includes(state)?null:entry,serverNow:'2026-11-06T22:00:00+10:00',observedAt:performance.now()};
-if(state==='ended')campaign.serverNow='2027-01-03T12:00:00+10:00';
+if(state==='ended'||state==='pending-ended')campaign.serverNow='2027-01-03T12:00:00+10:00';
 if(state==='future')campaign.serverNow='2026-11-05T12:00:00+10:00';
 const cache=new QueryClient({defaultOptions:{queries:{enabled:false,retry:false}}});cache.setQueryData(['giveaway'],campaign);
 window.fetch=async input=>{
