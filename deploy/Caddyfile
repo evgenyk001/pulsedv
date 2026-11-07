@@ -26,7 +26,7 @@
 		-Server
 	}
 
-	@privateSearch path /api/* /media/* /pulsedv/mini-app/* /pulsedv/control-center/* /mini-app/* /control-center/*
+	@privateSearch path /app/* /api/* /media/* /pulsedv/mini-app/* /pulsedv/control-center/* /mini-app/* /control-center/*
 	header @privateSearch X-Robots-Tag "noindex, nofollow"
 
 	@control path /pulsedv/control-center/*
@@ -61,6 +61,13 @@
 	redir /pulsedv/partner-offer /pulsedv/partner-offer/ 308
 	handle_path /pulsedv/partner-offer/* {
 		root * /srv/partner-offer
+		file_server
+	}
+	redir /app /app/ 308
+	handle_path /app/* {
+		root * /srv/pwa
+		@pwaEntry path / /index.html /sw.js /manifest.webmanifest /offline.html /offline.js
+		header @pwaEntry Cache-Control "no-store"
 		file_server
 	}
 	redir /pulsedv/mini-app /pulsedv/mini-app/ 308

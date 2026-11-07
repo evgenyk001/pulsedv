@@ -5,7 +5,7 @@ import type {RuntimeConfig} from './config';
 import {HttpError} from './security';
 export async function registeredPhone(db:Database,userId:string|null,consentVersion?:string){
  if(!userId)return false;
- return !!(await db.query('select u.id from app_users u join telegram_contact_consent c on c.user_id=u.id where u.id=$1 and u.phone is not null and c.accepted_at is not null and ($2::text is null or c.consent_version=$2)',[userId,consentVersion??null])).rows.length;
+ return !!(await db.query(`select u.id from app_users u where u.id=$1 and u.phone is not null and (exists(select 1 from telegram_contact_consent c where c.user_id=u.id and c.accepted_at is not null and ($2::text is null or c.consent_version=$2)) or exists(select 1 from phone_registrations p where p.user_id=u.id and p.phone=u.phone and ($2::text is null or p.consent_version=$2)))`,[userId,consentVersion??null])).rows.length;
 }
 export function registerAccountRoutes(app:FastifyInstance,db:Database,config:RuntimeConfig,visitor:(r:FastifyRequest)=>Promise<void>,editor:(r:FastifyRequest)=>Promise<void>){
  app.get('/api/v1/me/account',{preHandler:visitor},async r=>({authenticated:!!r.visitor!.userId,registered:await registeredPhone(db,r.visitor!.userId,config.CONSENT_VERSION),requiresPhone:config.REQUIRE_TELEGRAM_PHONE,botUsername:config.TELEGRAM_BOT_USERNAME,consentVersion:config.CONSENT_VERSION}));

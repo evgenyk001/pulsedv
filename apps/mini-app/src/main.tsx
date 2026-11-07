@@ -1,3 +1,6 @@
+import {InstallGate} from './pwa/InstallGate';
+import {PwaStatus} from './pwa/PwaExperience';
+import {isPwa,registerPwa} from './pwa/client';
 import {AppBoundary} from '../../../packages/browser/AppBoundary';
 import {dismissLaunchScreen} from './helpers/launchScreen';
 import {BrandLoading} from './components/BrandLoading';
@@ -29,9 +32,10 @@ const PropertyPage=React.lazy(()=>import('./pages/property.$propertyId'));
 const PrivacyPage=React.lazy(()=>import('./pages/privacy'));
 const PersonalDataConsentPage=React.lazy(()=>import('./pages/personal-data-consent'));
 
-configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.meta.env.VITE_API_BASE_URL,role:"public"});
+configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.meta.env.VITE_API_BASE_URL,role:"public",browserMode:isPwa});
+void registerPwa();
 
-const queryClient=new QueryClient({defaultOptions:{queries:{retry:(count,error)=>count<1&&(!(error instanceof ApiError)||error.status===0||error.status>=500),retryDelay:1000}}});
+const queryClient=new QueryClient({defaultOptions:{queries:{retry:(count,error)=>count<1&&(!(error instanceof ApiError)||error.status===0||error.status>=500),retryDelay:1000,refetchInterval:query=>isPwa&&query.queryKey[0]==="catalog"?60000:false}}});
 
 class ScreenBoundary extends React.Component<{children:React.ReactNode},{failed:boolean}>{
  state={failed:false};
@@ -49,7 +53,7 @@ function IdentityQueries(){
 }
 function App(){
   return <QueryClientProvider client={queryClient}>
-    <IdentityQueries/><HashRouter>
+    <IdentityQueries/><PwaStatus/><HashRouter>
       <AppShell>
         <ScreenContent><React.Suspense fallback={<BrandLoading/>}><Routes>
           <Route path="/" element={<HomePage/>}/>
@@ -76,4 +80,4 @@ function App(){
   </QueryClientProvider>
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><AppBoundary onError={dismissLaunchScreen}><RuntimeGate><App/></RuntimeGate></AppBoundary></React.StrictMode>);
+ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><AppBoundary onError={dismissLaunchScreen}><InstallGate><RuntimeGate><App/></RuntimeGate></InstallGate></AppBoundary></React.StrictMode>);

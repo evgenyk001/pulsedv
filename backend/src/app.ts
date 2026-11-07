@@ -1,3 +1,5 @@
+import {registerPhoneAuth,type SmsSender} from './phoneAuth';
+import {registerWebPush} from './webPush';
 import {registerPresentationRoutes} from './presentationRoutes';
 import {registerPropertyShareRoutes} from './propertyShareRoutes';
 import {registerGiveawayRoutes} from './giveawayRoutes';
@@ -46,7 +48,7 @@ declare module 'fastify' {interface FastifyRequest {member?:Member;visitor?:Visi
 const uuid=(value:unknown)=>z.uuid().parse(value);
 const memberView=(row:any)=>({id:row.id,name:row.name,email:row.email,role:row.role,active:row.active,cities:row.cities,telegramUserId:row.telegram_user_id?.toString()??null,mfaEnabled:!!row.mfa_enabled});
 
-export async function createApp(db:Database,config:RuntimeConfig){
+export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsSender}={}){
  const app=Fastify({requestTimeout:120000,bodyLimit:1_500_000,trustProxy:config.TRUST_PROXY_HOPS?(_address:string,hop:number)=>hop<config.TRUST_PROXY_HOPS:false,logger:config.NODE_ENV!=='test'?{redact:['req.headers.authorization','req.headers.cookie','req.headers["x-partner-unlock"]','res.headers["set-cookie"]']}:false});
  await app.register(cookie);
  app.addHook('preHandler',antifraudCollector(db,config.NODE_ENV==='production'));
@@ -97,6 +99,8 @@ export async function createApp(db:Database,config:RuntimeConfig){
  registerPropertyShareRoutes(app,db,config,visitor);
  registerPresentationRoutes(app,db,config,visitor);
  registerAccountRoutes(app,db,config,visitor,editor);
+ registerPhoneAuth(app,db,config,visitor,deps.sms);
+ registerWebPush(app,db,config,visitor);
  registerGiveawayRoutes(app,db,config,visitor,editor);
  registerAcquisitionRoutes(app,db,config,visitor,control);
  app.get('/health',async()=>({status:'ok'}));
@@ -123,9 +127,10 @@ export async function createApp(db:Database,config:RuntimeConfig){
   await db.transaction(async sql=>{
    await sessionLock(sql,request.visitor!.sessionId);
    await sql.query('select id from sessions where id=$1 for update',[request.visitor!.sessionId]);
-   const current=(await sql.query('select u.telegram_user_id from sessions s left join app_users u on u.id=s.user_id where s.id=$1',[request.visitor!.sessionId])).rows[0];
+   const current=(await sql.query('select u.id as user_id,u.telegram_user_id from sessions s left join app_users u on u.id=s.user_id where s.id=$1',[request.visitor!.sessionId])).rows[0];
    if(current?.telegram_user_id&&String(current.telegram_user_id)!==String(user.id))throw new HttpError(409,'Эта сессия уже принадлежит другому пользователю');
    const row=(await sql.query('insert into app_users(telegram_user_id,telegram_username,first_name,last_name) values($1,$2,$3,$4) on conflict(telegram_user_id) do update set telegram_username=excluded.telegram_username,first_name=excluded.first_name,last_name=excluded.last_name,last_seen_at=now() returning id',[user.id,user.username??null,user.first_name,user.last_name??null])).rows[0];
+   if(current?.user_id&&current.user_id!==row.id)throw new HttpError(409,'Эта сессия уже принадлежит другому аккаунту. Сначала выйдите из него.');
    await ensureAnnouncementSubscription(sql,row.id);
    await mergeFavorites(sql,request.visitor!.sessionId,row.id);
    await mergeSearch(sql,request.visitor!.sessionId,row.id);

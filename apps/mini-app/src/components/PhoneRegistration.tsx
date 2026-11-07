@@ -1,8 +1,11 @@
+import {BrowserPhoneRegistration} from '../pwa/BrowserPhoneRegistration';
+import {isPwa} from '../pwa/client';
 import React from 'react';
 import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import {prepareTelegramWindow} from '../helpers/telegramWindow';
 import './phoneRegistration.css';
-export function PhoneRegistration({onRegistered}:{onRegistered:()=>void}){
+export function PhoneRegistration({onRegistered}:{onRegistered:()=>void}){return isPwa?<BrowserPhoneRegistration onRegistered={onRegistered}/>:<TelegramPhoneRegistration onRegistered={onRegistered}/>;}
+function TelegramPhoneRegistration({onRegistered}:{onRegistered:()=>void}){
  const [busy,setBusy]=React.useState(false),[consent,setConsent]=React.useState(false),[error,setError]=React.useState('');
  const active=React.useRef(true);
  React.useEffect(()=>()=>{active.current=false},[]);

@@ -1,0 +1,8 @@
+import React from 'react';
+// iOS outline glyphs recreated from the supplied Safari reference; no SF font is bundled.
+export function SafariShare(){return <svg className="pwaSystemIcon pwaSystemIcon--ios" viewBox="0 0 24 28" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 18V2m-4.5 4.5L12 2l4.5 4.5M7 11H4a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 4 26h16a1.5 1.5 0 0 0 1.5-1.5v-12A1.5 1.5 0 0 0 20 11h-3"/></svg>}
+export function SafariAddHome(){return <svg className="pwaSystemIcon pwaSystemIcon--ios" viewBox="0 0 26 26" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><rect x="2.5" y="2.5" width="21" height="21" rx="4.5"/><path d="M13 7.5v11M7.5 13h11"/></svg>}
+// Original Google Material icon paths, Apache-2.0; license in public/licenses/material-icons.txt.
+// https://github.com/google/material-design-icons/tree/master/src
+export function AndroidMenu(){return <svg className="pwaSystemIcon pwaSystemIcon--android" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>}
+export function AndroidInstall(){return <svg className="pwaSystemIcon pwaSystemIcon--android" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17,18H7V6h7V1H7C5.9,1,5,1.9,5,3v18c0,1.1,0.9,2,2,2h10c1.1,0,2-0.9,2-2v-5h-2V18z"/><polygon points="18,14 23,9 21.59,7.59 19,10.17 19,3 17,3 17,10.17 14.41,7.59 13,9"/></svg>}

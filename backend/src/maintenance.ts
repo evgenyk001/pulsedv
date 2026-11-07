@@ -23,6 +23,8 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
   await sql.query("delete from antifraud_devices where last_seen_at<now()-interval '180 days'");
   await sql.query("delete from partner_security_attempts where created_at<now()-interval '90 days'");
   await sql.query("delete from partner_client_reservations where converted_referral_id is null and expires_at<now()-interval '30 days'");
+  await sql.query("delete from phone_login_challenges where created_at<now()-interval '1 day'");
+  await sql.query("delete from push_deliveries where delivered_at<now()-interval '30 days' or dead_at<now()-interval '30 days'");
   await sql.query('delete from auth_tokens where expires_at<=now()');
   await sql.query('delete from control_login_challenges where expires_at<now()-interval \'1 day\' or consumed_at is not null and consumed_at<now()-interval \'1 day\'');
   await sql.query("delete from outbox_events where topic='manager.security_code' and created_at<now()-interval '10 minutes'");

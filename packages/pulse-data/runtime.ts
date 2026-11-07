@@ -15,14 +15,14 @@ export type PageMeta={page:number;limit:number;total:number;hasMore:boolean;load
 const empty:Snapshot={state:{...DEFAULT_STATE,properties:[],banners:[]},version:0,leads:[],tasks:[],events:[],profiles:[],members:[],notifications:[],limited:false};
 const emptyCounts:ControlCounts={leadsTotal:0,activeLeads:0,newLeads:0,unassignedLeads:0,openTasks:0,overdueTasks:0,hotProfiles:0,leadStages:{new:0,contacted:0,qualified:0,showing:0,booking:0,deal:0,closed:0,lost:0}};
 const emptyPage=(limit:number):PageMeta=>({page:0,limit,total:0,hasMore:false,loading:false});
-export const runtime={requiresPhone:false,enabled:false,base:'/api/v1',role:'public' as 'public'|'control',snapshot:empty,member:null as TeamMember|null,counts:emptyCounts,pages:{leads:emptyPage(300),tasks:emptyPage(300),events:emptyPage(500),profiles:emptyPage(300)} as Record<ControlResource,PageMeta>,dirty:false,saving:false,error:null as string|null,ready:false,publicIdentity:'idle' as 'idle'|'loading'|'ready'|'error',publicIdentityError:null as string|null,consentVersion:'2026-09-25',lastSync:null as string|null};
+export const runtime={browserMode:false,requiresPhone:false,enabled:false,base:'/api/v1',role:'public' as 'public'|'control',snapshot:empty,member:null as TeamMember|null,counts:emptyCounts,pages:{leads:emptyPage(300),tasks:emptyPage(300),events:emptyPage(500),profiles:emptyPage(300)} as Record<ControlResource,PageMeta>,dirty:false,saving:false,error:null as string|null,ready:false,publicIdentity:'idle' as 'idle'|'loading'|'ready'|'error',publicIdentityError:null as string|null,consentVersion:'2026-09-25',lastSync:null as string|null};
 const notify=(names:ControlResource[]|['state']|null=null)=>{
  if(typeof window==='undefined')return;
  const list=names??['state','leads','tasks','events','profiles'];
  for(const name of list)window.dispatchEvent(new Event('pulse:control-'+name));
  window.dispatchEvent(new Event('pulse:runtime'));
 };
-export function configureRuntime(input:{enabled:boolean;base?:string;role:'public'|'control'}){runtime.enabled=input.enabled;runtime.base=(input.base||'/api/v1').replace(/\/$/,'');runtime.role=input.role;}
+export function configureRuntime(input:{enabled:boolean;base?:string;role:'public'|'control';browserMode?:boolean}){runtime.browserMode=!!input.browserMode;runtime.enabled=input.enabled;runtime.base=(input.base||'/api/v1').replace(/\/$/,'');runtime.role=input.role;}
 export function subscribeRuntime(listener:()=>void){window.addEventListener('pulse:runtime',listener);return()=>window.removeEventListener('pulse:runtime',listener);}
 export function runtimeError(error:unknown){runtime.error=error instanceof Error?error.message:'Не удалось выполнить запрос';notify();}
 export class ApiError extends Error{constructor(public status:number,message:string){super(message);}}
@@ -48,6 +48,12 @@ let sessionPromise:Promise<Session>|null=null;
 let telegramBound=false;
 let visitorCookieBound=false;
 const SESSION='pulse.dv.api.session.v1';
+export function replaceVisitorSession(value:Session|null){
+ sessionPromise=value?Promise.resolve(value):null;telegramBound=false;visitorCookieBound=!!value;identityPending=null;
+ runtime.publicIdentity=value?'ready':'idle';runtime.publicIdentityError=null;
+ try{if(value)safeLocalStorage.setItem(SESSION,JSON.stringify(value));else safeLocalStorage.removeItem(SESSION)}catch{}
+}
+
 export async function visitorSessionId(){return (await session()).sessionId;}
 async function session():Promise<Session>{
  if(sessionPromise)return sessionPromise;
@@ -86,9 +92,9 @@ export function connectPublicIdentity():Promise<void>{
  runtime.publicIdentity='loading';runtime.publicIdentityError=null;notify();
  const task=(async()=>{
   try{
-   await loadTelegramSdk();
-   const initData=telegramInitData();
-   if(telegramLaunchExpected()&&!initData)throw new Error('Не удалось подтвердить вход в Telegram. Повторите подключение.');
+   if(!runtime.browserMode)await loadTelegramSdk();
+   const initData=runtime.browserMode?null:telegramInitData();
+   if(!runtime.browserMode&&telegramLaunchExpected()&&!initData)throw new Error('Не удалось подтвердить вход в Telegram. Повторите подключение.');
    await session();
    if(!visitorCookieBound){await sessionApi('/auth/cookie',{method:'POST',body:'{}'});visitorCookieBound=true;}
    if(initData&&!telegramBound){await sessionApi('/auth/telegram',{method:'POST',body:JSON.stringify({initData})});telegramBound=true;}

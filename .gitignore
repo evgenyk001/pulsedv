@@ -18,3 +18,7 @@ dist/partner-offer/
 # Search discovery files are generated for the deployment target.
 dist/robots.txt
 dist/sitemap.xml
+
+dist/pwa/
+.env.pwa
+.env.pwa.*

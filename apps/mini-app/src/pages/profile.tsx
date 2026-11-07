@@ -1,3 +1,4 @@
+import {PwaPreferences} from '../pwa/PwaExperience';
 import {safeLocalStorage} from '../../../../packages/browser/storage';
 import {PartnerSecurityPreferences} from '../components/PartnerSecurity';
 import {IconTile} from '../components/IconTile';
@@ -60,6 +61,7 @@ export default function ProfilePage(){
         </SheetContent>
       </Sheet>
     </GroupedMenu>
+    <PwaPreferences/>
     <AnnouncementPreferences/>
     <PartnerSecurityPreferences/>
     <GroupedMenu title="О приложении">

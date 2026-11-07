@@ -1,3 +1,5 @@
+import {acceptTelegramPhone} from './phoneIdentity';
+import {HttpError} from './security';
 import {ensureAnnouncementSubscription} from './announcementSubscriptions';
 import {setTimeout} from 'node:timers/promises';
 import type {Database,Sql} from './database';
@@ -40,9 +42,9 @@ export async function handleBotUpdate(sql:Sql,config:BotConfig,call:BotCall,upda
   if(m.forward_origin||m.contact.user_id!==u.id||!/^\+[1-9]\d{6,14}$/.test(phone)){
    await call('sendMessage',{chat_id:m.chat.id,text:'Поделитесь именно своим номером кнопкой «Поделиться номером». Чужие и пересланные контакты не сохраняем.'});return;
   }
-  const accepted=await sql.query('update telegram_contact_consent c set accepted_at=now() from app_users u where c.user_id=u.id and u.telegram_user_id=$1 and c.consent_version=$2 and c.requested_at>now()-interval \'24 hours\' returning u.id',[u.id,config.CONSENT_VERSION]);
+  const accepted=await sql.query('select u.id from telegram_contact_consent c join app_users u on u.id=c.user_id where u.telegram_user_id=$1 and c.consent_version=$2 and c.requested_at>now()-interval \'24 hours\'',[u.id,config.CONSENT_VERSION]);
   if(!accepted.rows[0]){await call('sendMessage',{chat_id:m.chat.id,text:'Для подключения номера нажмите /start и ознакомьтесь с условиями.'});return;}
-  await sql.query('update app_users set phone=$2,first_name=$3,last_name=$4,telegram_username=$5,updated_at=now() where id=$1',[accepted.rows[0].id,phone,u.first_name,u.last_name??null,u.username??null]);
+  try{await acceptTelegramPhone(sql,u.id,phone,config.CONSENT_VERSION,u)}catch(e){if(e instanceof HttpError&&e.statusCode===409){await call('sendMessage',{chat_id:m.chat.id,text:e.message});return;}throw e}
   await open('Спасибо! Ваш номер сохранён в аккаунте PULSEDV.RU.');return;
  }
  if(m.text==='Продолжить без номера'){await requestPhone();return;}
