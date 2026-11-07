@@ -1,3 +1,4 @@
+import {requirePwaPartner} from './pwaPasskeys';
 import {randomBytes,randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import type {FastifyInstance,FastifyRequest} from 'fastify';
@@ -10,6 +11,7 @@ const credential=async(sql:Sql,userId:string)=>(await sql.query('select * from p
 async function userLock(sql:Sql,id:string){await sql.query('select id from app_users where id=$1 for update',[id]);}
 export async function requirePartnerBiometric(db:Sql,r:FastifyRequest,fresh=false){
  const id=r.visitor?.userId;if(!id)return;
+ if(await requirePwaPartner(db,r,fresh))return;
  const c=await credential(db,id);if(!c?.active)return;
  const token=r.headers['x-partner-unlock'];
  if(typeof token!=='string'||token.length>1024)throw new HttpError(423,'Подтвердите вход в партнёрский кабинет');

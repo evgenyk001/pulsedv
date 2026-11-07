@@ -1,3 +1,4 @@
+import {registerPwaPasskeys} from './pwaPasskeys';
 import {registerPhoneAuth,type SmsSender} from './phoneAuth';
 import {registerWebPush} from './webPush';
 import {registerPresentationRoutes} from './presentationRoutes';
@@ -135,7 +136,7 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
    await mergeFavorites(sql,request.visitor!.sessionId,row.id);
    await mergeSearch(sql,request.visitor!.sessionId,row.id);
    await mergeNotificationReads(sql,request.visitor!.sessionId,row.id);
-   await sql.query('update sessions set user_id=$2,telegram_start_param=$3 where id=$1',[request.visitor!.sessionId,row.id,verified.startParam]);
+   await sql.query("update sessions set user_id=$2,telegram_start_param=$3,auth_provider='telegram' where id=$1",[request.visitor!.sessionId,row.id,verified.startParam]);
    await linkAcquisition(sql,request.visitor!.sessionId,verified.startParam);
    for(const table of ['user_events','visitor_profiles','leads'])await sql.query(`update ${table} set user_id=$2 where session_id=$1`,[request.visitor!.sessionId,row.id]);
   });return {ok:true};
@@ -240,6 +241,7 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
  app.post('/api/v1/control/logout',{preHandler:control},async(request,reply)=>{await db.query('delete from auth_tokens where token_hash=$1',[tokenHash(request.cookies.pulse_control!)]);reply.clearCookie('pulse_control',cookieOptions);return {ok:true};});
  await registerFinanceRoutes(app,db,control);
  registerPartnerBiometricRoutes(app,db,config,visitor);
+ registerPwaPasskeys(app,db,config,visitor);
  await registerPartnerRoutes(app,{db,config,visitor,editor,owner});
  await registerLossRoutes(app,db,control);
  await registerInterestRoutes(app,db,control);

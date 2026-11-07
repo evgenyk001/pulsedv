@@ -52,7 +52,7 @@ export function registerPhoneAuth(app:FastifyInstance,db:Database,config:Runtime
    await sql.query('insert into phone_identities(phone,user_id) values($1,$2) on conflict(phone) do update set verified_at=now()',[challenge.phone,id]);
    await sql.query('insert into phone_registrations(user_id,phone,consent_version) values($1,$2,$3) on conflict(user_id) do update set phone=excluded.phone,consent_version=excluded.consent_version,verified_at=now()',[id,challenge.phone,challenge.consent_version]);
    await mergeFavorites(sql,r.visitor!.sessionId,id!);await mergeSearch(sql,r.visitor!.sessionId,id!);await mergeNotificationReads(sql,r.visitor!.sessionId,id!);
-   await sql.query('update sessions set user_id=$2 where id=$1',[r.visitor!.sessionId,id]);
+   await sql.query("update sessions set user_id=$2,auth_provider='sms',phone_verified_at=now() where id=$1",[r.visitor!.sessionId,id]);
    for(const table of ['user_events','visitor_profiles','leads'])await sql.query(`update ${table} set user_id=$2 where session_id=$1`,[r.visitor!.sessionId,id]);
    await sql.query('update phone_login_challenges set consumed_at=now() where id=$1',[challenge.id]);
    await sql.query("delete from auth_tokens where session_id=$1 and kind='visitor'",[r.visitor!.sessionId]);
@@ -65,6 +65,7 @@ export function registerPhoneAuth(app:FastifyInstance,db:Database,config:Runtime
  });
  app.post('/api/v1/me/account/logout',{preHandler:visitor},async(r,reply)=>{
   await db.query("delete from auth_tokens where session_id=$1 and kind='visitor'",[r.visitor!.sessionId]);
+  await db.query('delete from pwa_passkey_grants where session_id=$1',[r.visitor!.sessionId]);
   reply.clearCookie('pulse_visitor',{path:'/api/v1'});return {ok:true};
  });
 }

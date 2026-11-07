@@ -10,6 +10,9 @@ const cutoff=(days:number)=>new Date(Date.now()-days*86400_000).toISOString();
 
 export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
  await cleanExpiredUploads(db,config.MEDIA_ROOT);
+ await db.query("delete from pwa_passkey_challenges where created_at<now()-interval '1 day'");
+ await db.query('delete from pwa_passkey_grants where expires_at<=now()');
+ await db.query('delete from pwa_legacy_approvals where expires_at<=now()');
  await drainMediaCleanup(db,config.MEDIA_ROOT);
  const clientCutoff=cutoff(config.CLIENT_DATA_RETENTION_DAYS);
  const analyticsCutoff=cutoff(config.ANALYTICS_RETENTION_DAYS);
@@ -92,6 +95,9 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
   };
  });
 
+ await db.query("delete from pwa_passkey_challenges where created_at<now()-interval '1 day'");
+ await db.query('delete from pwa_passkey_grants where expires_at<=now()');
+ await db.query('delete from pwa_legacy_approvals where expires_at<=now()');
  await drainMediaCleanup(db,config.MEDIA_ROOT);
  return result;
 }

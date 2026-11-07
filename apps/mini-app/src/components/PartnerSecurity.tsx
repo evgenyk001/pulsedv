@@ -4,6 +4,8 @@ import {Link} from 'react-router-dom';
 import {useQueryClient} from '@tanstack/react-query';
 import {ScanFace,ShieldCheck} from 'lucide-react';
 import {biometricManager,securitySettings,enablePartnerBiometrics,disablePartnerBiometrics,unlockPartner,lockPartner,partnerIsUnlocked} from '../../../../packages/partners/biometrics';
+import {PwaPartnerGate} from '../pwa/PwaPartnerSecurity';
+import {isPwa} from '../pwa/client';
 import {visitorApi} from '../../../../packages/pulse-data/runtime';
 import {ensureAnnouncementWriteAccess} from '../../../../packages/broadcasts/telegramPermission';
 import {GroupedMenu} from './GroupedMenu';
@@ -13,13 +15,17 @@ import './announcementPreferences.css';
 export function PartnerSecurityPreferences(){
  const [state,setState]=React.useState({enabled:false,authenticated:false,available:false}),[busy,setBusy]=React.useState(true),[error,setError]=React.useState(''),[loadFailed,setLoadFailed]=React.useState(false),[attempt,setAttempt]=React.useState(0);
  React.useEffect(()=>{let active=true;setBusy(true);setLoadFailed(false);Promise.all([securitySettings(),biometricManager()]).then(([s,m])=>{if(active)setState({...s,available:!!m?.isBiometricAvailable})}).catch(()=>{if(active)setLoadFailed(true)}).finally(()=>{if(active)setBusy(false)});return()=>{active=false}},[attempt]);
+ const [approval,setApproval]=React.useState('');
+ const connectPwa=async()=>{setBusy(true);setError('');try{await unlockPartner();const r=await visitorApi<{code:string}>('/me/partner-security/pwa-approval',{method:'POST',body:'{}'});setApproval(r.code);setTimeout(()=>setApproval(''),300000)}catch(e){setError(e instanceof Error?e.message:'Повторите действие')}finally{setBusy(false)}};
  const change=async(enabled:boolean)=>{setBusy(true);setError('');try{if(enabled){await ensureAnnouncementWriteAccess((window as any).Telegram?.WebApp).catch(()=>{throw Error('Для восстановления доступа разрешите боту писать вам в Telegram')});await enablePartnerBiometrics()}else await disablePartnerBiometrics();setState(v=>({...v,enabled}))}catch(e){setError(e instanceof Error?e.message:'Не удалось изменить настройку')}finally{setBusy(false)}};
  return <GroupedMenu title="Защита партнёрского кабинета" caption={error||(!state.authenticated||!state.available?'Face ID или отпечаток доступны в мобильном Telegram на поддерживаемом устройстве.':'Проверка при входе в кабинет и изменении данных для выплаты.')}>
   <div className="announcementPreference"><IconTile><ScanFace size={20}/></IconTile><span className="announcementPreferenceCopy"><b>Face ID или отпечаток</b><small>Клиенты и выплаты под защитой</small></span><Switch aria-label="Защитить партнёрский кабинет" checked={state.enabled} disabled={busy||!state.authenticated||!state.available} onCheckedChange={v=>void change(v)}/></div>
+  {state.enabled&&<div style={{padding:16}}><button disabled={busy} onClick={()=>void connectPwa()}>Подключить PWA</button>{approval&&<p>Код подключения: <b>{approval}</b>. Действует 5 минут.</p>}</div>}
   {loadFailed&&<LoadRecovery label="Обновить настройку защиты" onRetry={()=>setAttempt(v=>v+1)}/>}
  </GroupedMenu>;
 }
-export function PartnerSecurityGate({children}:{children:React.ReactNode}){
+export function PartnerSecurityGate({children}:{children:React.ReactNode}){return isPwa?<PwaPartnerGate>{children}</PwaPartnerGate>:<TelegramPartnerSecurityGate>{children}</TelegramPartnerSecurityGate>}
+function TelegramPartnerSecurityGate({children}:{children:React.ReactNode}){
  const cache=useQueryClient(),[ready,setReady]=React.useState(false),[enabled,setEnabled]=React.useState(false),[open,setOpen]=React.useState(false),[busy,setBusy]=React.useState(false),[error,setError]=React.useState(''),[recovery,setRecovery]=React.useState(false),[code,setCode]=React.useState('');
  const autoAttempt=React.useRef(false);
  const [autoBusy,setAutoBusy]=React.useState(false);

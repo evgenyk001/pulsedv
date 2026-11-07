@@ -1,4 +1,5 @@
 import {runtime,visitorApi} from '../pulse-data/runtime';
+import {authenticatePwaPartner,getPasskeySettings} from './passkeys';
 import {partnerGrant,setPartnerGrant} from './securityState';
 export type BiometricManager={isInited:boolean;isBiometricAvailable:boolean;biometricType:string;isAccessGranted:boolean;isBiometricTokenSaved:boolean;deviceId:string;init:(callback:()=>void)=>unknown;requestAccess:(params:{reason:string},callback:(ok:boolean)=>void)=>unknown;authenticate:(params:{reason:string},callback:(ok:boolean,token?:string)=>void)=>unknown;updateBiometricToken:(token:string,callback:(ok:boolean)=>void)=>unknown;openSettings:()=>unknown};
 export function biometricCall<T>(call:(finish:(v:T)=>void)=>unknown,timeout=45000):Promise<T>{return new Promise((resolve,reject)=>{let settled=false;const timer=setTimeout(()=>{settled=true;reject(Error('Telegram не подтвердил действие. Попробуйте ещё раз'))},timeout);try{call(value=>{if(settled)return;settled=true;clearTimeout(timer);resolve(value)})}catch(e){settled=true;clearTimeout(timer);reject(e)}})}
@@ -13,12 +14,12 @@ export async function authenticateBiometric(m:BiometricManager,reason:string){
  const result=await biometricCall<{ok:boolean;token?:string}>(done=>m.authenticate({reason},(ok,token)=>done({ok,token})));
  if(!result.ok||!result.token)throw Error('Проверка не завершена. Попробуйте ещё раз или используйте код в Telegram');return result.token;
 }
-export async function securitySettings(){return runtime.enabled?visitorApi<{enabled:boolean;authenticated:boolean}>('/me/partner-security'):{enabled:false,authenticated:false};}
+export async function securitySettings(){return runtime.browserMode?getPasskeySettings():runtime.enabled?visitorApi<{enabled:boolean;authenticated:boolean}>('/me/partner-security'):{enabled:false,authenticated:false};}
 let pendingLock:Promise<unknown>=Promise.resolve();
 let lockGeneration=0;
-export function lockPartner(){lockGeneration++;setPartnerGrant('');if(runtime.enabled)pendingLock=visitorApi('/me/partner-security/lock',{method:'POST',body:'{}'}).catch(()=>{});return pendingLock;}
+export function lockPartner(){lockGeneration++;setPartnerGrant('');if(runtime.enabled)pendingLock=visitorApi(runtime.browserMode?'/me/account/passkeys/lock':'/me/partner-security/lock',{method:'POST',body:'{}'}).catch(()=>{});return pendingLock;}
 export async function unlockPartner(reason='Вход в партнёрский кабинет'){
- const generation=lockGeneration;await pendingLock;const m=await biometricManager();if(!m)throw Error('Откройте приложение в мобильном Telegram или восстановите доступ через код');
+ const generation=lockGeneration;await pendingLock;if(runtime.browserMode){const result=await authenticatePwaPartner();if(generation!==lockGeneration){void lockPartner();throw Error('Вход отменён. Откройте кабинет ещё раз')}setPartnerGrant(result.grant);return;}const m=await biometricManager();if(!m)throw Error('Откройте приложение в мобильном Telegram или восстановите доступ через код');
  const token=await authenticateBiometric(m,reason);
  if(generation!==lockGeneration)throw Error('Вход отменён. Откройте кабинет ещё раз');
  const result=await visitorApi<{grant:string}>('/me/partner-security/unlock',{method:'POST',body:JSON.stringify({token,deviceId:m.deviceId})});if(generation!==lockGeneration){void lockPartner();throw Error('Вход отменён. Откройте кабинет ещё раз')}setPartnerGrant(result.grant);

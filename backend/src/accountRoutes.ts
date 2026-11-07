@@ -1,9 +1,9 @@
 import type {FastifyInstance,FastifyRequest} from 'fastify';
 import {z} from 'zod';
-import type {Database} from './database';
+import type {Database,Sql} from './database';
 import type {RuntimeConfig} from './config';
 import {HttpError} from './security';
-export async function registeredPhone(db:Database,userId:string|null,consentVersion?:string){
+export async function registeredPhone(db:Sql,userId:string|null,consentVersion?:string){
  if(!userId)return false;
  return !!(await db.query(`select u.id from app_users u where u.id=$1 and u.phone is not null and (exists(select 1 from telegram_contact_consent c where c.user_id=u.id and c.accepted_at is not null and ($2::text is null or c.consent_version=$2)) or exists(select 1 from phone_registrations p where p.user_id=u.id and p.phone=u.phone and ($2::text is null or p.consent_version=$2)))`,[userId,consentVersion??null])).rows.length;
 }

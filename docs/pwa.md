@@ -121,13 +121,29 @@ the verified phone and optional Telegram connection; badges follow the shared
 notification inbox. Session expiry clears private query caches and returns to
 phone login. Browser pinch-to-zoom is retained for accessibility.
 
-Telegram announcement settings and Telegram-only biometric enrollment are not
-shown as unusable browser switches. The existing partner security gate is kept:
-if a customer enabled Telegram biometric protection, browser PWA does not bypass
-it. That protected cabinet still requires the existing Telegram unlock/recovery;
-browser passkey enrollment is not implemented in this branch. Ordinary customer
-catalog, favorites, search, requests, conversations and showing flows use the
-same API in PWA. Real SMS and OS push need server configuration and device QA.
+PWA uses its own WebAuthn passkeys for the partner cabinet, independent of
+Telegram biometrics. SMS/passkey sessions are tagged on the server; protected
+partner endpoints require a short-lived, session-bound key grant. Existing
+browser sessions are backfilled into that guard by migration 038. Keys require
+user verification (Face ID, fingerprint or device PIN), exact PUBLIC_ORIGIN / RP
+hostname, one-time challenges and verified signatures. Grants live in memory,
+expire after ten minutes, and lock on background/navigation; payout updates and
+key management need a fresh confirmation. Removing keys revokes grants.
+
+First key enrollment needs SMS verified within five minutes. If Telegram
+biometric protection is already active, the first PWA key additionally needs an
+eight-digit approval from the protected Telegram profile, valid for five minutes
+and bound to that SMS session. SMS alone cannot replace existing protection.
+Lost last key requires fresh SMS and, when enabled, the Telegram approval.
+Passkeys can also log into the same account without repeating SMS. Never change
+PUBLIC_ORIGIN casually: passkeys are scoped to its hostname.
+
+Phone entry uses the shared app theme, native telephone keyboard and system
+emoji. It confirms the formatted number in a bottom sheet before requesting SMS.
+The next screen supports one-time-code autofill, six-digit submission, editing
+the number and server-enforced resend cooldown. No synthetic keyboard is drawn.
+Real SMS, physical-device passkey dialogs and OS push still need configured
+infrastructure and iPhone/Android acceptance testing.
 
 Visual review uses the real shared components with separate iPhone and Android
 screens, then an isolated synthetic account against the actual API. The fixture

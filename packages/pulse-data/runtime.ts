@@ -67,7 +67,7 @@ async function session():Promise<Session>{
 }
 async function sessionApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
  const identity=await session();
- try{return await api<T>(path,{...options,headers:{...options.headers,Authorization:'Bearer '+identity.accessToken,...(path.startsWith('/me/partner')&&partnerGrant()?{'X-Partner-Unlock':partnerGrant()}:{})}});}catch(error){
+ try{return await api<T>(path,{...options,headers:{...options.headers,Authorization:'Bearer '+identity.accessToken,...((path.startsWith('/me/partner')||path.startsWith('/me/account/passkeys'))&&partnerGrant()?{'X-Partner-Unlock':partnerGrant()}:{})}});}catch(error){
   if(error instanceof ApiError&&error.status===423&&path.startsWith('/me/partner'))window.dispatchEvent(new Event('pulse:partner-locked'));
   if(error instanceof ApiError&&error.status===401){sessionPromise=null;telegramBound=false;visitorCookieBound=false;runtime.publicIdentity='idle';try{safeLocalStorage.removeItem(SESSION);}catch{}if(runtime.browserMode)window.dispatchEvent(new Event('pulse:session-expired'))}
   throw error;
