@@ -1,3 +1,5 @@
+import {propertyPwaLink} from '../../../../packages/browser/pwaLinks';
+import {isPwa} from '../pwa/client';
 import {usePresentationDelivery} from '../helpers/usePresentationDelivery';
 import {propertyTelegramLink} from '../../../../packages/browser/propertyLinks';
 import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
@@ -157,6 +159,14 @@ export default function PropertyPage(){
     sharing.current=true;setShareBusy(true);setShareNotice('');
     const complete=(method:string)=>recordPulseEvent({eventType:"property_share",entityType:"property",entityId:p.id,metadata:{city:p.city,method,outcome:"completed"}});
     try{
+      if(isPwa){
+        // Native share must run within the original tap, before awaiting any API.
+        const url=propertyPwaLink(p.id,window.location.origin,import.meta.env.BASE_URL);
+        if(navigator.share){await navigator.share({title:p.name,text:p.name+' — '+p.city,url});complete('pwa_share')}
+        else if(navigator.clipboard){await navigator.clipboard.writeText(url);setShareNotice('Ссылка на ЖК скопирована');complete('pwa_clipboard')}
+        else setShareNotice('Откройте меню браузера и выберите «Поделиться».');
+        return;
+      }
       const tg=(window as any).Telegram?.WebApp;
       const prepare=typeof tg?.shareMessage==='function'&&(!tg.isVersionAtLeast||tg.isVersionAtLeast('8.0'));
       const result=runtime.enabled?await visitorApi<{url:string;messageId?:string}>('/me/property-share',{method:'POST',body:JSON.stringify({propertyId:p.id,prepare})}):{url:propertyTelegramLink(p.id,'pulsedvbot'),messageId:undefined};
@@ -284,7 +294,7 @@ export default function PropertyPage(){
         <div className={styles.sectionHead}><div><span>МАТЕРИАЛЫ</span><h2>Документы проекта</h2></div><small>{(p.documents??[]).length} файлов</small></div>
         <div className={styles.materials}>
           {(p.documents??[]).map(doc=>{
-            const content=<><IconTile><FileText size={18}/></IconTile><div><strong>{doc.name}</strong><small>{doc.kind==='presentation'?'Получить PDF в Telegram':'Документ'}{doc.sizeBytes?' · '+Math.round(doc.sizeBytes/1024/1024*10)/10+' МБ':''}</small></div><ChevronRight size={16}/></>;
+            const content=<><IconTile><FileText size={18}/></IconTile><div><strong>{doc.name}</strong><small>{doc.kind==='presentation'?(isPwa?'Скачать PDF':'Получить PDF в Telegram'):'Документ'}{doc.sizeBytes?' · '+Math.round(doc.sizeBytes/1024/1024*10)/10+' МБ':''}</small></div><ChevronRight size={16}/></>;
             return doc.kind==='presentation'?<button key={doc.id||doc.url} type="button" disabled={pdfDelivery.busy} onClick={()=>void pdfDelivery.send(doc.id)}>{content}</button>:<a key={doc.id||doc.url} href={doc.url} target="_blank" rel="noreferrer">{content}</a>;
           })}
         </div>

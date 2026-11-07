@@ -39,6 +39,7 @@ export function RuntimeGate({children}:{children:React.ReactNode}){
   })();
   identityTask.current=task;void task.finally(()=>{identityTask.current=null});return task;
  },[]);
+ React.useEffect(()=>{if(!runtime.browserMode)return;const expired=()=>{setRegistered(false);setConnected(false);if(!identityTask.current)void connect()};window.addEventListener('pulse:session-expired',expired);return()=>window.removeEventListener('pulse:session-expired',expired)},[connect]);
  const load=React.useCallback(async()=>{setError('');try{await initializePublicState();if(!active.current)return;setReady(true);void connect()}catch(e){if(active.current)setError(e instanceof Error?e.message:'Не удалось загрузить приложение')}},[connect]);
  React.useEffect(()=>{if(runtime.enabled)void load()},[load]);
  React.useEffect(()=>{

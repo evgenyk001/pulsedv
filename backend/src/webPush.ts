@@ -48,6 +48,10 @@ export async function deliverWebPush(db:Database,config:RuntimeConfig,send:PushS
   if(!row||Date.parse(row.event_at)<Date.now()-86400000||!await registeredPhone(db,row.user_id,config.CONSENT_VERSION)){
    await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;
   }
+  if(row.topic==='user.search_updates'){
+   const consent=(await db.query('select settings,consent_key from search_profiles where owner=$1',['user:'+row.user_id])).rows[0];
+   if(!consent?.settings.push||consent.consent_key!==row.payload.consentKey){await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;}
+  }
   try{
    // Private conversation text, phone numbers and security codes never appear on a lock screen.
    const title=row.topic==='user.giveaway'?'Обновление по розыгрышу':row.topic==='user.search_updates'?'Обновление по вашему поиску':row.topic==='user.showing_reminder'?'Напоминание о показе':'Сообщение от PULSEDV.RU';

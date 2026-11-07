@@ -42,9 +42,12 @@ export async function enablePush(){
  catch(e){await subscription.unsubscribe();throw e}
 }
 export async function disablePush(){
- let id:string|null=null;try{id=localStorage.getItem(PUSH_ID)}catch{}if(id)await visitorApi('/me/push/unsubscribe',{method:'POST',body:JSON.stringify({id})});
- if('serviceWorker' in navigator){const registration=await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL);await (await registration?.pushManager.getSubscription())?.unsubscribe();}
- try{localStorage.removeItem(PUSH_ID)}catch{}
+ let id:string|null=null;try{id=localStorage.getItem(PUSH_ID)}catch{}
+ try{if(id)await visitorApi('/me/push/unsubscribe',{method:'POST',body:JSON.stringify({id})})}
+ finally{
+  try{if('serviceWorker' in navigator){const registration=await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL);await (await registration?.pushManager.getSubscription())?.unsubscribe()}}
+  finally{try{localStorage.removeItem(PUSH_ID)}catch{}}
+ }
 }
 export function clearPwaPersonalCaches(){
  try{for(const key of ['pulse.dv.favorites.v1','pulse.favorite-changes.v2','pulse.favorites-imported.v2','pulse_selection_history'])localStorage.removeItem(key)}catch{}
@@ -54,4 +57,4 @@ export async function resetPwaDevice(){
  clearPwaPersonalCaches();
  try{localStorage.removeItem(PUSH_ID);const r=await navigator.serviceWorker?.getRegistration(import.meta.env.BASE_URL);await(await r?.pushManager.getSubscription())?.unsubscribe()}catch{}
 }
-export async function logoutPwa(){await disablePush();await visitorApi('/me/account/logout',{method:'POST',body:'{}'});clearPwaPersonalCaches();replaceVisitorSession(null);location.reload();}
+export async function logoutPwa(){try{await disablePush()}catch{}await visitorApi('/me/account/logout',{method:'POST',body:'{}'});clearPwaPersonalCaches();replaceVisitorSession(null);void(navigator as Navigator&{clearAppBadge?:()=>Promise<void>}).clearAppBadge?.().catch(()=>{});location.reload();}

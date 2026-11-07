@@ -17,6 +17,7 @@
     "test:scale": "node --import tsx --test backend/test/scale.test.ts",
     "seo:build": "node scripts/build-seo.mjs",
     "seo:check": "node --test tests/seo.test.mjs",
+    "build:pwa:preview": "VITE_APP_VARIANT=pwa VITE_PWA_PREVIEW=true VITE_PULSE_MODE=preview npm run build -w apps/mini-app",
     "build:pwa": "VITE_APP_VARIANT=pwa npm run build -w apps/mini-app"
   },
   "engines": {

@@ -1,3 +1,4 @@
+import {isPwa} from '../pwa/client';
 import React from 'react';
 import {useQuery,useQueryClient} from '@tanstack/react-query';
 import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
@@ -11,6 +12,10 @@ export function usePresentationDelivery(propertyId:string){
   if(locked.current)return;
   if(!runtime.enabled){setError('Отправка PDF доступна в рабочем Telegram-приложении.');return;}
   if(!documentId){setError('Обновите карточку ЖК и повторите запрос.');return;}
+  if(isPwa){
+   const a=document.createElement('a');a.href=runtime.base+'/me/presentation-files/'+encodeURIComponent(documentId);a.download='PULSEDV.RU.pdf';document.body.append(a);a.click();a.remove();
+   setError('PDF запрошен. Его можно сохранить в «Файлы» или переслать через меню телефона.');return;
+  }
   locked.current=true;setRequesting(true);setError('');setJob(null);const started=propertyId;
   try{const data=await visitorApi<Delivery>('/me/presentations',{method:'POST',body:JSON.stringify({propertyId,documentId})});if(current.current!==started)return;client.setQueryData(['presentationDelivery',data.id],data);setJob(data.id)}catch(e){if(current.current===started)setError(e instanceof Error?e.message:'Не удалось запросить презентацию.')}finally{locked.current=false;if(current.current===started)setRequesting(false)}
  };

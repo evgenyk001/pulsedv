@@ -25,3 +25,7 @@
 @media(max-height:720px){.pwaInstall{padding-top:24px;padding-bottom:24px}.pwaInstall__phone{width:218px;height:240px;margin-bottom:24px}.pwaInstall__grid span{height:38px}.pwaInstall__phone>img{width:100px;height:100px;left:52px;top:104px;border-radius:27px}.pwaInstall h1{font-size:25px}.pwaInstall__steps{margin-top:24px;gap:14px}.pwaInstall>.pwaInstall__hint{margin-top:22px}}
 
 .pwaInstall .pwaSystemIcon--ios{color:#007aff;width:22px;height:25px;vertical-align:-6px}.pwaInstall .pwaSystemIcon--android{color:var(--foreground);width:23px;height:23px;vertical-align:-5px}.pwaInstall .pwaButton .pwaSystemIcon{color:inherit}
+
+.pwaAccountLink{padding:18px 0 8px}.pwaAccountLink strong{font-size:13px}.pwaAccountLink p{font-size:12px;line-height:1.6;color:var(--muted-foreground);margin:7px 0 15px}.pwaAccountLink a{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 16px;border-radius:999px;background:var(--muted);color:var(--foreground);font-size:12px;font-weight:550;text-decoration:none}.pwaPreference p .pwaSystemIcon{display:inline-block;width:14px;height:16px;vertical-align:-3px}
+
+.pwaInstall__steps strong{display:inline-flex;align-items:center;gap:5px;vertical-align:middle}.pwaInstall__steps strong svg{flex:none;margin:0}

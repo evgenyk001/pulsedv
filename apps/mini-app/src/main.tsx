@@ -1,5 +1,5 @@
 import {InstallGate} from './pwa/InstallGate';
-import {PwaStatus} from './pwa/PwaExperience';
+import {PwaStatus,PwaBadge} from './pwa/PwaExperience';
 import {isPwa,registerPwa} from './pwa/client';
 import {AppBoundary} from '../../../packages/browser/AppBoundary';
 import {dismissLaunchScreen} from './helpers/launchScreen';
@@ -49,11 +49,11 @@ function ScreenContent({children}:{children:React.ReactNode}){
 }
 function ScreenReady(){React.useEffect(()=>dismissLaunchScreen(),[]);return null}
 function IdentityQueries(){
- React.useEffect(()=>{const refresh=()=>void queryClient.invalidateQueries();window.addEventListener("pulse:identity-ready",refresh);return()=>window.removeEventListener("pulse:identity-ready",refresh)},[]);return null;
+ React.useEffect(()=>{const refresh=()=>void queryClient.invalidateQueries();const expired=()=>queryClient.clear();window.addEventListener("pulse:identity-ready",refresh);window.addEventListener("pulse:session-expired",expired);return()=>{window.removeEventListener("pulse:identity-ready",refresh);window.removeEventListener("pulse:session-expired",expired)}},[]);return null;
 }
-function App(){
+export function App(){
   return <QueryClientProvider client={queryClient}>
-    <IdentityQueries/><PwaStatus/><HashRouter>
+    <IdentityQueries/>{isPwa&&<PwaBadge/>}<PwaStatus/><HashRouter>
       <AppShell>
         <ScreenContent><React.Suspense fallback={<BrandLoading/>}><Routes>
           <Route path="/" element={<HomePage/>}/>
@@ -80,4 +80,4 @@ function App(){
   </QueryClientProvider>
 }
 
-ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><AppBoundary onError={dismissLaunchScreen}><InstallGate><RuntimeGate><App/></RuntimeGate></InstallGate></AppBoundary></React.StrictMode>);
+export function mountApp(){ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><AppBoundary onError={dismissLaunchScreen}><InstallGate><RuntimeGate><App/></RuntimeGate></InstallGate></AppBoundary></React.StrictMode>);}

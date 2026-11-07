@@ -22,3 +22,5 @@ dist/sitemap.xml
 dist/pwa/
 .env.pwa
 .env.pwa.*
+
+dist/pwa-preview/

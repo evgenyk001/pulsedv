@@ -1,0 +1,61 @@
+name: Publish PWA interface preview
+on:
+  push:
+    branches: [feat/pwa]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pwa-pages-review
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Existing Pages source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: stable
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Preserve existing Pages routes from main
+        working-directory: stable
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          node scripts/build-seo.mjs --preview
+      - name: PWA branch
+        uses: actions/checkout@v4
+        with:
+          path: pwa
+      - name: Build isolated PWA review
+        working-directory: pwa
+        run: |
+          npm ci --no-audit --no-fund
+          npm run check --workspaces
+          npm run build:pwa:preview
+      - name: Add preview without replacing existing app routes
+        run: |
+          cp -R pwa/dist/pwa-preview stable/dist/pwa-preview
+          test -f stable/dist/pwa-preview/index.html
+          test -f stable/dist/mini-app/index.html
+          test -f stable/dist/control-center/index.html
+          touch stable/dist/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: stable/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.publish.outputs.page_url }}
+    steps:
+      - name: Publish preview
+        id: publish
+        uses: actions/deploy-pages@v4

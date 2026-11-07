@@ -69,7 +69,7 @@ async function sessionApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
  const identity=await session();
  try{return await api<T>(path,{...options,headers:{...options.headers,Authorization:'Bearer '+identity.accessToken,...(path.startsWith('/me/partner')&&partnerGrant()?{'X-Partner-Unlock':partnerGrant()}:{})}});}catch(error){
   if(error instanceof ApiError&&error.status===423&&path.startsWith('/me/partner'))window.dispatchEvent(new Event('pulse:partner-locked'));
-  if(error instanceof ApiError&&error.status===401){sessionPromise=null;telegramBound=false;visitorCookieBound=false;runtime.publicIdentity='idle';try{safeLocalStorage.removeItem(SESSION);}catch{}}
+  if(error instanceof ApiError&&error.status===401){sessionPromise=null;telegramBound=false;visitorCookieBound=false;runtime.publicIdentity='idle';try{safeLocalStorage.removeItem(SESSION);}catch{}if(runtime.browserMode)window.dispatchEvent(new Event('pulse:session-expired'))}
   throw error;
  }
 }
@@ -96,7 +96,7 @@ export function connectPublicIdentity():Promise<void>{
    const initData=runtime.browserMode?null:telegramInitData();
    if(!runtime.browserMode&&telegramLaunchExpected()&&!initData)throw new Error('Не удалось подтвердить вход в Telegram. Повторите подключение.');
    await session();
-   if(!visitorCookieBound){await sessionApi('/auth/cookie',{method:'POST',body:'{}'});visitorCookieBound=true;}
+   if(!visitorCookieBound){try{await sessionApi('/auth/cookie',{method:'POST',body:'{}'})}catch(e){if(!(e instanceof ApiError)||e.status!==401)throw e;await sessionApi('/auth/cookie',{method:'POST',body:'{}'})}visitorCookieBound=true;}
    if(initData&&!telegramBound){await sessionApi('/auth/telegram',{method:'POST',body:JSON.stringify({initData})});telegramBound=true;}
    runtime.publicIdentity='ready';runtime.publicIdentityError=null;notify();
    void sessionApi('/me/acquisition',{method:'POST',body:JSON.stringify({id:visitId('miniapp'),search:entrySearch().slice(0,3000),referrer:document.referrer.slice(0,2000),...(initData?{initData}:{})})}).catch(()=>{});

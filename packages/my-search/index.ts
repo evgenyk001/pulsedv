@@ -1,10 +1,10 @@
 import type {PulseProperty} from '../pulse-data/model';
 import {matchesBudgetAndRooms,hasSea,deliveryMatches} from '../domain/propertyMatch';
 export type SearchCriteria={q:string;city:string;rooms:string;min:number;max:number;delivery:string;sea:boolean;purchaseMode:'any'|'cash'|'mortgage'};
-export type SearchSettings={criteria:SearchCriteria|null;watchFavorites:boolean;telegram:boolean};
+export type SearchSettings={criteria:SearchCriteria|null;watchFavorites:boolean;telegram:boolean;push?:boolean};
 export type SearchUpdate={id:string;propertyId:string;name:string;kind:'match'|'price'|'floorplan';title:string;at:string;notified:boolean};
 export type SearchSnapshot=Record<string,{match:boolean;favorite:boolean;price:number;plans:string[]}>;
-export const defaultSearchSettings:SearchSettings={criteria:null,watchFavorites:false,telegram:false};
+export const defaultSearchSettings:SearchSettings={criteria:null,watchFavorites:false,telegram:false,push:false};
 export function sameSearchCriteria(a:SearchCriteria|null,b:SearchCriteria|null){return JSON.stringify(a?Object.entries(a).sort(([x],[y])=>x.localeCompare(y)):null)===JSON.stringify(b?Object.entries(b).sort(([x],[y])=>x.localeCompare(y)):null);}
 export function searchMatches(p:PulseProperty,c:SearchCriteria){
  return p.status==='published'&&(!c.q||[p.name,p.city,p.district,p.developerName].join(' ').toLowerCase().includes(c.q.toLowerCase()))&&(c.city==='Все'||c.city==='Не важно'||p.city===c.city)&&deliveryMatches(p,c.delivery)&&(!c.sea||hasSea(p))&&matchesBudgetAndRooms(p,c);

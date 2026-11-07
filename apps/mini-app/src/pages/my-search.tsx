@@ -1,3 +1,4 @@
+import {isPwa} from '../pwa/client';
 import {LoadRecovery} from '../components/LoadRecovery';
 import {usePulseControlState} from '../helpers/usePulseControlState';
 import {useCatalogFacets} from '../helpers/useCatalog';
@@ -47,7 +48,8 @@ export default function MySearchPage(){
   </section>
   <section className={styles.card} aria-label='Настройки обновлений'>
    <div className={styles.setting}><IconTile className={styles.smallIcon}><Heart size={19}/></IconTile><div><h3>Изменения в избранном</h3><p>Цена в каталоге и новые планировки сохранённых ЖК</p></div><Switch aria-label='Следить за избранным' checked={settings.watchFavorites} disabled={save.isPending} onCheckedChange={watchFavorites=>void update({...settings,watchFavorites})}/></div>
-   <div className={styles.setting}><IconTile className={styles.smallIcon}><BellRing size={19}/></IconTile><div><h3>Уведомления в Telegram</h3><p>Только полезные изменения, не чаще раза в час</p></div><Switch aria-label='Уведомления моего поиска в Telegram' checked={settings.telegram} disabled={save.isPending||!data?.authenticated} onCheckedChange={telegram=>void update({...settings,telegram})}/></div>
+   <div className={styles.setting}><IconTile className={styles.smallIcon}><BellRing size={19}/></IconTile><div><h3>{isPwa?'Уведомления на телефоне':'Уведомления в Telegram'}</h3><p>Только полезные изменения, не чаще раза в час</p></div><Switch aria-label={isPwa?'Уведомления моего поиска на телефоне':'Уведомления моего поиска в Telegram'} checked={isPwa?!!settings.push:settings.telegram} disabled={save.isPending||!data?.authenticated} onCheckedChange={enabled=>void update({...settings,...(isPwa?{push:enabled}:{telegram:enabled})})}/></div>
+   {isPwa&&<p className={styles.hint}>Разрешите системные уведомления в <Link to='/profile'>профиле приложения</Link>, чтобы получать обновления на этом устройстве.</p>}
    {!data?.authenticated&&<p className={styles.hint}>{runtime.enabled?'Откройте Mini App из бота и нажмите «Старт», чтобы получать уведомления.':'Доставка уведомлений пока недоступна.'}</p>}
    <Link className={styles.inlineLink} to='/favorites'>Открыть избранное<ChevronRight size={15}/></Link>
   </section>

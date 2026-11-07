@@ -9,9 +9,9 @@ remains at `/pulsedv/mini-app/`. This branch does not deploy or change `main`.
 - Mobile browser: branded installation screen, platform instructions, no catalog
   or login until launched in standalone mode. Android uses the native install
   prompt when available. iPhone shows Safari Share → Add to Home Screen.
-- Desktop: installation is required too; there is no bypass/continue button.
-  Legal pages remain accessible by their existing URLs and on the login screen,
-  but the installation screen has no extra links or branding header.
+- Desktop: opens phone login directly; no extra continue button. Mobile still
+  requires standalone launch. Legal pages remain accessible by existing URLs and
+  on login, while installation has no extra links or branding header.
 - After installation: consent and a phone code delivered by SMS.RU. No Telegram
   connection is required to log into PWA.
 - A previously verified Telegram phone resolves to the existing account. If PWA
@@ -104,3 +104,48 @@ external browser (including links opened from Telegram), standalone relaunch,
 real SMS and existing-account history, push permission/delivery while closed,
 notification routing, logout/switching account, offline fallback, and updating
 with an open form. Actual OS delivery and real SMS have not been verified here.
+
+## Browser application integration
+
+PWA shares property links through the native share sheet (or copies a PWA URL),
+without sending users back to Telegram. The native share call runs directly in
+the user tap so Safari does not lose its required activation. Published uploaded
+PDF presentations download through an authenticated same-origin cookie endpoint;
+unverified sessions, draft projects and missing files are rejected. Telegram keeps
+its existing bot-delivery behavior.
+
+PWA phone registrations appear in Control together with Telegram registrations.
+Saved-search push consent is independent from Telegram consent. Cancelling or
+changing the search invalidates pending push deliveries. Account profile shows
+the verified phone and optional Telegram connection; badges follow the shared
+notification inbox. Session expiry clears private query caches and returns to
+phone login. Browser pinch-to-zoom is retained for accessibility.
+
+Telegram announcement settings and Telegram-only biometric enrollment are not
+shown as unusable browser switches. The existing partner security gate is kept:
+if a customer enabled Telegram biometric protection, browser PWA does not bypass
+it. That protected cabinet still requires the existing Telegram unlock/recovery;
+browser passkey enrollment is not implemented in this branch. Ordinary customer
+catalog, favorites, search, requests, conversations and showing flows use the
+same API in PWA. Real SMS and OS push need server configuration and device QA.
+
+Visual review uses the real shared components with separate iPhone and Android
+screens, then an isolated synthetic account against the actual API. The fixture
+session route exists only in the scratch preview server; no preview login,
+platform override or synthetic authentication endpoint ships in production.
+
+Visual baseline: existing Mini App components, typography and spacing are reused.
+PWA-specific screens avoid duplicate brand captions and explanatory marketing
+copy; installation contains the illustration, title and two platform steps.
+Consent and actionable errors remain visible.
+
+## GitHub Pages interface review
+
+`npm run build:pwa:preview` produces a separate static review at
+`/pulsedv/pwa-preview/`, with its own manifest identity and service-worker scope.
+The source entry is isolated from the production bootstrap and build-guarded.
+It uses existing browser-local demonstration data, not a phone-login bypass
+in the server application. No SMS, server session, real manager messages or
+push delivery are simulated as successful. Do not connect this public preview
+to production customer data. The workflow rebuilds the existing main-branch
+Pages site and adds the PWA directory, without modifying main or the VPS.

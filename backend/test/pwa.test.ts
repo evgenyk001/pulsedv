@@ -1,3 +1,11 @@
+import {mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {upsertCatalogProperty} from '../src/catalogRepository';
+import {scanSearchProfiles} from '../src/searchRoutes';
+import {DEFAULT_STATE} from '../../packages/pulse-data/model';
+import {hashPassword} from '../src/security';
+import {propertyPwaLink} from '../../packages/browser/pwaLinks';
 import {test,type TestContext} from 'node:test';
 import assert from 'node:assert/strict';
 import {createHmac,randomUUID} from 'node:crypto';
@@ -85,4 +93,33 @@ test('Web Push rejects private endpoints, scopes subscriptions, isolates deliver
  await f.db.query("insert into outbox_events(topic,aggregate_type,payload) values('user.journey','lead',$1::jsonb)",[JSON.stringify({userId:aId})]);
  await deliverWebPush(f.db,f.config,async()=>{throw Object.assign(new Error('gone'),{statusCode:410})});
  assert.equal(Number((await f.db.query('select count(*) from push_subscriptions')).rows[0].count),0);
+});
+
+test('PWA customers appear in Control and download published PDFs without Telegram; anonymous requests fail',async t=>{
+ const f=await fixture(t),a=await f.login('+79990005555'),anonymous=await f.session();
+ const root=await mkdtemp(join(tmpdir(),'pulse-pwa-pdf-'));t.after(()=>rm(root,{recursive:true,force:true}));f.config.MEDIA_ROOT=root;
+ const file=randomUUID(),doc=randomUUID();await mkdir(join(root,'documents'));await writeFile(join(root,'documents',file+'.pdf'),'%PDF-1.7\n synthetic document');
+ const p={...structuredClone(DEFAULT_STATE.properties[0]),id:'pwa-pdf',status:'published' as const,documents:[{id:doc,kind:'presentation' as const,name:'Презентация',url:'/media/documents/'+file+'.pdf',mimeType:'application/pdf',sizeBytes:30,sortOrder:0}]};await upsertCatalogProperty(f.db,p);
+ const url='/api/v1/me/presentation-files/'+doc;
+ assert.equal((await f.app.inject({url,headers:anonymous.headers})).statusCode,403);
+ const pdf=await f.app.inject({url,headers:a.headers});assert.equal(pdf.statusCode,200,pdf.body);assert.match(pdf.headers['content-disposition'] as string,/attachment/);assert.equal(pdf.headers['cache-control'],'private, no-store');assert.ok(pdf.body.startsWith('%PDF-'));
+ await upsertCatalogProperty(f.db,{...p,status:'draft'});assert.equal((await f.app.inject({url,headers:a.headers})).statusCode,404);
+ await f.db.query("insert into team_members(name,email,password_hash,role) values('Owner','pwa-owner@test.ru',$1,'owner')",[await hashPassword('test-long-owner-password')]);
+ const login=await f.app.inject({method:'POST',url:'/api/v1/control/login',headers:{origin:f.config.PUBLIC_ORIGIN},payload:{email:'pwa-owner@test.ru',password:'test-long-owner-password'}});
+ const list=await f.app.inject({url:'/api/v1/control/registrations?q=79990005555',cookies:{pulse_control:login.cookies[0].value}});assert.equal(list.statusCode,200,list.body);assert.equal(list.json().total,1);assert.equal(list.json().items[0].phone,'+79990005555');assert.equal(list.json().items[0].telegram_user_id,null);
+ const account=(await f.app.inject({url:'/api/v1/me/account',headers:a.headers})).json();assert.equal(account.telegramLinked,false);assert.equal(account.phone,'+79990005555');
+ const link=new URL(propertyPwaLink('a/b?x=1','https://pulsedv.ru'));assert.equal(link.origin,'https://pulsedv.ru');assert.equal(link.pathname,'/app/');assert.equal(link.hash,'#/property/a%2Fb%3Fx%3D1');
+});
+test('PWA saved search notifications are independently consented and cancellation prevents queued push',async t=>{
+ const f=await fixture(t),a=await f.login('+79990006666');
+ const keys={p256dh:Buffer.concat([Buffer.from([4]),Buffer.alloc(64,1)]).toString('base64url'),auth:Buffer.alloc(16,2).toString('base64url')};
+ await f.app.inject({method:'POST',url:'/api/v1/me/push/subscribe',headers:a.headers,payload:{endpoint:'https://fcm.googleapis.com/fcm/send/search',keys}});
+ const settings={criteria:{q:'',city:'Все',rooms:'Все',min:0,max:30000000,delivery:'Любой',sea:false,purchaseMode:'any'},watchFavorites:false,telegram:false,push:true};
+ const put=()=>f.app.inject({method:'PUT',url:'/api/v1/me/search',headers:a.headers,payload:settings});assert.equal((await put()).statusCode,200);
+ const p={...structuredClone(DEFAULT_STATE.properties[0]),id:'pwa-search',status:'published' as const};await upsertCatalogProperty(f.db,p);await scanSearchProfiles(f.db,f.config.PUBLIC_ORIGIN);
+ assert.equal(Number((await f.db.query('select count(*) from push_deliveries')).rows[0].count),1);
+ let sent=0;await deliverWebPush(f.db,f.config,async()=>{sent++});assert.equal(sent,1,'push does not require Telegram subscription or Telegram account');
+ await upsertCatalogProperty(f.db,{...p,id:'pwa-search-second',floorplans:[]});await scanSearchProfiles(f.db,f.config.PUBLIC_ORIGIN,new Date(Date.now()+3700000));
+ assert.equal(Number((await f.db.query('select count(*) from push_deliveries where delivered_at is null and dead_at is null')).rows[0].count),1,'a second digest is queued before revocation');
+ settings.push=false;assert.equal((await put()).statusCode,200);await deliverWebPush(f.db,f.config,async()=>{sent++});assert.equal(sent,1,'revoked search consent blocks pending delivery');
 });

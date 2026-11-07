@@ -1,3 +1,4 @@
+import {runtime} from '../../../../packages/pulse-data/runtime';
 import {safeLocalStorage,safeSessionStorage} from '../../../../packages/browser/storage';
 import {prepareTelegramWindow} from '../helpers/telegramWindow';
 import {FavoriteSync} from "../helpers/useFavoriteIds";
@@ -58,6 +59,7 @@ export function AppShell({children}:{children:React.ReactNode}){
   },[]);
 
   React.useEffect(()=>{
+    if(runtime.browserMode)return;
     const preventPageGesture=(event:Event)=>{
       const target=event.target instanceof Element?event.target:null;
       if(target?.closest('[data-allow-pinch-zoom="true"]'))return;

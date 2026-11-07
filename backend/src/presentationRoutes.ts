@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {createReadStream} from 'node:fs';
 import type {FastifyInstance,FastifyRequest} from 'fastify';
 import type {Database} from './database';
 import type {RuntimeConfig} from './config';
@@ -23,6 +24,17 @@ export function registerPresentationRoutes(app:FastifyInstance,db:Database,confi
    const row=(await sql.query("insert into outbox_events(topic,aggregate_type,aggregate_id,payload) values('document.presentation','catalog_document',$1,$2::jsonb) returning *",[doc.id,JSON.stringify(payload)])).rows[0];
    return view(row,config);
   });
+ });
+ // Cookie-authenticated download for installed/browser PWA; never expose a token in the URL.
+ app.get('/api/v1/me/presentation-files/:id',{preHandler:visitor,config:{rateLimit:{max:10,timeWindow:'1 minute'}}},async(r,reply)=>{
+  if(!await registeredPhone(db,r.visitor!.userId,config.CONSENT_VERSION))throw new HttpError(403,'Подтвердите номер телефона');
+  const {id}=z.object({id:z.uuid()}).parse(r.params);
+  const doc=(await db.query("select d.url,p.name from catalog_property_documents d join catalog_properties p on p.id=d.property_id where d.id=$1 and d.kind='presentation' and p.status='published'",[id])).rows[0];
+  if(!doc)throw new HttpError(404,'Презентация недоступна');
+  let path:string;try{path=await presentationFile(config.MEDIA_ROOT,doc.url)}catch{throw new HttpError(404,'Файл недоступен. Обратитесь к менеджеру');}
+  const filename=(doc.name+' — презентация').replace(/[\\/<>:"|?*\u0000-\u001f]/g,' ').slice(0,140)+'.pdf';
+  reply.header('Cache-Control','private, no-store').header('X-Content-Type-Options','nosniff').header('Content-Disposition',"attachment; filename=\"PULSE-presentation.pdf\"; filename*=UTF-8''"+encodeURIComponent(filename));
+  return reply.type('application/pdf').send(createReadStream(path));
  });
  app.get('/api/v1/me/presentations/:id',{preHandler:visitor},async r=>{
   const {id}=z.object({id:z.uuid()}).parse(r.params);

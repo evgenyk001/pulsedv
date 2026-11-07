@@ -8,7 +8,7 @@ import {HttpError} from './security';
 import {defaultSearchSettings,sameSearchCriteria,searchSnapshot,searchChanges,type SearchSettings,type SearchUpdate} from '../../packages/my-search';
 
 const criteria=z.object({q:z.string().trim().max(200),city:z.string().min(1).max(100),rooms:z.string().regex(/^(?:Все|Не важно|Студия|(?:[1-9]\d?|100)\+?)$/),min:z.number().finite().int().min(0).max(1e10),max:z.number().finite().int().positive().max(1e10),delivery:z.string().min(1).max(100),sea:z.boolean(),purchaseMode:z.enum(['any','cash','mortgage'])}).strict().refine(c=>c.min<=c.max,'Проверьте диапазон бюджета');
-const settingsSchema=z.object({criteria:criteria.nullable(),watchFavorites:z.boolean(),telegram:z.boolean()}).strict();
+const settingsSchema=z.object({criteria:criteria.nullable(),watchFavorites:z.boolean(),telegram:z.boolean(),push:z.boolean().optional()}).strict();
 export async function searchCatalog(sql:Sql){
  const items=[];let page=1;
  for(;;){const result=await listCatalog(sql,{page,limit:1000,view:'match'});items.push(...result.items);if(page*result.limit>=result.total)break;page++;}
@@ -31,7 +31,7 @@ export async function registerSearchRoutes(app:FastifyInstance,db:Database,visit
   const settings=settingsSchema.parse(r.body);
   return db.transaction(async sql=>{
    const identity=await favoriteOwner(sql,r.visitor!.sessionId);
-   if(settings.telegram&&!identity.authenticated)throw new HttpError(400,'Откройте приложение через Telegram, чтобы включить уведомления');
+   if((settings.telegram||settings.push)&&!identity.authenticated)throw new HttpError(400,'Откройте приложение через Telegram, чтобы включить уведомления');
    const previous=(await sql.query('select * from search_profiles where owner=$1 for update',[identity.owner])).rows[0];
    const reset=!previous||!sameSearchCriteria(previous.settings.criteria,settings.criteria)||previous.settings.watchFavorites!==settings.watchFavorites;
    const baseline=reset?searchSnapshot(await searchCatalog(sql),settings,await favorites(sql,identity.owner)):previous.baseline;
@@ -53,7 +53,7 @@ export async function scanSearchProfiles(db:Database,origin:string,now=new Date(
    const changes=searchChanges(row.baseline,next,catalog,now.toISOString()).map(e=>({...e,id:randomUUID()}));
    let feed=[...changes.reverse(),...row.feed as SearchUpdate[]].filter(e=>next[e.propertyId]&&(e.kind==='match'?next[e.propertyId].match:next[e.propertyId].favorite)&&Date.parse(e.at)>=now.getTime()-30*86400000).slice(0,30);
    const pending=feed.filter(e=>!e.notified);
-   if(settings.telegram&&owner.startsWith('user:')&&pending.length&&(!row.last_notified_at||new Date(row.last_notified_at).getTime()<=now.getTime()-3600000)){
+   if((settings.telegram||settings.push)&&owner.startsWith('user:')&&pending.length&&(!row.last_notified_at||new Date(row.last_notified_at).getTime()<=now.getTime()-3600000)){
     const titles=[...new Set(pending.slice(0,8).map(e=>e.name+' — '+(e.kind==='price'?'изменение цены в каталоге':e.title)))];
     await sql.query("insert into outbox_events(topic,aggregate_type,aggregate_id,payload,dedup_key) values('user.search_updates','user',$1,$2::jsonb,$3) on conflict(dedup_key) where dedup_key is not null do nothing",[owner.slice(5),JSON.stringify({userId:owner.slice(5),owner,consentKey:row.consent_key,propertyIds:[...new Set(pending.map(e=>e.propertyId))],at:now.toISOString(),title:'PULSEDV.RU · Обновления вашего поиска',body:titles.join('\n')+'\nАктуальные условия уточнит менеджер.',deepLink:origin+'/pulsedv/mini-app/#/my-search'}),'search:'+owner+':'+pending[0].id]);
     feed=feed.map(e=>({...e,notified:true}));await sql.query('update search_profiles set last_notified_at=$2 where owner=$1',[owner,now.toISOString()]);
