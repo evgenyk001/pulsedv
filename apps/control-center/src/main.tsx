@@ -1,3 +1,4 @@
+import {AppearanceProvider,initializeAppearance} from './components/Appearance';
 import {ControlConfirmHost} from './components/ControlConfirm';
 import {AppBoundary} from '../../../packages/browser/AppBoundary';
 import { configureRuntime } from "../../../packages/pulse-data/runtime";
@@ -8,11 +9,13 @@ import { HashRouter } from "react-router-dom";
 import { App } from "./App";
 import "./styles.css";
 import "./workspace.css";
+import "./studio.css";
+initializeAppearance();
 
 configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.meta.env.VITE_API_BASE_URL,role:"control"});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AppBoundary><HashRouter><RuntimeShell><App/></RuntimeShell><ControlConfirmHost/></HashRouter></AppBoundary>
+    <AppBoundary><AppearanceProvider><HashRouter><RuntimeShell><App/></RuntimeShell><ControlConfirmHost/></HashRouter></AppearanceProvider></AppBoundary>
   </React.StrictMode>
 );

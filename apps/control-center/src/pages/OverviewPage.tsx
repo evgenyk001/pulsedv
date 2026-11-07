@@ -173,8 +173,8 @@ export function OverviewPage(){
      {activePoint&&<div className="pulseChartTooltip" style={{left:(activePoint.x/600*100)+'%',top:Math.max(3,(activePoint.y/185*100)-4)+'%'}}><b>{activePoint.value}</b><span>{activePoint.label}</span></div>}
      <svg viewBox="0 0 600 185" role="img" aria-label={metric.title+' · '+periodText}>
       <defs>
-       <linearGradient id="pulseLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="#ff5260"/><stop offset="55%" stopColor="#f20d1d"/><stop offset="100%" stopColor="#ff9c72"/></linearGradient>
-       <linearGradient id="pulseArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#f20d1d" stopOpacity=".28"/><stop offset="100%" stopColor="#f20d1d" stopOpacity="0"/></linearGradient>
+       <linearGradient id="pulseLine" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="var(--pc-accent)"/><stop offset="55%" stopColor="var(--pc-accent)"/><stop offset="100%" stopColor="var(--info)"/></linearGradient>
+       <linearGradient id="pulseArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--pc-accent)" stopOpacity=".28"/><stop offset="100%" stopColor="var(--pc-accent)" stopOpacity="0"/></linearGradient>
       </defs>
       {[0,1,2,3,4].map(step=>{const value=Math.round(chartMax*(4-step)/4);const y=chartTop+step*((chartBottom-chartTop)/4);return <g key={step}><line x1={chartLeft} x2={chartRight} y1={y} y2={y} className="chartGridLine"/><text x="8" y={y+3} className="chartAxisValue">{value}</text></g>})}
       {chartArea&&<path d={chartArea} fill="url(#pulseArea)"/>}
@@ -195,7 +195,7 @@ export function OverviewPage(){
    <div className="focusStack">
     <article className="focusCard conversionCard">
      <div className="focusCardHead"><span>Конверсия в сделку</span><Activity size={18}/></div>
-     <div className="conversionBody"><div className="conversionRing" style={{background:`conic-gradient(#f20d1d ${dealRate*3.6}deg, rgba(255,255,255,.11) 0deg)`}}><div><strong>{dealRate}%</strong><small>сделки</small></div></div><div><b>{counts.leadStages.deal}</b><span>сделок в текущей базе</span><small>из {counts.leadsTotal} обращений</small></div></div>
+     <div className="conversionBody"><div className="conversionRing" style={{background:`conic-gradient(var(--pc-accent) ${dealRate*3.6}deg, var(--pc-surface-strong) 0deg)`}}><div><strong>{dealRate}%</strong><small>сделки</small></div></div><div><b>{counts.leadStages.deal}</b><span>сделок в текущей базе</span><small>из {counts.leadsTotal} обращений</small></div></div>
     </article>
     <article className="focusCard focusQueue">
      <div className="focusCardHead"><span>Фокус команды</span><Clock3 size={18}/></div>

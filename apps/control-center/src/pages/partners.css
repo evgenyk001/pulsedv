@@ -3,8 +3,8 @@
 .partnersWorkspace { color:var(--pc-text); }
 .partnersWorkspace .pageFlow { min-width:0; }
 .partnersNotice { margin:0; padding:14px 16px; background:var(--pc-surface); border:1px solid var(--pc-line); border-radius:16px; color:var(--pc-muted); font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
-.partnersRules { display:flex; align-items:flex-start; gap:14px; padding:20px; border-radius:20px; background:linear-gradient(120deg,rgba(242,13,29,.09),var(--pc-surface)); border:1px solid var(--pc-line); }
-.partnersRules>svg { color:#ff7783; flex:none; margin-top:2px; }
+.partnersRules { display:flex; align-items:flex-start; gap:14px; padding:20px; border-radius:20px; background:linear-gradient(120deg,var(--danger-soft),var(--pc-surface)); border:1px solid var(--pc-line); }
+.partnersRules>svg { color:var(--danger); flex:none; margin-top:2px; }
 .partnersRules b { font-size:16px; color:var(--pc-text); }
 .partnersRules p { margin:7px 0 0; color:var(--pc-muted); line-height:1.65; font-size:12px; }
 .partnersWorkspace .toolbar { min-width:0; }
@@ -22,9 +22,9 @@
 .partnerCellReward { display:flex; align-items:center; justify-content:space-between; gap:8px; font-variant-numeric:tabular-nums; }
 .partnerCellReward>svg { flex:none; color:var(--pc-muted); }
 .partnerBadge { display:inline-block; font-size:10px; font-weight:650; line-height:1.45; background:var(--pc-surface-strong); color:var(--pc-muted); padding:7px 9px; border-radius:10px; white-space:normal; }
-.partnerBadge.accepted { background:rgba(66,184,140,.13); color:#8ed9b6; }
-.partnerBadge.conflict { background:rgba(224,163,72,.13); color:#efc88c; }
-.partnerBadge.rejected { background:rgba(226,91,108,.12); color:#efa6af; }
+.partnerBadge.accepted { background:var(--success-soft); color:var(--success); }
+.partnerBadge.conflict { background:var(--warning-soft); color:var(--warning); }
+.partnerBadge.rejected { background:var(--danger-soft); color:var(--danger); }
 .partnerProfileRow { display:flex; gap:14px; align-items:center; justify-content:space-between; padding:16px 0; border-bottom:1px solid var(--pc-line); }
 .partnerProfileRow:last-child { border-bottom:0; padding-bottom:0; }
 .partnerProfileRow>div { min-width:0; overflow-wrap:anywhere; }
@@ -37,11 +37,11 @@
 .partnerIdentity { display:flex; flex-direction:column; gap:9px; padding:18px 0; font-size:13px; color:var(--pc-muted); }
 .partnerIdentity b { color:var(--pc-text); }
 .partnerIdentity .secondaryAction { align-self:flex-start; margin-top:5px; }
-.partnerCheck { padding:17px; border:1px solid rgba(83,188,143,.18); border-radius:16px; background:rgba(66,184,140,.07); color:#9bdbba; font-size:12px; line-height:1.65; overflow-wrap:anywhere; }
-.partnerCheck.hasConflict { border-color:rgba(224,163,72,.24); background:rgba(224,163,72,.08); color:#efc88c; }
+.partnerCheck { padding:17px; border:1px solid var(--pc-line); border-radius:16px; background:var(--success-soft); color:var(--warning); font-size:12px; line-height:1.65; overflow-wrap:anywhere; }
+.partnerCheck.hasConflict { border-color:var(--pc-line); background:var(--warning-soft); color:var(--warning); }
 .partnerCheck p { white-space:pre-line; color:var(--pc-muted); }
 .partnerCheck small { color:var(--pc-muted); }
-.partnerCheck a { color:#a6c6ff; }
+.partnerCheck a { color:var(--info); }
 .partnerForm { border:0; border-top:1px solid var(--pc-line); padding:22px 0; margin:20px 0 0; display:flex; flex-direction:column; gap:14px; min-width:0; }
 .partnerForm .partnerForm { background:var(--pc-surface); padding:18px; border:1px solid var(--pc-line); border-radius:18px; margin:4px 0; }
 .partnerForm h3,.partnerForm p { margin:0; }
@@ -59,10 +59,10 @@
 .partnerHistory { padding:0; list-style:none; display:grid; gap:0; font-size:12px; margin:18px 0; }
 .partnerHistory li { position:relative; padding:0 0 21px 22px; border-left:1px solid var(--pc-line); margin-left:5px; }
 .partnerHistory li:last-child { border:0; padding-bottom:0; }
-.partnerHistory li:before { content:""; position:absolute; left:-4px; top:4px; width:7px; height:7px; border-radius:50%; background:#8e969f; box-shadow:0 0 0 4px #202328; }
+.partnerHistory li:before { content:""; position:absolute; left:-4px; top:4px; width:7px; height:7px; border-radius:50%; background:var(--pc-surface-raised); box-shadow:0 0 0 4px rgb(var(--shadow-rgb) / 0.18); }
 .partnerHistory b { color:var(--pc-text); font-weight:600; line-height:1.5; }
 .partnerHistory small { display:block; margin-top:5px; color:var(--pc-muted); font-size:10px; }
-.partnersWorkspace button:focus-visible,.partnerDrawer button:focus-visible { outline:2px solid #ff7783; outline-offset:3px; }
+.partnersWorkspace button:focus-visible,.partnerDrawer button:focus-visible { outline:2px solid var(--pc-line); outline-offset:3px; }
 @media(hover:hover) { .partnersWorkspace .partnerReferralRow:hover { background:var(--pc-surface-raised); border-color:var(--pc-line-strong); } }
 .partnersWorkspace .partnerReferralRow:active { transform:scale(.992); }
 @media(max-width:760px) {
@@ -101,15 +101,15 @@
 
 .partnersWorkspace details summary{padding:12px 0;overflow-wrap:anywhere;cursor:pointer;line-height:1.5}.partnersWorkspace details form{display:grid;gap:12px;padding:8px 0 18px}
 
-.partnerAntifraud{min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;padding:20px;border:1px solid rgba(66,184,140,.3);border-radius:18px;background:rgba(66,184,140,.06);color:var(--pc-text);margin:18px 0}
-.partnerAntifraud.risk-high{border-color:rgba(255,119,131,.35);background:rgba(242,13,29,.07)}
-.partnerAntifraud.risk-review{border-color:rgba(224,163,72,.3);background:rgba(224,163,72,.07)}
+.partnerAntifraud{min-width:0;max-width:100%;box-sizing:border-box;overflow-wrap:anywhere;padding:20px;border:1px solid var(--pc-line);border-radius:18px;background:var(--success-soft);color:var(--pc-text);margin:18px 0}
+.partnerAntifraud.risk-high{border-color:var(--pc-line);background:var(--danger-soft)}
+.partnerAntifraud.risk-review{border-color:var(--pc-line);background:var(--warning-soft)}
 .partnerAntifraud .sectionHeading{display:flex;flex-wrap:wrap;gap:8px;align-items:center;min-width:0}
 .partnerAntifraud .sectionHeading>*{min-width:0;max-width:100%}
 .partnerAntifraud h3{margin:0}.partnerAntifraud ul{padding-inline-start:20px;min-width:0}
 .partnerAntifraud li{margin:10px 0;line-height:1.5;overflow-wrap:anywhere}
 .partnerAntifraud small{display:block;line-height:1.5;color:var(--pc-muted)}
-.partnerAntifraud .signal-high{color:#ff9aa3}.partnerAntifraud .signal-review{color:#efc88c}
+.partnerAntifraud .signal-high{color:var(--danger)}.partnerAntifraud .signal-review{color:var(--warning)}
 .partnerSecurityAttempts{min-width:0;max-width:100%;overflow-wrap:anywhere;margin:16px 0;padding:18px;border:1px solid var(--pc-line);border-radius:16px}
 .partnerSecurityAttempts li{margin:10px 0}.partnerSecurityAttempts small{display:block;color:var(--pc-muted)}
 .control .partnerDrawer>*{min-width:0;max-width:100%;box-sizing:border-box}
@@ -117,20 +117,20 @@
 .partnersGuide,.partnerNextAction{padding:22px;border:1px solid var(--pc-line);background:var(--pc-surface);border-radius:20px;line-height:1.6}
 .partnersGuide p,.partnerNextAction p{color:var(--pc-muted);font-size:13px;margin:8px 0 16px}
 .partnersGuide p:last-child{margin-bottom:0}
-.partnerNextAction{background:linear-gradient(120deg,rgba(242,13,29,.1),var(--pc-surface));margin-bottom:16px}
-.partnerNextAction small{color:#ff9aa3;font-size:10px;letter-spacing:.08em}.partnerNextAction h3{margin:6px 0;font-size:20px;line-height:1.35}
+.partnerNextAction{background:linear-gradient(120deg,var(--danger-soft),var(--pc-surface));margin-bottom:16px}
+.partnerNextAction small{color:var(--danger);font-size:10px;letter-spacing:.08em}.partnerNextAction h3{margin:6px 0;font-size:20px;line-height:1.35}
 .partnerStepNav,.partnerLocalTabs,.partnerContactActions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;min-width:0;align-items:center}
 .partnerStepNav button,.partnerLocalTabs button{padding:10px 13px;min-height:44px;border:1px solid var(--pc-line);border-radius:12px;background:var(--pc-surface);color:var(--pc-text);font:inherit;font-size:12px;cursor:pointer}
-.partnerLocalTabs button[aria-pressed=true]{background:rgba(242,13,29,.13);border-color:#f20d1d;color:#ffb2ba}
+.partnerLocalTabs button[aria-pressed=true]{background:var(--danger-soft);border-color:var(--pc-line-strong);color:var(--danger)}
 .partnerSectionTitle{display:flex;gap:12px;align-items:flex-start;margin:20px 0 14px;min-width:0}
-.partnerSectionTitle>span{display:grid;place-items:center;width:32px;height:32px;flex:none;background:rgba(242,13,29,.12);border-radius:10px;color:#ff9aa3;font-weight:700}
+.partnerSectionTitle>span{display:grid;place-items:center;width:32px;height:32px;flex:none;background:var(--danger-soft);border-radius:10px;color:var(--danger);font-weight:700}
 .partnerSectionTitle>div{min-width:0}.partnerSectionTitle h3{margin:0;font-size:17px;line-height:1.4}.partnerSectionTitle p{margin:5px 0 0;color:var(--pc-muted);font-size:12px;line-height:1.6}
 .partnerDealPanel,.partnerPayoutPanel{min-width:0;border-top:1px solid var(--pc-line);margin-top:24px;padding-top:4px}
 .partnerPayoutPanel{display:grid;gap:12px}.partnerPayoutPanel>.partnerSectionTitle{margin-bottom:0}.partnerPayoutPanel>p,.partnerPayoutPanel>small{font-size:12px;line-height:1.6;color:var(--pc-muted);margin:0}
 .partnerContactActions{margin:0}.partnerContactActions>b{flex-basis:100%;font-size:14px}.partnerContactActions a{display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none;max-width:100%}
 .partnerFinanceFields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-.partnerSaved{padding:14px 16px;border:1px solid rgba(66,184,140,.3);background:rgba(66,184,140,.08);border-radius:14px;color:#a6e3c4;font-size:13px;line-height:1.6}
-.partnerRowNext{display:block;margin-top:8px;color:#ffb2ba;font-size:11px;line-height:1.45}
+.partnerSaved{padding:14px 16px;border:1px solid var(--pc-line);background:var(--success-soft);border-radius:14px;color:var(--pc-muted);font-size:13px;line-height:1.6}
+.partnerRowNext{display:block;margin-top:8px;color:var(--danger);font-size:11px;line-height:1.45}
 .partnerConflictPreview{padding:14px;margin-top:12px;border:1px solid var(--pc-line);border-radius:12px;background:var(--pc-surface)}
 .partnerDrawer [id^=partner-]{scroll-margin-top:18px}.partnerDrawer #partner-history{border-top:1px solid var(--pc-line);margin-top:24px;padding-top:10px}
 @media(max-width:600px){.partnerFinanceFields{grid-template-columns:minmax(0,1fr)}.partnerNextAction{padding:17px}.partnerStepNav button{flex:1 0 30%}.partnerContactActions a{flex:1 0 100%}.partnerNextAction .primaryAction{width:100%}}

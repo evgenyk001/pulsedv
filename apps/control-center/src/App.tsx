@@ -1,3 +1,4 @@
+import {AppearanceControl} from './components/Appearance';
 import {GiveawayPage} from './pages/GiveawayPage';
 import {SectionNavigator} from './components/SectionNavigator';
 import {PageFrame} from './components/PageFrame';
@@ -67,7 +68,7 @@ export function App(){
     <aside className="sidebar" inert={(compact&&!menu)||undefined} aria-hidden={compact&&!menu?true:undefined} role={menu?"dialog":undefined} aria-modal={menu?true:undefined} aria-label="Навигация PULSE Control" id="control-navigation">
       <div className="brand">
         <span className="mark"><i/><i/><i/></span>
-        <div><b>PULSE Control</b><small>Рабочее пространство</small></div>
+        <div><b>PULSE Control</b><small>Команда · недвижимость</small></div>
       </div>
       <button type="button" className="mobileNavClose" aria-label="Закрыть навигацию" onClick={()=>setMenu(false)}><X size={20}/></button>
       <div className="sidebarNav">
@@ -104,9 +105,9 @@ export function App(){
         <div className="workspaceLeft">
           <button className="mobileMenu" aria-label={menu?"Скрыть меню":"Открыть меню"} aria-controls="control-navigation" aria-expanded={menu} onClick={()=>setMenu(!menu)}>{menu?<X size={20}/>:<Menu size={20}/>}</button>
           <div className="workspaceSectionIcon"><activeSection.icon size={17}/></div>
-          <div className="workspaceContext"><small>PULSE CONTROL</small><b>{activeSection.label}</b></div>
+          <div className="workspaceContext"><span>Рабочее пространство</span><ChevronRight size={13}/><b>{activeSection.label}</b></div>
         </div>
-        <div className="workspaceActions"><button className="workspaceJump" onClick={()=>{setMenu(false);setNavigator(true)}} aria-label="Быстрый переход"><Search size={17}/><span>Найти раздел</span><kbd>⌘ / Ctrl K</kbd></button>
+        <div className="workspaceActions"><AppearanceControl/><button className="workspaceJump" onClick={()=>{setMenu(false);setNavigator(true)}} aria-label="Быстрый переход"><Search size={17}/><span>Найти раздел</span><kbd>⌘ / Ctrl K</kbd></button>
           <span className="workspaceDate">{new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}</span>
           <Link to="/tasks?filter=overdue" className="notificationsLink" aria-label={"Просроченные задачи: "+overdue}><Bell size={17}/>{overdue>0&&<i>{overdue}</i>}</Link>
           <a className="miniAppLink" href="../mini-app/" target="_blank" rel="noreferrer">Мини-приложение <ArrowUpRight size={14}/></a>

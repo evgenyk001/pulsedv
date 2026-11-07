@@ -1,3 +1,4 @@
+import {AppearanceControl} from './components/Appearance';
 import {confirmControl} from './components/ControlConfirm';
 import {useDialog} from './components/useDialog';
 import React from 'react';
@@ -47,7 +48,7 @@ export function RuntimeShell({children}:{children:React.ReactNode}){
  };
 
  if(checking)return <div className="loginPage"><p>Подключаем PULSE Control…</p></div>;
- if(current.enabled&&!current.member&&challengeId)return <div className="loginPage"><form className="loginCard" onSubmit={verify}>
+ if(current.enabled&&!current.member&&challengeId)return <div className="loginPage"><div className="loginAppearance"><AppearanceControl/></div><form className="loginCard" onSubmit={verify}>
   <span className="loginMark"><ShieldCheck/></span><span className="kicker">PULSEDV.RU · 2FA</span><h1>Подтверждение входа</h1>
   <p>Шестизначный код отправлен в Telegram, привязанный к вашему аккаунту.{challengeExpires?' Код действует до '+new Date(challengeExpires).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})+'.':''}</p>
   <label className="controlField"><span>Код из Telegram</span><input inputMode="numeric" autoComplete="one-time-code" pattern="\d{6}" maxLength={6} value={mfaCode} onChange={e=>setMfaCode(e.target.value.replace(/\D/g,'').slice(0,6))} required autoFocus/></label>
@@ -55,7 +56,7 @@ export function RuntimeShell({children}:{children:React.ReactNode}){
   <button className="primaryAction" disabled={busy||mfaCode.length!==6}>{busy?'Проверяем…':'Подтвердить'}</button>
   <button type="button" onClick={()=>{setChallengeId('');setChallengeExpires('');setMfaCode('');setError('');}}>Вернуться к входу</button>
  </form></div>;
- if(current.enabled&&!current.member)return <div className="loginPage"><form className="loginCard" onSubmit={submit}><span className="loginMark"><ShieldCheck/></span><span className="kicker">PULSEDV.RU</span><h1>Вход в Control</h1><p>Рабочее пространство вашей команды.</p><label className="controlField"><span>Электронная почта</span><input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required/></label><label className="controlField"><span>Пароль</span><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required/></label>{error&&<p className="errorNotice" role="alert">{error}</p>}<button className="primaryAction" disabled={busy}>{busy?'Входим…':'Войти'}</button></form></div>;
+ if(current.enabled&&!current.member)return <div className="loginPage"><div className="loginAppearance"><AppearanceControl/></div><form className="loginCard" onSubmit={submit}><span className="loginMark"><ShieldCheck/></span><span className="kicker">PULSEDV.RU</span><h1>Вход в Control</h1><p>Рабочее пространство вашей команды.</p><label className="controlField"><span>Электронная почта</span><input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required/></label><label className="controlField"><span>Пароль</span><input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required/></label>{error&&<p className="errorNotice" role="alert">{error}</p>}<button className="primaryAction" disabled={busy}>{busy?'Входим…':'Войти'}</button></form></div>;
  return <>
   <div className="runtimeBar" ref={runtimeBarRef}>
    <span><i className={current.enabled?'liveDot':'previewDot'}/>{current.enabled?(current.member?.name+' · '+(current.member?.role==='owner'?'Владелец':current.member?.role==='admin'?'Администратор':'Менеджер')):'Локальные данные'}</span>

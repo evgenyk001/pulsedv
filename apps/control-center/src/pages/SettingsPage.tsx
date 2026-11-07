@@ -1,3 +1,4 @@
+import {AppearanceControl} from '../components/Appearance';
 import { TeamSettings } from "../components/TeamSettings";
 import { Gauge, ShieldCheck, SlidersHorizontal, UsersRound } from "lucide-react";
 import { PageFrame } from "../components/PageFrame";
@@ -26,6 +27,7 @@ export function SettingsPage(){
   };
 
   return <PageFrame eyebrow="СИСТЕМА" title="Настройки" description="Команда, роли и правила оценки интереса. Бизнес-логику можно менять без правки Mini App.">
+    <section className="panel appearanceSettings"><div><span className="kicker">ЛИЧНЫЕ НАСТРОЙКИ</span><h2>Внешний вид</h2><p>Дневная, ночная или системная тема. Выбор сохраняется на этом устройстве.</p></div><AppearanceControl expanded/></section>
     <TeamSettings/>
 
     <section className="panel">
