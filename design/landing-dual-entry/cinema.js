@@ -50,14 +50,17 @@ async function transition(index){
  }catch{started=clock-HOLD+4;}finally{preparing=false;}
 }
 function layout(){
- if(!pair)return;const s=scenes[current],W=dimensions.width,H=dimensions.height,mobile=W<480,pick=[0,1,1,0,1][current];poses=[];
+ if(!pair)return;const s=scenes[current],W=dimensions.width,H=dimensions.height,mobile=W<480,pick=[0,1,1,0,1][current];poses=[];let lowerEdge=0;
  [...pair.children].forEach((im,i)=>{
   im.style.display=mobile&&i!==pick?'none':'';
   const angle=s.angles[i],r=700/1440,rad=Math.abs(angle)*Math.PI/180;
   const hh=mobile?Math.min(H*.92/(Math.cos(rad)+r*Math.sin(rad)),W*.78/(r*Math.cos(rad)+Math.sin(rad))):Math.min(H*.88/(Math.cos(rad)+r*Math.sin(rad)),W*.46/(r*Math.cos(rad)+Math.sin(rad)))*(s.heights[i]/.90);
+  if(!mobile||i===pick)lowerEdge=Math.max(lowerEdge,H*(mobile?.5:.5+s.levels[i])+hh*(Math.cos(rad)+r*Math.sin(rad))/2);
   im.style.width=`${(hh*r).toFixed(2)}px`;im.style.height=`${hh.toFixed(2)}px`;im.style.left=`${(W*(mobile?.5:i?.75:.25)).toFixed(2)}px`;im.style.top=`${(H*(mobile?.5:.5+s.levels[i])).toFixed(2)}px`;
   im.style.transform=`translate(-50%,-50%) rotate(${angle}deg)`;poses.push({im,angle,phase:i});
  });
+ // Place the caption below the lowest rotated device, including its float range.
+ stage.style.setProperty('--scene-caption-top',`${Math.min(H+6,lowerEdge+16).toFixed(2)}px`);
 }
 function drift(){for(const p of poses){const y=Math.sin(clock*.38+p.phase)*Math.min(2,dimensions.height*.006);p.im.style.transform=`translate(-50%,-50%) translateY(${y.toFixed(2)}px) rotate(${p.angle}deg)`;}}
 function drawLines(){

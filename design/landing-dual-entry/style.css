@@ -86,3 +86,17 @@ body{grid-template-rows:var(--header) minmax(0,1fr)}
 @media(orientation:landscape) and (max-height:500px){.hero{padding-bottom:12px}.showcase{grid-template-rows:minmax(0,1fr) 32px}}
 @media(min-width:960px) and (max-height:680px){:root{--header:64px}.header .brand img{width:220px}.hero{padding-top:6px;padding-bottom:20px}.copy{padding:4px 0 8px;row-gap:8px;grid-template-rows:max-content minmax(76px,1fr) max-content}h1{font-size:44px}.highlight{margin-top:8px;padding:7px 15px 10px}.description{font-size:12px;line-height:1.6;margin-top:12px}.entry-button{min-height:56px}.social-proof{margin-top:14px}.entry-meta{margin-top:8px}.capabilities{padding:8px 0}.capability-icon{height:18px;width:18px;margin-bottom:5px}.capabilities .capability-icon>svg{height:18px;width:18px}.capabilities strong{font-size:11px;margin-bottom:3px}.capabilities span{font-size:9px;line-height:1.5}}
 .cinema-loading .fallback-phones{visibility:hidden;opacity:0}
+
+/* Keep the copy evenly spaced and captions attached to the phone scene. */
+@media(min-width:960px){
+ .copy{height:auto;align-self:center;padding:18px 0;grid-template-rows:max-content max-content max-content;row-gap:clamp(22px,3.3svh,36px)}
+ .capabilities{align-self:stretch;padding:20px 0}
+ .social-proof{margin-top:28px}
+ .scene-description{position:absolute;left:0;right:0;top:var(--scene-caption-top,calc(100% - 80px));padding:0 12px;align-self:auto}
+}
+@media(min-width:960px) and (max-height:760px){
+ .copy{padding:8px 0;row-gap:20px}.capabilities{padding:15px 0}.social-proof{margin-top:22px}
+}
+@media(min-width:960px) and (max-height:680px){
+ .copy{padding:4px 0;row-gap:14px}.capabilities{padding:10px 0}.social-proof{margin-top:18px}
+}
