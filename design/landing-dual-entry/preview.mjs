@@ -4,7 +4,7 @@ import {resolve,extname,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('./',import.meta.url));
 const capture=resolve(root,'../../.qa/built');
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.webp':'image/webp','.png':'image/png','.ttf':'font/ttf'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.json':'application/json; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.webp':'image/webp','.png':'image/png','.ttf':'font/ttf'};
 http.createServer(async(req,res)=>{try{
  const u=new URL(req.url,'http://localhost');let path=decodeURIComponent(u.pathname);
  if(path==='/capture-frame'){

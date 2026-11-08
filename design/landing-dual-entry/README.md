@@ -94,3 +94,11 @@ both axes. Both small-mobile entry controls measure 56px high. All five desktop
 scenes keep one pair mounted; measured rotated image gaps were 46–49px and
 caption gaps 74–83px at 1363×936. Desktop focus tooltip delay is 300ms. Production
 app/backend and pulsedv.ru deployment remain outside this proposal change.
+
+
+Desktop feature strip: three consistent local Lottie JSON assets for catalog,
+mortgage and partnerships fill the gap between introduction and entry controls.
+They share 1.5px round red strokes, a short reveal and pointer-hover replay.
+The local Lottie-light runtime and license are included. Static SVG fallback,
+reduced motion, global pause and visibility handling are preserved. The strip
+is hidden on mobile portrait to keep the centered single-screen composition.

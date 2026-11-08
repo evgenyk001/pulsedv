@@ -69,7 +69,7 @@ function render(){
 }
 function tick(t){raf=0;const delta=last?Math.min((t-last)/1000,.12):0;last=t;if(!paused&&!reduced.matches&&!document.hidden&&visible)clock+=delta;render();if(!paused&&!reduced.matches&&!document.hidden&&visible)raf=requestAnimationFrame(tick);}
 function redraw(){if(!raf){last=0;raf=requestAnimationFrame(tick)}}
-function syncRibbonMotion(){const svg=document.querySelector('.sprite');if(paused||reduced.matches||document.hidden)svg.pauseAnimations?.();else svg.unpauseAnimations?.();}
+function syncRibbonMotion(){const svg=document.querySelector('.sprite');if(paused||reduced.matches||document.hidden)svg.pauseAnimations?.();else svg.unpauseAnimations?.();window.dispatchEvent(new Event('pulse:motion-change'));}
 function pauseUI(){syncRibbonMotion();document.documentElement.classList.toggle('motion-paused',paused);pauseButton.setAttribute('aria-pressed',String(paused));pauseButton.setAttribute('aria-label',paused?'Продолжить анимацию':'Приостановить анимацию');pauseButton.querySelector('.pause-icon').hidden=paused;pauseButton.querySelector('.play-icon').hidden=!paused;cancelAnimationFrame(raf);raf=0;redraw();}
 async function init(){
  await Promise.all([...new Set(scenes.flatMap(s=>s.screens))].map(name=>new Promise((resolve,reject)=>{const im=new Image();im.onload=resolve;im.onerror=reject;im.src=`assets/phone-${name}.webp`})));
