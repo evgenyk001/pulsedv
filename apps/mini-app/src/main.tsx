@@ -15,6 +15,7 @@ import "./floot-runtime.css";
 import "./base.css";
 import { AppShell } from "./components/AppShell";
 import HomePage from "./pages/_index";
+const AnnouncementPage=React.lazy(()=>import('./pages/announcement'));
 const GiveawayPage=React.lazy(()=>import('./pages/giveaway'));
 const ComparePage=React.lazy(()=>import('./pages/compare'));
 const JourneyPage=React.lazy(()=>import('./pages/journey'));
@@ -57,6 +58,7 @@ export function App(){
       <AppShell>
         <ScreenContent><React.Suspense fallback={<BrandLoading/>}><Routes>
           <Route path="/" element={<HomePage/>}/>
+          <Route path="/announcements/:announcementId" element={<AnnouncementPage/>}/>
           <Route path="/catalog" element={<CatalogPage/>}/>
           <Route path="/map" element={<MapPage/>}/>
           <Route path="/mortgage" element={<MortgagePage/>}/>

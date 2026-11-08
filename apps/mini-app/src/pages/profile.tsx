@@ -1,6 +1,7 @@
 import {isPwa} from '../pwa/client';
 import {PwaPreferences,PwaAccount} from '../pwa/PwaExperience';
 import {safeLocalStorage} from '../../../../packages/browser/storage';
+import {PwaAnnouncementPreferences} from '../pwa/PwaAnnouncementPreferences';
 import {PwaSecurityPreferences} from '../pwa/PwaPartnerSecurity';
 import {PartnerSecurityPreferences} from '../components/PartnerSecurity';
 import {IconTile} from '../components/IconTile';
@@ -64,7 +65,7 @@ export default function ProfilePage(){
       </Sheet>
     </GroupedMenu>
     <PwaAccount/><PwaPreferences/>
-    {isPwa?<PwaSecurityPreferences/>:<><AnnouncementPreferences/><PartnerSecurityPreferences/></>}
+    {isPwa?<><PwaAnnouncementPreferences/><PwaSecurityPreferences/></>:<><AnnouncementPreferences/><PartnerSecurityPreferences/></>}
     <GroupedMenu title="О приложении">
       <MenuLink to="/privacy" icon={<ShieldCheck/>} title="Персональные данные"/>
       <Sheet>

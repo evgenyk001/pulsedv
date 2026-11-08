@@ -1,9 +1,9 @@
 import React from 'react';
-import {Bell,Download,LogOut,RefreshCw,WifiOff,UserRound,Check,ArrowUpRight} from 'lucide-react';
+import {Bell,Download,LogOut,RefreshCw,WifiOff,UserRound,Check,ArrowUpRight,MessageCircle} from 'lucide-react';
 import {SafariShare,SafariAddHome} from './InstallationIcons';
 import {useClientNotifications} from '../helpers/useClientNotifications';
 import {useQuery} from '@tanstack/react-query';
-import {GroupedMenu} from '../components/GroupedMenu';
+import {GroupedMenu,MenuToggle,MenuButton,MenuInfo,MenuExternalLink} from '../components/GroupedMenu';
 import {appleDevice,standalone,install,canInstall,enablePush,disablePush,logoutPwa,pwaConfig,isPwa} from './client';
 import {visitorApi} from '../../../../packages/pulse-data/runtime';
 import './pwa.css';
@@ -20,9 +20,10 @@ export function PwaPreferences(){
  if(!isPwa)return null;
  const toggle=async()=>{if(busy)return;setBusy(true);setError('');try{if(enabled)await disablePush();else await enablePush();setEnabled(!enabled)}catch(e){setError(e instanceof Error?e.message:'Не удалось изменить уведомления')}finally{setBusy(false)}};
  const logout=async()=>{setBusy(true);setError('');try{await logoutPwa()}catch{setError('Не удалось выйти. Проверьте интернет и повторите.');setBusy(false)}};
- return <GroupedMenu title="Приложение"><div className="pwaPreference"><Bell size={21}/><div><strong>Системные уведомления</strong><p>{enabled?'Включены на этом устройстве':!supported?'Откройте установленную PWA в поддерживаемом браузере':!ready?'Пока недоступны':'Ответы менеджера, показы и важные обновления'}</p></div><button disabled={busy||!supported||(!ready&&!enabled)} onClick={()=>void toggle()}>{enabled?'Отключить':'Включить'}</button></div>
-  {!standalone()&&<div className="pwaPreference"><Download size={21}/><div><strong>Добавить на главный экран</strong><p>{appleDevice()?<>Меню <SafariShare/> → <SafariAddHome/> «На экран “Домой”»</>:'Выберите установку в меню браузера'}</p></div>{canInstall()&&<button onClick={()=>void install()}>Добавить</button>}</div>}
-  <button className="pwaLogout" disabled={busy} onClick={()=>void logout()}><LogOut size={17}/> Выйти на этом устройстве</button>{error&&<p className="pwaError" role="alert">{error}</p>}
+ return <GroupedMenu title="Приложение" caption={error||undefined}>
+  <MenuToggle icon={<Bell/>} title="Системные уведомления" description={enabled?'На этом устройстве':!supported?'Доступны в установленном приложении':!ready?'Пока недоступны':'Сообщения, показы и новости'} checked={enabled} disabled={busy||!supported||(!ready&&!enabled)} onCheckedChange={()=>void toggle()}/>
+  {!standalone()&&<MenuButton icon={<Download/>} title="Добавить на главный экран" description={appleDevice()?'Поделиться → На экран «Домой»':'Установка приложения'} onClick={()=>{if(canInstall())void install().catch(()=>setError('Откройте меню браузера и выберите установку'));else setError(appleDevice()?'В Safari нажмите «Поделиться» → «На экран Домой»':'В меню браузера выберите «Установить приложение»')}}/>}
+  <MenuButton icon={<LogOut/>} title="Выйти из аккаунта" disabled={busy} onClick={()=>void logout()}/>{error&&<span className="sr-only" role="alert">{error}</span>}
  </GroupedMenu>;
 }
 
@@ -35,5 +36,8 @@ export function PwaAccount(){
  const account=useQuery({queryKey:['pwa-account'],queryFn:()=>visitorApi<{name:string;phone:string;telegramLinked:boolean;botUsername:string}>('/me/account'),enabled:isPwa,refetchOnWindowFocus:true});
  if(!isPwa||!account.data)return null;
  const a=account.data;
- return <GroupedMenu title="Ваш аккаунт"><div className="pwaPreference"><UserRound size={21}/><div><strong>{a.name==='Клиент'?'Покупатель PULSEDV.RU':a.name}</strong><p>{a.phone} · номер подтверждён</p></div><Check size={18}/></div><div className="pwaAccountLink"><strong>{a.telegramLinked?'Telegram подключён':'Подключить Telegram'}</strong>{!a.telegramLinked&&<p>Подтвердите тот же номер в Telegram.</p>}<a href={'https://t.me/'+a.botUsername+'?startapp=profile'} target="_blank" rel="noreferrer">{a.telegramLinked?'Открыть Telegram':'Подключить бота'}<ArrowUpRight size={16}/></a></div></GroupedMenu>;
+ return <GroupedMenu title="Ваш аккаунт">
+  <MenuInfo icon={<UserRound/>} title={a.name==='Клиент'?'Покупатель PULSEDV.RU':a.name} description={a.phone+' · подтверждён'}/>
+  <MenuExternalLink icon={<MessageCircle/>} title={a.telegramLinked?'Telegram подключён':'Подключить Telegram'} description={a.telegramLinked?'Открыть бота':'Войдите с тем же номером'} href={'https://t.me/'+a.botUsername+'?startapp=profile'} target="_blank" rel="noopener noreferrer"/>
+ </GroupedMenu>;
 }

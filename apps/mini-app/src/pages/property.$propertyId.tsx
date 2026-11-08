@@ -294,7 +294,7 @@ export default function PropertyPage(){
         <div className={styles.sectionHead}><div><span>МАТЕРИАЛЫ</span><h2>Документы проекта</h2></div><small>{(p.documents??[]).length} файлов</small></div>
         <div className={styles.materials}>
           {(p.documents??[]).map(doc=>{
-            const content=<><IconTile><FileText size={18}/></IconTile><div><strong>{doc.name}</strong><small>{doc.kind==='presentation'?(isPwa?'Скачать PDF':'Получить PDF в Telegram'):'Документ'}{doc.sizeBytes?' · '+Math.round(doc.sizeBytes/1024/1024*10)/10+' МБ':''}</small></div><ChevronRight size={16}/></>;
+            const content=<><IconTile><FileText size={18}/></IconTile><div><strong>{doc.name}</strong><small>{doc.kind==='presentation'?(isPwa?'Открыть PDF':'Получить PDF в Telegram'):'Документ'}{doc.sizeBytes?' · '+(doc.sizeBytes<1024*1024?Math.max(1,Math.round(doc.sizeBytes/1024))+' КБ':Math.round(doc.sizeBytes/1024/1024*10)/10+' МБ'):''}</small></div><ChevronRight size={16}/></>;
             return doc.kind==='presentation'?<button key={doc.id||doc.url} type="button" disabled={pdfDelivery.busy} onClick={()=>void pdfDelivery.send(doc.id)}>{content}</button>:<a key={doc.id||doc.url} href={doc.url} target="_blank" rel="noreferrer">{content}</a>;
           })}
         </div>

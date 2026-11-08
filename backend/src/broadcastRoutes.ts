@@ -3,6 +3,7 @@ import {z} from 'zod';
 import type {FastifyInstance,FastifyRequest} from 'fastify';
 import type {Database,Sql} from './database';
 import type {RuntimeConfig} from './config';
+import {registeredPhone} from './accountRoutes';
 import {HttpError} from './security';
 import {favoriteOwner} from './favoriteRoutes';
 import {audit} from './repository';
@@ -12,23 +13,44 @@ import {broadcastError,type BroadcastContent,type Broadcast} from '../../package
 const content=z.object({kind:z.enum(['apartment','promotion','giveaway','news']),title:z.string().trim().min(1).max(120),body:z.string().trim().min(1).max(3500),imageUrl:z.string().regex(/^\/media\/broadcasts\/[a-f0-9-]{36}\.jpg$/).nullable(),buttonLabel:z.string().trim().min(1).max(40),buttonPath:z.string().trim().min(1).max(500)}).strict().superRefine((v,c)=>{const error=broadcastError(v);if(error)c.addIssue({code:'custom',message:error})});
 const idOf=(r:FastifyRequest)=>z.object({id:z.uuid()}).parse(r.params).id;
 const revision=z.object({version:z.number().int().positive()}).strict();
-const subscriberCount=async(sql:Sql)=>Number((await sql.query('select count(*)::int n from announcement_subscriptions s join app_users u on u.id=s.user_id where s.enabled=true and u.telegram_user_id is not null')).rows[0].n);
+const telegramAudience="s.enabled=true and u.telegram_user_id is not null and not exists(select 1 from pwa_announcement_subscriptions p where p.user_id=s.user_id and p.enabled)";
+const subscriberCount=async(sql:Sql)=>Number((await sql.query('select count(*)::int n from announcement_subscriptions s join app_users u on u.id=s.user_id where '+telegramAudience)).rows[0].n);
 export async function broadcastView(sql:Sql,row:any):Promise<Broadcast>{
+ const pwa=Number((await sql.query('select count(*)::int n from pwa_announcement_receipts where campaign_id=$1',[row.id])).rows[0].n);
+ const push=(await sql.query("select count(*) filter(where d.delivered_at is not null)::int sent,count(*) filter(where d.delivered_at is null and d.dead_at is null)::int pending,count(*) filter(where d.dead_at is not null)::int failed from push_deliveries d join outbox_events o on o.id=d.event_id where o.topic='user.broadcast_pwa' and o.aggregate_id=$1",[row.id])).rows[0];
  const counts={sent:row.sent_count,failed:row.failed_count,skipped:row.skipped_count,pending:Math.max(0,row.recipient_count-row.sent_count-row.failed_count-row.skipped_count)};
- return {...row.content,id:row.id,version:row.version,status:row.status==='queued'&&!counts.pending?'completed':row.status,createdAt:new Date(row.created_at).toISOString(),sentAt:row.sent_at?new Date(row.sent_at).toISOString():null,total:row.recipient_count,...counts};
+ return {...row.content,id:row.id,version:row.version,status:row.status==='queued'&&!counts.pending?'completed':row.status,createdAt:new Date(row.created_at).toISOString(),sentAt:row.sent_at?new Date(row.sent_at).toISOString():null,total:row.recipient_count,pwaInbox:pwa,pushSent:push.sent,pushPending:push.pending,pushFailed:push.failed,...counts};
 }
 export async function registerBroadcastRoutes(app:FastifyInstance,db:Database,config:RuntimeConfig,visitor:(r:FastifyRequest)=>Promise<void>,editor:(r:FastifyRequest)=>Promise<void>){
+ const pwaAudience="p.enabled and p.consent_version=$1 and (exists(select 1 from phone_registrations r where r.user_id=p.user_id and r.consent_version=$1 and exists(select 1 from app_users u where u.id=r.user_id and u.phone=r.phone)) or exists(select 1 from telegram_contact_consent c join app_users u on u.id=c.user_id where c.user_id=p.user_id and c.accepted_at is not null and c.consent_version=$1 and u.phone is not null))";
+ const pwaCount=async(sql:Sql)=>Number((await sql.query('select count(*)::int n from pwa_announcement_subscriptions p where '+pwaAudience,[config.CONSENT_VERSION])).rows[0].n);
+ const pwaAccount=async(r:FastifyRequest)=>{await visitor(r);if(!await registeredPhone(db,r.visitor!.userId,config.CONSENT_VERSION))throw new HttpError(403,'Подтвердите номер телефона');};
+ app.get('/api/v1/me/pwa-announcements',{preHandler:pwaAccount},async r=>({enabled:!!(await db.query('select user_id from pwa_announcement_subscriptions where user_id=$1 and enabled and consent_version=$2',[r.visitor!.userId,config.CONSENT_VERSION])).rows.length}));
+ app.put('/api/v1/me/pwa-announcements',{preHandler:pwaAccount},async r=>{
+  const {enabled}=z.object({enabled:z.boolean()}).strict().parse(r.body);
+  await db.transaction(async sql=>{
+   await sql.query('select id from app_users where id=$1 for update',[r.visitor!.userId]);
+   await sql.query('insert into pwa_announcement_subscriptions(user_id,enabled,consent_version) values($1,$2,$3) on conflict(user_id) do update set enabled=excluded.enabled,consent_key=gen_random_uuid(),consent_version=excluded.consent_version,updated_at=now()',[r.visitor!.userId,enabled,config.CONSENT_VERSION]);
+   await sql.query("update push_deliveries d set dead_at=now(),locked_until=null,lock_token=null from outbox_events o where o.id=d.event_id and o.topic='user.broadcast_pwa' and o.payload->>'userId'=$1 and d.delivered_at is null and d.dead_at is null",[r.visitor!.userId]);
+  });return {enabled};
+ });
+ app.get('/api/v1/me/pwa-announcements/:id',{preHandler:pwaAccount},async r=>{
+  const id=idOf(r),row=(await db.query('select id,content,created_at from pwa_announcement_receipts where id=$1 and user_id=$2',[id,r.visitor!.userId])).rows[0];
+  if(!row)throw new HttpError(404,'Анонс не найден');return {id:row.id,...row.content,at:new Date(row.created_at).toISOString()};
+ });
  app.get('/api/v1/me/announcements',{preHandler:visitor},async r=>db.transaction(async sql=>{
   const identity=await favoriteOwner(sql,r.visitor!.sessionId);
   if(identity.authenticated)await ensureAnnouncementSubscription(sql,r.visitor!.userId!);
   const row=identity.authenticated?(await sql.query('select enabled from announcement_subscriptions where user_id=$1',[r.visitor!.userId])).rows[0]:null;
-  return {enabled:!!row?.enabled,authenticated:identity.authenticated};
+  const pwa=identity.authenticated&&!!(await sql.query('select user_id from pwa_announcement_subscriptions where user_id=$1 and enabled',[r.visitor!.userId])).rows.length;
+  return {enabled:!!row?.enabled&&!pwa,authenticated:identity.authenticated,pwaPreferred:!!pwa};
  }));
  app.put('/api/v1/me/announcements',{preHandler:visitor,config:{rateLimit:{max:20,timeWindow:'1 minute'}}},async r=>{
   const {enabled}=z.object({enabled:z.boolean()}).strict().parse(r.body);
   return db.transaction(async sql=>{
    const identity=await favoriteOwner(sql,r.visitor!.sessionId);
    if(!identity.authenticated)throw new HttpError(400,'Откройте PULSE через Telegram, чтобы настроить анонсы');
+   if(enabled){await sql.query('update pwa_announcement_subscriptions set enabled=false,consent_key=gen_random_uuid(),updated_at=now() where user_id=$1 and enabled',[r.visitor!.userId]);await sql.query("update push_deliveries d set dead_at=now(),locked_until=null,lock_token=null from outbox_events o where o.id=d.event_id and o.topic='user.broadcast_pwa' and o.payload->>'userId'=$1 and d.delivered_at is null and d.dead_at is null",[r.visitor!.userId]);}
    await sql.query(`insert into announcement_subscriptions(user_id,enabled) values($1,$2) on conflict(user_id) do update set enabled=excluded.enabled,consent_key=gen_random_uuid(),updated_at=now()`,[r.visitor!.userId,enabled]);
    await sql.query("with skipped as (update outbox_events set processed_at=now(),lock_token=null,locked_until=null,last_error='Announcement subscription changed' where topic='user.broadcast' and payload->>'userId'=$1 and processed_at is null and dead_at is null returning aggregate_id) update broadcasts b set skipped_count=skipped_count+s.n from (select aggregate_id,count(*)::int n from skipped group by aggregate_id) s where b.id=s.aggregate_id",[r.visitor!.userId]);
    return {enabled,authenticated:true};
@@ -37,7 +59,7 @@ export async function registerBroadcastRoutes(app:FastifyInstance,db:Database,co
  app.get('/api/v1/control/broadcasts',{preHandler:editor},async r=>{
   const {page}=z.object({page:z.coerce.number().int().min(1).max(10000).default(1)}).strict().parse(r.query);
   const rows=(await db.query('select * from broadcasts order by created_at desc,id limit 21 offset $1',[(page-1)*20])).rows;
-  return {items:await Promise.all(rows.slice(0,20).map(row=>broadcastView(db,row))),page,hasMore:rows.length>20,subscribers:await subscriberCount(db),telegramReady:!!config.BOT_TOKEN,testReady:!!config.BOT_TOKEN&&!!(await db.query('select telegram_user_id from team_members where id=$1',[r.member!.id])).rows[0]?.telegram_user_id};
+  return {items:await Promise.all(rows.slice(0,20).map(row=>broadcastView(db,row))),page,hasMore:rows.length>20,subscribers:(config.BOT_TOKEN?await subscriberCount(db):0)+await pwaCount(db),pwaSubscribers:await pwaCount(db),telegramSubscribers:await subscriberCount(db),sendReady:!!config.BOT_TOKEN||await pwaCount(db)>0,telegramReady:!!config.BOT_TOKEN,testReady:!!config.BOT_TOKEN&&!!(await db.query('select telegram_user_id from team_members where id=$1',[r.member!.id])).rows[0]?.telegram_user_id};
  });
  app.put('/api/v1/control/broadcasts/:id',{preHandler:editor},async r=>{
   const id=idOf(r),input=z.object({version:z.number().int().min(0),content}).strict().parse(r.body);
@@ -59,23 +81,27 @@ export async function registerBroadcastRoutes(app:FastifyInstance,db:Database,co
   await audit(db,r.member!.id,'broadcast.test',id);return {queued:true};
  });
  app.post('/api/v1/control/broadcasts/:id/send',{preHandler:editor,config:{rateLimit:{max:5,timeWindow:'1 minute'}}},async r=>{
-  const id=idOf(r),{version}=revision.parse(r.body);if(!config.BOT_TOKEN)throw new HttpError(409,'Подключите Telegram-бота на сервере');
+  const id=idOf(r),{version}=revision.parse(r.body);
   return db.transaction(async sql=>{
    const row=(await sql.query('select * from broadcasts where id=$1 for update',[id])).rows[0];if(!row)throw new HttpError(404,'Рассылка не найдена');
    // Retrying the same send request never creates another delivery per recipient.
    if(row.status!=='draft')return {item:await broadcastView(sql,row)};
    if(row.version!==version)throw new HttpError(409,'Рассылка изменилась. Проверьте предпросмотр заново');
    content.parse(row.content);
-   const count=await subscriberCount(sql);if(!count)throw new HttpError(409,'Пока нет пользователей, подписанных на анонсы');
-   const inserted=await sql.query(`insert into outbox_events(topic,aggregate_type,aggregate_id,payload,dedup_key) select 'user.broadcast','broadcast',$1::uuid,$2::jsonb||jsonb_build_object('userId',s.user_id::text,'campaignId',$1::text,'consentKey',s.consent_key::text),'broadcast:'||$1::text||':'||s.user_id::text from announcement_subscriptions s join app_users u on u.id=s.user_id where s.enabled=true and u.telegram_user_id is not null on conflict(dedup_key) where dedup_key is not null do nothing returning id`,[id,JSON.stringify(delivery(row.content))]);
-   const updated=(await sql.query("update broadcasts set status='queued',sent_at=now(),recipient_count=$2,version=version+1 where id=$1 returning *",[id,inserted.rows.length])).rows[0];
-   await audit(sql,r.member!.id,'broadcast.send',id,{recipients:inserted.rows.length});return {item:await broadcastView(sql,updated)};
+   await sql.query('select user_id from pwa_announcement_subscriptions where enabled for share');
+   const count=(config.BOT_TOKEN?await subscriberCount(sql):0)+await pwaCount(sql);if(!count)throw new HttpError(409,'Пока нет пользователей, подписанных на анонсы');
+   const inserted=config.BOT_TOKEN?await sql.query(`insert into outbox_events(topic,aggregate_type,aggregate_id,payload,dedup_key) select 'user.broadcast','broadcast',$1::uuid,$2::jsonb||jsonb_build_object('userId',s.user_id::text,'campaignId',$1::text,'consentKey',s.consent_key::text),'broadcast:'||$1::text||':'||s.user_id::text from announcement_subscriptions s join app_users u on u.id=s.user_id where ${telegramAudience} on conflict(dedup_key) where dedup_key is not null do nothing returning id`,[id,JSON.stringify(delivery(row.content))]):{rows:[]};
+   const pwa=(await sql.query('insert into pwa_announcement_receipts(campaign_id,user_id,content) select $2::uuid,p.user_id,$3::jsonb from pwa_announcement_subscriptions p where '+pwaAudience+' on conflict(campaign_id,user_id) do nothing returning id,user_id',[config.CONSENT_VERSION,id,JSON.stringify(row.content)])).rows;
+   await sql.query("insert into outbox_events(topic,aggregate_type,aggregate_id,payload,dedup_key,processed_at) select 'user.broadcast_pwa','broadcast',$1::uuid,jsonb_build_object('userId',p.user_id::text,'campaignId',$1::text,'receiptId',a.id::text,'consentKey',p.consent_key::text,'deepLink',$2::text||a.id::text),'pwa-broadcast:'||$1::text||':'||p.user_id::text,now() from pwa_announcement_receipts a join pwa_announcement_subscriptions p on p.user_id=a.user_id where a.campaign_id=$1 on conflict(dedup_key) where dedup_key is not null do nothing",[id,config.PUBLIC_ORIGIN+'/app/#/announcements/']);
+   const updated=(await sql.query("update broadcasts set status='queued',sent_at=now(),recipient_count=$2,sent_count=$3,version=version+1 where id=$1 returning *",[id,inserted.rows.length+pwa.length,pwa.length])).rows[0];
+   await audit(sql,r.member!.id,'broadcast.send',id,{recipients:inserted.rows.length+pwa.length,pwa:pwa.length});return {item:await broadcastView(sql,updated)};
   });
  });
  app.post('/api/v1/control/broadcasts/:id/cancel',{preHandler:editor},async r=>{
   const id=idOf(r),{version}=revision.parse(r.body);
   return db.transaction(async sql=>{
    const row=(await sql.query("update broadcasts set status='cancelled',version=version+1 where id=$1 and status='queued' and version=$2 returning *",[id,version])).rows[0];if(!row)throw new HttpError(409,'Обновите состояние рассылки');
+   await sql.query("update push_deliveries d set dead_at=now(),locked_until=null,lock_token=null from outbox_events o where o.id=d.event_id and o.topic='user.broadcast_pwa' and o.aggregate_id=$1 and d.delivered_at is null and d.dead_at is null",[id]);
    await sql.query("with skipped as (update outbox_events set processed_at=now(),lock_token=null,locked_until=null,last_error='Broadcast cancelled' where topic='user.broadcast' and aggregate_id=$1 and processed_at is null and dead_at is null returning id) update broadcasts set skipped_count=skipped_count+(select count(*)::int from skipped) where id=$1",[id]);await audit(sql,r.member!.id,'broadcast.cancel',id);return {item:await broadcastView(sql,(await sql.query('select * from broadcasts where id=$1',[id])).rows[0])};
   });
  });

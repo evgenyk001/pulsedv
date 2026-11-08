@@ -1,4 +1,5 @@
 import {registerPwaPasskeys} from './pwaPasskeys';
+import type {PhoneCallSender} from './phoneCall';
 import {registerPhoneAuth,type SmsSender} from './phoneAuth';
 import {registerWebPush} from './webPush';
 import {registerPresentationRoutes} from './presentationRoutes';
@@ -49,7 +50,7 @@ declare module 'fastify' {interface FastifyRequest {member?:Member;visitor?:Visi
 const uuid=(value:unknown)=>z.uuid().parse(value);
 const memberView=(row:any)=>({id:row.id,name:row.name,email:row.email,role:row.role,active:row.active,cities:row.cities,telegramUserId:row.telegram_user_id?.toString()??null,mfaEnabled:!!row.mfa_enabled});
 
-export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsSender}={}){
+export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsSender;phoneCall?:PhoneCallSender}={}){
  const app=Fastify({requestTimeout:120000,bodyLimit:1_500_000,trustProxy:config.TRUST_PROXY_HOPS?(_address:string,hop:number)=>hop<config.TRUST_PROXY_HOPS:false,logger:config.NODE_ENV!=='test'?{redact:['req.headers.authorization','req.headers.cookie','req.headers["x-partner-unlock"]','res.headers["set-cookie"]']}:false});
  await app.register(cookie);
  app.addHook('preHandler',antifraudCollector(db,config.NODE_ENV==='production'));
@@ -89,7 +90,7 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
   const row=(await db.query("select s.id,s.user_id from auth_tokens t join sessions s on s.id=t.session_id where t.token_hash=$1 and t.kind='visitor' and t.expires_at>now()",[tokenHash(token)])).rows[0];
   if(!row)throw new HttpError(401,'Сессия истекла');request.visitor={sessionId:row.id,userId:row.user_id};
   const route=request.routeOptions.url||'';
-  if(config.REQUIRE_TELEGRAM_PHONE&&((route.startsWith('/api/v1/me/')&&!route.startsWith('/api/v1/me/account')&&route!=='/api/v1/me/acquisition')||route==='/api/v1/leads')&&!await registeredPhone(db,row.user_id))throw new HttpError(403,'Для входа поделитесь своим номером в Telegram');
+  if(config.REQUIRE_TELEGRAM_PHONE&&((route.startsWith('/api/v1/me/')&&!route.startsWith('/api/v1/me/account')&&route!=='/api/v1/me/acquisition')||route==='/api/v1/leads')&&!await registeredPhone(db,row.user_id,config.CONSENT_VERSION))throw new HttpError(403,'Подтвердите номер телефона, чтобы продолжить');
   await observeVisitor(db,request,row.id);
   await db.query("update sessions set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.id]);
   if(row.user_id)await db.query("update app_users set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.user_id]);
@@ -100,7 +101,7 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
  registerPropertyShareRoutes(app,db,config,visitor);
  registerPresentationRoutes(app,db,config,visitor);
  registerAccountRoutes(app,db,config,visitor,editor);
- registerPhoneAuth(app,db,config,visitor,deps.sms);
+ registerPhoneAuth(app,db,config,visitor,deps.sms,deps.phoneCall);
  registerWebPush(app,db,config,visitor);
  registerGiveawayRoutes(app,db,config,visitor,editor);
  registerAcquisitionRoutes(app,db,config,visitor,control);

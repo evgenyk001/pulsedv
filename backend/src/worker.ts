@@ -20,7 +20,7 @@ try{
    try{await refreshStoredScores(db)}catch{console.error('Score refresh failed; will retry')}
    if(Date.now()>=nextSearch){try{const result=await scanSearchProfiles(db,config.PUBLIC_ORIGIN,new Date(),searchCursor);searchCursor=result.nextCursor;nextSearch=Date.now()+(searchCursor?5000:60000)}catch{console.error('Saved search scan failed; will retry');nextSearch=Date.now()+60000}}
    // Leave pending messages untouched until Telegram is configured.
-   if(config.BOT_TOKEN&&Date.now()>=nextReminders){await scheduleShowingReminders(db,config.PUBLIC_ORIGIN);nextReminders=Date.now()+60_000;}
+   if(Date.now()>=nextReminders){await scheduleShowingReminders(db,config.PUBLIC_ORIGIN);nextReminders=Date.now()+60_000;}
    try{await deliverWebPush(db,config)}catch{console.error('Web Push batch failed; will retry')}
    if(config.BOT_TOKEN&&Date.now()>=nextDelivery){const result=await processNotificationOutbox(outboxRepository(db),telegramSender(config),5);if(result.retryAfterSeconds)nextDelivery=Date.now()+(result.retryAfterSeconds+1)*1000;}
    await db.query("insert into worker_health(name,updated_at) values('notifications',now()) on conflict(name) do update set updated_at=excluded.updated_at");

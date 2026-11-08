@@ -5,6 +5,10 @@ const schema=z.object({
   PORT:z.coerce.number().int().min(1).max(65535).default(3000),
   PUBLIC_ORIGIN:z.url().default('http://localhost:8080'),
   BOT_TOKEN:z.string().default(''),
+  PWA_CALL_LOGIN:z.enum(['true','false']).default('false').transform(v=>v==='true'),
+  ZVONOK_PUBLIC_KEY:z.string().default(''),
+  ZVONOK_CAMPAIGN_ID:z.string().regex(/^\d*$/).default(''),
+  CALL_DAILY_LIMIT:z.coerce.number().int().min(1).max(1000).default(50),
   PWA_SMS_LOGIN:z.enum(['true','false']).default('false').transform(v=>v==='true'),
   SMS_RU_API_ID:z.string().default(''),
   SMS_RU_FROM:z.string().default(''),
@@ -37,7 +41,8 @@ export function readConfig(env:NodeJS.ProcessEnv=process.env){
   const config=schema.parse(env);
   if(config.NODE_ENV==='production'&&!config.PUBLIC_ORIGIN.startsWith('https://'))throw new Error('Production PUBLIC_ORIGIN must use HTTPS');
   if(new URL(config.PUBLIC_ORIGIN).origin!==config.PUBLIC_ORIGIN)throw new Error('PUBLIC_ORIGIN must be an origin without path or trailing slash');
-  if(config.PWA_SMS_LOGIN&&(!config.SMS_RU_API_ID||config.PHONE_OTP_SECRET.length<32))throw new Error('SMS login requires provider API ID and a PHONE_OTP_SECRET of at least 32 characters');
+  if(config.PWA_CALL_LOGIN&&(!config.ZVONOK_PUBLIC_KEY||!config.ZVONOK_CAMPAIGN_ID||config.PHONE_OTP_SECRET.length<32))throw new Error('Call login requires Zvonok key, campaign ID and a PHONE_OTP_SECRET of at least 32 characters');
+  if(!config.PWA_CALL_LOGIN&&config.PWA_SMS_LOGIN&&(!config.SMS_RU_API_ID||config.PHONE_OTP_SECRET.length<32))throw new Error('SMS login requires provider API ID and a PHONE_OTP_SECRET of at least 32 characters');
   if(!!config.WEB_PUSH_PUBLIC_KEY!==!!config.WEB_PUSH_PRIVATE_KEY)throw new Error('Configure both Web Push VAPID keys');
   return config;
 }

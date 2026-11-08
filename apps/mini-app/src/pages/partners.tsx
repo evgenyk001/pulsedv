@@ -75,7 +75,7 @@ export default function PartnersPage(){
  const waiting=(q.data?.reservations||[]).filter(r=>!r.submitted),unsubmittedInvites=(q.data?.invitations||[]).filter(i=>!i.submitted&&!q.data?.reservations?.some(r=>r.code===i.code));
  const selected=(deep.data?.referral?.id===selectedId?deep.data.referral:null)||q.data?.referrals.find(r=>r.id===selectedId),summary=q.data?.summary;
  React.useEffect(()=>{if(deep.error)setError(deep.error instanceof Error?deep.error.message:'Не удалось открыть рекомендацию')},[deep.error]);
- const shareUrl=partnerLink(inviteCode||p?.code||'',window.location.origin+window.location.pathname,runtime.enabled?program.data?.botUsername:undefined);
+ const shareUrl=partnerLink(inviteCode||p?.code||'',window.location.origin+window.location.pathname,runtime.enabled&&!runtime.browserMode?program.data?.botUsername:undefined);
  const run=async(fn:()=>Promise<unknown>)=>{
   if(busy)return false;setBusy(true);setError('');
   try{await fn();await Promise.all([cache.invalidateQueries({queryKey:['partner-cabinet']},{throwOnError:true}),cache.invalidateQueries({queryKey:['partner-referral']},{throwOnError:true})]);return true}

@@ -1,6 +1,6 @@
 export type BroadcastContent={kind:'apartment'|'promotion'|'giveaway'|'news';title:string;body:string;imageUrl:string|null;buttonLabel:string;buttonPath:string};
-export type Broadcast=BroadcastContent&{id:string;version:number;status:'draft'|'queued'|'completed'|'cancelled'|'demo';createdAt:string;sentAt:string|null;total:number;sent:number;pending:number;failed:number;skipped:number};
-export type BroadcastList={items:Broadcast[];page:number;hasMore:boolean;subscribers:number;telegramReady:boolean;testReady:boolean};
+export type Broadcast=BroadcastContent&{id:string;version:number;status:'draft'|'queued'|'completed'|'cancelled'|'demo';createdAt:string;sentAt:string|null;pwaInbox?:number;pushSent?:number;pushPending?:number;pushFailed?:number;total:number;sent:number;pending:number;failed:number;skipped:number};
+export type BroadcastList={items:Broadcast[];page:number;hasMore:boolean;subscribers:number;pwaSubscribers?:number;telegramSubscribers?:number;sendReady?:boolean;telegramReady:boolean;testReady:boolean};
 export const broadcastKinds={apartment:'Квартира дня',promotion:'Акция',giveaway:'Розыгрыш',news:'Новость'} as const;
 export const broadcastText=(c:BroadcastContent)=>c.title.trim()+'\n\n'+c.body.trim();
 export function broadcastError(c:BroadcastContent){

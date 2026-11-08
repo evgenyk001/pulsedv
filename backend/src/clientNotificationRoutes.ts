@@ -42,6 +42,13 @@ const notices=`with owned as (
  '/partners?referral='||r.id,false
  from partner_referral_events e join partner_referrals r on r.id=e.referral_id join partner_profiles p on p.id=r.partner_id
  where p.user_id=$2::uuid and e.kind in ('accrued','payout_details','payout_agreed','payout_reopened','paid')
+ union all
+ select 'giveaway:'||e.id||':'||e.status||':'||coalesce(e.ticket_number::text,''),'giveaway',case when e.status='confirmed' then 'Участие в розыгрыше подтверждено' when e.status='rejected' then 'Обновление по розыгрышу' else 'Заявка на участие принята' end,'Подробности и номер участника — в разделе розыгрыша',coalesce(e.reviewed_at,e.created_at),'/giveaway',false from giveaway_entries e where e.user_id=$2::uuid and e.status<>'confirmed'
+ union all
+ select 'giveaway-ticket:'||t.id,'giveaway','Присвоен номер участника розыгрыша','Номер и условия — в разделе розыгрыша',t.created_at,'/giveaway',false from giveaway_tickets t join giveaway_entries e on e.id=t.entry_id where e.user_id=$2::uuid and e.status='confirmed'
+ union all
+ select 'announcement:'||a.id,'announcement',a.content->>'title',left(a.content->>'body',160),a.created_at,
+ '/announcements/'||a.id,false from pwa_announcement_receipts a where a.user_id=$2::uuid
 ), notices as (
  select r.id,r.kind,r.title,r.body,r.at,r.href,(r.source_read or seen.notice_id is not null) as read
  from raw r left join client_notification_reads seen on seen.owner=$3 and seen.notice_id=r.id where seen.dismissed_at is null

@@ -10,8 +10,8 @@ export function outboxRepository(db:Database):NotificationOutboxRepository{
    if(event.topic==='user.giveaway')return !!(await db.query('select id from giveaway_entries where id=$1 and user_id=$2 and status=$3',[event.payload.entryId,event.payload.userId,event.payload.status])).rows.length;
    if(event.topic==='user.partner_security_code')return !!(await db.query('select id from partner_biometric_recovery where id=$1 and user_id=$2 and expires_at>now() and attempts<5',[event.payload.challengeId,event.payload.userId])).rows.length;
    if(event.topic==='user.broadcast'){
-    const row=(await db.query("select s.enabled,s.consent_key,b.status from announcement_subscriptions s join broadcasts b on b.id=$2 where s.user_id=$1",[event.payload.userId,event.payload.campaignId])).rows[0];
-    return !!row?.enabled&&row.status==='queued'&&row.consent_key===event.payload.consentKey;
+    const row=(await db.query("select s.enabled,s.consent_key,b.status,exists(select 1 from pwa_announcement_subscriptions p where p.user_id=s.user_id and p.enabled) as pwa from announcement_subscriptions s join broadcasts b on b.id=$2 where s.user_id=$1",[event.payload.userId,event.payload.campaignId])).rows[0];
+    return !!row?.enabled&&!row.pwa&&row.status==='queued'&&row.consent_key===event.payload.consentKey;
    }
    if(event.topic==='manager.security_code'){
     const challengeId=event.payload.challengeId;

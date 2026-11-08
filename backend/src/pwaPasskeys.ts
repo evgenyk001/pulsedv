@@ -15,7 +15,7 @@ export async function pwaGrantValid(sql:Sql,r:FastifyRequest,fresh=false){
 }
 export async function requirePwaPartner(sql:Sql,r:FastifyRequest,fresh=false){
  const provider=(await sql.query('select auth_provider from sessions where id=$1',[r.visitor!.sessionId])).rows[0]?.auth_provider;
- if(provider!=='sms'&&provider!=='passkey')return false;
+ if(provider!=='sms'&&provider!=='call'&&provider!=='passkey')return false;
  if(!await pwaGrantValid(sql,r,fresh))throw new HttpError(423,fresh?'Подтвердите действие ключом доступа':'Откройте партнёрский кабинет ключом доступа');
  return true;
 }
@@ -48,7 +48,7 @@ export function registerPwaPasskeys(app:FastifyInstance,db:Database,config:Runti
    if(keys.length>=5)throw new HttpError(409,'Можно подключить до пяти ключей');
    if(keys.length){if(!await pwaGrantValid(sql,r,true))throw new HttpError(423,'Сначала подтвердите действующий ключ доступа');}
    else{
-    if(session.auth_provider!=='sms'||!session.phone_verified_at||Date.parse(session.phone_verified_at)<Date.now()-300000)throw new HttpError(428,'Для подключения ключа заново подтвердите номер по SMS');
+    if(!['sms','call'].includes(session.auth_provider)||!session.phone_verified_at||Date.parse(session.phone_verified_at)<Date.now()-300000)throw new HttpError(428,'Для подключения ключа заново подтвердите номер телефона');
     const legacy=(await sql.query('select revision from partner_biometric_credentials where user_id=$1 and active',[id])).rows[0];
     if(legacy){
      const a=(await sql.query('select * from pwa_legacy_approvals where user_id=$1 and expires_at>now() and revision=$2 for update',[id,legacy.revision])).rows[0];

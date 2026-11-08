@@ -5,3 +5,5 @@
 @media(max-width:360px){.phoneEntry{padding-left:21px;padding-right:21px}.phoneEntry__phone input,.phoneEntry__phone{font-size:23px}.phoneEntry__confirm h2{font-size:25px!important}}
 @media(prefers-reduced-motion:reduce){.phoneEntry *{transition:none!important;animation:none!important}}
 .phoneEntry .phoneEntry__phone input{border-radius:0}.phoneEntry .phoneEntry__phone input:focus-visible{outline:none}
+
+.phoneEntry__callHint{margin:8px 0 22px;color:var(--muted-foreground);font-size:14px;text-align:center}

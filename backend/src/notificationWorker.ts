@@ -105,7 +105,7 @@ export async function processNotificationOutbox(
         const userId=asString(event.payload.userId);
         if(!userId)throw new Error("userId missing");
         const chatId=await repo.userTelegramUserId(userId);
-        if(!chatId)throw new Error("user Telegram id missing");
+        if(!chatId){await repo.markSkipped(event.id,"Telegram account not connected");continue;}
         if((isShowingReminder(event.topic)||event.topic==='user.partner_security_code'||event.topic==='user.search_updates'||event.topic==='user.broadcast'||event.topic==='document.presentation'||event.topic==='user.giveaway')&&!await repo.canDeliver(event)){await repo.markSkipped(event.id,event.topic==='document.presentation'?'Presentation unavailable':event.topic==='user.broadcast'?'Broadcast cancelled or subscription changed':event.topic==='user.search_updates'?'Search subscription changed':undefined);continue;}
         if(event.topic==='document.presentation'){
           if(!telegram.sendDocument)throw new Error('Document delivery unavailable');

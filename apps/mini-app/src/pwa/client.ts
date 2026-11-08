@@ -1,6 +1,7 @@
+import {pwaStartRoute} from '../../../../packages/browser/pwaLinks';
 import {api,visitorApi,replaceVisitorSession} from '../../../../packages/pulse-data/runtime';
 export const isPwa=import.meta.env.VITE_APP_VARIANT==='pwa';
-export type PwaConfiguration={phoneLogin:boolean;push:boolean;pushPublicKey:string};
+export type PwaConfiguration={phoneLogin:boolean;phoneChannel:'call'|'sms';push:boolean;pushPublicKey:string};
 export const pwaConfig=()=>api<PwaConfiguration>('/public/pwa');
 export function standalone(){return window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: fullscreen)').matches||(navigator as Navigator&{standalone?:boolean}).standalone===true;}
 export function appleDevice(){return /iPhone|iPad|iPod/i.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;}
@@ -10,6 +11,7 @@ if(isPwa)window.addEventListener('beforeinstallprompt',event=>{event.preventDefa
 export async function install(){if(!installPrompt)return false;const prompt=installPrompt;installPrompt=null;await prompt.prompt();return (await prompt.userChoice).outcome==='accepted';}
 export function canInstall(){return !!installPrompt;}
 export async function registerPwa(){
+ if(isPwa&&import.meta.env.VITE_PULSE_MODE==='api'){const route=pwaStartRoute(location.hash.slice(1));if(route!=='/'){const manifest=document.querySelector<HTMLLinkElement>('link[rel="manifest"]');if(manifest)manifest.href='/api/v1/public/pwa-manifest?route='+encodeURIComponent(route)}}
  if(!isPwa||!('serviceWorker' in navigator)||!window.isSecureContext)return;
  try{
   const registration=await navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js',{scope:import.meta.env.BASE_URL,updateViaCache:'none'});
@@ -19,10 +21,10 @@ export async function registerPwa(){
   navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='PULSE_OPEN'){try{const url=new URL(e.data.url,location.origin);if(url.origin===location.origin&&url.pathname===import.meta.env.BASE_URL)location.hash=url.hash}catch{}}});
  }catch{window.dispatchEvent(new Event('pulse:pwa-unavailable'))}
 }
-export async function requestPhoneCode(phone:string,consentVersion:string){return visitorApi<{challengeId:string;retryAfter:number;expiresIn:number}>('/me/account/sms/request',{method:'POST',body:JSON.stringify({phone,consent:true,consentVersion})});}
-export async function verifyPhoneCode(challengeId:string,code:string){
+export async function requestPhoneCode(phone:string,consentVersion:string,channel:'call'|'sms'='call'){return visitorApi<{challengeId:string;retryAfter:number;expiresIn:number;codeLength:number;channel:'call'|'sms'}>('/me/account/'+channel+'/request',{method:'POST',body:JSON.stringify({phone,consent:true,consentVersion})});}
+export async function verifyPhoneCode(challengeId:string,code:string,channel:'call'|'sms'='call'){
  await resetPwaDevice();
- const session=await visitorApi<{sessionId:string;accessToken:string;expiresAt:string}>('/me/account/sms/verify',{method:'POST',body:JSON.stringify({challengeId,code})});
+ const session=await visitorApi<{sessionId:string;accessToken:string;expiresAt:string}>('/me/account/'+channel+'/verify',{method:'POST',body:JSON.stringify({challengeId,code})});
  replaceVisitorSession(session);window.dispatchEvent(new Event('pulse:identity-ready'));
 }
 function bytes(key:string){const padded=key.replace(/-/g,'+').replace(/_/g,'/');return Uint8Array.from(atob(padded),c=>c.charCodeAt(0));}

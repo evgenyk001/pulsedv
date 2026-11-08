@@ -44,17 +44,35 @@ export async function deliverWebPush(db:Database,config:RuntimeConfig,send:PushS
  update push_deliveries p set locked_until=now()+interval '120 seconds',lock_token=$1,attempts=attempts+1 from picked where p.id=picked.id returning p.*`,[lease])).rows;
  let processed=0;
  for(const d of rows){
-  const row=(await db.query(`select s.*,o.topic,o.payload,o.created_at as event_at from push_subscriptions s join outbox_events o on o.id=$2 where s.id=$1 and s.enabled and s.user_id::text=o.payload->>'userId'`,[d.subscription_id,d.event_id])).rows[0];
+  const row=(await db.query(`select s.*,o.topic,o.payload,o.available_at as event_at,o.aggregate_id from push_subscriptions s join outbox_events o on o.id=$2 where s.id=$1 and s.enabled and s.user_id::text=o.payload->>'userId'`,[d.subscription_id,d.event_id])).rows[0];
   if(!row||Date.parse(row.event_at)<Date.now()-86400000||!await registeredPhone(db,row.user_id,config.CONSENT_VERSION)){
    await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;
   }
   if(row.topic==='user.search_updates'){
    const consent=(await db.query('select settings,consent_key from search_profiles where owner=$1',['user:'+row.user_id])).rows[0];
-   if(!consent?.settings.push||consent.consent_key!==row.payload.consentKey){await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;}
+   const ids=Array.isArray(row.payload.propertyIds)?row.payload.propertyIds:[];
+   const visible=ids.length?(await db.query("select id from catalog_properties where id=any($1::text[]) and status='published'",[ids])).rows.length:0;
+   if(!consent?.settings.push||consent.consent_key!==row.payload.consentKey||visible!==ids.length||!ids.length){await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;}
+  }
+  if(row.topic==='user.broadcast_pwa'){
+   const consent=(await db.query("select p.enabled,p.consent_key,p.consent_version,b.status from pwa_announcement_subscriptions p join broadcasts b on b.id=$2 join pwa_announcement_receipts a on a.id::text=$3 and a.user_id=p.user_id and a.campaign_id=b.id where p.user_id=$1",[row.user_id,row.payload.campaignId,row.payload.receiptId])).rows[0];
+   if(!consent?.enabled||consent.consent_key!==row.payload.consentKey||consent.consent_version!==config.CONSENT_VERSION||consent.status==='cancelled'){
+    await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;
+   }
+  }
+  if(row.topic==='user.showing_reminder'){
+   const lead=(await db.query('select l.user_id,l.status,j.document from leads l left join client_journeys j on j.lead_id=l.id where l.id=$1',[row.aggregate_id])).rows[0];
+   const showing=(lead?.document?.showings??[]).find((s:any)=>s.id===row.payload.showingId),at=Date.parse(showing?.at),hours=Number(row.payload.hours);
+   if(!lead||lead.user_id!==row.user_id||['deal','closed','lost'].includes(lead.status)||showing?.status!=='confirmed'||at!==Date.parse(row.payload.at)||![24,2].includes(hours)||at<=Date.now()||Date.now()>at-hours*3600000+30*60000){
+    await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;
+   }
+  }
+  if(row.topic==='user.giveaway'&&!(await db.query('select id from giveaway_entries where id::text=$1 and user_id=$2 and status=$3',[row.payload.entryId,row.user_id,row.payload.status])).rows.length){
+   await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;
   }
   try{
    // Private conversation text, phone numbers and security codes never appear on a lock screen.
-   const title=row.topic==='user.giveaway'?'Обновление по розыгрышу':row.topic==='user.search_updates'?'Обновление по вашему поиску':row.topic==='user.showing_reminder'?'Напоминание о показе':'Сообщение от PULSEDV.RU';
+   const title=row.topic==='user.broadcast_pwa'?'Новый анонс PULSEDV.RU':row.topic==='user.partner'?'Обновление в партнёрском кабинете':row.topic==='user.giveaway'?'Обновление по розыгрышу':row.topic==='user.search_updates'?'Обновление по вашему поиску':row.topic==='user.showing_reminder'?'Напоминание о показе':'Сообщение от PULSEDV.RU';
    await send({endpoint:row.endpoint,keys:{p256dh:row.p256dh,auth:row.auth}},JSON.stringify({title,body:'Откройте приложение, чтобы посмотреть подробности.',url:pushRoute(row.payload.deepLink,config.PUBLIC_ORIGIN),tag:'pulse-'+d.event_id}),{TTL:3600,timeout:8000,vapidDetails:{subject:config.WEB_PUSH_SUBJECT,publicKey:config.WEB_PUSH_PUBLIC_KEY,privateKey:config.WEB_PUSH_PRIVATE_KEY}});
    await db.query('update push_deliveries set delivered_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);processed++;
   }catch(e){

@@ -103,6 +103,7 @@ test('PWA customers appear in Control and download published PDFs without Telegr
  const url='/api/v1/me/presentation-files/'+doc;
  assert.equal((await f.app.inject({url,headers:anonymous.headers})).statusCode,403);
  const pdf=await f.app.inject({url,headers:a.headers});assert.equal(pdf.statusCode,200,pdf.body);assert.match(pdf.headers['content-disposition'] as string,/attachment/);assert.equal(pdf.headers['cache-control'],'private, no-store');assert.ok(pdf.body.startsWith('%PDF-'));
+ const inline=await f.app.inject({url:url+'?view=inline',headers:a.headers});assert.equal(inline.statusCode,200,inline.body);assert.match(inline.headers['content-disposition'] as string,/^inline;/);assert.equal(inline.headers['cache-control'],'private, no-store');assert.equal((await f.app.inject({url:url+'?view=inline',headers:anonymous.headers})).statusCode,403);
  await upsertCatalogProperty(f.db,{...p,status:'draft'});assert.equal((await f.app.inject({url,headers:a.headers})).statusCode,404);
  await f.db.query("insert into team_members(name,email,password_hash,role) values('Owner','pwa-owner@test.ru',$1,'owner')",[await hashPassword('test-long-owner-password')]);
  const login=await f.app.inject({method:'POST',url:'/api/v1/control/login',headers:{origin:f.config.PUBLIC_ORIGIN},payload:{email:'pwa-owner@test.ru',password:'test-long-owner-password'}});

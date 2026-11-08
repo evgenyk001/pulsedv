@@ -6,7 +6,7 @@ import {loadJourneys} from '../../../../packages/journey/client';
 import {clientUpdates} from '../../../../packages/journey/updates';
 import {getMySearch} from './useMySearch';
 import {localPartnerNotices} from '../../../../packages/partners/client';
-export type ClientNotice={id:string;kind:'message'|'collection'|'showing'|'search'|'partner';title:string;body:string;at:string;href:string;read:boolean};
+export type ClientNotice={id:string;kind:'message'|'collection'|'showing'|'search'|'partner'|'announcement'|'giveaway';title:string;body:string;at:string;href:string;read:boolean};
 export type ClientInbox={items:ClientNotice[];unreadCount:number};
 const KEY='pulse.read-updates.v1',DISMISSED='pulse.dismissed-updates.v1';
 function dismissedIds():string[]{try{const v=JSON.parse(safeLocalStorage.getItem(DISMISSED)||'[]');return Array.isArray(v)?v.filter((id):id is string=>typeof id==='string'):[]}catch{return []}}

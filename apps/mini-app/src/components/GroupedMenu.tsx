@@ -1,3 +1,4 @@
+import {Switch} from './Switch';
 import {IconTile} from './IconTile';
 import React from 'react';
 import {Link, type LinkProps} from 'react-router-dom';
@@ -20,8 +21,8 @@ export function GroupedMenu({children,title,label,caption,className=''}:{childre
   </section>;
 }
 
-function Content({icon,title,description,value}:RowContent){
-  return <><IconTile>{icon}</IconTile><span className={styles.copy}><span className={styles.title}>{title}</span>{description&&<span className={styles.description}>{description}</span>}</span>{value&&<span className={styles.value}>{value}</span>}<ChevronRight className={styles.chevron} size={17} aria-hidden="true"/></>;
+function Content({icon,title,description,value,trailing,chevron=true}:RowContent&{trailing?:React.ReactNode;chevron?:boolean}){
+  return <><IconTile>{icon}</IconTile><span className={styles.copy}><span className={styles.title}>{title}</span>{description&&<span className={styles.description}>{description}</span>}</span>{value&&<span className={styles.value}>{value}</span>}{trailing}{chevron&&<ChevronRight className={styles.chevron} size={17} aria-hidden="true"/>}</>;
 }
 
 export const MenuLink=React.forwardRef<HTMLAnchorElement,RowContent&Omit<LinkProps,'title'|'children'>>(
@@ -34,3 +35,9 @@ export const MenuButton=React.forwardRef<HTMLButtonElement,RowContent&Omit<React
     return <button {...props} ref={ref} type={type} data-menu-row className={`${styles.row} ${className}`}><Content {...{icon,title,description,value}}/></button>;
   }
 );
+
+export function MenuToggle({icon,title,description,checked,disabled,onCheckedChange,label}:RowContent&{checked:boolean;disabled?:boolean;onCheckedChange:(checked:boolean)=>void;label?:string}){
+ const id=React.useId();return <div data-menu-row className={styles.row}><IconTile>{icon}</IconTile><span className={styles.copy}><span id={id} className={styles.title}>{title}</span>{description&&<span className={styles.description}>{description}</span>}</span><Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} aria-label={label||title} aria-labelledby={label?undefined:id}/></div>;
+}
+export function MenuInfo(props:RowContent){return <div data-menu-row className={styles.row}><Content {...props} chevron={false}/></div>}
+export function MenuExternalLink({icon,title,description,value,...props}:RowContent&Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>,'title'|'children'>){return <a {...props} data-menu-row className={styles.row}><Content {...{icon,title,description,value}}/></a>}
