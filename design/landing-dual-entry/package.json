@@ -1,0 +1,1 @@
+{"name":"pulsedv-landing-cinematic-preview","private":true,"type":"module","scripts":{"dev":"node preview.mjs","check":"node --check cinema.js && node --check preview.mjs"}}

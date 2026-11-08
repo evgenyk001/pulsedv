@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#fff">
 <title>PULSEDV.RU — приложение на вашем телефоне</title>
+<meta name="description" content="Новостройки Приморья в PULSEDV.RU: каталог, планировки, расчёт ипотеки и партнёрская программа.">
+<link rel="preload" as="image" href="assets/app-home.jpg">
 <link rel="icon" href="assets/pulse-mark-180-v2.png"><link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -32,10 +34,21 @@
 </div>
 
 </section>
-<section class="showcase" aria-label="Интерфейс приложения PULSEDV.RU">
-<div class="phone phone-home"><div class="phone-edge"></div><div class="phone-screen"><div class="status"><span>9:41</span><span class="status-icons"><i></i><b>◔</b><em></em></span></div><div class="island"></div><img class="screen-image" src="assets/app-home.jpg" alt="Главная PULSEDV.RU: поиск ЖК, ипотека и избранное" width="390" height="844"><div class="home-indicator"></div></div></div>
-<div class="phone phone-catalog"><div class="phone-edge"></div><div class="phone-screen"><div class="status"><span>9:41</span><span class="status-icons"><i></i><b>◔</b><em></em></span></div><div class="island"></div><div class="catalog-crop" role="img" aria-label="Каталог PULSEDV.RU с фильтрами и карточками новостроек"><img src="assets/app-catalog.jpg" alt="" width="390" height="844"></div><div class="home-indicator"></div></div></div>
+<section class="showcase" aria-label="Возможности приложения PULSEDV.RU">
+ <svg class="flow-pattern" viewBox="0 0 700 700" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="flow-ink" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#df1428" stop-opacity="0"/><stop offset=".3" stop-color="#df1428"/><stop offset=".8" stop-color="#df1428" stop-opacity=".45"/><stop offset="1" stop-color="#df1428" stop-opacity="0"/></linearGradient></defs>
+ <path class="flow-line" d="M -120 410 C 300 -40 430 655 810 125"/><path class="flow-line" d="M -120 425 C 300 -25 430 670 810 140"/><path class="flow-line" d="M -120 440 C 300 -10 430 685 810 155"/><path class="flow-line flow-line-red" d="M -120 455 C 300 5 430 700 810 170"/><path class="flow-line" d="M -120 470 C 300 20 430 715 810 185"/>
+ </svg>
+ <div class="stage-shadow" aria-hidden="true"></div>
+ <div class="fallback-phones" aria-hidden="true"><div class="fallback-phone"><img src="assets/app-home.jpg" alt="" width="390" height="844"></div><div class="fallback-phone"><img src="assets/app-catalog.jpg" alt="" width="390" height="844"></div></div>
+ <div class="cinema" role="img" aria-label="Объёмные телефоны с экранами каталога, ЖК, ипотеки, партнёрской программы и конкурса" aria-busy="true"></div>
+ <div class="scene-description"><span class="scene-label">Выбирайте</span><p class="scene-caption">Новостройки — перед вами.</p></div>
+ <div class="scene-controls" aria-label="Сцены презентации">
+  <div class="scene-picker"><button class="scene-dot" aria-label="Каталог и главная" aria-current="true"></button><button class="scene-dot" aria-label="ЖК и планировки" aria-current="false"></button><button class="scene-dot" aria-label="Избранное и ипотека" aria-current="false"></button><button class="scene-dot" aria-label="Партнёрская программа" aria-current="false"></button><button class="scene-dot" aria-label="Новогодний розыгрыш" aria-current="false"></button></div>
+  <button class="motion-toggle" aria-label="Приостановить анимацию" aria-pressed="false"><svg class="pause-icon" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg><svg class="play-icon" viewBox="0 0 24 24" hidden><path d="m9 5 10 7-10 7Z"/></svg></button>
+ </div>
+ <noscript><p class="no-motion-note">Каталог, подбор квартиры, ипотека и партнёрская программа — в PULSE.</p></noscript>
 </section>
 </main>
 <footer class="wrap footer"><p>Владивосток <span>·</span> Уссурийск <span>·</span> Артём</p><p>PULSEDV.RU <i></i> Больше, чем квадратные метры</p></footer>
+<script type="module" src="cinema.js"></script>
 </body></html>
