@@ -74,3 +74,15 @@ h1{font:700 clamp(40px,4.6vw,68px)/1.05 Onest,sans-serif;letter-spacing:-.05em}.
 @media(min-width:960px) and (max-height:690px){.copy{row-gap:14px;grid-template-rows:max-content minmax(68px,1fr) max-content}.capabilities{padding:12px 0;gap:12px}.capabilities svg{width:20px;height:20px;margin-bottom:7px}.capabilities strong{font-size:11px}.capabilities span{font-size:9px}}
 .capability-icon{position:relative;display:block;width:24px;height:24px;flex:none;margin-bottom:10px}.capabilities .capability-icon>svg{position:absolute;inset:0;margin:0;width:24px;height:24px;stroke-width:1.5}.capability-lottie{position:absolute;inset:0}.capability-lottie>svg{display:block;width:100%!important;height:100%!important;margin:0!important}.lottie-ready>svg{visibility:hidden}
 @media(min-width:960px) and (max-height:690px){.capability-icon{width:21px;height:21px;margin-bottom:7px}.capabilities .capability-icon>svg{width:21px;height:21px}}
+/* Clean lower edge, no slideshow chrome or duplicated footer copy. */
+body{grid-template-rows:var(--header) minmax(0,1fr)}
+.copy{min-height:0}.hero{padding-bottom:24px}
+.showcase{grid-template-rows:minmax(0,1fr) 48px}
+.rendered-phone{filter:none}.stage-shadow{filter:none;bottom:3%;height:9%;opacity:.65}
+.scene-description{padding-bottom:5px}
+@media(min-width:960px){.copy{padding-bottom:16px}}
+@media(max-width:959px) and (orientation:portrait){.hero{padding-bottom:14px}.showcase{grid-template-rows:minmax(0,1fr) 34px;margin-bottom:10px}.scene-description{padding-bottom:0}.entry-meta{margin-top:8px}}
+@media(max-width:959px) and (orientation:portrait) and (max-height:740px){.hero{padding-bottom:10px}.showcase{grid-template-rows:minmax(0,1fr) 22px;margin-bottom:8px}}
+@media(orientation:landscape) and (max-height:500px){.hero{padding-bottom:12px}.showcase{grid-template-rows:minmax(0,1fr) 32px}}
+@media(min-width:960px) and (max-height:680px){:root{--header:64px}.header .brand img{width:220px}.hero{padding-top:6px;padding-bottom:20px}.copy{padding:4px 0 8px;row-gap:8px;grid-template-rows:max-content minmax(76px,1fr) max-content}h1{font-size:44px}.highlight{margin-top:8px;padding:7px 15px 10px}.description{font-size:12px;line-height:1.6;margin-top:12px}.entry-button{min-height:56px}.social-proof{margin-top:14px}.entry-meta{margin-top:8px}.capabilities{padding:8px 0}.capability-icon{height:18px;width:18px;margin-bottom:5px}.capabilities .capability-icon>svg{height:18px;width:18px}.capabilities strong{font-size:11px;margin-bottom:3px}.capabilities span{font-size:9px;line-height:1.5}}
+.cinema-loading .fallback-phones{visibility:hidden;opacity:0}

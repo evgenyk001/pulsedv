@@ -102,3 +102,26 @@ They share 1.5px round red strokes, a short reveal and pointer-hover replay.
 The local Lottie-light runtime and license are included. Static SVG fallback,
 reduced motion, global pause and visibility handling are preserved. The strip
 is hidden on mobile portrait to keep the centered single-screen composition.
+
+
+## Motion/loading refinement
+
+Removed visible pause, scene indicators and the duplicated marketing footer.
+Captions and the App Store development status now have separate clear space.
+Reduced motion and hidden-tab suspension remain supported; Escape toggles motion
+without adding slideshow controls to the composition.
+
+First-scene images get high-priority preload and decode before entrance. Remaining
+screens warm sequentially during idle time. Every transition rechecks decode
+readiness before starting the outgoing motion; current pictures remain visible
+on slow/failed loads. The eight decoded Image elements are reused between scenes.
+Bitmap size is 560×1152 and total device assets drop from 762456 to 487176 bytes
+(36%). Per-phone CSS drop shadows are removed; only compositor transforms and
+opacity change in the animation loop. Dimensions are assigned on scene/viewport
+changes rather than every frame. SVG paths update at 30fps; phone motion uses rAF.
+Reading dwell remains 6.5 seconds. Exit is 0.72s; entrance is 1.10s with faster
+initial travel and a soft ease-out. The pair remains lane-separated throughout.
+
+Browser verification: 1366×568 and 390×844 overflow is zero on both axes;
+App Store/captions remain inside the viewport. Later automatic scenes show
+complete, explicitly decoded bitmaps. No visible slideshow controls/footer remain.

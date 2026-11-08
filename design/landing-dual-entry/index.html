@@ -1,10 +1,12 @@
 <!doctype html>
 <html lang="ru">
 <head>
+<script>document.documentElement.classList.add("cinema-loading")</script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#fff">
 <title>PULSEDV.RU — приложение на вашем телефоне</title>
 <meta name="description" content="Новостройки Приморья в PULSEDV.RU: каталог, планировки, расчёт ипотеки и партнёрская программа.">
-<link rel="preload" as="image" href="assets/app-home.jpg">
+<link rel="preload" as="image" href="assets/phone-home.webp?v=motion-4" fetchpriority="high">
+<link rel="preload" as="image" href="assets/phone-catalog.webp?v=motion-4" fetchpriority="high">
 <link rel="icon" href="assets/pulse-mark-180-v2.png"><link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -62,14 +64,11 @@
  <div class="cinema" role="img" aria-label="Объёмные телефоны с экранами каталога, ЖК, ипотеки, партнёрской программы и конкурса" aria-busy="true"></div>
  </div>
  <div class="scene-description"><span class="scene-label">Выбирайте</span><p class="scene-caption">Новостройки — перед вами.</p></div>
- <div class="scene-controls" aria-label="Сцены презентации">
-  <div class="scene-picker"><button class="scene-dot" aria-label="Каталог и главная" aria-current="true"></button><button class="scene-dot" aria-label="ЖК и планировки" aria-current="false"></button><button class="scene-dot" aria-label="Избранное и ипотека" aria-current="false"></button><button class="scene-dot" aria-label="Партнёрская программа" aria-current="false"></button><button class="scene-dot" aria-label="Новогодний розыгрыш" aria-current="false"></button></div>
-  <button class="motion-toggle" aria-label="Приостановить анимацию" aria-pressed="false"><svg class="pause-icon" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg><svg class="play-icon" viewBox="0 0 24 24" hidden><path d="m9 5 10 7-10 7Z"/></svg></button>
- </div>
+
 
 </section>
 </main>
-<footer class="wrap footer"><p>Владивосток <span>·</span> Уссурийск <span>·</span> Артём</p><p>PULSEDV.RU <i></i> Больше, чем квадратные метры</p></footer>
+
 <script src="assets/lottie-light-5.13.0.min.js" defer></script>
 <script src="capability-icons.js" defer></script>
 <script type="module" src="cinema.js"></script>
