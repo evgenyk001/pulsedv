@@ -15,6 +15,6 @@ export function usePresentationDelivery(propertyId:string){
   try{const data=await visitorApi<Delivery>('/me/presentations',{method:'POST',body:JSON.stringify({propertyId,documentId})});if(current.current!==started)return;client.setQueryData(['presentationDelivery',data.id],data);setJob(data.id)}catch(e){if(current.current===started)setError(e instanceof Error?e.message:'Не удалось запросить презентацию.')}finally{locked.current=false;if(current.current===started)setRequesting(false)}
  };
  const state=query.data?.status;
- const notice=error||(query.isError?'Не удалось проверить отправку. Загляните в бот или повторите запрос.':requesting?'Готовим презентацию…':state==='queued'?'Отправляем PDF в бот. Файл можно будет скачать и переслать.':state==='sent'?'Презентация отправлена в бот. Сохраните PDF или перешлите близким.':state==='failed'?'Не удалось доставить PDF. Откройте бота, нажмите «Начать» или разблокируйте его и повторите запрос.':state==='unavailable'?'Презентация обновилась или снята с публикации. Обновите карточку ЖК.':'');
+ const notice=error||(query.isError?'Не удалось проверить отправку. Загляните в бот или повторите запрос.':state==='failed'?'Не удалось доставить PDF. Откройте бота, нажмите «Начать» или разблокируйте его и повторите запрос.':state==='unavailable'?'Презентация обновилась или снята с публикации. Обновите карточку ЖК.':'');
  return {send,busy:requesting||(!query.isError&&state==='queued'),notice,botUrl:query.data?.botUrl,dismiss:()=>{setJob(null);setError('')}};
 }
