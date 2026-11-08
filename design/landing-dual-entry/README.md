@@ -13,3 +13,5 @@ Before release: confirm the iOS status text, enable and verify /app/, attach
 first-party channel attribution to both entry paths, and replace fixture
 screens with approved current catalog screenshots. Keep the existing Instagram
 destination and tracking when integrating with production landing markup.
+
+Revision 2: removed floating marketing cards, ornaments and benefit tiles; replaced both screenshots with cursor-free browser captures; simplified equal-size entry buttons. Desktop and 375px mobile layout reviewed.
