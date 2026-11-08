@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#fff">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#fff">
 <title>PULSEDV.RU — приложение на вашем телефоне</title>
 <meta name="description" content="Новостройки Приморья в PULSEDV.RU: каталог, планировки, расчёт ипотеки и партнёрская программа.">
 <link rel="preload" as="image" href="assets/app-home.jpg">
@@ -9,6 +9,7 @@
 </head>
 <body>
 <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+<defs><clipPath id="ribbon-clip" clipPathUnits="objectBoundingBox"><path d="M .035 .08 C .23 .015 .42 .08 .62 .04 C .77 .01 .90 .04 .967 .08 Q .995 .10 .995 .27 L .995 .80 Q .995 .95 .965 .96 C .72 .90 .54 1 .34 .95 C .19 .92 .10 .98 .035 .93 Q .005 .91 .005 .75 L .005 .25 Q .005 .10 .035 .08 Z"><animate attributeName="d" values="M .035 .08 C .23 .015 .42 .08 .62 .04 C .77 .01 .90 .04 .967 .08 Q .995 .10 .995 .27 L .995 .80 Q .995 .95 .965 .96 C .72 .90 .54 1 .34 .95 C .19 .92 .10 .98 .035 .93 Q .005 .91 .005 .75 L .005 .25 Q .005 .10 .035 .08 Z;M .035 .05 C .23 .10 .42 .015 .62 .07 C .77 .10 .90 .015 .967 .04 Q .995 .06 .995 .23 L .995 .78 Q .995 .93 .965 .94 C .72 1 .54 .91 .34 .96 C .19 1 .10 .92 .035 .95 Q .005 .93 .005 .77 L .005 .22 Q .005 .07 .035 .05 Z;M .035 .08 C .23 .015 .42 .08 .62 .04 C .77 .01 .90 .04 .967 .08 Q .995 .10 .995 .27 L .995 .80 Q .995 .95 .965 .96 C .72 .90 .54 1 .34 .95 C .19 .92 .10 .98 .035 .93 Q .005 .91 .005 .75 L .005 .25 Q .005 .10 .035 .08 Z" dur="10s" repeatCount="indefinite" calcMode="spline" keyTimes="0;0.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"/></path></clipPath></defs>
 <symbol id="arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
 <symbol id="tg" viewBox="0 0 24 24"><path d="m21 3-3.5 18-5.7-4.7-3.1 2.9.6-5.5L18 6 6.9 12.2 3 11 21 3Z"/></symbol>
 <symbol id="heart" viewBox="0 0 24 24"><path d="m12 20-8-8a5.2 5.2 0 0 1 8-6.6A5.2 5.2 0 0 1 20 12Z"/></symbol>
@@ -22,31 +23,45 @@
 </header>
 <main id="top" class="wrap hero">
 <section class="copy">
+<div class="intro">
 <h1>Новостройки<br>Приморья —<span class="highlight">в одном приложении</span></h1>
 <p class="description">Сравнивайте ЖК и квартиры, изучайте цены,<br class="desktop-break"> сохраняйте варианты и выбирайте самостоятельно.</p>
+</div>
 <div class="entry">
 
 <div class="entry-options">
-<a class="entry-button" href="https://pulsedv.ru/app/"><svg class="button-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg><span class="entry-copy"><strong>Установить приложение</strong></span><svg class="entry-arrow"><use href="#arrow"/></svg></a>
-<a class="entry-button" href="https://t.me/pulsedvbot?startapp"><svg class="button-tg"><use href="#tg"/></svg><span class="entry-copy"><strong>Открыть в Telegram</strong></span><svg class="entry-arrow"><use href="#arrow"/></svg></a>
+<div class="entry-choice">
+<a class="entry-button entry-pwa" href="https://pulsedv.ru/app/" aria-describedby="tip-pwa"><svg class="button-phone" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M12 6v8m-3-3 3 3 3-3M10 18h4"/></svg><span class="entry-copy"><strong>Установить приложение</strong><small>Работает без VPN</small></span></a>
+<div class="entry-tooltip" role="tooltip" id="tip-pwa"><strong>Веб-приложение (PWA)</strong><p>Полноценное приложение, которое добавляется на главный экран вашего телефона как отдельная иконка. Не нужно скачивать из App Store.</p><p>Плюсы: открывается в один клик, работает без VPN и не требует установки из магазина приложений.</p></div>
+</div>
+<div class="entry-choice">
+<a class="entry-button entry-telegram" href="https://t.me/pulsedvbot?startapp" aria-describedby="tip-telegram"><svg class="button-tg" aria-hidden="true"><use href="#tg"/></svg><span class="entry-copy"><strong>Открыть в Telegram</strong><small>Внутри мессенджера</small></span></a>
+<div class="entry-tooltip" role="tooltip" id="tip-telegram"><strong>Telegram Mini App</strong><p>Приложение открывается прямо внутри мессенджера Telegram. Никаких паролей — мгновенный вход через ваш аккаунт. Сюда же будут приходить уведомления от менеджера.</p><p>Важно: требуется доступ к Telegram.</p></div>
+</div>
+</div>
+<div class="social-proof">
+ <div class="client-avatars" aria-hidden="true"><span><img src="assets/avatar-1.jpg" alt="" width="40" height="40"></span><span><img src="assets/avatar-2.jpg" alt="" width="40" height="40"></span><span><img src="assets/avatar-3.jpg" alt="" width="40" height="40"></span><span><img src="assets/avatar-4.jpg" alt="" width="40" height="40"></span><span class="avatar-count">+500</span></div>
+ <div class="proof-copy"><strong><span class="rating-star" aria-hidden="true">★</span> 4.9</strong><p>Более 500 клиентов уже используют PULSE.DV для выбора новостроек</p></div>
 </div>
 <div class="entry-meta"><span class="appstore"><svg><use href="#apple"/></svg>App Store<span class="development">В разработке</span></span></div>
 </div>
 
 </section>
 <section class="showcase" aria-label="Возможности приложения PULSEDV.RU">
+ <div class="phone-stage">
  <svg class="flow-pattern" viewBox="0 0 700 700" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="flow-ink" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#df1428" stop-opacity="0"/><stop offset=".3" stop-color="#df1428"/><stop offset=".8" stop-color="#df1428" stop-opacity=".45"/><stop offset="1" stop-color="#df1428" stop-opacity="0"/></linearGradient></defs>
  <path class="flow-line" d="M -120 410 C 300 -40 430 655 810 125"/><path class="flow-line" d="M -120 425 C 300 -25 430 670 810 140"/><path class="flow-line" d="M -120 440 C 300 -10 430 685 810 155"/><path class="flow-line flow-line-red" d="M -120 455 C 300 5 430 700 810 170"/><path class="flow-line" d="M -120 470 C 300 20 430 715 810 185"/>
  </svg>
  <div class="stage-shadow" aria-hidden="true"></div>
  <div class="fallback-phones" aria-hidden="true"><div class="fallback-phone"><img src="assets/app-home.jpg" alt="" width="390" height="844"></div><div class="fallback-phone"><img src="assets/app-catalog.jpg" alt="" width="390" height="844"></div></div>
  <div class="cinema" role="img" aria-label="Объёмные телефоны с экранами каталога, ЖК, ипотеки, партнёрской программы и конкурса" aria-busy="true"></div>
+ </div>
  <div class="scene-description"><span class="scene-label">Выбирайте</span><p class="scene-caption">Новостройки — перед вами.</p></div>
  <div class="scene-controls" aria-label="Сцены презентации">
   <div class="scene-picker"><button class="scene-dot" aria-label="Каталог и главная" aria-current="true"></button><button class="scene-dot" aria-label="ЖК и планировки" aria-current="false"></button><button class="scene-dot" aria-label="Избранное и ипотека" aria-current="false"></button><button class="scene-dot" aria-label="Партнёрская программа" aria-current="false"></button><button class="scene-dot" aria-label="Новогодний розыгрыш" aria-current="false"></button></div>
   <button class="motion-toggle" aria-label="Приостановить анимацию" aria-pressed="false"><svg class="pause-icon" viewBox="0 0 24 24"><path d="M9 6v12M15 6v12"/></svg><svg class="play-icon" viewBox="0 0 24 24" hidden><path d="m9 5 10 7-10 7Z"/></svg></button>
  </div>
- <noscript><p class="no-motion-note">Каталог, подбор квартиры, ипотека и партнёрская программа — в PULSE.</p></noscript>
+
 </section>
 </main>
 <footer class="wrap footer"><p>Владивосток <span>·</span> Уссурийск <span>·</span> Артём</p><p>PULSEDV.RU <i></i> Больше, чем квадратные метры</p></footer>

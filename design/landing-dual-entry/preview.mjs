@@ -12,9 +12,10 @@ http.createServer(async(req,res)=>{try{
   return res.end('<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#ddd"><iframe title="Экран приложения" src="/capture/#'+(u.searchParams.get('route')||'/')+'" style="position:absolute;left:0;top:0;border:0;width:390px;height:844px"></iframe></body></html>');
  }
  if(path==='/mobile-review'){
-  const w=['320','375','390','430','768'].includes(u.searchParams.get('width'))?u.searchParams.get('width'):'390';
+  const w=['320','375','390','430','568','667','768','844','1024','1366','1440'].includes(u.searchParams.get('width'))?u.searchParams.get('width'):'390';
+  const h=['320','375','390','568','667','740','768','844','852','896','900','1024'].includes(u.searchParams.get('height'))?u.searchParams.get('height'):'844';
   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});
-  return res.end('<!doctype html><html><body style="margin:0;background:#ddd"><iframe title="Мобильный лендинг" src="/" style="border:0;width:'+w+'px;height:1300px"></iframe></body></html>');
+  return res.end('<!doctype html><html><body style="margin:0;background:#ddd"><iframe title="Мобильный лендинг" src="/" style="border:0;width:'+w+'px;height:'+h+'px"></iframe></body></html>');
  }
  const base=path.startsWith('/capture/')?capture:root;
  if(base===capture)path=path.slice('/capture'.length);

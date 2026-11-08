@@ -1,3 +1,5 @@
 node_modules/
 source/screen-*.png
 source/phone-*.png
+
+source/__pycache__/

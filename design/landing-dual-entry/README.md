@@ -48,3 +48,49 @@ PNGs to WebP with Pillow. The browser runtime has no build or install step.
 Keep both equal entry paths, the existing Instagram destination and acquisition
 attribution when integrating with the production landing. App Store remains an
 inactive development status. This proposal does not enable or deploy /app/.
+
+
+## Revision: staged transitions and responsive composition
+
+The phone pair exits fully before the next pair enters. Both devices share one
+translation; their rotated bounds are constrained to separate lanes. An edge
+mask and eased opacity prevent hard cuts. Captions and controls have dedicated
+grid rows outside the masked phone stage. Mobile portrait uses one large phone,
+with introduction above it and the two entry controls and trust block below.
+The viewport grid uses 100svh with no document scrolling. At short heights,
+spacing and typography compress while each entry control retains 56px height.
+
+The two oval controls have red/burgundy and graphite gradients, inner glass
+highlights, hover lift and pressed states. Desktop tooltips also work on keyboard
+focus, with a 300ms delay; mobile tooltips are hidden. The headline ribbon uses
+subtle animated shape, light and perspective, honoring reduced motion and pause.
+The avatar photos are illustrative and blurred. Rating 4.9 and 500+ are supplied
+marketing copy from the user; no independent customer/rating verification was
+performed. PWA uses browser storage; the tooltip deliberately avoids the
+technically false claim that it takes no device memory.
+
+Device geometry now comes from Apple's official iPhone 18 Pro AR asset. Product
+studio renders use five finishes and two relative device sizes. Orange/navy
+17-series styling is a front-focused visual adaptation of that geometry, not a
+claim of an exact CAD replica of every requested model. The original USDZ is
+not redistributed. `source/prepare_device_model.py` downloads and converts the
+reference using usd-core; `source/render_phones.py` renders it in Blender.
+
+References:
+- https://www.apple.com/iphone-18-pro/
+- https://www.apple.com/iphone-18-pro/specs/
+- https://support.apple.com/en-us/125090
+
+
+Final visual refinements: mobile portrait content is centered; entry buttons are
+oval and slightly narrower. Desktop entry controls sit lower in the column.
+The ribbon uses smoothly interpolated SVG curves with a restrained light pass;
+its letters stay readable. Pause, reduced motion and hidden-tab handling cover
+both CSS and SVG animation. Lower rear lighting was removed/repositioned to
+eliminate the repeated bright lower-left rim highlight across device renders.
+
+Validation: 320×568, 390×844 and 1366×768 document overflow checked at zero on
+both axes. Both small-mobile entry controls measure 56px high. All five desktop
+scenes keep one pair mounted; measured rotated image gaps were 46–49px and
+caption gaps 74–83px at 1363×936. Desktop focus tooltip delay is 300ms. Production
+app/backend and pulsedv.ru deployment remain outside this proposal change.
