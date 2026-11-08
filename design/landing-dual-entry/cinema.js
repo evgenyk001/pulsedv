@@ -50,7 +50,14 @@ async function transition(index){
  }catch{started=clock-HOLD+4;}finally{preparing=false;}
 }
 function layout(){
- if(!pair)return;const s=scenes[current],W=dimensions.width,H=dimensions.height,mobile=W<480,pick=[0,1,1,0,1][current];poses=[];let lowerEdge=0;
+ if(!pair)return;const s=scenes[current],W=dimensions.width,mobile=W<480,pick=[0,1,1,0,1][current];poses=[];
+ const H=dimensions.height;let safeBottom=Infinity,lowerEdge=0;
+ if(matchMedia('(min-width:960px)').matches){
+  const bounds=stage.getBoundingClientRect(),proof=document.querySelector('.social-proof').getBoundingClientRect();
+  stage.style.setProperty('--scene-caption-bottom',`${(bounds.bottom-proof.bottom).toFixed(2)}px`);
+  // Reserve space above the shared baseline for the badge and a clear phone gap.
+  safeBottom=proof.bottom-bounds.top-description.offsetHeight-20;
+ }
  [...pair.children].forEach((im,i)=>{
   im.style.display=mobile&&i!==pick?'none':'';
   const angle=s.angles[i],r=700/1440,rad=Math.abs(angle)*Math.PI/180;
@@ -59,8 +66,8 @@ function layout(){
   im.style.width=`${(hh*r).toFixed(2)}px`;im.style.height=`${hh.toFixed(2)}px`;im.style.left=`${(W*(mobile?.5:i?.75:.25)).toFixed(2)}px`;im.style.top=`${(H*(mobile?.5:.5+s.levels[i])).toFixed(2)}px`;
   im.style.transform=`translate(-50%,-50%) rotate(${angle}deg)`;poses.push({im,angle,phase:i});
  });
- // Place the caption below the lowest rotated device, including its float range.
- stage.style.setProperty('--scene-caption-top',`${Math.min(H+6,lowerEdge+16).toFixed(2)}px`);
+ const lift=Math.max(0,lowerEdge-safeBottom);
+ if(lift)for(const {im} of poses)im.style.top=`${(parseFloat(im.style.top)-lift).toFixed(2)}px`;
 }
 function drift(){for(const p of poses){const y=Math.sin(clock*.38+p.phase)*Math.min(2,dimensions.height*.006);p.im.style.transform=`translate(-50%,-50%) translateY(${y.toFixed(2)}px) rotate(${p.angle}deg)`;}}
 function drawLines(){
@@ -93,7 +100,7 @@ async function init(){
  await Promise.all(scenes[0].screens.map(name=>loadScreen(name,'high')));
  const r=host.getBoundingClientRect();dimensions={width:r.width,height:r.height};setScene(0);syncMotion();if(reduced.matches)mode='hold';
  stage.classList.add('cinema-ready');host.setAttribute('aria-busy','false');
- new ResizeObserver(()=>{const r=host.getBoundingClientRect();dimensions={width:r.width,height:r.height};layout();redraw()}).observe(host);
+ const resize=new ResizeObserver(()=>{const r=host.getBoundingClientRect();dimensions={width:r.width,height:r.height};layout();redraw()});resize.observe(host);resize.observe(document.querySelector('.copy'));resize.observe(description);
  document.addEventListener('visibilitychange',()=>{document.documentElement.classList.toggle('is-background',document.hidden);syncMotion();if(document.hidden){cancelAnimationFrame(raf);raf=0}else redraw()});
  new IntersectionObserver(e=>{visible=e[0].isIntersecting;if(visible)redraw();else{cancelAnimationFrame(raf);raf=0}},{threshold:.01}).observe(stage);
  reduced.addEventListener('change',()=>{mode='hold';started=clock;syncMotion();redraw()});
