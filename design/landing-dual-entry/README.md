@@ -152,3 +152,7 @@ Four alternating eraser passes start at 10s, with faint ink clearing by 11.16s.
 Desktop arrow ends 2px before Telegram's left edge at its vertical centre;
 mobile has a separate curve pointing at the bottom edge of Instagram.
 No loop or layout shift. Reduced motion shows a static note for 10 seconds.
+
+Final motion polish: desktop arrow keeps a 16px gap from Telegram; mobile
+keeps roughly 12px below Instagram. Curve draw is 620ms, tip 240ms with a
+20ms overlap; erase passes overlap smoothly. The 10-second hold/end is unchanged.
