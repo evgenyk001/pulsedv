@@ -125,3 +125,12 @@ initial travel and a soft ease-out. The pair remains lane-separated throughout.
 Browser verification: 1366×568 and 390×844 overflow is zero on both axes;
 App Store/captions remain inside the viewport. Later automatic scenes show
 complete, explicitly decoded bitmaps. No visible slideshow controls/footer remain.
+
+### Header update — 9 November 2026
+
+The brand symbol in `assets/pulse-header-mark.svg` retains the exact original
+path geometry/transform from `pulsedv-pencil-logo.svg`. The text lockup uses
+local Onest 700 and Manrope 500 fonts; both SVG text lines have equal widths.
+Social app artwork is served locally, from Apple's official iTunes Lookup API:
+Telegram Messenger (686449807), Instagram (389801252), retrieved 2026-11-09.
+Instagram destination is the exact user-supplied pulsedv.ru profile URL.
