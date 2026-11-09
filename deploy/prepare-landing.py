@@ -14,12 +14,12 @@ def prepare(source, destination, current, release, tracker):
         raise ValueError('Invalid release name')
     destination.mkdir(parents=True, exist_ok=False)
     prefix = '/landing-cinematic/releases/' + release + '/'
-    for name in ['style.css', 'cinema.js', 'capability-icons.js']:
+    for name in ['style.css', 'cinema.js', 'capability-icons.js', 'header-ink.js']:
         shutil.copy2(source / name, destination / name)
     shutil.copytree(source / 'assets', destination / 'assets')
     page = (source / 'index.html').read_text()
     page = re.sub(r'(src|href)="assets/', lambda m: m[1] + '="' + prefix + 'assets/', page)
-    for name in ['style.css', 'cinema.js', 'capability-icons.js']:
+    for name in ['style.css', 'cinema.js', 'capability-icons.js', 'header-ink.js']:
         page = page.replace('="' + name + '"', '="' + prefix + name + '"')
     # Runtime URLs are document-relative in the review proposal.
     for name, needle in [('cinema.js', 'assets/phone-${name}.webp'),

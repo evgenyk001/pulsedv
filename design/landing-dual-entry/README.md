@@ -140,3 +140,15 @@ wordmark subset). The black tagline and red social note use local Caveat 500.
 The note draws once on load, holds until second 10, then erases by second 11.3.
 It does not loop or restart during phone-scene changes. Reduced motion uses
 a static note for 10 seconds. Mobile reserves header space for the annotation.
+
+### Stroke animation refinement
+
+`header-ink.js` waits for Caveat before starting once. Each glyph is revealed
+along its own ordered centreline strokes, retaining its exact font silhouette.
+`source/build-social-ink.py` (Pillow, NumPy) regenerates the glyph masks in
+`source/social-ink-fragment.html`; no tracing library is shipped to visitors.
+Phrase completes around 2.1s; arrow curve then tip complete by 2.85s.
+Four alternating eraser passes start at 10s, with faint ink clearing by 11.16s.
+Desktop arrow ends 2px before Telegram's left edge at its vertical centre;
+mobile has a separate curve pointing at the bottom edge of Instagram.
+No loop or layout shift. Reduced motion shows a static note for 10 seconds.
