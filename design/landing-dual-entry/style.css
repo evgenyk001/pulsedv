@@ -172,3 +172,9 @@ body{grid-template-rows:var(--header) minmax(0,1fr)}
 @media(prefers-reduced-motion:reduce){.social-note .ink-pen,.social-note .ink-arrow{animation:none!important;stroke-dashoffset:0}.social-note .ink-erase{animation:none!important;stroke-dashoffset:1}.social-note .ink-residue{animation:none!important;opacity:0}.social-note.ink-ready{animation:ink-end .01s linear 10s forwards!important}}
 
 .ink-erase{stroke-opacity:.97}
+
+.social-note.ink-ready{animation:none}
+.ink-ready .ink-art{animation:ink-clean .18s linear 10.98s forwards}
+.social-note.ink-finished{opacity:0;visibility:hidden}
+@keyframes ink-clean{to{opacity:0}}
+@media(prefers-reduced-motion:reduce){.social-note.ink-ready,.social-note .ink-art{animation:none!important}}
