@@ -134,3 +134,9 @@ local Onest 700 and Manrope 500 fonts; both SVG text lines have equal widths.
 Social app artwork is served locally, from Apple's official iTunes Lookup API:
 Telegram Messenger (686449807), Instagram (389801252), retrieved 2026-11-09.
 Instagram destination is the exact user-supplied pulsedv.ru profile URL.
+
+The refined wordmark uses Unbounded 800 (Google Fonts, SIL OFL; local Latin
+wordmark subset). The black tagline and red social note use local Caveat 500.
+The note draws once on load, holds until second 10, then erases by second 11.3.
+It does not loop or restart during phone-scene changes. Reduced motion uses
+a static note for 10 seconds. Mobile reserves header space for the annotation.

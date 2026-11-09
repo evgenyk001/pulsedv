@@ -136,3 +136,26 @@ body{grid-template-rows:var(--header) minmax(0,1fr)}
 @media(max-width:374px){.header .brand .brand-mark{width:33px}.header .brand-wordmark{width:146px}.brand{gap:7px}.header nav{gap:8px}.header .social-app{width:32px;height:32px}}
 @media(max-width:959px) and (max-height:740px){.header .brand .brand-mark{width:33px}.header .brand-wordmark{width:155px}.header .social-app{width:32px;height:32px}}
 @media(orientation:landscape) and (max-height:500px){.header .brand .brand-mark{width:27px}.header .brand-wordmark{width:139px}.header .social-app{width:28px;height:28px}.header nav{gap:10px}}
+
+/* Bold geometric name, ink-like signature and a one-time marker annotation. */
+@font-face{font-family:Unbounded;src:url(assets/unbounded-brand-800.ttf);font-weight:800;font-display:swap}
+@font-face{font-family:Caveat;src:url(assets/caveat-500.ttf);font-weight:500;font-display:swap}
+.brand-name{font-family:Unbounded,Onest,sans-serif;font-size:32px;font-weight:800;letter-spacing:-.055em}
+.brand-tagline{font-family:Caveat,cursive;font-size:26px;font-weight:500;fill:#202125;letter-spacing:0}
+.social-cluster{position:relative;flex:none}
+.header .social-app{width:44px;height:44px;border:1px solid #d5d6da;box-shadow:0 4px 9px #252a3a22,0 1px 2px #00000014;background:#fff}
+.social-note{position:absolute;right:calc(100% + 14px);top:50%;transform:translateY(-48%) rotate(-6deg);width:190px;height:72px;fill:none;stroke:#cd0c1b;stroke-width:2.2;overflow:visible;pointer-events:none;animation:social-note-finish 11.3s linear forwards}
+.social-handwriting{font-family:Caveat,cursive;font-size:28px;font-weight:500;fill:#cd0c1b;stroke:none}
+.social-note-reveal{animation:social-note-write 11.3s linear forwards}
+.social-arrow{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;animation:social-arrow-write 11.3s ease-in-out forwards}
+.social-arrow-mobile{display:none}
+@keyframes social-note-write{0%{width:0}20%,88.5%{width:180px}100%{width:0}}
+@keyframes social-arrow-write{0%,15%{stroke-dashoffset:1}30%,88.5%{stroke-dashoffset:0}100%{stroke-dashoffset:1}}
+@keyframes social-note-finish{0%,99%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
+@media(min-width:960px) and (max-height:760px){.header .social-app{width:39px;height:39px}}
+@media(max-width:959px) and (orientation:portrait){:root{--header:88px}.header{align-items:flex-start;padding-top:8px}.header .social-app{width:33px;height:33px}.social-note{width:150px;height:auto;right:-4px;top:31px;transform:none}.social-arrow-desktop{display:none}.social-arrow-mobile{display:inline}.header nav{gap:10px}}
+@media(max-width:959px) and (orientation:portrait) and (max-height:740px){:root{--header:78px}.header .social-app{width:30px;height:30px}.social-note{top:28px;width:142px}}
+@media(max-width:374px){.header .social-app{width:30px;height:30px}.header .brand-wordmark{width:146px}}
+@media(orientation:landscape) and (max-height:500px){.social-note{display:none}.header .social-app{width:26px;height:26px}}
+@media(prefers-reduced-motion:reduce){.social-note{animation:social-note-accessible 10s step-end forwards!important}.social-note-reveal{animation:none!important;width:180px}.social-arrow{animation:none!important;stroke-dashoffset:0}}
+@keyframes social-note-accessible{to{visibility:hidden;opacity:0}}
