@@ -37,3 +37,14 @@ No external animation library or generated bitmap is needed for this surface.
 
 Three geometry tests verify noticeable displacement within one second of a
 fixed scene, finite geometry and continuous width/position through twist reversals.
+
+## Compact controls and capability pictograms
+
+Desktop entry controls now use a 360–440px responsive maximum width, with
+unchanged full-width mobile controls. Three new original 32px Lottie icons show
+a floorplan, a house/percentage badge and a handshake. Gestures last 40 frames
+at 60fps (0.67s), with a 100ms initial stagger and stable resting contours.
+Each capability includes a short two-line explanation. Original released
+capability assets/controller remain untouched; city-icons.js loads the new set.
+Static icon contours were visually inspected. Browser layout verification for
+this final compact-controls revision was unavailable in the current browser.
