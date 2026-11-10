@@ -2,15 +2,15 @@ import {criticalStep,smootherstep,clamp01} from './motion-core.js';
 const stage=document.querySelector('.city-studio'),host=document.querySelector('.city-cinema'),title=document.querySelector('.city-scene-title'),caption=document.querySelector('.scene-caption'),label=document.querySelector('.scene-label');
 const reduce=matchMedia('(prefers-reduced-motion:reduce)'),coarse=matchMedia('(pointer:coarse)');
 const scenes=[
- {screens:['home','catalog'],label:'Ваш следующий адрес',title:'Большой выбор. В ваших руках.',angles:[-7,7],levels:[.43,.55],heights:[.82,.73],curve:[545,290,600,690,410,430]},
- {screens:['property','floorplans'],label:'От дома — до деталей',title:'Представьте, как будете здесь жить.',angles:[-5,5],levels:[.53,.43],heights:[.73,.84],curve:[590,355,230,390,410,460]},
- {screens:['favorites','mortgage'],label:'Всё сходится',title:'Сравните варианты. Рассчитайте платёж.',angles:[-6,6],levels:[.45,.54],heights:[.83,.74],curve:[520,300,565,680,320,450]},
- {screens:['partners','home'],label:'Партнёрская программа',title:'Рекомендуйте PULSE. Получайте больше.',angles:[-5,7],levels:[.44,.56],heights:[.84,.71],curve:[565,330,235,430,330,490]},
- {screens:['catalog','giveaway'],label:'Новогодний розыгрыш',title:'Новая квартира. Новый iPhone?',angles:[-7,5],levels:[.53,.43],heights:[.72,.85],curve:[590,350,600,700,370,410]}
+ {screens:['home','catalog'],label:'Ваш следующий адрес',title:'Большой выбор. В ваших руках.',angles:[-7,7],levels:[.43,.55],heights:[.82,.73]},
+ {screens:['property','floorplans'],label:'От дома — до деталей',title:'Представьте, как будете здесь жить.',angles:[-5,5],levels:[.53,.43],heights:[.73,.84]},
+ {screens:['favorites','mortgage'],label:'Всё сходится',title:'Сравните варианты. Рассчитайте платёж.',angles:[-6,6],levels:[.45,.54],heights:[.83,.74]},
+ {screens:['partners','home'],label:'Партнёрская программа',title:'Рекомендуйте PULSE. Получайте больше.',angles:[-5,7],levels:[.44,.56],heights:[.84,.71]},
+ {screens:['catalog','giveaway'],label:'Новогодний розыгрыш',title:'Новая квартира. Новый iPhone?',angles:[-7,5],levels:[.53,.43],heights:[.72,.85]}
 ];
-const bitmaps=new Map(),paths=[...document.querySelectorAll('.city-thread,.city-echo,.city-comet')],shadows=[...document.querySelectorAll('.city-contact-shadow')];
-const light=document.querySelector('.city-light'),architecture=document.querySelector('.city-architecture'),comet=document.querySelector('.city-comet');
-const v=scenes[0].curve.slice(),vel=v.map(()=>0);let curve=scenes[0].curve;
+const bitmaps=new Map(),shadows=[...document.querySelectorAll('.city-contact-shadow')];
+const light=document.querySelector('.city-light'),architecture=document.querySelector('.city-architecture');
+
 let current=0,next=0,phase='enter',elapsed=0,time=0,raf=0,last=0,pair,poses=[],W=1,H=1,paused=false,preparing=false,seen=true;
 let px=0,py=0,vx=0,vy=0,tx=0,ty=0;
 const HOLD=6.4,ENTER=1.25,EXIT=.75;
@@ -36,26 +36,12 @@ function layout(){
  shadows.forEach((el,i)=>{const p=poses[i];el.style.display=p.show?'block':'none';el.style.width=`${p.hh*.7}px`;el.style.left=`${p.x-p.hh*.35}px`;el.style.right='auto';el.style.bottom=`${Math.max(0,H-(p.y+p.hh*.52)-15)}px`});
 }
 async function mount(index){
- const ims=await Promise.all(scenes[index].screens.map(imageFor));pair?.remove();pair=document.createElement('div');pair.className='city-pair';ims.forEach(im=>pair.append(im));host.append(pair);current=index;curve=scenes[index].curve;
+ const ims=await Promise.all(scenes[index].screens.map(imageFor));pair?.remove();pair=document.createElement('div');pair.className='city-pair';ims.forEach(im=>pair.append(im));host.append(pair);current=index;
  caption.textContent=scenes[index].title;label.textContent=scenes[index].label;stage.dataset.scene=String(index);layout();signal('enter');
 }
 async function prepare(){
  if(preparing)return;preparing=true;const wanted=(current+1)%scenes.length;
- try{await Promise.all(scenes[wanted].screens.map(imageFor));if(phase!=='hold')return;next=wanted;phase='exit';elapsed=0;curve=scenes[wanted].curve;signal('exit')}catch{elapsed=HOLD-3}finally{preparing=false}
-}
-function line(dt){
- for(let i=0;i<v.length;i++)[v[i],vel[i]]=criticalStep(v[i],vel[i],curve[i],dt,3.5);
- const breath=Math.sin(time*.31)*18;
- const d=off=>{
-  const wave=Math.sin(time*.23)*22,curl=Math.cos(time*.19)*18;
-  const joinX=365+wave,joinY=260+breath+(v[0]-545)*.35;
-  const firstX=110+(v[2]-300)*.16,firstY=70+(v[3]-400)*.13+curl;
-  const outgoingX=565+(v[4]-400)*.18,outgoingY=540+(v[5]-450)*.2-curl;
-  return `M -110 ${525+off+breath*.4} C ${firstX} ${firstY+off}, ${joinX-(outgoingX-joinX)*.6} ${joinY-(outgoingY-joinY)*.6+off}, ${joinX} ${joinY+off} C ${outgoingX} ${outgoingY+off}, 680 ${480+(v[1]-300)*.2+off+wave}, 910 ${135+off-breath}`;
- };
-
- paths.forEach(el=>el.setAttribute('d',d(Number(el.dataset.offset||0))));
- comet.style.strokeDashoffset=String(-time*.047);
+ try{await Promise.all(scenes[wanted].screens.map(imageFor));if(phase!=='hold')return;next=wanted;phase='exit';elapsed=0;signal('exit')}catch{elapsed=HOLD-3}finally{preparing=false}
 }
 function render(dt){
  [px,vx]=criticalStep(px,vx,tx,dt,3.8);[py,vy]=criticalStep(py,vy,ty,dt,3.8);
@@ -76,7 +62,7 @@ function render(dt){
  title.style.transform=`translateY(${entering?(1-smootherstep(p))*8:0}px)`;
  light.style.transform=`translate3d(${px*.5}px,${py*.5}px,0)`;
  architecture.style.transform=`translate3d(${-px*.35}px,${-py*.25}px,0)`;
- line(dt);
+
 }
 function tick(now){
  raf=0;const dt=last?Math.max(0,(now-last)/1000):0;last=now;

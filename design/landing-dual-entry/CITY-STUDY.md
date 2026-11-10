@@ -24,3 +24,16 @@ Escape toggles motion. Mobile has an independent centered grid and no page scrol
 Validation: JavaScript syntax; browser inspection of 1363×936, 390×844,
 320×640 and 1366×568 layouts and later automatic scenes. Physical-device frame
 rates and production server deployment are not verified in this study.
+
+## Satin ribbon revision
+
+The previous narrow stroke was replaced with a true filled band. A sampled
+centreline and a smoothly twisting normal cross section generate the surface,
+underside shade, highlight and rim. Spatial waves travel continuously at an
+independent time phase. The ribbon starts without waiting for phone assets and
+continues during loading/scene holds. Its own loop suspends for hidden tabs,
+Escape pause, offscreen placement and system reduced-motion preferences.
+No external animation library or generated bitmap is needed for this surface.
+
+Three geometry tests verify noticeable displacement within one second of a
+fixed scene, finite geometry and continuous width/position through twist reversals.
