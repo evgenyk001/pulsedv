@@ -118,9 +118,8 @@ on slow/failed loads. The eight decoded Image elements are reused between scenes
 Bitmap size is 560×1152 and total device assets drop from 762456 to 487176 bytes
 (36%). Per-phone CSS drop shadows are removed; only compositor transforms and
 opacity change in the animation loop. Dimensions are assigned on scene/viewport
-changes rather than every frame. SVG paths update at 30fps; phone motion uses rAF.
-Reading dwell remains 6.5 seconds. Exit is 0.72s; entrance is 1.10s with faster
-initial travel and a soft ease-out. The pair remains lane-separated throughout.
+changes rather than every frame. SVG paths and phone motion now share the browser animation frame clock.
+Reading dwell remains 6.5 seconds. Exit is 0.78s; entrance is 1.18s with quintic easing and zero endpoint velocity. The pair remains lane-separated throughout.
 
 Browser verification: 1366×568 and 390×844 overflow is zero on both axes;
 App Store/captions remain inside the viewport. Later automatic scenes show
@@ -156,3 +155,24 @@ No loop or layout shift. Reduced motion shows a static note for 10 seconds.
 Final motion polish: desktop arrow keeps a 16px gap from Telegram; mobile
 keeps roughly 12px below Instagram. Curve draw is 620ms, tip 240ms with a
 20ms overlap; erase passes overlap smoothly. The 10-second hold/end is unchanged.
+
+### Coordinated motion — 10 November 2026
+
+The five background curves use an exact critically damped spring, preserving
+position and velocity when a scene retargets. A quiet red travelling highlight
+follows the same geometry. There is no separate 30fps path timer. Phone drift
+continues through entrance, hold and exit; decoded pairs remain lane-separated.
+
+The social annotation has twelve continuous glyph masks (previously 86 tiny
+segments), natural word lifts, then a separate curve/tip gesture. Drawing
+finishes at 3.02s; erasing starts at 10s and finishes at 11.16s.
+
+Three locally generated, 60fps Lottie vector compositions retain a permanent
+outline. Short window, calculator and partnership accents follow the semantic
+phone scene or pointer hover. Initial accents follow the handwriting rather
+than competing with it. No icon loop or restart while already playing.
+Hidden tabs, reduced motion and Escape suspension remain supported.
+
+Validation: five Node motion invariants and two production packaging tests.
+Browser inspection covers desktop and 390×844, 320×640, 1366×568 viewport
+layouts. This is not a guarantee of a particular frame rate on physical devices.

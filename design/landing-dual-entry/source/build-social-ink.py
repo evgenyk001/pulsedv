@@ -76,17 +76,15 @@ for index,char in enumerate('наши соц. сети'):
   paths=[(f'M{px:.2f} {py:.2f} l .01 .01',.3)];total+=.3
  letters.append((index,char,x,paths));x+=advance
 
-# 1.65 seconds for the phrase. Brief pen lifts separate letters and words.
-clock=.18;svg=[];masks=[]
+# One continuous pen path per letter avoids sub-frame stop/start fragments.
+clock=.14;svg=[];masks=[]
 for index,char,x,paths in letters:
- strokes=[]
- for d,length in paths:
-  duration=max(.012,1.15*length/total)
-  strokes.append(f'<path class="ink-pen" pathLength="1" d="{d}" style="--ink-start:{clock:.3f}s;--ink-time:{duration:.3f}s"/>')
-  clock+=duration
- clock+=.018 if char!='.' else .04
- masks.append(f'<mask id="ink-letter-{index}" maskUnits="userSpaceOnUse" x="0" y="0" width="190" height="72"><g class="ink-pen-mask">'+''.join(strokes)+'</g></mask>')
- # Keep the exact font ink silhouette, not the skeleton, visible to the visitor.
+ length=sum(item[1] for item in paths)
+ duration=max(.055,1.45*length/total)
+ d=' '.join(item[0] for item in paths)
+ stroke=f'<path class="ink-pen" pathLength="1" d="{d}" style="--ink-start:{clock:.3f}s;--ink-time:{duration:.3f}s"/>'
+ masks.append(f'<mask id="ink-letter-{index}" maskUnits="userSpaceOnUse" x="0" y="0" width="190" height="72"><g class="ink-pen-mask">'+stroke+'</g></mask>')
  svg.append(f'<text class="social-handwriting" x="{x:.3f}" y="38" mask="url(#ink-letter-{index})">{char}</text>')
+ clock+=duration+.012+(.065 if index in [3,8] else 0)
 print(json.dumps({'letters':len(letters),'strokes':sum(len(x[3]) for x in letters),'writingEnds':round(clock,3)}))
 (BASE/'source/social-ink-fragment.html').write_text('<defs>'+''.join(masks)+'</defs>\n'+''.join(svg))

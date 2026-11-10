@@ -1,3 +1,4 @@
+import {criticalStep,smootherstep,FLOW_SCENES,flowPath} from './motion-core.js';
 // Decoded, reused device images; only compositor transforms change each frame.
 const host=document.querySelector('.cinema'),stage=document.querySelector('.showcase');
 const description=document.querySelector('.scene-description'),caption=document.querySelector('.scene-caption'),label=document.querySelector('.scene-label');
@@ -9,16 +10,17 @@ const scenes=[
  {title:'Рекомендуйте PULSE. Получайте больше.',label:'Партнёрская программа',screens:['partners','home'],angles:[-3,4],heights:[.90,.76],levels:[-.015,.045]},
  {title:'Новая квартира. Новый iPhone?',label:'Новогодний розыгрыш',screens:['catalog','giveaway'],angles:[-4,3],heights:[.76,.90],levels:[.045,-.015]},
 ];
-const curves=[[470,240,160,-30,435,770],[370,430,310,-140,360,920],[535,180,10,140,555,530],[390,360,180,-30,470,840],[490,210,280,-180,380,700]];
 
 const paths=[...document.querySelectorAll('.flow-line')];
-const HOLD=6.5,EXIT=.72,ENTER=1.10,REV='motion-4';
+const HOLD=6.5,EXIT=.78,ENTER=1.18,REV='motion-4';
+const flow=FLOW_SCENES[0].slice(),flowVelocity=flow.map(()=>0);let flowTarget=FLOW_SCENES[0];
+const highlight=document.querySelector('.flow-highlight');
 const images=new Map();
-let clock=0,last=0,raf=0,current=0,next=0,previous=0,mode='enter',started=0,paused=false,visible=true,preparing=false,lastLine=-1;
+let clock=0,last=0,raf=0,current=0,next=0,mode='enter',started=0,paused=false,visible=true,preparing=false;
 let pair=null,dimensions={width:600,height:600},poses=[];
 const clamp=x=>Math.max(0,Math.min(1,x));
 const smooth=x=>{const t=clamp(x);return t*t*(3-2*t)};
-const easeOut=x=>1-Math.pow(1-clamp(x),3);
+const signal=phase=>window.dispatchEvent(new CustomEvent('pulse:scene',{detail:{index:current,phase}}));
 function loadScreen(name,priority='low'){
  if(images.has(name))return images.get(name).promise;
  const image=new Image();image.decoding='async';image.fetchPriority=priority;image.className='rendered-phone';image.alt='';image.width=560;image.height=1152;image.draggable=false;
@@ -38,7 +40,7 @@ function createPair(index){
 }
 function setScene(index){
  pair?.remove();current=index;pair=createPair(index);layout();stage.dataset.scene=String(index);
- caption.textContent=scenes[index].title;label.textContent=scenes[index].label;
+ caption.textContent=scenes[index].title;label.textContent=scenes[index].label;signal('enter');
 }
 async function transition(index){
  if(preparing||mode!=='hold'||index===current)return;preparing=true;
@@ -46,7 +48,7 @@ async function transition(index){
   await Promise.all(scenes[index].screens.map(async name=>{const image=await loadScreen(name);if(typeof image.decode==='function')await image.decode();}));
   // Keep the current scene fully visible until every incoming bitmap is decoded.
   if(reduced.matches||paused){preparing=false;return;}
-  next=index;previous=current;mode='exit';started=clock;redraw();
+  next=index;flowTarget=FLOW_SCENES[index];mode='exit';started=clock;signal('exit');redraw();
  }catch{started=clock-HOLD+4;}finally{preparing=false;}
 }
 function layout(){
@@ -70,25 +72,25 @@ function layout(){
  if(lift)for(const {im} of poses)im.style.top=`${(parseFloat(im.style.top)-lift).toFixed(2)}px`;
 }
 function drift(){for(const p of poses){const y=Math.sin(clock*.38+p.phase)*Math.min(2,dimensions.height*.006);p.im.style.transform=`translate(-50%,-50%) translateY(${y.toFixed(2)}px) rotate(${p.angle}deg)`;}}
-function drawLines(){
- if(clock-lastLine<1/30&&!reduced.matches)return;lastLine=clock;
- const t=mode==='exit'?smooth((clock-started)/EXIT)*.5:mode==='enter'?.5+easeOut((clock-started)/ENTER)*.5:1;
- const a=curves[previous],b=curves[mode==='exit'?next:current],c=b.map((v,i)=>a[i]+(v-a[i])*t);
- paths.forEach((p,i)=>{const off=i*14,w=Math.sin(clock*.24+i*.04)*14;p.setAttribute('d',`M -120 ${c[0]+off+w} C ${c[2]} ${c[3]+off}, ${c[4]} ${c[5]+off+w}, 810 ${c[1]+off}`)});
+function drawLines(dt){
+ for(let i=0;i<flow.length;i++)[flow[i],flowVelocity[i]]=criticalStep(flow[i],flowVelocity[i],flowTarget[i],dt);
+ paths.forEach((path,i)=>path.setAttribute('d',flowPath(flow,i,clock)));
+ if(highlight){highlight.setAttribute('d',flowPath(flow,3,clock));highlight.style.strokeDashoffset=String(-clock*.075);}
 }
-function render(){
+
+function render(dt=0){
  const elapsed=clock-started;
  if(mode==='exit'&&elapsed>=EXIT){setScene(next);mode='enter';started=clock;}
- else if(mode==='enter'&&elapsed>=ENTER){mode='hold';started=clock;}
+ else if(mode==='enter'&&elapsed>=ENTER){mode='hold';started=clock;signal('hold');}
  if(mode==='hold'&&!paused&&!reduced.matches&&clock-started>=HOLD)void transition((current+1)%scenes.length);
  const p=clamp((clock-started)/(mode==='exit'?EXIT:ENTER));
- const x=mode==='exit'?-p*p*dimensions.width*.94:mode==='enter'?(1-easeOut(p))*dimensions.width*.94:0;
+ const x=mode==='exit'?-smootherstep(p)*dimensions.width*.94:mode==='enter'?(1-smootherstep(p))*dimensions.width*.94:0;
  pair.style.transform=`translate3d(${x.toFixed(2)}px,0,0)`;
  pair.style.opacity=String(mode==='exit'?1-smooth(p):mode==='enter'?smooth(p/.28):1);
  description.style.opacity=String(mode==='exit'?1-smooth(p/.65):mode==='enter'?smooth((p-.24)/.55):1);
- if(mode==='hold')drift();drawLines();
+ drift();drawLines(dt);
 }
-function tick(t){raf=0;const delta=last?Math.min((t-last)/1000,.25):0;last=t;if(!paused&&!reduced.matches&&!document.hidden&&visible)clock+=delta;render();if(!paused&&!reduced.matches&&!document.hidden&&visible)raf=requestAnimationFrame(tick);}
+function tick(t){raf=0;const delta=last?Math.min((t-last)/1000,.25):0;last=t;const active=!paused&&!reduced.matches&&!document.hidden&&visible;if(active)clock+=delta;render(active?delta:0);if(!paused&&!reduced.matches&&!document.hidden&&visible)raf=requestAnimationFrame(tick);}
 function redraw(){if(!raf){last=0;raf=requestAnimationFrame(tick)}}
 function syncMotion(){
  document.documentElement.classList.toggle('motion-paused',paused);
@@ -99,11 +101,11 @@ async function warmRemaining(){for(const name of [...new Set(scenes.flatMap(s=>s
 async function init(){
  await Promise.all(scenes[0].screens.map(name=>loadScreen(name,'high')));
  const r=host.getBoundingClientRect();dimensions={width:r.width,height:r.height};setScene(0);syncMotion();if(reduced.matches)mode='hold';
- stage.classList.add('cinema-ready');host.setAttribute('aria-busy','false');
+ drawLines(0);stage.classList.add('cinema-ready');host.setAttribute('aria-busy','false');
  const resize=new ResizeObserver(()=>{const r=host.getBoundingClientRect();dimensions={width:r.width,height:r.height};layout();redraw()});resize.observe(host);resize.observe(document.querySelector('.copy'));resize.observe(description);
  document.addEventListener('visibilitychange',()=>{document.documentElement.classList.toggle('is-background',document.hidden);syncMotion();if(document.hidden){cancelAnimationFrame(raf);raf=0}else redraw()});
  new IntersectionObserver(e=>{visible=e[0].isIntersecting;if(visible)redraw();else{cancelAnimationFrame(raf);raf=0}},{threshold:.01}).observe(stage);
- reduced.addEventListener('change',()=>{mode='hold';started=clock;syncMotion();redraw()});
+ reduced.addEventListener('change',()=>{mode='hold';started=clock;flowTarget=FLOW_SCENES[current];if(reduced.matches)flow.forEach((_,i)=>{flow[i]=flowTarget[i];flowVelocity[i]=0});syncMotion();redraw()});
  document.addEventListener('keydown',e=>{if(e.key!=='Escape'||e.repeat)return;paused=!paused;syncMotion();cancelAnimationFrame(raf);raf=0;redraw()});
  // Present a decoded, positioned layer before starting the entrance clock.
  requestAnimationFrame(()=>requestAnimationFrame(()=>{started=clock;redraw();}));
