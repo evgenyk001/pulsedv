@@ -9,10 +9,11 @@ const scenes=[
  {screens:['catalog','giveaway'],label:'Новогодний розыгрыш',title:'Новая квартира. Новый iPhone?',angles:[-7,5],levels:[.53,.43],heights:[.72,.85],curve:[590,350,600,700,370,410]}
 ];
 const bitmaps=new Map(),paths=[...document.querySelectorAll('.city-thread,.city-echo,.city-comet')],shadows=[...document.querySelectorAll('.city-contact-shadow')];
+const light=document.querySelector('.city-light'),architecture=document.querySelector('.city-architecture'),comet=document.querySelector('.city-comet');
 const v=scenes[0].curve.slice(),vel=v.map(()=>0);let curve=scenes[0].curve;
 let current=0,next=0,phase='enter',elapsed=0,time=0,raf=0,last=0,pair,poses=[],W=1,H=1,paused=false,preparing=false,seen=true;
 let px=0,py=0,vx=0,vy=0,tx=0,ty=0;
-const HOLD=6.4,ENTER=1.6,EXIT=.95;
+const HOLD=6.4,ENTER=1.25,EXIT=.75;
 const active=()=>!reduce.matches&&!paused&&!document.hidden&&seen;
 const signal=p=>window.dispatchEvent(new CustomEvent('pulse:scene',{detail:{index:current,phase:p}}));
 async function imageFor(name){
@@ -25,7 +26,7 @@ function layout(){
  [...pair.children].forEach((im,i)=>{
   const show=!mobile||i===pick;im.style.display=show?'block':'none';
   const angle=s.angles[i],rad=Math.abs(angle)*Math.PI/180,r=560/1152;
-  const boundH=mobile?H*.88:H*s.heights[i];const boundW=mobile?W*.55:W*.38;
+  const boundH=mobile?H*.88:H*s.heights[i];const boundW=mobile?W*.55:W*.41;
   const hh=Math.min(boundH/(Math.cos(rad)+r*Math.sin(rad)),boundW/(r*Math.cos(rad)+Math.sin(rad)));
   const x=mobile?W*.5:W*(i?.765:.295),y=mobile?H*.49:H*s.levels[i];
   im.style.width=`${hh*r}px`;im.style.height=`${hh}px`;im.style.left=`${x}px`;im.style.top=`${y}px`;
@@ -44,10 +45,17 @@ async function prepare(){
 }
 function line(dt){
  for(let i=0;i<v.length;i++)[v[i],vel[i]]=criticalStep(v[i],vel[i],curve[i],dt,3.5);
- const breath=Math.sin(time*.32)*6;
- const d=off=>`M -90 ${v[0]+off} C ${v[2]} ${v[3]+off+breath}, ${v[4]} ${v[5]+off-breath}, 880 ${v[1]+off}`;
- paths.forEach(el=>el.setAttribute('d',d(el.classList.contains('city-echo')?-19:0)));
- document.querySelector('.city-comet').style.strokeDashoffset=String(-time*.047);
+ const breath=Math.sin(time*.31)*18;
+ const d=off=>{
+  const wave=Math.sin(time*.23)*22,curl=Math.cos(time*.19)*18;
+  const joinX=365+wave,joinY=260+breath+(v[0]-545)*.35;
+  const firstX=110+(v[2]-300)*.16,firstY=70+(v[3]-400)*.13+curl;
+  const outgoingX=565+(v[4]-400)*.18,outgoingY=540+(v[5]-450)*.2-curl;
+  return `M -110 ${525+off+breath*.4} C ${firstX} ${firstY+off}, ${joinX-(outgoingX-joinX)*.6} ${joinY-(outgoingY-joinY)*.6+off}, ${joinX} ${joinY+off} C ${outgoingX} ${outgoingY+off}, 680 ${480+(v[1]-300)*.2+off+wave}, 910 ${135+off-breath}`;
+ };
+
+ paths.forEach(el=>el.setAttribute('d',d(Number(el.dataset.offset||0))));
+ comet.style.strokeDashoffset=String(-time*.047);
 }
 function render(dt){
  [px,vx]=criticalStep(px,vx,tx,dt,3.8);[py,vy]=criticalStep(py,vy,ty,dt,3.8);
@@ -59,15 +67,15 @@ function render(dt){
   const y=entering?(1-e)*22:exiting?-smootherstep(p)*14:0;
   const rotation=o.angle+(entering?(1-e)*(o.i?5:-5):exiting?-smootherstep(p)*3:0);
   const drift=reduce.matches?0:Math.sin(time*.45+o.i*.8)*2.4;
-  const opacity=entering?smootherstep(clamp01(local/.47)):exiting?1-smootherstep(p):1;
+  const opacity=entering?smootherstep(clamp01(local/.2)):exiting?1-smootherstep(p):1;
   o.im.style.opacity=String(opacity);
   o.im.style.transform=`translate(-50%,-50%) translate3d(${x+px*(o.i?-.6:1)}px,${y+drift+py*.6}px,0) rotate(${rotation}deg) scale(${entering?.965+.035*e:1})`;
   shadows[o.i].style.opacity=String(opacity*.7);shadows[o.i].style.transform=`translateX(${x*.5}px) scaleX(${.9+opacity*.1})`;
  }
  title.style.opacity=String(entering?smootherstep(clamp01((p-.4)/.6)):exiting?1-smootherstep(clamp01(p/.7)):1);
  title.style.transform=`translateY(${entering?(1-smootherstep(p))*8:0}px)`;
- document.querySelector('.city-light').style.transform=`translate3d(${px*.5}px,${py*.5}px,0)`;
- document.querySelector('.city-architecture').style.transform=`translate3d(${-px*.35}px,${-py*.25}px,0)`;
+ light.style.transform=`translate3d(${px*.5}px,${py*.5}px,0)`;
+ architecture.style.transform=`translate3d(${-px*.35}px,${-py*.25}px,0)`;
  line(dt);
 }
 function tick(now){
