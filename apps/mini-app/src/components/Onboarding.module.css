@@ -29,8 +29,8 @@
 }
 :global(.pulse-pwa) .stage{
   top:calc(var(--pulse-safe-top) + 6px);
-  bottom:max(18px,var(--pulse-safe-bottom));
-  grid-template-rows:44px minmax(0,1fr) 92px;
+  bottom:max(10px,calc(var(--pulse-safe-bottom) - 12px));
+  grid-template-rows:44px minmax(0,1fr) 86px;
   gap:6px;
 }
 :global(.pulse-pwa) .topControls{
@@ -49,7 +49,8 @@
 :global(.pulse-pwa) .skip span{padding-inline:14px}
 :global(.pulse-pwa) .canvas{
   width:min(100%,480px);
-  height:100%;
+  height:calc(100% - 14px);
+  align-self:end;
   aspect-ratio:auto;
   container-type:size;
   --art-height:min(calc(100cqw * 1672 / 941),calc(100cqh / .85));
@@ -79,7 +80,7 @@
   justify-items:center;
   align-self:end;
   gap:8px;
-  padding-bottom:6px;
+  padding-bottom:0;
 }
 :global(.pulse-pwa) .primary{
   position:static;
