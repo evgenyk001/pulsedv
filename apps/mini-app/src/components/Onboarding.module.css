@@ -22,11 +22,9 @@
   overflow:hidden;
   overscroll-behavior:none;
 }
-:global(.pulse-pwa) .overlay{height:auto;min-height:100lvh}
+:global(.pulse-pwa) .overlay{height:auto;min-height:max(100lvh,var(--onboarding-screen-height,0px))}
 :global(.pulse-pwa) .stage{
   top:calc(var(--pulse-safe-top) + 6px);
-  height:calc(100dvh - var(--pulse-safe-top) - var(--pulse-safe-bottom) - 6px);
-  bottom:auto;
   grid-template-rows:44px minmax(0,1fr) auto;
   gap:6px;
 }
