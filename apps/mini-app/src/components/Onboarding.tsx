@@ -1,7 +1,7 @@
 import {safeLocalStorage} from '../../../../packages/browser/storage';
 import React from "react";
 import {createPortal} from "react-dom";
-import {isPwa, standalone} from "../pwa/client";
+import {isPwa} from "../pwa/client";
 import {ArrowRight} from "lucide-react";
 import { getPulseState, recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./Onboarding.module.css";
@@ -32,24 +32,20 @@ export function Onboarding({onDone}:{onDone:()=>void}){
     const root=document.documentElement;
     const theme=document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
     const previous=theme?.content;
-    const syncScreenHeight=()=>{
-      const fullWidthPhone=/iPhone|iPod/.test(navigator.userAgent)
-        && standalone()
-        && matchMedia("(orientation: portrait)").matches
-        && Math.abs(window.innerWidth-window.screen.width)<=2;
-      if(fullWidthPhone){
-        root.style.setProperty("--onboarding-screen-height",`${window.screen.height}px`);
-      }else{
-        root.style.removeProperty("--onboarding-screen-height");
-      }
+    const viewport=window.visualViewport;
+    const syncViewport=()=>{
+      const height=viewport?.height||window.innerHeight;
+      root.style.setProperty("--onboarding-viewport-height",`${height}px`);
     };
-    syncScreenHeight();
-    window.addEventListener("resize",syncScreenHeight);
+    syncViewport();
+    viewport?.addEventListener("resize",syncViewport);
+    window.addEventListener("resize",syncViewport);
     root.classList.add(styles.onboardingOpen);
     if(theme)theme.content="#ffffff";
     return ()=>{
-      window.removeEventListener("resize",syncScreenHeight);
-      root.style.removeProperty("--onboarding-screen-height");
+      viewport?.removeEventListener("resize",syncViewport);
+      window.removeEventListener("resize",syncViewport);
+      root.style.removeProperty("--onboarding-viewport-height");
       root.classList.remove(styles.onboardingOpen);
       if(theme&&previous!==undefined)theme.content=previous;
     };
