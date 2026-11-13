@@ -20,3 +20,16 @@
 :global(.pulse-pwa) .overlay{height:auto}
 :global(.pulse-pwa) .stage{top:calc(var(--pulse-safe-top) + 12px);container-type:size}
 :global(.pulse-pwa) .canvas{width:min(100cqw,calc(100cqh * 941 / 1672))}
+
+:global(.pulse-pwa) .canvas{
+  --onboarding-edge-space:max(0px,calc((100cqh - 100cqw * 1672 / 941) / 2));
+}
+:global(.pulse-pwa) .skip{
+  top:calc(8% - min(28px,var(--onboarding-edge-space) + 8px));
+}
+:global(.pulse-pwa) .primary{
+  top:calc(14% + min(22px,var(--onboarding-edge-space) + 6px));
+}
+:global(.pulse-pwa) .pagination{
+  bottom:calc(4% - min(22px,var(--onboarding-edge-space)));
+}
