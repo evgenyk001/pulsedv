@@ -182,6 +182,12 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
   const input=leadSchema.parse(request.body);if(input.consentVersion!==config.CONSENT_VERSION)throw new HttpError(409,'Условия обработки данных обновились. Обновите страницу');
   return db.transaction(sql=>persistLead(sql,input,request));
  });
+ app.post('/api/v1/public/pwa/contact',{preHandler:visitor,config:{rateLimit:{max:3,timeWindow:'1 minute'}}},async request=>{
+  const input=leadSchema.parse(request.body);
+  if(input.referralCode||input.referralConsent)throw new HttpError(400,'Для партнёрской заявки требуется вход');
+  if(input.consentVersion!==config.CONSENT_VERSION)throw new HttpError(409,'Условия обработки данных обновились. Обновите страницу');
+  return db.transaction(sql=>persistLead(sql,{...input,source:'pwa-contact'},request));
+ });
  registerConversationRoutes(app,db,config,visitor,persistLead);
  app.post('/api/v1/control/login',{config:{rateLimit:{max:5,timeWindow:'1 minute'}}},async(request,reply)=>{
   const {email,password}=z.object({email:z.email().max(254),password:z.string().min(1).max(200)}).parse(request.body);

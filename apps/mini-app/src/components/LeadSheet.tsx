@@ -16,20 +16,7 @@ export type LeadSheetProps={children:React.ReactNode;title?:string;project?:stri
 
 export function LeadSheet(props:LeadSheetProps){
  const account=useQuery({queryKey:['visitor-account'],queryFn:()=>visitorApi<{registered:boolean}>('/me/account'),enabled:runtime.enabled&&!runtime.publicPreview,staleTime:30000});
- if(runtime.publicPreview)return <Sheet>
-  <SheetTrigger asChild>{props.children}</SheetTrigger>
-  <SheetContent side="bottom" className={styles.sheet}>
-   <SheetClose className={styles.dismiss} aria-label="Закрыть"><X size={18}/></SheetClose>
-   <SheetHeader>
-    <SheetTitle>{props.title??"Связаться с менеджером"}</SheetTitle>
-    <SheetDescription>Откройте PULSE в Telegram и выберите «Персональный менеджер» в профиле.</SheetDescription>
-   </SheetHeader>
-   <a className={styles.submit} href="https://t.me/pulsedvbot?startapp" target="_blank" rel="noopener noreferrer"
-    onClick={()=>recordPulseEvent({eventType:"contact_click",entityType:props.propertyId?"property":"funnel",entityId:props.propertyId??props.source??"app",metadata:{source:props.source??"app"}})}>
-    Открыть PULSE в Telegram <ArrowRight size={17}/>
-   </a>
-  </SheetContent>
- </Sheet>;
+ if(runtime.publicPreview)return <LegacyLeadSheet {...props}/>;
  if(runtime.enabled&&(account.isPending||account.isError))return React.cloneElement(props.children as React.ReactElement<any>,{disabled:account.isPending,onClick:()=>void account.refetch()});
  return runtime.enabled&&account.data?.registered?<AccountConversationEntry {...props}/>:<LegacyLeadSheet {...props}/>;
 }
@@ -52,7 +39,7 @@ function LegacyLeadSheet({children,title="Получить консультац�
   const [declinedCode,setDeclinedCode]=React.useState<string>();
   // Direct agency/manager contact is separate from a partner application.
   const directContact=source==="profile-manager"||source==="profile-contact";
-  const candidateCode=directContact?undefined:(referralCode||invitation?.code);
+  const candidateCode=directContact||runtime.publicPreview?undefined:(referralCode||invitation?.code);
   const activeCode=candidateCode!==declinedCode?candidateCode:undefined;
   React.useEffect(()=>setReferralConsent(false),[activeCode]);
   const activeName=referralName||invitation?.partnerName;
@@ -81,7 +68,7 @@ function LegacyLeadSheet({children,title="Получить консультац�
     <SheetTrigger asChild>{children}</SheetTrigger>
     <SheetContent side="bottom" className={styles.sheet}>
       <SheetClose className={styles.dismiss} aria-label="Закрыть заявку"><X size={18}/></SheetClose>
-      {readingConsent?<><SheetHeader><SheetTitle>Согласие на обработку данных</SheetTitle><SheetDescription>После прочтения вернитесь к заполненной заявке.</SheetDescription></SheetHeader><button type="button" className={styles.submit} onClick={()=>setReadingConsent(false)}>Вернуться к заявке</button><PersonalDataConsentDocument/></>:sent?<div className={styles.success}><CheckCircle2 size={38}/><h2>{runtime.enabled?"Заявка принята":"Обращение создано"}</h2><p>{runtime.enabled?"Менеджер PULSEDV.RU свяжется с вами и уточнит детали"+(project?" по "+project:"")+".":"Обращение сохранено на устройстве. Отправка менеджеру пока недоступна."}</p><Link className={styles.submit} to={"/journey"+(leadId?"?lead="+leadId:"")}>Открыть моё обращение <ArrowRight size={17}/></Link></div>:<>
+      {readingConsent?<><SheetHeader><SheetTitle>Согласие на обработку данных</SheetTitle><SheetDescription>После прочтения вернитесь к заполненной заявке.</SheetDescription></SheetHeader><button type="button" className={styles.submit} onClick={()=>setReadingConsent(false)}>Вернуться к заявке</button><PersonalDataConsentDocument/></>:sent?<div className={styles.success}><CheckCircle2 size={38}/><h2>{runtime.enabled?"Заявка принята":"Обращение создано"}</h2><p>{runtime.enabled?"Менеджер PULSEDV.RU свяжется с вами и уточнит детали"+(project?" по "+project:"")+".":"Обращение сохранено на устройстве. Отправка менеджеру пока недоступна."}</p>{!runtime.publicPreview&&<Link className={styles.submit} to={"/journey"+(leadId?"?lead="+leadId:"")}>Открыть моё обращение <ArrowRight size={17}/></Link>}</div>:<>
         <SheetHeader><SheetTitle>{title}</SheetTitle><SheetDescription>{project?(project+". "):""}Оставьте контакт — всё остальное обсудим без спешки.</SheetDescription></SheetHeader>
         <form className={styles.form} onSubmit={submit}>
           <label><span>Как к вам обращаться</span><Input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Имя" autoComplete="given-name" maxLength={100} required/></label>

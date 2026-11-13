@@ -124,3 +124,21 @@ test('PWA saved search notifications are independently consented and cancellatio
  assert.equal(Number((await f.db.query('select count(*) from push_deliveries where delivered_at is null and dead_at is null')).rows[0].count),1,'a second digest is queued before revocation');
  settings.push=false;assert.equal((await put()).statusCode,200);await deliverWebPush(f.db,f.config,async()=>{sent++});assert.equal(sent,1,'revoked search consent blocks pending delivery');
 });
+
+test('PWA guests can submit an idempotent callback without opening account routes',async t=>{
+ const {app,config,db,session}=await fixture(t);
+ const {headers}=await session();
+ const url='/api/v1/public/pwa/contact';
+ const payload={idempotencyKey:randomUUID(),source:'profile-manager',name:'Тест PWA',phone:'+79990006666',consent:true,consentVersion:config.CONSENT_VERSION};
+ assert.equal((await app.inject({method:'POST',url,payload,headers:{origin:config.PUBLIC_ORIGIN}})).statusCode,401);
+ const first=await app.inject({method:'POST',url,payload,headers});
+ assert.equal(first.statusCode,200,first.body);
+ const retry=await app.inject({method:'POST',url,payload,headers});
+ assert.equal(retry.statusCode,200,retry.body);
+ assert.deepEqual(retry.json(),{ok:true,id:first.json().id,duplicate:true});
+ assert.equal((await app.inject({method:'POST',url:'/api/v1/leads',payload,headers})).statusCode,403);
+ assert.equal((await app.inject({url:'/api/v1/me/notifications',headers})).statusCode,403);
+ const lead=(await db.query('select source,user_id from leads where id=$1',[first.json().id])).rows[0];
+ assert.deepEqual(lead,{source:'pwa-contact',user_id:null});
+ assert.equal((await db.query("select id from outbox_events where aggregate_id=$1 and topic='manager.new_lead'",[first.json().id])).rows.length,1);
+});

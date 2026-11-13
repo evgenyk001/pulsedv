@@ -30,8 +30,8 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
  if(runtime.publicPreview){
   const method=(options.method??"GET").toUpperCase();
   const publicRead=method==="GET"&&path.startsWith("/public/");
-  const analyticsPost=method==="POST"&&(path==="/auth/session"||path==="/events");
-  if(!publicRead&&!analyticsPost)throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
+  const guestPost=method==="POST"&&(path==="/auth/session"||path==="/events"||path==="/public/pwa/contact");
+  if(!publicRead&&!guestPost)throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
  }
  const controller=new AbortController();
  const sources=[options.signal,pageRequestSignal()].filter((signal):signal is AbortSignal=>!!signal);
@@ -204,7 +204,7 @@ export async function updateRemote(kind:'leads'|'tasks',id:string,patch:Record<s
  const item=runtime.snapshot[kind].find(x=>x.id===id);if(!item&&!patch.expectedUpdatedAt)throw new Error('Запись не найдена');
  try{await api('/control/'+kind+'/'+id,{method:'PATCH',body:JSON.stringify({...patch,expectedUpdatedAt:patch.expectedUpdatedAt??item?.updatedAt})});await Promise.all([refreshControlResource(kind),refreshControlPulse()]);}catch(error){runtimeError(error);throw error;}
 }
-export async function createRemoteLead(payload:Record<string,unknown>){return visitorApi('/leads',{method:'POST',body:JSON.stringify({...payload,consent:true,consentVersion:runtime.consentVersion})});}
+export async function createRemoteLead(payload:Record<string,unknown>){const send=runtime.publicPreview?sessionApi:visitorApi;return send(runtime.publicPreview?'/public/pwa/contact':'/leads',{method:'POST',body:JSON.stringify({...payload,consent:true,consentVersion:runtime.consentVersion})});}
 
 type QueuedEvent={idempotencyKey:string;eventType:string;entityType:string|null;entityId:string|null;metadata:Record<string,unknown>;occurredAt:string};
 const QUEUE='pulse.dv.api.events.v1';
