@@ -29,10 +29,3 @@
 .pwaAccountLink{padding:18px 0 8px}.pwaAccountLink strong{font-size:13px}.pwaAccountLink p{font-size:12px;line-height:1.6;color:var(--muted-foreground);margin:7px 0 15px}.pwaAccountLink a{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 16px;border-radius:999px;background:var(--muted);color:var(--foreground);font-size:12px;font-weight:550;text-decoration:none}.pwaPreference p .pwaSystemIcon{display:inline-block;width:14px;height:16px;vertical-align:-3px}
 
 .pwaInstall__steps strong{display:inline-flex;align-items:center;gap:5px;vertical-align:middle}.pwaInstall__steps strong svg{flex:none;margin:0}
-
-@media(min-width:361px){
- .pwaInstall{padding-inline:20px}
- .pwaInstall h1{font-size:clamp(29px,7.7vw,34px)}
- .pwaInstall__steps li{font-size:17px;line-height:1.5}
- .pwaInstall__steps{max-width:370px}
-}
