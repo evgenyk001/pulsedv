@@ -26,12 +26,34 @@ export function AppShell({children}:{children:React.ReactNode}){
   const location=useLocation();
   const control=usePulseControlState();
   const [showOnboarding,setShowOnboarding]=React.useState(()=>control.content.onboardingEnabled&&safeLocalStorage.getItem("pulse_onboarding_version")!==control.content.onboardingVersion);
+  const [startupSettled,setStartupSettled]=React.useState(()=>!runtime.browserMode);
   const [storyOverlayOpen,setStoryOverlayOpen]=React.useState(false);
   const chatRoute=location.pathname==="/journey"&&(new URLSearchParams(location.search).has("lead")||new URLSearchParams(location.search).has("compose"));
   const propertyRoute=location.pathname.startsWith("/property/");
   const legalRoute=['/privacy','/personal-data-consent'].includes(location.pathname);
   const hideNav=propertyRoute||chatRoute;
-  const onboardingVisible=showOnboarding&&!['/privacy','/personal-data-consent'].includes(location.pathname)&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled;
+  const onboardingVisible=startupSettled&&showOnboarding&&!['/privacy','/personal-data-consent'].includes(location.pathname)&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled;
+
+  React.useEffect(()=>{
+    if(!runtime.browserMode)return;
+    const viewport=window.visualViewport;
+    let timer:number;
+    const settle=()=>setStartupSettled(true);
+    const schedule=()=>{
+      window.clearTimeout(timer);
+      timer=window.setTimeout(settle,350);
+    };
+    const deadline=window.setTimeout(settle,1200);
+    viewport?.addEventListener("resize",schedule);
+    window.addEventListener("resize",schedule);
+    schedule();
+    return ()=>{
+      window.clearTimeout(timer);
+      window.clearTimeout(deadline);
+      viewport?.removeEventListener("resize",schedule);
+      window.removeEventListener("resize",schedule);
+    };
+  },[]);
 
   React.useEffect(()=>{
     const version=control.content.onboardingVersion;
