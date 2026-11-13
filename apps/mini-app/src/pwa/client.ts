@@ -15,8 +15,17 @@ export async function registerPwa(){
  if(!isPwa||!('serviceWorker' in navigator)||!window.isSecureContext)return;
  try{
   const registration=await navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js',{scope:import.meta.env.BASE_URL,updateViaCache:'none'});
-  const notice=()=>{if(registration.waiting)window.dispatchEvent(new Event('pulse:pwa-update'))};
-  notice();registration.addEventListener('updatefound',()=>registration.installing?.addEventListener('statechange',notice));
+  if(import.meta.env.VITE_PWA_PREVIEW!=='true'){
+   const notice=()=>{
+    if(registration.active&&registration.waiting&&navigator.serviceWorker.controller){
+     window.dispatchEvent(new Event('pulse:pwa-update'));
+    }
+   };
+   const watchInstallation=()=>registration.installing?.addEventListener('statechange',notice);
+   notice();
+   watchInstallation();
+   registration.addEventListener('updatefound',watchInstallation);
+  }
   let lastUpdate=Date.now();document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastUpdate>60000){lastUpdate=Date.now();void registration.update().catch(()=>{})}});
   navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='PULSE_OPEN'){try{const url=new URL(e.data.url,location.origin);if(url.origin===location.origin&&url.pathname===import.meta.env.BASE_URL)location.hash=url.hash}catch{}}});
  }catch{window.dispatchEvent(new Event('pulse:pwa-unavailable'))}

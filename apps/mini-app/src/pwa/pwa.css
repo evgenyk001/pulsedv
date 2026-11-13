@@ -30,5 +30,11 @@
 
 .pwaInstall__steps strong{display:inline-flex;align-items:center;gap:5px;vertical-align:middle}.pwaInstall__steps strong svg{flex:none;margin:0}
 
-.pwaInstall__action{display:flex;align-items:flex-start;gap:6px;margin-top:2px}
-.pwaInstall__action svg{flex:none;margin:1px 0 0}
+.pwaInstall[data-install-platform="ios"] .pwaInstall__steps li{
+ display:grid;
+ grid-template-columns:1.25em 22px minmax(0,1fr);
+ column-gap:8px;
+ align-items:start;
+ line-height:22px;
+}
+.pwaInstall[data-install-platform="ios"] .pwaInstall__steps li>svg{display:block;margin:0}

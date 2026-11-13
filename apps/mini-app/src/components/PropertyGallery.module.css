@@ -36,3 +36,6 @@
 @media(prefers-reduced-motion:reduce){.fullRail,.header,.footer,.previous,.next,.viewer[data-settling] .fullRail{transition:none}}
 
 .viewer{background:transparent}
+
+:global(.pulse-pwa) .viewer{height:auto}
+:global(.pulse-pwa) .header{background:#0c1118}
