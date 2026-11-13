@@ -84,7 +84,7 @@
 }
 :global(.pulse-pwa) .primary{
   position:relative;
-  top:6px;
+  inset:6px auto auto;
   width:85%;
   height:46px;
   font-size:18px;
