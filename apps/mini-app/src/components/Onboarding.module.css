@@ -49,6 +49,7 @@
   height:100%;
   aspect-ratio:auto;
   container-type:size;
+  --art-height:min(calc(100cqw * 1672 / 941),calc(100cqh / .85));
 }
 :global(.pulse-pwa) .screen,
 :global(.pulse-pwa) .skipCover{
@@ -56,18 +57,17 @@
 }
 :global(.pulse-pwa) .screen{
   inset:50% auto auto 50%;
-  width:min(100cqw,calc(100cqh * 941 / (1672 * .85)));
-  height:auto;
+  width:100%;
+  height:var(--art-height);
+  object-fit:fill;
   max-width:none;
   transform:translate(-50%,-42.5%);
   clip-path:inset(0 0 15% 0);
 }
 :global(.pulse-pwa) .skipCover{
-  --art-width:min(100cqw,calc(100cqh * 941 / (1672 * .85)));
-  top:calc((100cqh - var(--art-width) * 1672 * .85 / 941) / 2);
-  right:calc((100cqw - var(--art-width)) / 2);
-  width:calc(var(--art-width) * .30);
-  height:calc(var(--art-width) * 1672 * .09 / 941);
+  top:calc((100% - var(--art-height) * .85) / 2);
+  right:0;
+  height:calc(var(--art-height) * .09);
 }
 :global(.pulse-pwa) .footer{
   position:static;
@@ -84,3 +84,7 @@
   font-size:18px;
 }
 :global(.pulse-pwa) .pagination{position:relative;inset:auto;transform:none}
+
+@media(orientation:landscape) and (max-height:540px){
+  :global(.pulse-pwa) .canvas{width:min(100%,calc(100dvh * .56))}
+}
