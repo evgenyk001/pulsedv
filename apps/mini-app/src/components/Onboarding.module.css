@@ -26,12 +26,14 @@
   top:var(--onboarding-viewport-top,0px);
   height:var(--onboarding-viewport-height,100dvh);
   bottom:auto;
+  overflow-y:auto;
 }
 :global(.pulse-pwa) .stage{
   top:calc(var(--pulse-safe-top) + 6px);
   bottom:max(10px,calc(var(--pulse-safe-bottom) - 12px));
   grid-template-rows:44px minmax(0,1fr) 86px;
   gap:6px;
+  overflow:visible;
 }
 :global(.pulse-pwa) .topControls{
   width:min(100%,480px);
@@ -90,6 +92,11 @@
   font-size:18px;
 }
 :global(.pulse-pwa) .pagination{position:relative;inset:auto;transform:none}
+
+@media(orientation:portrait) and (min-height:700px){
+  :global(.pulse-pwa) .canvas{transform:translateY(20px)}
+  :global(.pulse-pwa) .footer{transform:translateY(48px)}
+}
 
 @media(orientation:landscape) and (max-height:540px){
   :global(.pulse-pwa) .canvas{width:min(100%,calc(100dvh * .56))}
