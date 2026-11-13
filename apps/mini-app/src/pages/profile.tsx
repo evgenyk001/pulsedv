@@ -1,3 +1,4 @@
+import {runtime as previewRuntime} from '../../../../packages/pulse-data/runtime';
 import {isPwa} from '../pwa/client';
 import {PwaPreferences,PwaAccount} from '../pwa/PwaExperience';
 import {safeLocalStorage} from '../../../../packages/browser/storage';
@@ -6,7 +7,7 @@ import {PwaSecurityPreferences} from '../pwa/PwaPartnerSecurity';
 import {PartnerSecurityPreferences} from '../components/PartnerSecurity';
 import {IconTile} from '../components/IconTile';
 import {AnnouncementPreferences} from '../components/AnnouncementPreferences';
-import {GroupedMenu,MenuLink,MenuButton} from "../components/GroupedMenu";
+import {GroupedMenu,MenuLink,MenuButton,MenuInfo} from "../components/GroupedMenu";
 import {useClientJourneys} from "../helpers/useClientJourneys";
 import React from "react";
 import { Link } from "react-router-dom";
@@ -64,8 +65,8 @@ export default function ProfilePage(){
         </SheetContent>
       </Sheet>
     </GroupedMenu>
-    <PwaAccount/><PwaPreferences/>
-    {isPwa?<><PwaAnnouncementPreferences/><PwaSecurityPreferences/></>:<><AnnouncementPreferences/><PartnerSecurityPreferences/></>}
+    {previewRuntime.publicPreview?<GroupedMenu title="Аккаунт"><MenuInfo icon={<ShieldCheck/>} title="Настройки после входа" description="Уведомления, анонсы и защита партнёрского кабинета доступны после подключения аккаунта."/></GroupedMenu>:<><PwaAccount/><PwaPreferences/></>}
+    {previewRuntime.publicPreview?null:isPwa?<><PwaAnnouncementPreferences/><PwaSecurityPreferences/></>:<><AnnouncementPreferences/><PartnerSecurityPreferences/></>}
     <GroupedMenu title="О приложении">
       <MenuLink to="/privacy" icon={<ShieldCheck/>} title="Персональные данные"/>
       <Sheet>

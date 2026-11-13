@@ -16,3 +16,7 @@
 .activePill{position:absolute;z-index:1;left:2px;top:13px;width:24px;height:6px;border-radius:999px;background:#ff001b;pointer-events:none;transition:transform .32s cubic-bezier(.22,1,.36,1)}
 .skip:focus-visible,.primary:focus-visible,.pagination button:focus-visible{outline:2px solid #20242a;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.primary,.activePill{transition:none}}
+
+:global(.pulse-pwa) .overlay{height:auto}
+:global(.pulse-pwa) .stage{top:calc(var(--pulse-safe-top) + 12px);container-type:size}
+:global(.pulse-pwa) .canvas{width:min(100cqw,calc(100cqh * 941 / 1672))}

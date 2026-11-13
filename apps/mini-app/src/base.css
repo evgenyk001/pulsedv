@@ -223,3 +223,5 @@ html{scroll-padding-bottom:calc(108px + var(--pulse-safe-bottom))}
 
 /* Telegram owns back navigation; keep the browser fallback wired but out of layout. */
 html[data-native-back] [data-back-link],html[data-native-back] [data-app-back-row]{display:none!important}
+
+:root.pulse-pwa{--pulse-safe-top:env(safe-area-inset-top,0px);--pulse-safe-right:env(safe-area-inset-right,0px);--pulse-safe-bottom:env(safe-area-inset-bottom,0px);--pulse-safe-left:env(safe-area-inset-left,0px)}

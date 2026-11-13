@@ -44,7 +44,7 @@ export function useClientNotifications(){
   for(const source of sources)window.addEventListener(source,refresh);window.addEventListener('storage',storage);
   return()=>{for(const source of sources)window.removeEventListener(source,refresh);window.removeEventListener('storage',storage);};
  },[cache]);
- const query=useQuery({queryKey:['client-notifications'],queryFn:loadClientNotifications,staleTime:10000,refetchInterval:runtime.enabled?30000:false,refetchIntervalInBackground:false,refetchOnWindowFocus:true});
+ const query=useQuery({queryKey:['client-notifications'],queryFn:loadClientNotifications,enabled:!runtime.publicPreview,staleTime:10000,refetchInterval:runtime.enabled?30000:false,refetchIntervalInBackground:false,refetchOnWindowFocus:true});
  const mark=useMutation({mutationFn:markClientNotifications,onSuccess:data=>cache.setQueryData(['client-notifications'],data)});
  const dismiss=useMutation({mutationFn:dismissClientNotifications,scope:{id:'dismiss-notifications'},onSuccess:data=>cache.setQueryData(['client-notifications'],data)});
  return {...query,mark,dismiss};
