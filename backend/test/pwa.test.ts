@@ -150,7 +150,7 @@ test('PWA guests can submit an idempotent callback without opening account route
  assert.equal(inbox.json().items.find((item:{kind:string})=>item.kind==='message')?.body,'Ответ из Control');
  const thread=await app.inject({url:'/api/v1/me/journeys/'+leadId,headers});
  assert.equal(thread.statusCode,200,thread.body);
- const other=await app.inject({method:'POST',url,payload:{...payload,idempotencyKey:randomUUID()},headers:stranger.headers});
+ const other=await app.inject({method:'POST',url,remoteAddress:'192.0.2.2',payload:{...payload,idempotencyKey:randomUUID()},headers:stranger.headers});
  assert.equal(other.statusCode,200,other.body);
  assert.equal((await app.inject({url:'/api/v1/me/journeys/'+leadId,headers:stranger.headers})).statusCode,404);
  const lead=(await db.query('select source,user_id from leads where id=$1',[first.json().id])).rows[0];
