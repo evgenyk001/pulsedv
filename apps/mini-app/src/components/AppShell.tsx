@@ -1,3 +1,4 @@
+import {BrandLoading} from "./BrandLoading";
 import {standalone} from '../pwa/client';
 import {runtime} from '../../../../packages/pulse-data/runtime';
 import {safeLocalStorage,safeSessionStorage} from '../../../../packages/browser/storage';
@@ -32,7 +33,8 @@ export function AppShell({children}:{children:React.ReactNode}){
   const propertyRoute=location.pathname.startsWith("/property/");
   const legalRoute=['/privacy','/personal-data-consent'].includes(location.pathname);
   const hideNav=propertyRoute||chatRoute;
-  const onboardingVisible=startupSettled&&showOnboarding&&!['/privacy','/personal-data-consent'].includes(location.pathname)&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled;
+  const onboardingRequested=showOnboarding&&!['/privacy','/personal-data-consent'].includes(location.pathname)&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled;
+  const onboardingVisible=startupSettled&&onboardingRequested;
 
   React.useEffect(()=>{
     if(!runtime.browserMode)return;
@@ -102,6 +104,8 @@ export function AppShell({children}:{children:React.ReactNode}){
 
     recordPulseEvent({eventType:"page_view",entityType:"route",entityId:location.pathname,metadata:{search:location.search}});
   },[location.pathname,location.search]);
+
+  if(onboardingRequested&&!startupSettled)return <BrandLoading fullScreen/>;
 
   return <NavigationMemory><div className={styles.viewport}>{!legalRoute&&<FavoriteSync/>}
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
