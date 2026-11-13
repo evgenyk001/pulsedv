@@ -35,17 +35,21 @@ export function Onboarding({onDone}:{onDone:()=>void}){
     const viewport=window.visualViewport;
     const syncViewport=()=>{
       const height=viewport?.height||window.innerHeight;
+      root.style.setProperty("--onboarding-viewport-top",`${viewport?.offsetTop??0}px`);
       root.style.setProperty("--onboarding-viewport-height",`${height}px`);
     };
     syncViewport();
     viewport?.addEventListener("resize",syncViewport);
+    viewport?.addEventListener("scroll",syncViewport);
     window.addEventListener("resize",syncViewport);
     root.classList.add(styles.onboardingOpen);
     if(theme)theme.content="#ffffff";
     return ()=>{
       viewport?.removeEventListener("resize",syncViewport);
+      viewport?.removeEventListener("scroll",syncViewport);
       window.removeEventListener("resize",syncViewport);
       root.style.removeProperty("--onboarding-viewport-height");
+      root.style.removeProperty("--onboarding-viewport-top");
       root.classList.remove(styles.onboardingOpen);
       if(theme&&previous!==undefined)theme.content=previous;
     };

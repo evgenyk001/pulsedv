@@ -22,10 +22,15 @@
   overflow:hidden;
   overscroll-behavior:none;
 }
-:global(.pulse-pwa) .overlay{height:var(--onboarding-viewport-height,100dvh);bottom:auto}
+:global(.pulse-pwa) .overlay{
+  top:var(--onboarding-viewport-top,0px);
+  height:var(--onboarding-viewport-height,100dvh);
+  bottom:auto;
+}
 :global(.pulse-pwa) .stage{
   top:calc(var(--pulse-safe-top) + 6px);
-  grid-template-rows:44px minmax(0,1fr) auto;
+  bottom:max(18px,var(--pulse-safe-bottom));
+  grid-template-rows:44px minmax(0,1fr) 92px;
   gap:6px;
 }
 :global(.pulse-pwa) .topControls{
@@ -72,6 +77,7 @@
   width:min(100%,480px);
   display:grid;
   justify-items:center;
+  align-self:end;
   gap:8px;
   padding-bottom:6px;
 }
