@@ -29,9 +29,11 @@
 }
 :global(.pulse-pwa) .stage{
   top:calc(var(--pulse-safe-top) + 6px);
-  bottom:max(20px,var(--pulse-safe-bottom));
+  bottom:0;
+  box-sizing:border-box;
+  padding-bottom:max(16px,calc(var(--pulse-safe-bottom) - 12px));
   grid-template-rows:44px minmax(0,1fr) auto;
-  gap:10px;
+  row-gap:0;
 }
 :global(.pulse-pwa) .topControls{
   width:min(100%,480px);
@@ -49,7 +51,7 @@
 :global(.pulse-pwa) .skip span{padding-inline:14px}
 :global(.pulse-pwa) .canvas{
   width:min(100%,480px);
-  height:calc(100% - 14px);
+  height:100%;
   align-self:end;
   aspect-ratio:auto;
   container-type:size;
@@ -60,16 +62,16 @@
   position:absolute;
 }
 :global(.pulse-pwa) .screen{
-  inset:50% auto auto 50%;
+  inset:auto 0 0;
   width:100%;
   height:var(--art-height);
   object-fit:fill;
   max-width:none;
-  transform:translate(-50%,-42.5%);
+  bottom:calc(var(--art-height) * -.15);
   clip-path:inset(0 0 15% 0);
 }
 :global(.pulse-pwa) .skipCover{
-  top:calc((100% - var(--art-height) * .85) / 2);
+  top:calc(100% - var(--art-height) * .85);
   right:0;
   height:calc(var(--art-height) * .09);
 }
@@ -79,8 +81,8 @@
   display:grid;
   justify-items:center;
   align-self:end;
-  gap:8px;
-  padding-top:8px;
+  gap:4px;
+  padding-top:20px;
 }
 :global(.pulse-pwa) .primary{
   position:static;
