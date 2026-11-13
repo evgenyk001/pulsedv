@@ -140,12 +140,24 @@ test('PWA guests can submit an idempotent callback without opening account route
  assert.equal((await app.inject({url:'/api/v1/me/notifications',headers})).statusCode,200);
  const stranger=await session();
  assert.equal((await app.inject({url:'/api/v1/me/journeys/'+first.json().id,headers:stranger.headers})).statusCode,403);
+ const endpoint='https://web.push.apple.com/guest-reply-test';
+ const keys={p256dh:Buffer.concat([Buffer.from([4]),Buffer.alloc(64,1)]).toString('base64url'),auth:Buffer.alloc(16,2).toString('base64url')};
+ const subscribed=await app.inject({method:'POST',url:'/api/v1/me/push/subscribe',payload:{endpoint,keys},headers});
+ assert.equal(subscribed.statusCode,200,subscribed.body);
  const leadId=first.json().id;
  await db.query("insert into team_members(name,email,password_hash,role) values('Owner','reply-owner@test.ru',$1,'owner')",[await hashPassword('test-long-owner-password')]);
  const login=await app.inject({method:'POST',url:'/api/v1/control/login',headers:{origin:config.PUBLIC_ORIGIN},payload:{email:'reply-owner@test.ru',password:'test-long-owner-password'}});
  assert.equal(login.statusCode,200,login.body);
  const reply=await app.inject({method:'POST',url:'/api/v1/control/journeys/'+leadId,headers:{origin:config.PUBLIC_ORIGIN},cookies:{pulse_control:login.cookies[0].value},payload:{revision:0,command:{type:'message',id:randomUUID(),text:'Ответ из Control'}}});
  assert.equal(reply.statusCode,200,reply.body);
+ const delivered:string[]=[];
+ await deliverWebPush(db,config,async(sub,payload)=>{
+  assert.equal(sub.endpoint,endpoint);
+  delivered.push(payload);
+ });
+ assert.equal(delivered.length,1);
+ assert.match(JSON.parse(delivered[0]).url,/pwa-preview\/#\/journey/);
+ assert.doesNotMatch(delivered[0],/Ответ из Control/);
  const inbox=await app.inject({url:'/api/v1/me/notifications',headers});
  assert.equal(inbox.json().items.find((item:{kind:string})=>item.kind==='message')?.body,'Ответ из Control');
  const thread=await app.inject({url:'/api/v1/me/journeys/'+leadId,headers});

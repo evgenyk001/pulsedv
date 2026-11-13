@@ -29,7 +29,7 @@ export class ApiError extends Error{constructor(public status:number,message:str
 function guestConversation(path:string,method:string){
  const route=path.split('?')[0];
  if(method==="GET")return route==="/me/notifications"||route==="/me/journeys"||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/messages)?$/.test(route);
- return method==="POST"&&(/^\/me\/notifications\/(read|dismiss)$/.test(route)||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/read)?$/.test(route));
+ return method==="POST"&&(/^\/me\/(?:notifications\/(read|dismiss)|push\/(subscribe|unsubscribe))$/.test(route)||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/read)?$/.test(route));
 }
 export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
  if(runtime.publicPreview){

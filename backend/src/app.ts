@@ -94,7 +94,7 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
   const guestConversation=!row.user_id&&request.headers.authorization?.startsWith('Bearer ')
    &&(request.method==='GET'
     ? /^\/api\/v1\/me\/(notifications|journeys(?:\/:id(?:\/messages)?)?)$/.test(route)
-    : request.method==='POST'&&/^\/api\/v1\/me\/(notifications\/(read|dismiss)|journeys\/:id(?:\/read)?)$/.test(route))
+    : request.method==='POST'&&/^\/api\/v1\/me\/(notifications\/(read|dismiss)|push\/(subscribe|unsubscribe)|journeys\/:id(?:\/read)?)$/.test(route))
    &&(await db.query("select 1 from leads where session_id=$1 and source='pwa-contact' limit 1",[row.id])).rows.length>0;
   if(config.REQUIRE_TELEGRAM_PHONE&&!guestConversation&&((route.startsWith('/api/v1/me/')&&!route.startsWith('/api/v1/me/account')&&route!=='/api/v1/me/acquisition')||route==='/api/v1/leads')&&!await registeredPhone(db,row.user_id,config.CONSENT_VERSION))throw new HttpError(403,'Подтвердите номер телефона, чтобы продолжить');
   await observeVisitor(db,request,row.id);

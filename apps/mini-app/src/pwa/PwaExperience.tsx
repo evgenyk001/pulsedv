@@ -5,7 +5,7 @@ import {useClientNotifications} from '../helpers/useClientNotifications';
 import {useQuery} from '@tanstack/react-query';
 import {GroupedMenu,MenuToggle,MenuButton,MenuInfo,MenuExternalLink} from '../components/GroupedMenu';
 import {appleDevice,standalone,install,canInstall,enablePush,disablePush,logoutPwa,pwaConfig,isPwa} from './client';
-import {visitorApi} from '../../../../packages/pulse-data/runtime';
+import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import './pwa.css';
 export function PwaStatus(){
  const [online,setOnline]=React.useState(navigator.onLine),[update,setUpdate]=React.useState(false),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
@@ -21,9 +21,9 @@ export function PwaPreferences(){
  const toggle=async()=>{if(busy)return;setBusy(true);setError('');try{if(enabled)await disablePush();else await enablePush();setEnabled(!enabled)}catch(e){setError(e instanceof Error?e.message:'Не удалось изменить уведомления')}finally{setBusy(false)}};
  const logout=async()=>{setBusy(true);setError('');try{await logoutPwa()}catch{setError('Не удалось выйти. Проверьте интернет и повторите.');setBusy(false)}};
  return <GroupedMenu title="Приложение" caption={error||undefined}>
-  <MenuToggle icon={<Bell/>} title="Системные уведомления" description={enabled?'На этом устройстве':!supported?'Доступны в установленном приложении':!ready?'Пока недоступны':'Сообщения, показы и новости'} checked={enabled} disabled={busy||!supported||(!ready&&!enabled)} onCheckedChange={()=>void toggle()}/>
+  <MenuToggle icon={<Bell/>} title="Системные уведомления" description={enabled?'На этом устройстве':!supported?'Доступны в установленном приложении':!ready?'Пока недоступны':runtime.publicPreview?'Ответы менеджера':'Сообщения, показы и новости'} checked={enabled} disabled={busy||!supported||(!ready&&!enabled)} onCheckedChange={()=>void toggle()}/>
   {!standalone()&&<MenuButton icon={<Download/>} title="Добавить на главный экран" description={appleDevice()?'Поделиться → На экран «Домой»':'Установка приложения'} onClick={()=>{if(canInstall())void install().catch(()=>setError('Откройте меню браузера и выберите установку'));else setError(appleDevice()?'В Safari нажмите «Поделиться» → «На экран Домой»':'В меню браузера выберите «Установить приложение»')}}/>}
-  <MenuButton icon={<LogOut/>} title="Выйти из аккаунта" disabled={busy} onClick={()=>void logout()}/>{error&&<span className="sr-only" role="alert">{error}</span>}
+  {!runtime.publicPreview&&<MenuButton icon={<LogOut/>} title="Выйти из аккаунта" disabled={busy} onClick={()=>void logout()}/>}{error&&<span className="sr-only" role="alert">{error}</span>}
  </GroupedMenu>;
 }
 

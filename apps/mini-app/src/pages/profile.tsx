@@ -65,7 +65,8 @@ export default function ProfilePage(){
         </SheetContent>
       </Sheet>
     </GroupedMenu>
-    {previewRuntime.publicPreview?<GroupedMenu title="Аккаунт"><MenuInfo icon={<ShieldCheck/>} title="Настройки после входа" description="Уведомления, анонсы и защита партнёрского кабинета доступны после подключения аккаунта."/></GroupedMenu>:<><PwaAccount/><PwaPreferences/></>}
+    {previewRuntime.publicPreview?<GroupedMenu title="Аккаунт"><MenuInfo icon={<ShieldCheck/>} title="Настройки после входа" description="Уведомления, анонсы и защита партнёрского кабинета доступны после подключения аккаунта."/></GroupedMenu>:<PwaAccount/>}
+    <PwaPreferences/>
     {previewRuntime.publicPreview?null:isPwa?<><PwaAnnouncementPreferences/><PwaSecurityPreferences/></>:<><AnnouncementPreferences/><PartnerSecurityPreferences/></>}
     <GroupedMenu title="О приложении">
       <MenuLink to="/privacy" icon={<ShieldCheck/>} title="Персональные данные"/>

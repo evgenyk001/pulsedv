@@ -37,7 +37,8 @@ export async function verifyPhoneCode(challengeId:string,code:string,channel:'ca
  replaceVisitorSession(session);window.dispatchEvent(new Event('pulse:identity-ready'));
 }
 function bytes(key:string){const padded=key.replace(/-/g,'+').replace(/_/g,'/');return Uint8Array.from(atob(padded),c=>c.charCodeAt(0));}
-const PUSH_ID='pulse.pwa.push-device';
+const PUSH_ID='pulse.pwa.push-device:'+import.meta.env.BASE_URL;
+const LEGACY_PUSH_ID='pulse.pwa.push-device';
 export async function enablePush(){
  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))throw Error('Этот браузер не поддерживает push. Откройте установленное приложение.');
  if(appleDevice()&&!standalone())throw Error('Сначала добавьте PULSEDV.RU на экран «Домой» и откройте с иконки.');
@@ -53,11 +54,11 @@ export async function enablePush(){
  catch(e){await subscription.unsubscribe();throw e}
 }
 export async function disablePush(){
- let id:string|null=null;try{id=localStorage.getItem(PUSH_ID)}catch{}
+ let id:string|null=null;try{id=localStorage.getItem(PUSH_ID)??(import.meta.env.VITE_PWA_PREVIEW==='true'?null:localStorage.getItem(LEGACY_PUSH_ID))}catch{}
  try{if(id)await visitorApi('/me/push/unsubscribe',{method:'POST',body:JSON.stringify({id})})}
  finally{
   try{if('serviceWorker' in navigator){const registration=await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL);await (await registration?.pushManager.getSubscription())?.unsubscribe()}}
-  finally{try{localStorage.removeItem(PUSH_ID)}catch{}}
+  finally{try{localStorage.removeItem(PUSH_ID);if(import.meta.env.VITE_PWA_PREVIEW!=='true')localStorage.removeItem(LEGACY_PUSH_ID)}catch{}}
  }
 }
 export function clearPwaPersonalCaches(){

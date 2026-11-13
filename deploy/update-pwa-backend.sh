@@ -17,11 +17,25 @@ for service in api worker; do
   docker image tag "$(docker inspect --format '{{.Image}}' "$container")" "pulsedv-rollback:${backup##*/}-$service"
 done
 image="pulsedv-release:${backup##*/}"
-python3 - "$backup" "$image" <<'PY'
+docker build -t "$image" -f "$backup/build/deploy/Dockerfile.api" "$backup/build"
+keys=/root/pulsedv-web-push.json
+if [[ ! -s "$keys" ]]; then
+  temp_keys=$(mktemp /root/.pulsedv-web-push.XXXXXX)
+  if ! docker compose exec -T api node -e '
+const {WEB_PUSH_PUBLIC_KEY:publicKey,WEB_PUSH_PRIVATE_KEY:privateKey}=process.env;
+if(!publicKey||!privateKey)process.exit(1);
+process.stdout.write(JSON.stringify({publicKey,privateKey}));
+' > "$temp_keys"; then
+    docker run --rm --network none "$image" node -e 'process.stdout.write(JSON.stringify(require("web-push").generateVAPIDKeys()))' > "$temp_keys"
+  fi
+  mv -T "$temp_keys" "$keys"
+fi
+python3 - "$backup" "$image" "$keys" <<'PY'
 import json, sys
 from pathlib import Path
 folder = Path(sys.argv[1])
 original = json.loads((folder / 'compose.json').read_text())
+keys = json.loads(Path(sys.argv[3]).read_text())
 refs = {}
 new = {}
 old = {}
@@ -30,7 +44,7 @@ for service in ('api', 'worker'):
     refs[service] = spec.get('image') or f"{original['name']}-{service}"
     if '@' in refs[service] or refs[service].startswith('sha256:'):
         raise SystemExit('Нужна сверка закреплённого образа ' + service)
-    new[service] = {'image': sys.argv[2], 'pull_policy': 'never', 'environment': {'PWA_CALL_LOGIN': 'false', 'PWA_SMS_LOGIN': 'false'}}
+    new[service] = {'image': sys.argv[2], 'pull_policy': 'never', 'environment': {'PWA_CALL_LOGIN': 'false', 'PWA_SMS_LOGIN': 'false', 'WEB_PUSH_PUBLIC_KEY': keys['publicKey'], 'WEB_PUSH_PRIVATE_KEY': keys['privateKey']}}
     old[service] = {'image': f'pulsedv-rollback:{folder.name}-{service}', 'pull_policy': 'never'}
 for name, spec in [('candidate', new), ('rollback', old)]:
     (folder / f'{name}.json').write_text(json.dumps({'services': spec}))
@@ -41,7 +55,7 @@ roll() {
   shift
   docker compose --project-directory /opt/pulsedv -f "$backup/compose.json" -f "$backup/$mode.json" "$@"
 }
-docker build -t "$image" -f "$backup/build/deploy/Dockerfile.api" "$backup/build"
+
 roll candidate run --rm -T --no-deps api node --import tsx backend/src/preflight.ts
 scratch_db="pulse_pwa_check_$$"
 scratch_created=0
@@ -85,7 +99,10 @@ done
 python3 - "$backup/response.json" <<'PY'
 import json, sys
 with open(sys.argv[1]) as response:
-    if json.load(response).get('phoneLogin') is not False:
+    config = json.load(response)
+    if config.get('push') is not True:
+        raise SystemExit('Web Push не настроен')
+    if config.get('phoneLogin') is not False:
         raise SystemExit('Ожидалось, что вход по телефону выключен')
 PY
 while IFS= read -r ref; do docker image tag "$image" "$ref"; done < "$backup/image-refs"
