@@ -17,8 +17,13 @@
 .skip:focus-visible,.primary:focus-visible,.pagination button:focus-visible{outline:2px solid #20242a;outline-offset:3px}
 @media(prefers-reduced-motion:reduce){.primary,.activePill{transition:none}}
 
-:global(.pulse-pwa) .overlay{height:auto}
-:global(.pulse-pwa) .stage{top:calc(var(--pulse-safe-top) + 12px);container-type:size}
+.onboardingOpen,.onboardingOpen body{
+  background:#fff;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+:global(.pulse-pwa) .overlay{height:auto;min-height:100lvh}
+:global(.pulse-pwa) .stage{top:calc(var(--pulse-safe-top) + 12px);height:calc(100dvh - var(--pulse-safe-top) - var(--pulse-safe-bottom) - 12px);bottom:auto;container-type:size}
 :global(.pulse-pwa) .canvas{width:min(100cqw,calc(100cqh * 941 / 1672))}
 
 :global(.pulse-pwa) .canvas{

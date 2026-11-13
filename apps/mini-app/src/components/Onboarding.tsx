@@ -1,5 +1,7 @@
 import {safeLocalStorage} from '../../../../packages/browser/storage';
 import React from "react";
+import {createPortal} from "react-dom";
+import {isPwa} from "../pwa/client";
 import {ArrowRight} from "lucide-react";
 import { getPulseState, recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./Onboarding.module.css";
@@ -25,7 +27,20 @@ export function Onboarding({onDone}:{onDone:()=>void}){
     image.src=slides[index+1];
   },[index,loaded]);
 
-  return <section
+  React.useLayoutEffect(()=>{
+    if(!isPwa)return;
+    const root=document.documentElement;
+    const theme=document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const previous=theme?.content;
+    root.classList.add(styles.onboardingOpen);
+    if(theme)theme.content="#ffffff";
+    return ()=>{
+      root.classList.remove(styles.onboardingOpen);
+      if(theme&&previous!==undefined)theme.content=previous;
+    };
+  },[]);
+
+  const overlay=<section
     className={styles.overlay}
     aria-label="Онбординг PULSEDV"
     onTouchStart={e=>startX.current=e.touches[0]?.clientX??null}
@@ -54,4 +69,5 @@ export function Onboarding({onDone}:{onDone:()=>void}){
      </div>
     </div>
   </section>;
+  return isPwa?createPortal(overlay,document.body):overlay;
 }
