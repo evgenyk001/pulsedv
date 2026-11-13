@@ -90,7 +90,13 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
   const row=(await db.query("select s.id,s.user_id from auth_tokens t join sessions s on s.id=t.session_id where t.token_hash=$1 and t.kind='visitor' and t.expires_at>now()",[tokenHash(token)])).rows[0];
   if(!row)throw new HttpError(401,'Сессия истекла');request.visitor={sessionId:row.id,userId:row.user_id};
   const route=request.routeOptions.url||'';
-  if(config.REQUIRE_TELEGRAM_PHONE&&((route.startsWith('/api/v1/me/')&&!route.startsWith('/api/v1/me/account')&&route!=='/api/v1/me/acquisition')||route==='/api/v1/leads')&&!await registeredPhone(db,row.user_id,config.CONSENT_VERSION))throw new HttpError(403,'Подтвердите номер телефона, чтобы продолжить');
+  // An anonymous bearer can access its own PWA conversation. The route handlers enforce ownership.
+  const guestConversation=!row.user_id&&request.headers.authorization?.startsWith('Bearer ')
+   &&(request.method==='GET'
+    ? /^\/api\/v1\/me\/(notifications|journeys(?:\/:id(?:\/messages)?)?)$/.test(route)
+    : request.method==='POST'&&/^\/api\/v1\/me\/(notifications\/(read|dismiss)|journeys\/:id(?:\/read)?)$/.test(route))
+   &&(await db.query("select 1 from leads where session_id=$1 and source='pwa-contact' limit 1",[row.id])).rows.length>0;
+  if(config.REQUIRE_TELEGRAM_PHONE&&!guestConversation&&((route.startsWith('/api/v1/me/')&&!route.startsWith('/api/v1/me/account')&&route!=='/api/v1/me/acquisition')||route==='/api/v1/leads')&&!await registeredPhone(db,row.user_id,config.CONSENT_VERSION))throw new HttpError(403,'Подтвердите номер телефона, чтобы продолжить');
   await observeVisitor(db,request,row.id);
   await db.query("update sessions set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.id]);
   if(row.user_id)await db.query("update app_users set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.user_id]);

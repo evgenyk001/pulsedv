@@ -26,12 +26,17 @@ export function configureRuntime(input:{enabled:boolean;base?:string;role:'publi
 export function subscribeRuntime(listener:()=>void){window.addEventListener('pulse:runtime',listener);return()=>window.removeEventListener('pulse:runtime',listener);}
 export function runtimeError(error:unknown){runtime.error=error instanceof Error?error.message:'Не удалось выполнить запрос';notify();}
 export class ApiError extends Error{constructor(public status:number,message:string){super(message);}}
+function guestConversation(path:string,method:string){
+ const route=path.split('?')[0];
+ if(method==="GET")return route==="/me/notifications"||route==="/me/journeys"||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/messages)?$/.test(route);
+ return method==="POST"&&(/^\/me\/notifications\/(read|dismiss)$/.test(route)||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/read)?$/.test(route));
+}
 export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
  if(runtime.publicPreview){
   const method=(options.method??"GET").toUpperCase();
   const publicRead=method==="GET"&&path.startsWith("/public/");
   const guestPost=method==="POST"&&(path==="/auth/session"||path==="/events"||path==="/public/pwa/contact");
-  if(!publicRead&&!guestPost)throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
+  if(!publicRead&&!guestPost&&!guestConversation(path,method))throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
  }
  const controller=new AbortController();
  const sources=[options.signal,pageRequestSignal()].filter((signal):signal is AbortSignal=>!!signal);
@@ -81,7 +86,10 @@ async function sessionApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
 }
 // All account reads/writes wait for verified identity, independently of public catalog rendering.
 export async function visitorApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
- if(runtime.publicPreview)throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
+ if(runtime.publicPreview){
+  if(guestConversation(path,(options.method??"GET").toUpperCase()))return sessionApi<T>(path,options);
+  throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
+ }
  if(runtime.enabled&&runtime.role==='public'){
   if(runtime.publicIdentity==='error')throw new ApiError(0,runtime.publicIdentityError||'Не удалось подключить аккаунт');
   await connectPublicIdentity();

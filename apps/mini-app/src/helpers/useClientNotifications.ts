@@ -1,7 +1,7 @@
 import {safeLocalStorage} from '../../../../packages/browser/storage';
 import React from 'react';
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
-import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
+import {ApiError,runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import {loadJourneys} from '../../../../packages/journey/client';
 import {clientUpdates} from '../../../../packages/journey/updates';
 import {getMySearch} from './useMySearch';
@@ -20,7 +20,12 @@ async function localInbox():Promise<ClientInbox>{
  const dismissed=new Set(dismissedIds()),visible=items.filter(item=>!dismissed.has(item.id));return {items:visible,unreadCount:visible.filter(item=>!item.read).length};
 }
 export async function loadClientNotifications():Promise<ClientInbox>{
- if(runtime.enabled)return visitorApi('/me/notifications');
+ if(runtime.enabled){
+  try{return await visitorApi('/me/notifications')}catch(error){
+   if(runtime.publicPreview&&error instanceof ApiError&&error.status===403)return {items:[],unreadCount:0};
+   throw error;
+  }
+ }
  const inbox=await localInbox();return {...inbox,items:inbox.items.slice(0,80)};
 }
 async function markClientNotifications(command:{ids:string[]}|{all:true}):Promise<ClientInbox>{
@@ -44,7 +49,7 @@ export function useClientNotifications(){
   for(const source of sources)window.addEventListener(source,refresh);window.addEventListener('storage',storage);
   return()=>{for(const source of sources)window.removeEventListener(source,refresh);window.removeEventListener('storage',storage);};
  },[cache]);
- const query=useQuery({queryKey:['client-notifications'],queryFn:loadClientNotifications,enabled:!runtime.publicPreview,staleTime:10000,refetchInterval:runtime.enabled?30000:false,refetchIntervalInBackground:false,refetchOnWindowFocus:true});
+ const query=useQuery({queryKey:['client-notifications'],queryFn:loadClientNotifications,staleTime:10000,refetchInterval:runtime.enabled?(runtime.publicPreview?10000:30000):false,refetchIntervalInBackground:false,refetchOnWindowFocus:true});
  const mark=useMutation({mutationFn:markClientNotifications,onSuccess:data=>cache.setQueryData(['client-notifications'],data)});
  const dismiss=useMutation({mutationFn:dismissClientNotifications,scope:{id:'dismiss-notifications'},onSuccess:data=>cache.setQueryData(['client-notifications'],data)});
  return {...query,mark,dismiss};
