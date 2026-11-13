@@ -105,8 +105,6 @@ export function AppShell({children}:{children:React.ReactNode}){
     recordPulseEvent({eventType:"page_view",entityType:"route",entityId:location.pathname,metadata:{search:location.search}});
   },[location.pathname,location.search]);
 
-  if(onboardingRequested&&!startupSettled)return <BrandLoading fullScreen/>;
-
   return <NavigationMemory><div className={styles.viewport}>{!legalRoute&&<FavoriteSync/>}
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
     <main className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
@@ -114,5 +112,5 @@ export function AppShell({children}:{children:React.ReactNode}){
     </main>
     {!hideNav&&!legalRoute&&!storyOverlayOpen&&<BottomNav/>}
     {onboardingVisible&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}
-  </div></NavigationMemory>
+  </div>{onboardingRequested&&!startupSettled&&<BrandLoading fullScreen/>}</NavigationMemory>
 }
