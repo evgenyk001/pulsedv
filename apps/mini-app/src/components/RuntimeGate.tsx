@@ -40,11 +40,11 @@ export function RuntimeGate({children}:{children:React.ReactNode}){
   identityTask.current=task;void task.finally(()=>{identityTask.current=null});return task;
  },[]);
  React.useEffect(()=>{if(!runtime.browserMode)return;const expired=()=>{setRegistered(false);setConnected(false);if(!identityTask.current)void connect()};window.addEventListener('pulse:session-expired',expired);return()=>window.removeEventListener('pulse:session-expired',expired)},[connect]);
- const load=React.useCallback(async()=>{setError('');try{await initializePublicState();if(!active.current)return;setReady(true);void connect()}catch(e){if(active.current)setError(e instanceof Error?e.message:'Не удалось загрузить приложение')}},[connect]);
+ const load=React.useCallback(async()=>{setError('');try{await initializePublicState();if(!active.current)return;setReady(true);if(!runtime.publicPreview)void connect()}catch(e){if(active.current)setError(e instanceof Error?e.message:'Не удалось загрузить приложение')}},[connect]);
  React.useEffect(()=>{if(runtime.enabled)void load()},[load]);
  React.useEffect(()=>{
   if(!runtime.enabled)return;
-  const retry=()=>{if(pageIsLeaving()||document.visibilityState!=='visible')return;if(!ready)void load();else if(!connected)void connect();else void initializePublicState().catch(()=>{})};
+  const retry=()=>{if(pageIsLeaving()||document.visibilityState!=='visible')return;if(!ready)void load();else if(!connected&&!runtime.publicPreview)void connect();else void initializePublicState().catch(()=>{})};
   const sync=runtime.browserMode?window.setInterval(()=>{if(!document.hidden&&navigator.onLine)void initializePublicState().catch(()=>{})},60000):undefined;
   window.addEventListener('online',retry);document.addEventListener('visibilitychange',retry);
   const sdk=()=>{prepareTelegramWindow((window as any).Telegram?.WebApp);if(ready&&!connected)void connect()};window.addEventListener('pulse:telegram-sdk-ready',sdk);
@@ -53,7 +53,7 @@ export function RuntimeGate({children}:{children:React.ReactNode}){
  const path=(window.location.hash.slice(1)||'/').split('?')[0];
  if(!ready)return <BrandLoading fullScreen error={error} onRetry={()=>void load()}/>;
  // Only legal documents may render before identity and phone verification.
- if(runtime.enabled&&!['/privacy','/personal-data-consent'].includes(path)){
+ if(runtime.enabled&&!runtime.publicPreview&&!['/privacy','/personal-data-consent'].includes(path)){
   if(!connected)return <main className="telegramConnectionGate"><section role={connectionError?'alert':'status'} aria-label="Подключение аккаунта"><img src={import.meta.env.BASE_URL+'pulse-app-180-v3.png'} alt=""/><small>PULSEDV.RU</small><h1>{connectionError?'Давайте попробуем ещё раз':runtime.browserMode?'Подключаем аккаунт':'Подключаем Telegram'}</h1><p>{connectionError?'Не удалось подключить аккаунт. Проверьте соединение и повторите вход.':'Проверяем ваш аккаунт, чтобы безопасно продолжить вход.'}</p>{connectionError?<button onClick={()=>void connect()}>Повторить подключение</button>:<span className="telegramConnectionSpinner" aria-hidden="true"/>}</section></main>;
   if((runtime.requiresPhone||runtime.browserMode)&&!registered)return <PhoneRegistration onRegistered={()=>setRegistered(true)}/>;
  }

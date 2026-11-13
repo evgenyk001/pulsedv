@@ -11,7 +11,7 @@ if(isPwa)window.addEventListener('beforeinstallprompt',event=>{event.preventDefa
 export async function install(){if(!installPrompt)return false;const prompt=installPrompt;installPrompt=null;await prompt.prompt();return (await prompt.userChoice).outcome==='accepted';}
 export function canInstall(){return !!installPrompt;}
 export async function registerPwa(){
- if(isPwa&&import.meta.env.VITE_PULSE_MODE==='api'){const route=pwaStartRoute(location.hash.slice(1));if(route!=='/'){const manifest=document.querySelector<HTMLLinkElement>('link[rel="manifest"]');if(manifest)manifest.href='/api/v1/public/pwa-manifest?route='+encodeURIComponent(route)}}
+ if(isPwa&&import.meta.env.VITE_PWA_PREVIEW!=='true'&&import.meta.env.VITE_PULSE_MODE==='api'){const route=pwaStartRoute(location.hash.slice(1));if(route!=='/'){const manifest=document.querySelector<HTMLLinkElement>('link[rel="manifest"]');if(manifest)manifest.href='/api/v1/public/pwa-manifest?route='+encodeURIComponent(route)}}
  if(!isPwa||!('serviceWorker' in navigator)||!window.isSecureContext)return;
  try{
   const registration=await navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js',{scope:import.meta.env.BASE_URL,updateViaCache:'none'});

@@ -15,25 +15,26 @@ export type PageMeta={page:number;limit:number;total:number;hasMore:boolean;load
 const empty:Snapshot={state:{...DEFAULT_STATE,properties:[],banners:[]},version:0,leads:[],tasks:[],events:[],profiles:[],members:[],notifications:[],limited:false};
 const emptyCounts:ControlCounts={leadsTotal:0,activeLeads:0,newLeads:0,unassignedLeads:0,openTasks:0,overdueTasks:0,hotProfiles:0,leadStages:{new:0,contacted:0,qualified:0,showing:0,booking:0,deal:0,closed:0,lost:0}};
 const emptyPage=(limit:number):PageMeta=>({page:0,limit,total:0,hasMore:false,loading:false});
-export const runtime={browserMode:false,requiresPhone:false,enabled:false,base:'/api/v1',role:'public' as 'public'|'control',snapshot:empty,member:null as TeamMember|null,counts:emptyCounts,pages:{leads:emptyPage(300),tasks:emptyPage(300),events:emptyPage(500),profiles:emptyPage(300)} as Record<ControlResource,PageMeta>,dirty:false,saving:false,error:null as string|null,ready:false,publicIdentity:'idle' as 'idle'|'loading'|'ready'|'error',publicIdentityError:null as string|null,consentVersion:'2026-09-25',lastSync:null as string|null};
+export const runtime={publicPreview:false,browserMode:false,requiresPhone:false,enabled:false,base:'/api/v1',role:'public' as 'public'|'control',snapshot:empty,member:null as TeamMember|null,counts:emptyCounts,pages:{leads:emptyPage(300),tasks:emptyPage(300),events:emptyPage(500),profiles:emptyPage(300)} as Record<ControlResource,PageMeta>,dirty:false,saving:false,error:null as string|null,ready:false,publicIdentity:'idle' as 'idle'|'loading'|'ready'|'error',publicIdentityError:null as string|null,consentVersion:'2026-09-25',lastSync:null as string|null};
 const notify=(names:ControlResource[]|['state']|null=null)=>{
  if(typeof window==='undefined')return;
  const list=names??['state','leads','tasks','events','profiles'];
  for(const name of list)window.dispatchEvent(new Event('pulse:control-'+name));
  window.dispatchEvent(new Event('pulse:runtime'));
 };
-export function configureRuntime(input:{enabled:boolean;base?:string;role:'public'|'control';browserMode?:boolean}){runtime.browserMode=!!input.browserMode;runtime.enabled=input.enabled;runtime.base=(input.base||'/api/v1').replace(/\/$/,'');runtime.role=input.role;}
+export function configureRuntime(input:{enabled:boolean;base?:string;role:'public'|'control';browserMode?:boolean;publicPreview?:boolean}){runtime.publicPreview=!!input.publicPreview;runtime.browserMode=!!input.browserMode;runtime.enabled=input.enabled;runtime.base=(input.base||'/api/v1').replace(/\/$/,'');runtime.role=input.role;}
 export function subscribeRuntime(listener:()=>void){window.addEventListener('pulse:runtime',listener);return()=>window.removeEventListener('pulse:runtime',listener);}
 export function runtimeError(error:unknown){runtime.error=error instanceof Error?error.message:'Не удалось выполнить запрос';notify();}
 export class ApiError extends Error{constructor(public status:number,message:string){super(message);}}
 export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
+ if(runtime.publicPreview&&((options.method??"GET").toUpperCase()!=="GET"||!path.startsWith("/public/")))throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
  const controller=new AbortController();
  const sources=[options.signal,pageRequestSignal()].filter((signal):signal is AbortSignal=>!!signal);
  const abort=()=>{const source=sources.find(signal=>signal.aborted);controller.abort(source?.reason)};
  const timer=options.signal?undefined:setTimeout(()=>controller.abort(new DOMException('Request timed out','TimeoutError')),12000);
  for(const source of sources){source.addEventListener('abort',abort,{once:true});if(source.aborted)abort()}
  try{
-  const response=await fetch(runtime.base+path,{...options,credentials:'same-origin',headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers},signal:controller.signal});
+  const response=await fetch(runtime.base+path,{...options,credentials:runtime.publicPreview?'omit':'same-origin',headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers},signal:controller.signal});
   let body:any;
   try{body=await response.json()}catch(error){if(response.ok)throw error;body={}}
   if(!response.ok)throw new ApiError(response.status,runtime.role==='public'&&response.status>=500?'Не получилось выполнить действие. Попробуйте ещё раз.':body.error||'Не удалось выполнить запрос');
@@ -56,6 +57,7 @@ export function replaceVisitorSession(value:Session|null){
 
 export async function visitorSessionId(){return (await session()).sessionId;}
 async function session():Promise<Session>{
+ if(runtime.publicPreview)throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
  if(sessionPromise)return sessionPromise;
  sessionPromise=(async()=>{
   let stored:Session|null=null;try{stored=JSON.parse(safeLocalStorage.getItem(SESSION)||'null');}catch{}

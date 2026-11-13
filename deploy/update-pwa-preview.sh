@@ -12,19 +12,19 @@ web=$(docker compose ps -q web)
 test -n "$web"
 docker inspect --format '{{range .Mounts}}{{println .Type .Source .Destination}}{{end}}' "$web" |
   grep -Fx "bind $public /srv/landing-cinematic"
-if [[ -e "$target" || -L "$target" ]]; then
-  echo "Каталог предпросмотра уже существует: $target"
-  exit 1
-fi
 work=$(mktemp -d /root/pulsedv-pwa-preview.XXXXXX)
 stage=''
 container=''
 published=0
+previous=''
 cleanup() {
   local code=$?
   if [[ -n "$container" ]]; then docker rm -f "$container" >/dev/null || true; fi
   if [[ -n "$stage" ]]; then rm -rf -- "$stage"; fi
-  if (( code != 0 && published == 1 )); then mv -T "$target" "$work/failed-preview"; fi
+  if (( code != 0 )); then
+    if (( published == 1 )); then mv -T "$target" "$work/failed-preview"; fi
+    if [[ -n "$previous" ]]; then mv -T "$previous" "$target"; fi
+  fi
 }
 trap cleanup EXIT
 trap 'exit 130' INT
@@ -41,7 +41,8 @@ RUN npm ci --no-audit --no-fund
 COPY apps/mini-app apps/mini-app
 COPY packages packages
 COPY dist dist
-RUN npm run build:pwa:preview
+ENV VITE_APP_VARIANT=pwa VITE_PWA_PREVIEW=true VITE_PULSE_MODE=api VITE_API_BASE_URL=/api/v1
+RUN npm run build -w apps/mini-app
 DOCKERFILE
 image="pulsedv-pwa-preview:${release:0:12}"
 docker build -t "$image" "$work"
@@ -66,11 +67,17 @@ assert any(asset.endswith('.css') for asset in assets)
 assert all((directory / asset.removeprefix(base)).is_file() for asset in assets)
 (directory / '.preview-check-assets').write_text('\n'.join(assets))
 PY
+if [[ -e "$target" ]]; then
+  previous=$(mktemp -d "/opt/pulsedv-landing/.previous-pwa-preview.XXXXXX")
+  mv -T "$target" "$previous"
+fi
 mv -T "$stage" "$target"
 stage=''
 published=1
 url=https://pulsedv.ru/landing-cinematic/pwa-preview/
 get() { curl -fsS --retry 3 --max-time 15 --resolve pulsedv.ru:443:127.0.0.1 "$1" -o "$work/response"; }
+get https://pulsedv.ru/api/v1/public/state
+get https://pulsedv.ru/api/v1/public/catalog
 for file in index.html manifest.webmanifest sw.js; do
   path="$file"
   if [[ "$file" == index.html ]]; then path=''; fi

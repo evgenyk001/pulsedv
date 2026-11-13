@@ -5,3 +5,10 @@
 .propertyFrame{animation:none;transform:none}
 
 .contextBack{display:flex;align-items:center;gap:10px;margin-bottom:14px;color:var(--muted-foreground);font-size:12px}
+
+@media(max-width:540px){
+ .viewport[data-browser-app] .shell{
+  width:100%;
+  padding-inline:calc(14px + var(--pulse-safe-left)) calc(14px + var(--pulse-safe-right));
+ }
+}

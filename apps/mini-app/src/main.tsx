@@ -33,7 +33,7 @@ const PropertyPage=React.lazy(()=>import('./pages/property.$propertyId'));
 const PrivacyPage=React.lazy(()=>import('./pages/privacy'));
 const PersonalDataConsentPage=React.lazy(()=>import('./pages/personal-data-consent'));
 
-configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.meta.env.VITE_API_BASE_URL,role:"public",browserMode:isPwa});
+configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.meta.env.VITE_API_BASE_URL,role:"public",browserMode:isPwa,publicPreview:import.meta.env.VITE_PWA_PREVIEW==="true"});
 void registerPwa();
 
 const queryClient=new QueryClient({defaultOptions:{queries:{retry:(count,error)=>count<1&&(!(error instanceof ApiError)||error.status===0||error.status>=500),retryDelay:1000,refetchInterval:query=>isPwa&&query.queryKey[0]==="catalog"?60000:false}}});
