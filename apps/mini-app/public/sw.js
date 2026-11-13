@@ -1,9 +1,10 @@
 /* Public static assets only. No API, media, personal data, session tokens or HTML snapshots. */
-const CACHE='pulse-pwa-__BUILD__';
+const CACHE_PREFIX='pulse-pwa-'+self.location.pathname+'-';
+const CACHE=CACHE_PREFIX+'__BUILD__';
 const BASE=new URL('./',self.location.href);
 const safeAsset=url=>url.origin===BASE.origin&&url.pathname.startsWith(BASE.pathname+'assets/')&&/\.(?:js|css|woff2?)$/.test(url.pathname);
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll([new URL('offline.html',BASE).href,new URL('offline.js',BASE).href,new URL('pulse-app-192-v3.png',BASE).href]))));
-self.addEventListener('activate',event=>event.waitUntil((async()=>{const names=(await caches.keys()).filter(n=>n.startsWith('pulse-pwa-'));for(const name of names.slice(0,-2))await caches.delete(name);await self.clients.claim()})()));
+self.addEventListener('activate',event=>event.waitUntil((async()=>{const names=(await caches.keys()).filter(n=>n.startsWith(CACHE_PREFIX));for(const name of names.slice(0,-2))await caches.delete(name);await self.clients.claim()})()));
 self.addEventListener('message',event=>{if(event.data?.type==='PULSE_ACTIVATE')void self.skipWaiting()});
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);
