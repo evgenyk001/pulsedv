@@ -34,6 +34,7 @@ export function AppShell({children}:{children:React.ReactNode}){
   const legalRoute=['/privacy','/personal-data-consent'].includes(location.pathname);
   const hideNav=propertyRoute||chatRoute;
   const onboardingRequested=showOnboarding&&!['/privacy','/personal-data-consent'].includes(location.pathname)&&!hideNav&&location.pathname!=="/mortgage"&&control.content.onboardingEnabled;
+  const onboardingPending=onboardingRequested&&!startupSettled;
   const onboardingVisible=startupSettled&&onboardingRequested;
 
   React.useEffect(()=>{
@@ -105,12 +106,12 @@ export function AppShell({children}:{children:React.ReactNode}){
     recordPulseEvent({eventType:"page_view",entityType:"route",entityId:location.pathname,metadata:{search:location.search}});
   },[location.pathname,location.search]);
 
-  return <NavigationMemory><div className={styles.viewport}>{!legalRoute&&<FavoriteSync/>}
+  return <NavigationMemory><div className={styles.viewport} inert={onboardingPending} style={onboardingPending?{visibility:"hidden"}:undefined}>{!legalRoute&&<FavoriteSync/>}
     <div className={styles.ambientOne}/><div className={styles.ambientTwo}/>
     <main className={`${styles.shell} ${hideNav?styles.fullPage:""}`}>
       <ContextBack/><div key={location.pathname} className={`${styles.routeFrame} ${chatRoute?styles.chatRoute:propertyRoute?styles.propertyFrame:""}`}>{!onboardingVisible&&children}</div>
     </main>
     {!hideNav&&!legalRoute&&!storyOverlayOpen&&<BottomNav/>}
     {onboardingVisible&&<Onboarding onDone={()=>setShowOnboarding(false)}/>}
-  </div>{onboardingRequested&&!startupSettled&&<BrandLoading fullScreen/>}</NavigationMemory>
+  </div>{onboardingPending&&<BrandLoading fullScreen/>}</NavigationMemory>
 }
