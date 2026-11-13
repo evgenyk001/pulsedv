@@ -15,7 +15,21 @@ import {PersonalDataConsentDocument} from "../pages/personal-data-consent";
 export type LeadSheetProps={children:React.ReactNode;title?:string;project?:string;propertyId?:string;source?:string;context?:Record<string,unknown>;referralCode?:string;referralName?:string};
 
 export function LeadSheet(props:LeadSheetProps){
- const account=useQuery({queryKey:['visitor-account'],queryFn:()=>visitorApi<{registered:boolean}>('/me/account'),enabled:runtime.enabled,staleTime:30000});
+ const account=useQuery({queryKey:['visitor-account'],queryFn:()=>visitorApi<{registered:boolean}>('/me/account'),enabled:runtime.enabled&&!runtime.publicPreview,staleTime:30000});
+ if(runtime.publicPreview)return <Sheet>
+  <SheetTrigger asChild>{props.children}</SheetTrigger>
+  <SheetContent side="bottom" className={styles.sheet}>
+   <SheetClose className={styles.dismiss} aria-label="Закрыть"><X size={18}/></SheetClose>
+   <SheetHeader>
+    <SheetTitle>{props.title??"Связаться с менеджером"}</SheetTitle>
+    <SheetDescription>Откройте PULSE в Telegram и выберите «Персональный менеджер» в профиле.</SheetDescription>
+   </SheetHeader>
+   <a className={styles.submit} href="https://t.me/pulsedvbot?startapp" target="_blank" rel="noopener noreferrer"
+    onClick={()=>recordPulseEvent({eventType:"contact_click",entityType:props.propertyId?"property":"funnel",entityId:props.propertyId??props.source??"app",metadata:{source:props.source??"app"}})}>
+    Открыть PULSE в Telegram <ArrowRight size={17}/>
+   </a>
+  </SheetContent>
+ </Sheet>;
  if(runtime.enabled&&(account.isPending||account.isError))return React.cloneElement(props.children as React.ReactElement<any>,{disabled:account.isPending,onClick:()=>void account.refetch()});
  return runtime.enabled&&account.data?.registered?<AccountConversationEntry {...props}/>:<LegacyLeadSheet {...props}/>;
 }

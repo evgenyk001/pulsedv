@@ -27,7 +27,12 @@ export function subscribeRuntime(listener:()=>void){window.addEventListener('pul
 export function runtimeError(error:unknown){runtime.error=error instanceof Error?error.message:'Не удалось выполнить запрос';notify();}
 export class ApiError extends Error{constructor(public status:number,message:string){super(message);}}
 export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
- if(runtime.publicPreview&&((options.method??"GET").toUpperCase()!=="GET"||!path.startsWith("/public/")))throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
+ if(runtime.publicPreview){
+  const method=(options.method??"GET").toUpperCase();
+  const publicRead=method==="GET"&&path.startsWith("/public/");
+  const analyticsPost=method==="POST"&&(path==="/auth/session"||path==="/events");
+  if(!publicRead&&!analyticsPost)throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
+ }
  const controller=new AbortController();
  const sources=[options.signal,pageRequestSignal()].filter((signal):signal is AbortSignal=>!!signal);
  const abort=()=>{const source=sources.find(signal=>signal.aborted);controller.abort(source?.reason)};
@@ -57,7 +62,6 @@ export function replaceVisitorSession(value:Session|null){
 
 export async function visitorSessionId(){return (await session()).sessionId;}
 async function session():Promise<Session>{
- if(runtime.publicPreview)throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
  if(sessionPromise)return sessionPromise;
  sessionPromise=(async()=>{
   let stored:Session|null=null;try{stored=JSON.parse(safeLocalStorage.getItem(SESSION)||'null');}catch{}
@@ -77,6 +81,7 @@ async function sessionApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
 }
 // All account reads/writes wait for verified identity, independently of public catalog rendering.
 export async function visitorApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
+ if(runtime.publicPreview)throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
  if(runtime.enabled&&runtime.role==='public'){
   if(runtime.publicIdentity==='error')throw new ApiError(0,runtime.publicIdentityError||'Не удалось подключить аккаунт');
   await connectPublicIdentity();
@@ -215,11 +220,12 @@ function schedule(ms:number){if(timer)return;timer=setTimeout(()=>{timer=undefin
 export async function flushEvents(){
  if(flushing||!queue.length||!runtime.enabled)return;flushing=true;
  const batch=queue.slice(0,100);
- try{await visitorApi('/events',{method:'POST',body:JSON.stringify({events:batch})});queue=queue.filter(x=>!batch.some(b=>b.idempotencyKey===x.idempotencyKey));retry=0;persist();}
+ const send=runtime.publicPreview?sessionApi:visitorApi;
+ try{await send('/events',{method:'POST',body:JSON.stringify({events:batch})});queue=queue.filter(x=>!batch.some(b=>b.idempotencyKey===x.idempotencyKey));retry=0;persist();}
  catch(error){retry++;if(error instanceof ApiError&&error.status===400){
    // Isolate rejected events: one stale client event must not discard valid neighbours.
    for(const event of batch){
-    try{await visitorApi('/events',{method:'POST',body:JSON.stringify({events:[event]})});}
+    try{await send('/events',{method:'POST',body:JSON.stringify({events:[event]})});}
     catch(singleError){if(!(singleError instanceof ApiError&&singleError.status===400))break;}
     queue=queue.filter(x=>x.idempotencyKey!==event.idempotencyKey);persist();
    }
