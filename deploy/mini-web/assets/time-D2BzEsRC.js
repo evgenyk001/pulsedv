@@ -1,0 +1,1 @@
+function s(t=1){return new Date(Date.now()+36e6+t*6e4).toISOString().slice(0,16)}function o(t){if(!t)return null;const n=Date.parse(t+"+10:00");return Number.isFinite(n)?new Date(n).toISOString():null}function i(t,n=0){const e=o(t);return!!e&&Date.parse(e)>Date.now()+n*6e4}export{o as a,i,s as v};
