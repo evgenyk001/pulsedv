@@ -8,6 +8,13 @@
   -Server
  }
 
+ # Keep Telegram Web and the embedded apps outside the public landing policy.
+ @landing path /
+ header @landing {
+  X-Frame-Options SAMEORIGIN
+  Content-Security-Policy "default-src 'self'; base-uri 'none'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self' 'sha256-KjmLhMPrN7+XFOgu0Oiyu2NdrvPuJ77j4hgTgkmmB+o='; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:"
+ }
+
  @privateSearch path /api/* /media/* /pulsedv/mini-app/* /pulsedv/control-center/* /mini-app/* /control-center/*
  header @privateSearch X-Robots-Tag "noindex, nofollow"
 
