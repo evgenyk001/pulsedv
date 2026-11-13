@@ -2,7 +2,6 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "./Carousel";
-import Autoplay from "embla-carousel-autoplay";
 import { usePromoBanners } from "../helpers/usePromoBanners";
 import { recordPulseEvent, DEFAULT_PARTNER_BANNER } from "../../../../packages/pulse-data";
 import {useGiveaway} from '../helpers/useGiveaway';
@@ -32,6 +31,8 @@ const fallbackSlides:Slide[] = [
   { id:"mortgage",image:asset("/_cdn/static/2f66fed6-2933-4ec7-8a98-583896cd9e5f.webp"),eyebrow:"Ипотека",title:"Сначала платёж. Потом — подходящие квартиры",text:"Подберём проекты под комфортный ежемесячный платёж.",cta:"Рассчитать",to:"/mortgage",kind:"promo" },
   { id:"select",image:asset("/_cdn/static/7493f319-d413-4d3d-90e4-66b4a2ee6ecd.webp"),eyebrow:"PULSE Select",title:"Не листайте сотни квартир вручную",text:"Ответьте на несколько вопросов — покажем подходящие ЖК.",cta:"Начать подбор",to:"/selection",kind:"promo" }
 ];
+
+const AUTOPLAY_DELAY = 6200;
 
 function visibleIndicatorIndexes(total:number,selected:number,maxVisible=5){
   if(total<=maxVisible)return Array.from({length:total},(_,index)=>index);
@@ -71,17 +72,21 @@ export function PromoCarousel(){
   const [api,setApi]=React.useState<CarouselApi>();
   const [selected,setSelected]=React.useState(0);
   const [navigationReady,setNavigationReady]=React.useState(false);
-  const autoplay=React.useRef(Autoplay({delay:6200,stopOnInteraction:false,stopOnMouseEnter:true,playOnInit:false}));
+  const [dragging,setDragging]=React.useState(false);
+  const [hovered,setHovered]=React.useState(false);
+  const elapsed=React.useRef(0);
+  const progressBar = React.useRef<HTMLSpanElement>(null);
   const [mediaReady,setMediaReady]=React.useState(false);
   const impressed=React.useRef(new Set<string>());
 
+  const firstImage=slides[0]?.image;
   React.useEffect(()=>{
     let active=true;
-    if(!slides.length){setMediaReady(false);return()=>{active=false};}
+    if(!firstImage){setMediaReady(false);return()=>{active=false};}
     setMediaReady(false);
-    Promise.all(slides.slice(0,1).map(slide=>new Promise<void>(resolve=>{
+    new Promise<void>(resolve=>{
       const image=new Image();
-      image.src=slide.image;
+      image.src=firstImage;
       const done=()=>resolve();
       if(image.complete){
         if(typeof image.decode==="function")image.decode().catch(()=>{}).finally(done);
@@ -90,41 +95,56 @@ export function PromoCarousel(){
         image.onload=()=>{if(typeof image.decode==="function")image.decode().catch(()=>{}).finally(done);else done();};
         image.onerror=done;
       }
-    }))).then(()=>{if(active)setMediaReady(true)});
+    }).then(()=>{if(active)setMediaReady(true)});
     return()=>{active=false};
-  },[slides]);
-
-  React.useEffect(()=>{
-    if(!api||!mediaReady||slides.length<2||!inView||!foreground)return;
-    const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    if(reduced)return;
-    autoplay.current.play();
-    return()=>autoplay.current.stop();
-  },[api,mediaReady,slides.length,inView,foreground]);
+  },[firstImage]);
 
   React.useEffect(()=>{
     if(!api){setNavigationReady(false);return;}
     const sync=()=>{setSelected(api.selectedScrollSnap());setNavigationReady(api.scrollSnapList().length===slides.length)};
-    const onPointerDown=()=>autoplay.current.stop();
-    const onSettle=()=>{
-      const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-      if(mediaReady&&slides.length>1&&!reduced&&inView&&!document.hidden){
-        autoplay.current.play();
-        autoplay.current.reset();
-      }
-    };
+    const down=()=>setDragging(true);
+    const up=()=>setDragging(false);
     sync();
-    api.on("select",sync);
-    api.on("reInit",sync);
-    api.on("pointerDown",onPointerDown);
-    api.on("settle",onSettle);
+    api.on("select",sync).on("reInit",sync).on("pointerDown",down).on("pointerUp",up);
     return ()=>{
-      api.off("select",sync);
-      api.off("reInit",sync);
-      api.off("pointerDown",onPointerDown);
-      api.off("settle",onSettle);
+      api.off("select",sync).off("reInit",sync).off("pointerDown",down).off("pointerUp",up);
     };
-  },[api,mediaReady,slides.length,inView,foreground]);
+  },[api,slides.length]);
+
+  const activeBannerId=slides[selected]?.id;
+  React.useLayoutEffect(()=>{
+    elapsed.current=0;
+  },[selected,activeBannerId]);
+
+  React.useEffect(()=>{
+    if(!api||!navigationReady||!mediaReady||slides.length<2||!inView||!foreground||dragging||hovered)return;
+    const motion=window.matchMedia("(prefers-reduced-motion: reduce)");
+    let frame=0;
+    let previous:number|undefined;
+    const update=(now:number)=>{
+      if(document.hidden){previous=undefined;frame=requestAnimationFrame(update);return;}
+      if(previous!==undefined)elapsed.current=Math.min(AUTOPLAY_DELAY,elapsed.current+now-previous);
+      previous=now;
+      progressBar.current?.style.setProperty("--banner-progress",String(elapsed.current/AUTOPLAY_DELAY));
+      if(elapsed.current===AUTOPLAY_DELAY){
+        const snap=api.selectedScrollSnap();
+        api.scrollTo((snap+1)%slides.length);
+        return;
+      }
+      frame=requestAnimationFrame(update);
+    };
+    const syncMotion=()=>{
+      cancelAnimationFrame(frame);
+      previous=undefined;
+      if(!motion.matches)frame=requestAnimationFrame(update);
+    };
+    motion.addEventListener("change",syncMotion);
+    syncMotion();
+    return ()=>{
+      cancelAnimationFrame(frame);
+      motion.removeEventListener("change",syncMotion);
+    };
+  },[api,navigationReady,mediaReady,slides.length,inView,foreground,dragging,hovered,selected,activeBannerId]);
 
   React.useEffect(()=>{
     if(selected>=slides.length)setSelected(0);
@@ -138,8 +158,8 @@ export function PromoCarousel(){
 
   if(!slides.length)return null;
 
-  return <div className={styles.wrap} ref={wrap}>
-    <Carousel opts={{loop:slides.length>1,align:"start",duration:42,slidesToScroll:1,skipSnaps:false}} plugins={[autoplay.current]} setApi={setApi} className={styles.carousel}>
+  return <div className={styles.wrap} ref={wrap} onPointerEnter={event=>{if(event.pointerType==="mouse")setHovered(true)}} onPointerLeave={()=>setHovered(false)}>
+    <Carousel opts={{loop:slides.length>1,align:"start",duration:42,slidesToScroll:1,skipSnaps:false}} setApi={setApi} className={styles.carousel}>
       <CarouselContent>
         {slides.map(({id,image,eyebrow,title,text,cta,to,kind},index)=>{
           const indicatorIndexes=visibleIndicatorIndexes(slides.length,selected);
@@ -171,7 +191,9 @@ export function PromoCarousel(){
               aria-hidden={!isCurrent}
               style={{"--active-slot":activeSlot,"--slot-count":indicatorIndexes.length} as React.CSSProperties}
             >
-              <span className={styles.activePill} aria-hidden="true"/>
+              <span className={styles.activePill} aria-hidden="true">
+                {isCurrent&&<span key={id} className={styles.activeFill} ref={progressBar}/>}
+              </span>
               {indicatorIndexes.map((slideIndex,slotIndex)=>{
                 const active=slideIndex===selected;
                 const edgeBefore=hasBefore&&slotIndex===0;
@@ -188,7 +210,6 @@ export function PromoCarousel(){
                   onClick={()=>{
                     if(!isCurrent)return;
                     api?.scrollTo(slideIndex);
-                    autoplay.current.reset();
                   }}
                 />;
               })}
