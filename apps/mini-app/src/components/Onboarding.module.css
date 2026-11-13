@@ -23,18 +23,64 @@
   overscroll-behavior:none;
 }
 :global(.pulse-pwa) .overlay{height:auto;min-height:100lvh}
-:global(.pulse-pwa) .stage{top:calc(var(--pulse-safe-top) + 12px);height:calc(100dvh - var(--pulse-safe-top) - var(--pulse-safe-bottom) - 12px);bottom:auto;container-type:size}
-:global(.pulse-pwa) .canvas{width:min(100cqw,calc(100cqh * 941 / 1672))}
-
-:global(.pulse-pwa) .canvas{
-  --onboarding-edge-space:max(0px,calc((100cqh - 100cqw * 1672 / 941) / 2));
+:global(.pulse-pwa) .stage{
+  top:calc(var(--pulse-safe-top) + 6px);
+  height:calc(100dvh - var(--pulse-safe-top) - var(--pulse-safe-bottom) - 6px);
+  bottom:auto;
+  grid-template-rows:44px minmax(0,1fr) auto;
+  gap:6px;
+}
+:global(.pulse-pwa) .topControls{
+  width:min(100%,480px);
+  display:flex;
+  justify-content:flex-end;
+  padding-inline:12px;
+  box-sizing:border-box;
 }
 :global(.pulse-pwa) .skip{
-  top:calc(8% - min(28px,var(--onboarding-edge-space) + 8px));
+  position:static;
+  width:auto;
+  height:44px;
+  font-size:14px;
+}
+:global(.pulse-pwa) .skip span{padding-inline:14px}
+:global(.pulse-pwa) .canvas{
+  width:min(100%,480px);
+  height:100%;
+  aspect-ratio:auto;
+  container-type:size;
+}
+:global(.pulse-pwa) .screen,
+:global(.pulse-pwa) .skipCover{
+  position:absolute;
+}
+:global(.pulse-pwa) .screen{
+  inset:50% auto auto 50%;
+  width:min(100cqw,calc(100cqh * 941 / (1672 * .85)));
+  height:auto;
+  max-width:none;
+  transform:translate(-50%,-42.5%);
+  clip-path:inset(0 0 15% 0);
+}
+:global(.pulse-pwa) .skipCover{
+  --art-width:min(100cqw,calc(100cqh * 941 / (1672 * .85)));
+  top:calc((100cqh - var(--art-width) * 1672 * .85 / 941) / 2);
+  right:calc((100cqw - var(--art-width)) / 2);
+  width:calc(var(--art-width) * .30);
+  height:calc(var(--art-width) * 1672 * .09 / 941);
+}
+:global(.pulse-pwa) .footer{
+  position:static;
+  width:min(100%,480px);
+  display:grid;
+  justify-items:center;
+  gap:8px;
+  padding-bottom:6px;
 }
 :global(.pulse-pwa) .primary{
-  top:calc(14% + min(22px,var(--onboarding-edge-space) + 6px));
+  position:static;
+  width:85%;
+  height:46px;
+  font-size:18px;
 }
-:global(.pulse-pwa) .pagination{
-  bottom:calc(4% - min(22px,var(--onboarding-edge-space)));
-}
+:global(.pulse-pwa) .pagination{position:relative;inset:auto;transform:none}
