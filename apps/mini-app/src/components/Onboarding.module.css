@@ -83,7 +83,8 @@
   padding-bottom:0;
 }
 :global(.pulse-pwa) .primary{
-  position:static;
+  position:relative;
+  top:6px;
   width:85%;
   height:46px;
   font-size:18px;
