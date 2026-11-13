@@ -30,6 +30,8 @@ const fallbackSlides:Slide[] = [
   { id:"select",image:asset("/_cdn/static/7493f319-d413-4d3d-90e4-66b4a2ee6ecd.webp"),eyebrow:"PULSE Select",title:"Не листайте сотни квартир вручную",text:"Ответьте на несколько вопросов — покажем подходящие ЖК.",cta:"Начать подбор",to:"/selection",kind:"promo" }
 ];
 
+const AUTOPLAY_DELAY = 6200;
+
 function visibleIndicatorIndexes(total:number,selected:number,maxVisible=5){
   if(total<=maxVisible)return Array.from({length:total},(_,index)=>index);
   const half=Math.floor(maxVisible/2);
@@ -64,7 +66,8 @@ export function PromoCarousel(){
   const [api,setApi]=React.useState<CarouselApi>();
   const [selected,setSelected]=React.useState(0);
   const [navigationReady,setNavigationReady]=React.useState(false);
-  const autoplay=React.useRef(Autoplay({delay:6200,stopOnInteraction:false,stopOnMouseEnter:true,playOnInit:false}));
+  const autoplay=React.useRef(Autoplay({delay:AUTOPLAY_DELAY,stopOnInteraction:false,stopOnMouseEnter:true,playOnInit:false}));
+  const progressBar = React.useRef<HTMLSpanElement>(null);
   const [mediaReady,setMediaReady]=React.useState(false);
   const impressed=React.useRef(new Set<string>());
 
@@ -119,6 +122,30 @@ export function PromoCarousel(){
     };
   },[api,mediaReady,slides.length,inView,foreground]);
 
+  React.useEffect(() => {
+    if (!api || slides.length < 2) return;
+    const timer = autoplay.current;
+    let frame = 0;
+    const update = () => {
+      const remaining = timer.timeUntilNext();
+      const progress = remaining == null ? 0 : Math.min(1, Math.max(0, 1 - remaining / AUTOPLAY_DELAY));
+      progressBar.current?.style.setProperty("--banner-progress", String(progress));
+      if (remaining != null) frame = requestAnimationFrame(update);
+    };
+    const syncProgress = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(update);
+    };
+    api.on("autoplay:timerset", syncProgress);
+    api.on("autoplay:timerstopped", syncProgress);
+    syncProgress();
+    return () => {
+      cancelAnimationFrame(frame);
+      api.off("autoplay:timerset", syncProgress);
+      api.off("autoplay:timerstopped", syncProgress);
+    };
+  }, [api, selected, slides.length]);
+
   React.useEffect(()=>{
     if(selected>=slides.length)setSelected(0);
   },[slides.length,selected]);
@@ -162,7 +189,9 @@ export function PromoCarousel(){
               aria-hidden={!isCurrent}
               style={{"--active-slot":activeSlot,"--slot-count":indicatorIndexes.length} as React.CSSProperties}
             >
-              <span className={styles.activePill} aria-hidden="true"/>
+              <span className={styles.activePill} aria-hidden="true">
+                {isCurrent&&<span key={id} className={styles.activeFill} ref={progressBar}/>}
+              </span>
               {indicatorIndexes.map((slideIndex,slotIndex)=>{
                 const active=slideIndex===selected;
                 const edgeBefore=hasBefore&&slotIndex===0;
