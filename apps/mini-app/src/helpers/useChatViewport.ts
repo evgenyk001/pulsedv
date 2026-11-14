@@ -34,8 +34,7 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    samples.push(label+': поле '+px(rect.top)+'–'+px(rect.bottom)+'; экран '+px(viewport?.offsetTop??0)+'+'+px(viewport?.height??innerHeight)+'; окно '+innerHeight+'; прокрутка '+px(scrollY)+'; сверху '+hit);
    report.textContent=samples.slice(-4).join('\n');
   };
-  let layoutWidth=0;
-  let restingHeight=0;
+  let unfocusedHeight=0;
   const focusedComposer=()=>{
    const active=document.activeElement;
    return active instanceof HTMLTextAreaElement&&node?.contains(active)?active:null;
@@ -44,25 +43,13 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    const node=root.current;
    if(!node)return;
    const typing=!!focusedComposer();
-   const width=document.documentElement.clientWidth;
-   if(isPwa&&(!restingHeight||(!typing&&width!==layoutWidth))){
-    // Measure the full-screen CSS layout before applying keyboard geometry.
-    node.style.removeProperty('--chat-resting-height');
-    node.removeAttribute('data-pwa-keyboard');
-    restingHeight=node.getBoundingClientRect().height;
-    layoutWidth=width;
-    if(getComputedStyle(node).position==='fixed'&&restingHeight>0){
-     node.style.setProperty('--chat-resting-height',restingHeight+'px');
-    }else{
-     restingHeight=0;
-    }
-   }
-   const height=viewport?.height??window.innerHeight;
    const top=viewport?.offsetTop??0;
-   node.style.setProperty('--chat-height',height+'px');
+   const height=viewport?.height??window.innerHeight;
+   const visibleHeight=Math.max(0,Math.min(height,window.innerHeight-top));
+   if(!typing)unfocusedHeight=visibleHeight;
+   node.style.setProperty('--chat-height',(isPwa?visibleHeight:height)+'px');
    node.style.setProperty('--chat-top',top+'px');
-   const keyboardOpen=isPwa&&typing&&restingHeight-height>100;
-   node.toggleAttribute('data-pwa-keyboard',keyboardOpen);
+   node.toggleAttribute('data-pwa-keyboard',isPwa&&typing&&unfocusedHeight-visibleHeight>100);
    if(isPwa&&!typing&&getComputedStyle(node).position==='fixed'&&window.scrollY){
     window.scrollTo({top:0,left:0,behavior:'instant'});
    }

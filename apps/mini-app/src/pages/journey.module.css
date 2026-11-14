@@ -85,15 +85,12 @@
  margin-inline:auto;
  font-family:var(--font-family-base);
  transform:none;
- top:0;
- bottom:auto;
- height:var(--chat-resting-height,100dvh);
- padding-bottom:clamp(8px,calc(var(--pulse-safe-bottom) - 14px),20px);
-}
-:global(.pulse-pwa) .conversation:not(.detailsMode)[data-pwa-keyboard]{
  top:var(--chat-top,0px);
  bottom:auto;
  height:var(--chat-height,100dvh);
+ padding-bottom:clamp(8px,calc(var(--pulse-safe-bottom) - 14px),20px);
+}
+:global(.pulse-pwa) .conversation:not(.detailsMode)[data-pwa-keyboard]{
  padding-top:8px;
  padding-bottom:6px;
 }
