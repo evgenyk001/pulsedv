@@ -7,6 +7,8 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
  useLayoutEffect(()=>{
   const viewport=window.visualViewport;
   let frame=0;
+  let settledFrame=0;
+  let settleTimer=0;
   const node=root.current;
   let layoutWidth=0;
   let restingHeight=0;
@@ -35,7 +37,14 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    const top=viewport?.offsetTop??0;
    node.style.setProperty('--chat-height',height+'px');
    node.style.setProperty('--chat-top',top+'px');
-   node.toggleAttribute('data-pwa-keyboard',isPwa&&typing&&restingHeight-height>100);
+   const keyboardOpen=isPwa&&typing&&restingHeight-height>100;
+   node.toggleAttribute('data-pwa-keyboard',keyboardOpen);
+   if(isPwa){
+    const clippedBelow=viewport&&restingHeight>0&&!keyboardOpen
+     ? Math.max(0,restingHeight-(top+height))
+     : 0;
+    node.style.setProperty('--chat-clipped-bottom',clippedBelow+'px');
+   }
    if(isPwa&&!typing&&getComputedStyle(node).position==='fixed'&&window.scrollY){
     window.scrollTo({top:0,left:0,behavior:'instant'});
    }
@@ -50,6 +59,11 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    if(!isPwa||!(event.target instanceof HTMLTextAreaElement)||!node?.contains(event.target))return;
    node.removeAttribute('data-pwa-keyboard');
    updateFocus();
+   window.clearTimeout(settleTimer);
+   settleTimer=window.setTimeout(()=>{
+    cancelAnimationFrame(settledFrame);
+    settledFrame=requestAnimationFrame(resize);
+   },400);
   };
   resize();
   node?.addEventListener('click',dismissOnTap);
@@ -61,6 +75,8 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   window.addEventListener('resize',resize);
   return ()=>{
    cancelAnimationFrame(frame);
+   cancelAnimationFrame(settledFrame);
+   window.clearTimeout(settleTimer);
    document.removeEventListener('focusin',updateFocus);
    node?.removeEventListener('click',dismissOnTap);
    node?.removeEventListener('focusout',restoreAfterBlur);
