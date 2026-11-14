@@ -39,12 +39,6 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    node.style.setProperty('--chat-top',top+'px');
    const keyboardOpen=isPwa&&typing&&restingHeight-height>100;
    node.toggleAttribute('data-pwa-keyboard',keyboardOpen);
-   if(isPwa){
-    const clippedBelow=viewport&&restingHeight>0&&!keyboardOpen
-     ? Math.max(0,restingHeight-(top+height))
-     : 0;
-    node.style.setProperty('--chat-clipped-bottom',clippedBelow+'px');
-   }
    if(isPwa&&!typing&&getComputedStyle(node).position==='fixed'&&window.scrollY){
     window.scrollTo({top:0,left:0,behavior:'instant'});
    }
@@ -58,6 +52,7 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   const restoreAfterBlur=(event:FocusEvent)=>{
    if(!isPwa||!(event.target instanceof HTMLTextAreaElement)||!node?.contains(event.target))return;
    node.removeAttribute('data-pwa-keyboard');
+   resize();
    updateFocus();
    window.clearTimeout(settleTimer);
    settleTimer=window.setTimeout(()=>{
@@ -70,6 +65,7 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   node?.addEventListener('focusout',restoreAfterBlur);
   document.addEventListener('focusin',updateFocus);
 
+  window.addEventListener('scroll',resize);
   viewport?.addEventListener('resize',resize);
   viewport?.addEventListener('scroll',resize);
   window.addEventListener('resize',resize);
@@ -80,6 +76,7 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    document.removeEventListener('focusin',updateFocus);
    node?.removeEventListener('click',dismissOnTap);
    node?.removeEventListener('focusout',restoreAfterBlur);
+   window.removeEventListener('scroll',resize);
    viewport?.removeEventListener('resize',resize);
    viewport?.removeEventListener('scroll',resize);
    window.removeEventListener('resize',resize);

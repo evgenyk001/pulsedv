@@ -84,7 +84,7 @@
  top:0;
  bottom:auto;
  height:var(--chat-resting-height,100dvh);
- padding-bottom:calc(var(--chat-clipped-bottom,0px) + clamp(8px,calc(var(--pulse-safe-bottom) - 14px),20px));
+ padding-bottom:clamp(8px,calc(var(--pulse-safe-bottom) - 14px),20px);
 }
 :global(.pulse-pwa) .conversation:not(.detailsMode)[data-pwa-keyboard]{
  top:var(--chat-top,0px);
