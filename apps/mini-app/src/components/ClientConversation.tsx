@@ -1,3 +1,4 @@
+import {useChatViewport} from '../helpers/useChatViewport';
 import {safeLocalStorage,safeSessionStorage} from '../../../../packages/browser/storage';
 import {LoadRecovery} from './LoadRecovery';
 import {BackLink} from "./BackLink";
@@ -74,7 +75,7 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
  const subject=entry.propertyId?subjectProperty?.name:'Помощь с покупкой';
  const firstUnreadManagerId=React.useRef((j.messages||[]).find(m=>m.author==='manager'&&!m.readAt)?.id||'');
  const scrollEnd=()=>{if(log.current)log.current.scrollTop=log.current.scrollHeight;nearBottom.current=true;setNewBelow(false)};
- React.useEffect(()=>{const resize=()=>{const viewport=window.visualViewport;root.current?.style.setProperty('--chat-height',(viewport?.height||window.innerHeight)+'px');root.current?.style.setProperty('--chat-top',(viewport?.offsetTop||0)+'px');if(nearBottom.current)requestAnimationFrame(scrollEnd)};resize();window.visualViewport?.addEventListener('resize',resize);window.visualViewport?.addEventListener('scroll',resize);window.addEventListener('resize',resize);return()=>{window.visualViewport?.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('scroll',resize);window.removeEventListener('resize',resize)}},[]);
+ useChatViewport(root,()=>{if(nearBottom.current)requestAnimationFrame(scrollEnd)});
  React.useLayoutEffect(()=>{if(tab!=='chat')return;if(nearBottom.current)scrollEnd();else setNewBelow(true)},[j.messages?.length,tab]);
  React.useLayoutEffect(()=>{if(input.current){input.current.style.height='auto';input.current.style.height=Math.min(112,input.current.scrollHeight)+'px'}},[draft,tab]);
  React.useEffect(()=>{try{if(draft)safeSessionStorage.setItem('pulse.chat-draft.'+entry.leadId,draft);else safeSessionStorage.removeItem('pulse.chat-draft.'+entry.leadId)}catch{}},[draft,entry.leadId]);

@@ -72,3 +72,18 @@
 
 .pendingAttachment>button{flex-shrink:0}
 .pendingAttachment>.retryAttachment{width:auto;padding:0 8px;border-radius:12px;font-size:12px;white-space:nowrap}
+
+:global(.pulse-pwa) .conversation:not(.detailsMode){
+ top:0;
+ bottom:0;
+ height:auto;
+ padding-bottom:clamp(8px,calc(var(--pulse-safe-bottom) - 14px),20px);
+}
+:global(.pulse-pwa) .conversation:not(.detailsMode)[data-pwa-keyboard]{
+ top:var(--chat-top,0px);
+ bottom:auto;
+ height:var(--chat-height,100dvh);
+ padding-top:8px;
+ padding-bottom:6px;
+}
+:global(.pulse-pwa) .firstComposer>.srOnly{position:absolute}
