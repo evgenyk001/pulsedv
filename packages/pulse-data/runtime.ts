@@ -28,10 +28,11 @@ export function runtimeError(error:unknown){runtime.error=error instanceof Error
 export class ApiError extends Error{constructor(public status:number,message:string){super(message);}}
 function guestConversation(path:string,method:string){
  const route=path.split('?')[0];
- if(method==="GET")return route==="/me/notifications"||route==="/me/journeys"||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/messages)?$/.test(route);
- return method==="POST"&&(/^\/me\/(?:notifications\/(read|dismiss)|push\/(subscribe|unsubscribe))$/.test(route)||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/read)?$/.test(route));
+ if(method==="GET")return /^\/journey-media\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/.test(route)||/^\/legacy-journey-media\/[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/.test(route)||route==="/me/notifications"||route==="/me/journeys"||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/messages)?$/.test(route);
+ if(method==="DELETE")return /^\/me\/journeys\/[0-9a-f-]{36}\/attachments\/[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/.test(route);
+ return method==="POST"&&(/^\/me\/(?:notifications\/(read|dismiss)|push\/(subscribe|unsubscribe))$/.test(route)||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/(?:read|attachments))?$/.test(route));
 }
-export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
+export async function api<T=any>(path:string,options:RequestInit={},format:"json"|"blob"="json"):Promise<T>{
  if(runtime.publicPreview){
   const method=(options.method??"GET").toUpperCase();
   const publicRead=method==="GET"&&path.startsWith("/public/");
@@ -45,6 +46,7 @@ export async function api<T=any>(path:string,options:RequestInit={}):Promise<T>{
  for(const source of sources){source.addEventListener('abort',abort,{once:true});if(source.aborted)abort()}
  try{
   const response=await fetch(runtime.base+path,{...options,credentials:runtime.publicPreview?'omit':'same-origin',headers:{...(options.body?{'Content-Type':'application/json'}:{}),...options.headers},signal:controller.signal});
+  if(response.ok&&format==="blob")return await response.blob() as T;
   let body:any;
   try{body=await response.json()}catch(error){if(response.ok)throw error;body={}}
   if(!response.ok)throw new ApiError(response.status,runtime.role==='public'&&response.status>=500?'Не получилось выполнить действие. Попробуйте ещё раз.':body.error||'Не удалось выполнить запрос');
@@ -76,9 +78,9 @@ async function session():Promise<Session>{
   return value;
  })();try{return await sessionPromise;}catch(error){sessionPromise=null;throw error;}
 }
-async function sessionApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
+async function sessionApi<T=any>(path:string,options:RequestInit={},format:"json"|"blob"="json"):Promise<T>{
  const identity=await session();
- try{return await api<T>(path,{...options,headers:{...options.headers,Authorization:'Bearer '+identity.accessToken,...((path.startsWith('/me/partner')||path.startsWith('/me/account/passkeys'))&&partnerGrant()?{'X-Partner-Unlock':partnerGrant()}:{})}});}catch(error){
+ try{return await api<T>(path,{...options,headers:{...options.headers,Authorization:'Bearer '+identity.accessToken,...((path.startsWith('/me/partner')||path.startsWith('/me/account/passkeys'))&&partnerGrant()?{'X-Partner-Unlock':partnerGrant()}:{})}},format);}catch(error){
   if(error instanceof ApiError&&error.status===423&&path.startsWith('/me/partner'))window.dispatchEvent(new Event('pulse:partner-locked'));
   if(error instanceof ApiError&&error.status===401){sessionPromise=null;telegramBound=false;visitorCookieBound=false;runtime.publicIdentity='idle';try{safeLocalStorage.removeItem(SESSION);}catch{}if(runtime.browserMode)window.dispatchEvent(new Event('pulse:session-expired'))}
   throw error;
@@ -95,6 +97,9 @@ export async function visitorApi<T=any>(path:string,options:RequestInit={}):Prom
   await connectPublicIdentity();
  }
  return sessionApi<T>(path,options);
+}
+export function loadGuestChatMedia(path:string,signal:AbortSignal){
+ return sessionApi<Blob>(path,{signal},"blob");
 }
 export async function initializePublicState(){
  if(pageIsLeaving())return;

@@ -11,7 +11,7 @@ import {markJourneyRead,saveJourney,uploadJourneyAttachment,discardJourneyAttach
 import {type JourneyAttachment,type JourneyCommand,type Reaction,reactionLabels,showingLabels} from '../../../../packages/journey/model';
 import {ShowingChange} from '../../../../packages/journey/ShowingChange';
 import {isFutureVladivostokInput,vladivostokInputNow} from '../../../../packages/journey/time';
-import {runtime} from '../../../../packages/pulse-data/runtime';
+import {loadGuestChatMedia,runtime} from '../../../../packages/pulse-data/runtime';
 import type {PulseProperty} from '../../../../packages/pulse-data/model';
 import {useClientJourneys} from '../helpers/useClientJourneys';
 import styles from '../pages/journey.module.css';
@@ -20,6 +20,32 @@ export const journeyStatus=(status:string)=>({new:'Обращение приня
 export const journeyDate=(value:string,short=false)=>new Date(value).toLocaleString('ru-RU',short?{day:'numeric',month:'short'}:{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Vladivostok'});
 const clock=(value:string)=>new Date(value).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
 function draftFor(id:string){try{return safeSessionStorage.getItem('pulse.chat-draft.'+id)||''}catch{return ''}}
+
+function ChatAttachment({attachment}:{attachment:JourneyAttachment}){
+ const url=attachment.url.replace(/^\/media\/chat\//,'/api/v1/legacy-journey-media/');
+ const needsSession=runtime.publicPreview&&runtime.enabled;
+ const [objectUrl,setObjectUrl]=React.useState('');
+ const [failed,setFailed]=React.useState(false);
+ const [attempt,retry]=React.useReducer((value:number)=>value+1,0);
+ React.useEffect(()=>{
+  if(!needsSession)return;
+  const controller=new AbortController();
+  let localUrl:string|undefined;
+  setFailed(false);
+  setObjectUrl('');
+  void loadGuestChatMedia(url.slice('/api/v1'.length),controller.signal).then(blob=>{
+   if(controller.signal.aborted)return;
+   localUrl=URL.createObjectURL(blob);
+   setObjectUrl(localUrl);
+  }).catch(()=>{if(!controller.signal.aborted)setFailed(true)});
+  return ()=>{controller.abort();if(localUrl)URL.revokeObjectURL(localUrl)};
+ },[url,needsSession,attempt]);
+ const href=needsSession?objectUrl:url;
+ if(!href)return <div className={styles.fileAttachment}><FileText size={20}/><span><b>{attachment.name}</b>{failed?<button type="button" onClick={retry}>Повторить загрузку</button>:<small>Загружаем вложение…</small>}</span></div>;
+ return attachment.kind==='image'
+  ? <a className={styles.messageImage} href={href} target="_blank" rel="noreferrer"><img src={href} alt={attachment.name}/></a>
+  : <a className={styles.fileAttachment} href={href} download={needsSession?attachment.name:undefined} target="_blank" rel="noreferrer"><FileText size={20}/><span><b>{attachment.name}</b><small>{Math.max(1,Math.round(attachment.size/1024))} КБ</small></span></a>;
+}
 
 type Props={entry:JourneyEntry;properties:PulseProperty[];query:ReturnType<typeof useClientJourneys>;catalogError:boolean;onRetryCatalog:()=>void};
 export function ClientConversation({entry,properties,query,catalogError,onRetryCatalog}:Props){
@@ -111,7 +137,7 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
     {history.hasMore&&<button className={styles.secondary} type="button" disabled={history.loading} onClick={()=>void history.load()}>{history.loading?'Загружаем…':'Предыдущие сообщения'}</button>}{history.error&&<p role="alert">{history.error}</p>}{history.messages.map((m,index,all)=>{
      const day=new Date(m.at).toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
      const previous=index?new Date(all[index-1].at).toLocaleDateString('ru-RU',{day:'numeric',month:'long'}):'';
-     return <React.Fragment key={m.id}>{day!==previous&&<div className={styles.dateDivider}>{day}</div>}{m.id===firstUnreadManagerId.current&&<div className={styles.unreadDivider}><span>Новые сообщения</span></div>}<article className={m.author==='client'?styles.outgoing:styles.incoming} aria-label={m.author==='client'?'Ваше сообщение':'Сообщение менеджера'}>{m.author==='manager'&&<strong>{m.authorName||entry.managerName||'Команда PULSEDV.RU'}</strong>}{m.attachment&&(m.attachment.kind==='image'?<a className={styles.messageImage} href={m.attachment.url.replace(/^\/media\/chat\//,'/api/v1/legacy-journey-media/')} target="_blank" rel="noreferrer"><img src={m.attachment.url.replace(/^\/media\/chat\//,'/api/v1/legacy-journey-media/')} alt={m.attachment.name}/></a>:<a className={styles.fileAttachment} href={m.attachment.url.replace(/^\/media\/chat\//,'/api/v1/legacy-journey-media/')} target="_blank" rel="noreferrer"><FileText size={20}/><span><b>{m.attachment.name}</b><small>{Math.max(1,Math.round(m.attachment.size/1024))} КБ</small></span></a>)}{typeof m.requestContext?.propertyName==='string'&&<small className={styles.messageContext}>{String(m.requestContext.propertyName)}</small>}{m.text&&<p>{m.text}</p>}<footer><time dateTime={m.at}>{clock(m.at)}</time>{m.author==='client'&&(m.readAt?<CheckCheck className={styles.readReceipt} size={15} aria-label="Прочитано"/>:<Check size={13} aria-label={runtime.enabled?'Отправлено':'Сохранено на устройстве'}/>)}</footer></article></React.Fragment>;
+     return <React.Fragment key={m.id}>{day!==previous&&<div className={styles.dateDivider}>{day}</div>}{m.id===firstUnreadManagerId.current&&<div className={styles.unreadDivider}><span>Новые сообщения</span></div>}<article className={m.author==='client'?styles.outgoing:styles.incoming} aria-label={m.author==='client'?'Ваше сообщение':'Сообщение менеджера'}>{m.author==='manager'&&<strong>{m.authorName||entry.managerName||'Команда PULSEDV.RU'}</strong>}{m.attachment&&<ChatAttachment attachment={m.attachment}/>}{typeof m.requestContext?.propertyName==='string'&&<small className={styles.messageContext}>{String(m.requestContext.propertyName)}</small>}{m.text&&<p>{m.text}</p>}<footer><time dateTime={m.at}>{clock(m.at)}</time>{m.author==='client'&&(m.readAt?<CheckCheck className={styles.readReceipt} size={15} aria-label="Прочитано"/>:<Check size={13} aria-label={runtime.enabled?'Отправлено':'Сохранено на устройстве'}/>)}</footer></article></React.Fragment>;
     })}
    </div>
    {newBelow&&<button className={styles.newMessages} onClick={scrollEnd}><ArrowDown size={16}/>К последним сообщениям</button>}

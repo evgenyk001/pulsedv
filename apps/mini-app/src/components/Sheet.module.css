@@ -32,6 +32,14 @@
     transition:translate .5s cubic-bezier(.2,1.3,.3,1);
     will-change:transform,translate;
   }
+  :global(.pulse-pwa) .bottom{
+    --sheet-bottom-inset:max(0px,calc(var(--pulse-safe-bottom) - var(--sheet-viewport-bottom,0px)));
+    left:0;
+    right:0;
+    bottom:var(--sheet-viewport-bottom,0px);
+    padding-bottom:calc(var(--app-sheet-bottom) + var(--sheet-bottom-inset));
+    border-radius:var(--app-radius-sheet) var(--app-radius-sheet) 0 0!important;
+  }
   .bottom[data-state="open"]{animation:sheetIn .48s cubic-bezier(.22,1,.36,1)}
   .bottom[data-state="closed"]{height:var(--sheet-exit-height,auto);animation:sheetOut .38s cubic-bezier(.32,0,.2,1) both;pointer-events:none}
   .bottom.dragging{transition:none}

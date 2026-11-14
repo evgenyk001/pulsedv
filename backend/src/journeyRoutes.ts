@@ -189,12 +189,13 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
     const workBody=c.type==='message'?(c.text.slice(0,500)||'Клиент отправил вложение'):c.type==='reaction'?({liked:'Вариант понравился',expensive:'Дорого',location:'Не подходит расположение',question:'Есть вопрос',none:'Реакция снята'}[c.reaction]+(c.reply?' · '+c.reply.slice(0,300):'')):c.type==='showing'?new Date(c.at).toLocaleString('ru-RU',{timeZone:'Asia/Vladivostok'})+' (Владивосток)':'Откройте карточку клиента для деталей.';
     const recipient=client?l.manager_id:l.user_id;
     if((client||recipient)&&(client||c.type==='collection'&&c.published||['showing_status','showing_reschedule','message'].includes(c.type)))await sql.query('insert into outbox_events(topic,aggregate_type,aggregate_id,payload) values($1,$2,$3,$4::jsonb)',[client?'manager.journey':'user.journey','lead',leadId,JSON.stringify({[client?'managerId':'userId']:recipient,title:client?workTitle:'Обновление по подбору',body:client?workBody:'Менеджер обновил ваше обращение. Откройте подборки, показы и сообщения.',deepLink:origin+(client?'/pulsedv/control-center/#/leads?lead='+leadId:'/pulsedv/mini-app/#/journey?lead='+leadId+(c.type==='collection'?'&tab=collections':c.type.startsWith('showing')?'&tab=showings':''))})]);
-    if(!client&&c.type==='message'&&!l.user_id&&l.source==='pwa-contact'){
+    const guestTab=c.type==='message'?'chat':c.type==='collection'&&c.published?'collections':['showing_status','showing_reschedule'].includes(c.type)?'showings':null;
+    if(!client&&guestTab&&!l.user_id&&l.source==='pwa-contact'){
      await sql.query(`with event as (
       insert into outbox_events(topic,aggregate_type,aggregate_id,payload,processed_at)
-      values('pwa.guest_reply','lead',$1,jsonb_build_object('sessionId',$2::text),now()) returning id
+      values('pwa.guest_reply','lead',$1,jsonb_build_object('sessionId',$2::text,'tab',$3::text),now()) returning id
      ) insert into push_deliveries(event_id,subscription_id)
-       select event.id,s.id from event cross join push_subscriptions s where s.session_id=$2::uuid and s.enabled`,[leadId,l.session_id]);
+       select event.id,s.id from event cross join push_subscriptions s where s.session_id=$2::uuid and s.enabled`,[leadId,l.session_id,guestTab]);
     }
     if(!client)await audit(sql,r.member!.id,'journey.'+c.type,leadId,{revision:next.revision});
     return {journey:client?clientJourney(next):next};

@@ -84,8 +84,9 @@ export async function deliverWebPush(db:Database,config:RuntimeConfig,send:PushS
   }
   try{
    // Private conversation text, phone numbers and security codes never appear on a lock screen.
-   const title=row.topic==='user.broadcast_pwa'?'Новый анонс PULSEDV.RU':row.topic==='user.partner'?'Обновление в партнёрском кабинете':row.topic==='user.giveaway'?'Обновление по розыгрышу':row.topic==='user.search_updates'?'Обновление по вашему поиску':row.topic==='user.showing_reminder'?'Напоминание о показе':'Сообщение от PULSEDV.RU';
-   await send({endpoint:row.endpoint,keys:{p256dh:row.p256dh,auth:row.auth}},JSON.stringify({title,body:'Откройте приложение, чтобы посмотреть подробности.',url:guest?'/landing-cinematic/pwa-preview/#/journey?lead='+row.aggregate_id:pushRoute(row.payload.deepLink,config.PUBLIC_ORIGIN),tag:'pulse-'+d.event_id}),{TTL:3600,timeout:8000,vapidDetails:{subject:config.WEB_PUSH_SUBJECT,publicKey:config.WEB_PUSH_PUBLIC_KEY,privateKey:config.WEB_PUSH_PRIVATE_KEY}});
+   const tab=guest&&['collections','showings'].includes(row.payload.tab)?row.payload.tab:null;
+   const title=tab==='collections'?'Новая подборка квартир':tab==='showings'?'Обновление по показу':row.topic==='user.broadcast_pwa'?'Новый анонс PULSEDV.RU':row.topic==='user.partner'?'Обновление в партнёрском кабинете':row.topic==='user.giveaway'?'Обновление по розыгрышу':row.topic==='user.search_updates'?'Обновление по вашему поиску':row.topic==='user.showing_reminder'?'Напоминание о показе':'Сообщение от PULSEDV.RU';
+   await send({endpoint:row.endpoint,keys:{p256dh:row.p256dh,auth:row.auth}},JSON.stringify({title,body:'Откройте приложение, чтобы посмотреть подробности.',url:guest?'/landing-cinematic/pwa-preview/#/journey?lead='+row.aggregate_id+(tab?'&tab='+tab:''):pushRoute(row.payload.deepLink,config.PUBLIC_ORIGIN),tag:'pulse-'+d.event_id}),{TTL:3600,timeout:8000,vapidDetails:{subject:config.WEB_PUSH_SUBJECT,publicKey:config.WEB_PUSH_PUBLIC_KEY,privateKey:config.WEB_PUSH_PRIVATE_KEY}});
    await db.query('update push_deliveries set delivered_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);processed++;
   }catch(e){
    const status=(e as any)?.statusCode;
