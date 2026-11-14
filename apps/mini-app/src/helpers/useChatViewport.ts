@@ -45,10 +45,12 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    const typing=!!focusedComposer();
    const top=viewport?.offsetTop??0;
    const height=viewport?.height??window.innerHeight;
-   const visibleHeight=Math.max(0,Math.min(height,window.innerHeight-top));
+   // With the keyboard open, the visual viewport can be panned inside the layout
+   // viewport. Its offset positions the chat; it does not reduce its height.
+   const visibleHeight=typing?height:Math.min(height,window.innerHeight);
    if(!typing)unfocusedHeight=visibleHeight;
    node.style.setProperty('--chat-height',(isPwa?visibleHeight:height)+'px');
-   node.style.setProperty('--chat-top',top+'px');
+   node.style.setProperty('--chat-top',(isPwa&&!typing?0:top)+'px');
    node.toggleAttribute('data-pwa-keyboard',isPwa&&typing&&unfocusedHeight-visibleHeight>100);
    if(isPwa&&!typing&&getComputedStyle(node).position==='fixed'&&window.scrollY){
     window.scrollTo({top:0,left:0,behavior:'instant'});
