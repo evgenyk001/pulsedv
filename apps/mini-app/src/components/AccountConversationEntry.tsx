@@ -1,3 +1,5 @@
+import {createPortal} from 'react-dom';
+import {isPwa} from '../pwa/client';
 import {useChatViewport} from '../helpers/useChatViewport';
 import {safeSessionStorage} from '../../../../packages/browser/storage';
 import React from 'react';
@@ -49,7 +51,7 @@ export function AccountConversationDraft({details}:{details:ConversationDraft}){
    await cache.invalidateQueries({queryKey:['my-journeys']});navigate('/journey?lead='+result.id,{replace:true});
   }catch{setError('Не удалось отправить сообщение. Текст сохранён — попробуйте ещё раз.')}finally{locked.current=false;setBusy(false)}
  };
- return <div className={styles.conversation} ref={root}>
+ const conversation=<div className={styles.conversation} ref={root}>
   <header className={styles.chatHeader}><BackLink compact to="/journey" aria-label="Все мои обращения"/><span className={styles.avatar}><MessageCircle size={21}/></span><div><h1>Команда PULSEDV.RU</h1><small>Поможем с выбором недвижимости</small></div></header>
   <section className={styles.newChatBody}>
    <div className={styles.newChatMark}><MessageCircle size={30}/></div><h2>С чего начнём?</h2><p>Расскажите, какую квартиру ищете, или просто задайте вопрос.</p>
@@ -62,4 +64,5 @@ export function AccountConversationDraft({details}:{details:ConversationDraft}){
    <button className={styles.sendButton} type="submit" aria-label="Отправить сообщение" disabled={busy||!text.trim()||!!referralCode&&!referralConsent}><ArrowUp size={21}/></button>
   </form>
  </div>;
+ return isPwa?createPortal(conversation,document.body):conversation;
 }

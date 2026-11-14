@@ -1,7 +1,7 @@
 import {useLayoutEffect,useRef,type RefObject} from 'react';
 import {isPwa} from '../pwa/client';
 
-export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()=>void){
+export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()=>void,view?:string){
  const callback=useRef(onResize);
  callback.current=onResize;
  useLayoutEffect(()=>{
@@ -81,5 +81,5 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    viewport?.removeEventListener('scroll',resize);
    window.removeEventListener('resize',resize);
   };
- },[root]);
+ },[root,view]);
 }

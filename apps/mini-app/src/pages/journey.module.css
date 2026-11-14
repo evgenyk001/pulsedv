@@ -81,6 +81,9 @@
  background:var(--background);
 }
 :global(.pulse-pwa) .conversation:not(.detailsMode){
+ inset-inline:0;
+ margin-inline:auto;
+ transform:none;
  top:0;
  bottom:auto;
  height:var(--chat-resting-height,100dvh);
