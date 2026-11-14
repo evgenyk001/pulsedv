@@ -1,3 +1,4 @@
+import {useChatViewport} from '../helpers/useChatViewport';
 import {safeSessionStorage} from '../../../../packages/browser/storage';
 import React from 'react';
 import {Link,useNavigate} from 'react-router-dom';
@@ -32,7 +33,7 @@ export function AccountConversationEntry(props:LeadSheetProps){
 export function AccountConversationDraft({details}:{details:ConversationDraft}){
  const navigate=useNavigate(),cache=useQueryClient();
  const root=React.useRef<HTMLDivElement>(null);
- React.useEffect(()=>{const resize=()=>{root.current?.style.setProperty('--chat-height',(window.visualViewport?.height??innerHeight)+'px');root.current?.style.setProperty('--chat-top',(window.visualViewport?.offsetTop??0)+'px')};resize();window.visualViewport?.addEventListener('resize',resize);window.visualViewport?.addEventListener('scroll',resize);return()=>{window.visualViewport?.removeEventListener('resize',resize);window.visualViewport?.removeEventListener('scroll',resize)}},[]);
+ useChatViewport(root);
  const storageKey='pulse.new-conversation.'+details.source+'.'+(details.propertyId??'general')+'.'+!!details.newPurchase;
  const restored=React.useMemo(()=>{try{return JSON.parse(safeSessionStorage.getItem(storageKey)??'{}')}catch{return {}}},[storageKey]);
  const [text,setText]=React.useState<string>(typeof restored.text==='string'?restored.text:'');
@@ -57,7 +58,7 @@ export function AccountConversationDraft({details}:{details:ConversationDraft}){
   <form className={`${styles.composer} ${styles.firstComposer}`} onSubmit={send}>
    {referralCode&&<><label className={styles.firstConsent}><input type="checkbox" checked={referralConsent} onChange={e=>setReferralConsent(e.target.checked)}/><span>Меня пригласил(а) {details.referralName||'партнёр PULSE'}. Разрешаю передавать партнёру имя и статусы рекомендации, включая начисление и выплату вознаграждения. Телефон и переписка ему не передаются.</span></label><button type="button" className={styles.linkAction} onClick={()=>{setReferralCode(undefined);setReferralConsent(false);clearPartnerInvite()}}>Я обратился самостоятельно</button></>}
    {error&&<p className={styles.entryError} role="alert">{error}</p>}
-   <label className={styles.srOnly} htmlFor="first-message">Сообщение</label><textarea id="first-message" placeholder="Написать сообщение…" maxLength={2000} rows={2} value={text} readOnly={busy} onChange={e=>setText(e.target.value)}/>
+   <label className={styles.srOnly} htmlFor="first-message">Сообщение</label><textarea id="first-message" placeholder="Написать сообщение…" maxLength={2000} rows={1} autoComplete="off" value={text} readOnly={busy} onChange={e=>setText(e.target.value)}/>
    <button className={styles.sendButton} type="submit" aria-label="Отправить сообщение" disabled={busy||!text.trim()||!!referralCode&&!referralConsent}><ArrowUp size={21}/></button>
   </form>
  </div>;
