@@ -239,6 +239,7 @@ test('PWA Telegram login joins the existing account and retains guest conversati
  assert.equal((await f.db.query('select user_id from leads where id=$1',[contact.json().id])).rows[0].user_id,userId);
  assert.deepEqual((await f.app.inject({url:'/api/v1/me/favorites',headers})).json().ids,['primorskiy']);
  assert.equal((await f.app.inject({url:'/api/v1/me/journeys/'+contact.json().id,headers})).statusCode,200);
+ assert.equal((await f.app.inject({url:'/api/v1/me/partner',headers})).statusCode,403);
  const send=()=>f.app.inject({method:'POST',url:'/api/v1/me/conversations/start',headers,payload:{idempotencyKey:randomUUID(),source:'profile-manager',text:'Продолжим переписку',consent:true,consentVersion:f.config.CONSENT_VERSION}});
  assert.equal((await send()).statusCode,403);
  await f.db.query("update app_users set phone='+79990006666' where id=$1",[userId]);
@@ -246,5 +247,4 @@ test('PWA Telegram login joins the existing account and retains guest conversati
  const message=await send();
  assert.equal(message.statusCode,200,message.body);
  assert.equal(message.json().id,contact.json().id);
- assert.equal((await f.app.inject({url:'/api/v1/me/partner',headers})).statusCode,403);
 });
