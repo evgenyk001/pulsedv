@@ -23,9 +23,14 @@ export async function registerPwa(){
 
  if(isPwa&&import.meta.env.VITE_PWA_PREVIEW!=='true'&&import.meta.env.VITE_PULSE_MODE==='api'){const route=pwaStartRoute(location.hash.slice(1));if(route!=='/'){const manifest=document.querySelector<HTMLLinkElement>('link[rel="manifest"]');if(manifest)manifest.href='/api/v1/public/pwa-manifest?route='+encodeURIComponent(route)}}
  if(!isPwa||!('serviceWorker' in navigator)||!window.isSecureContext)return;
+  navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='PULSE_OPEN'){try{const url=new URL(e.data.url,location.origin);if(url.origin===location.origin&&url.pathname===import.meta.env.BASE_URL)location.hash=url.hash}catch{}}});
  try{
   const registration=await navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js',{scope:import.meta.env.BASE_URL,updateViaCache:'none'});
-  if(import.meta.env.VITE_PWA_PREVIEW!=='true'){
+  if(import.meta.env.VITE_PWA_PREVIEW==='true'){
+   const activate=()=>registration.waiting?.postMessage({type:'PULSE_ACTIVATE'});
+   activate();
+   registration.addEventListener('updatefound',()=>registration.installing?.addEventListener('statechange',activate));
+  }else{
    const notice=()=>{
     if(registration.active&&registration.waiting&&navigator.serviceWorker.controller){
      window.dispatchEvent(new Event('pulse:pwa-update'));
@@ -37,7 +42,6 @@ export async function registerPwa(){
    registration.addEventListener('updatefound',watchInstallation);
   }
   let lastUpdate=Date.now();document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-lastUpdate>60000){lastUpdate=Date.now();void registration.update().catch(()=>{})}});
-  navigator.serviceWorker.addEventListener('message',e=>{if(e.data?.type==='PULSE_OPEN'){try{const url=new URL(e.data.url,location.origin);if(url.origin===location.origin&&url.pathname===import.meta.env.BASE_URL)location.hash=url.hash}catch{}}});
  }catch{window.dispatchEvent(new Event('pulse:pwa-unavailable'))}
 }
 export async function requestPhoneCode(phone:string,consentVersion:string,channel:'call'|'sms'='call'){return visitorApi<{challengeId:string;retryAfter:number;expiresIn:number;codeLength:number;channel:'call'|'sms'}>('/me/account/'+channel+'/request',{method:'POST',body:JSON.stringify({phone,consent:true,consentVersion})});}

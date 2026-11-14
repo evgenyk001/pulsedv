@@ -52,6 +52,7 @@ docker cp "$container:/app/dist/pwa-preview/." "$stage/"
 chmod -R a+rX "$stage"
 test -s "$stage/index.html"
 test -s "$stage/sw.js"
+printf '%s\n' "$release" > "$stage/release.txt"
 python3 - "$stage" <<'PY'
 import json, re, sys
 from pathlib import Path
@@ -78,7 +79,7 @@ url=https://pulsedv.ru/landing-cinematic/pwa-preview/
 get() { curl -fsS --retry 3 --max-time 15 --resolve pulsedv.ru:443:127.0.0.1 "$1" -o "$work/response"; }
 get https://pulsedv.ru/api/v1/public/state
 get https://pulsedv.ru/api/v1/public/catalog
-for file in index.html manifest.webmanifest sw.js; do
+for file in index.html manifest.webmanifest sw.js release.txt; do
   path="$file"
   if [[ "$file" == index.html ]]; then path=''; fi
   get "$url$path"

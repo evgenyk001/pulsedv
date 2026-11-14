@@ -69,3 +69,6 @@
 .firstComposer{display:grid!important}.newChatBody{min-height:0;overflow:auto}.firstComposer .entryError,.firstComposer .linkAction{grid-column:1/-1}.pendingAttachment .attachmentThumb .uploadIndicator{display:grid!important}.chatWelcome h2{font-size:24px;letter-spacing:-.04em}.chatWelcome p{font-size:13px;line-height:1.65}.chatHeader{padding-bottom:16px}.conversation .subject{margin-bottom:12px}
 
 .inbox>[data-swipe-row]{border-radius:14px;border-bottom:1px solid var(--border)}.inbox>[data-swipe-row]:last-child{border:0}.inbox .dialogRow{border:0;padding:19px 4px}.dialogTitle time{display:flex;gap:5px;align-items:center}.undo{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:16px;padding:12px 16px;background:var(--app-card);border-radius:18px;font-size:12px}.undo button{border:0;background:transparent;color:var(--primary);font:inherit;font-weight:700;cursor:pointer}.firstComposer textarea{min-height:40px}
+
+.pendingAttachment>button{flex-shrink:0}
+.pendingAttachment>.retryAttachment{width:auto;padding:0 8px;border-radius:12px;font-size:12px;white-space:nowrap}

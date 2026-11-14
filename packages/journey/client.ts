@@ -27,7 +27,27 @@ export async function saveJourney(journey:Journey,command:JourneyCommand,client=
 }
 
 function dataUrl(file:File){return new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onerror=()=>reject(new Error('Не удалось прочитать файл'));reader.onload=()=>resolve(String(reader.result||''));reader.readAsDataURL(file)})}
+async function resizeChatImage(file:File):Promise<File>{
+ const url=URL.createObjectURL(file);
+ try{
+  const image=new Image();
+  image.src=url;
+  await image.decode();
+  if(Math.max(image.naturalWidth,image.naturalHeight)<=4096)return file;
+  const scale=4096/Math.max(image.naturalWidth,image.naturalHeight);
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.round(image.naturalWidth*scale);
+  canvas.height=Math.round(image.naturalHeight*scale);
+  const context=canvas.getContext('2d');
+  if(!context)throw new Error('Не удалось подготовить фото');
+  context.drawImage(image,0,0,canvas.width,canvas.height);
+  const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/jpeg',.9));
+  if(!blob)throw new Error('Не удалось подготовить фото');
+  return new File([blob],file.name.replace(/\.[^.]+$/,'')+'.jpg',{type:blob.type});
+ }finally{URL.revokeObjectURL(url)}
+}
 export async function uploadJourneyAttachment(leadId:string,file:File,client=false):Promise<JourneyAttachment>{
+ if(runtime.publicPreview&&runtime.enabled&&file.type.startsWith('image/'))file=await resizeChatImage(file);
  const type=(file.type||'').toLowerCase();const image=['image/jpeg','image/png','image/webp'].includes(type);
  if(!image&&type!=='application/pdf')throw new Error('Можно отправить JPG, PNG, WebP или PDF');
  const max=image?15*1024*1024:25*1024*1024;if(!file.size||file.size>max)throw new Error(image?'Фото должно быть меньше 15 МБ':'PDF должен быть меньше 25 МБ');

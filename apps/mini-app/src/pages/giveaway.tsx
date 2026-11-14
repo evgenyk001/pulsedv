@@ -3,7 +3,7 @@ import React from 'react';
 import {useQueryClient} from '@tanstack/react-query';
 import {ArrowRight,BookOpen,Check,ChevronDown,Clock3,Gift,MessageCircle,ShieldCheck,Ticket,ArrowUpRight,CheckCircle2} from 'lucide-react';
 import {useGiveaway} from '../helpers/useGiveaway';
-import {visitorApi} from '../../../../packages/pulse-data/runtime';
+import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import {GiveawayCountdown} from '../components/GiveawayCountdown';
 import {AccountConversationEntry} from '../components/AccountConversationEntry';
 import {BackLink} from '../components/BackLink';
@@ -73,9 +73,11 @@ export default function GiveawayPage(){
     {pending&&<small className="giveawayExperience__footnote">Документы отдельно для розыгрыша отправлять не нужно.</small>}
    </>:<>
     <h2 id="giveaway-entry-title">Ваша новая квартира.<br/>Ваш шанс на подарок.</h2><p>Оставьте заявку, купите недвижимость через PULSEDV.RU и получите номер после проверки регистрации сделки.</p>
+    {runtime.publicPreview?<button type="button" className="giveawayExperience__button" onClick={showRules}><BookOpen size={18}/><span>Прочитать правила</span></button>:<>
     <div className="giveawayExperience__accept"><label><input type="checkbox" checked={accepted} disabled={busy} onChange={e=>setAccepted(e.target.checked)}/><span>Принимаю правила розыгрыша</span></label><button type="button" onClick={showRules} aria-label="Прочитать правила розыгрыша"><BookOpen size={16}/><span>Прочитать правила</span><ArrowUpRight size={14}/></button></div>
     <button type="button" className="giveawayExperience__button" disabled={!accepted||busy||!s.enabled||before||closed} onClick={()=>void apply()}>{busy?<span>Отправляем заявку…</span>:<><Gift size={18}/><span>{before?'Приём ещё не начался':closed?'Приём завершён':!s.enabled?'Приём приостановлен':'Участвовать в розыгрыше'}</span><ArrowRight size={18} aria-hidden="true"/></>}</button>
     <small className="giveawayExperience__footnote">{eligibilityText}</small>
+    </>}
    </>}
    {error&&<p className="giveawayExperience__error" role="alert">{error}</p>}
   </section>

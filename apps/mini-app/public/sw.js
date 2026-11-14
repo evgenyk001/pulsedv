@@ -31,6 +31,7 @@ self.addEventListener('notificationclick',event=>{
   const tabs=await self.clients.matchAll({type:'window',includeUncontrolled:true});
   const existing=tabs.find(tab=>new URL(tab.url).origin===BASE.origin&&new URL(tab.url).pathname===BASE.pathname);
   if(existing){
+   try{existing.postMessage({type:'PULSE_OPEN',url:destinationUrl.href})}catch{}
    try{
     const navigated=await existing.navigate(launchUrl.href);
     if(navigated){await navigated.focus();return}

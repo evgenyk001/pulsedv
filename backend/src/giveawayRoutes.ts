@@ -20,6 +20,7 @@ async function notify(sql:Sql,config:RuntimeConfig,row:any,status:string,title:s
  await sql.query("insert into outbox_events(topic,aggregate_type,aggregate_id,payload,dedup_key) values('user.giveaway','giveaway',$1,$2::jsonb,$3) on conflict(dedup_key) where dedup_key is not null do nothing",[row.id,JSON.stringify({userId:row.user_id,entryId:row.id,status,title,body,deepLink:link,ticketId}),'giveaway:'+row.id+':'+status+(ticketId?':'+ticketId:'')]);
 }
 export function registerGiveawayRoutes(app:FastifyInstance,db:Database,config:RuntimeConfig,visitor:(r:FastifyRequest)=>Promise<void>,editor:(r:FastifyRequest)=>Promise<void>){
+ app.get('/api/v1/public/giveaway',async()=>({settings:await campaign(db),entry:null,serverNow:new Date().toISOString()}));
  app.get('/api/v1/me/giveaway',{preHandler:visitor},async r=>({settings:await campaign(db),entry:await (async()=>{const row=(await db.query('select id from giveaway_entries where user_id=$1',[r.visitor!.userId])).rows[0];return row?entryWithTickets(db,row.id):null})(),serverNow:new Date().toISOString()}));
  app.post('/api/v1/me/giveaway',{preHandler:visitor},async r=>{
   const input=z.object({version:z.number().int().positive(),acceptedRules:z.literal(true)}).strict().parse(r.body);

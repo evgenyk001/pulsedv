@@ -138,6 +138,11 @@ test('PWA guests can submit an idempotent callback without opening account route
  assert.equal(retry.statusCode,200,retry.body);
  assert.deepEqual(retry.json(),{ok:true,id:first.json().id,duplicate:true});
  assert.equal((await app.inject({method:'POST',url:'/api/v1/leads',payload,headers})).statusCode,403);
+ const campaign=await app.inject('/api/v1/public/giveaway');
+ assert.equal(campaign.statusCode,200,campaign.body);
+ assert.equal(campaign.json().entry,null);
+ assert.equal(typeof campaign.json().settings.enabled,'boolean');
+
  assert.equal((await app.inject({url:'/api/v1/me/notifications',headers})).statusCode,200);
  const stranger=await session();
  assert.equal((await app.inject({url:'/api/v1/me/journeys/'+first.json().id,headers:stranger.headers})).statusCode,403);
@@ -157,7 +162,7 @@ test('PWA guests can submit an idempotent callback without opening account route
   delivered.push(payload);
  });
  assert.equal(delivered.length,1);
- assert.match(JSON.parse(delivered[0]).url,/pwa-preview\/#\/journey/);
+ assert.match(JSON.parse(delivered[0]).url,/pwa-preview\/\?pushRoute=/);
  assert.doesNotMatch(delivered[0],/Ответ из Control/);
  const inbox=await app.inject({url:'/api/v1/me/notifications',headers});
  assert.equal(inbox.json().items.find((item:{kind:string})=>item.kind==='message')?.body,'Ответ из Control');
