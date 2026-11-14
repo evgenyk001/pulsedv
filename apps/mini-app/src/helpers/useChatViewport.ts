@@ -8,6 +8,8 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   const viewport=window.visualViewport;
   let frame=0;
   const node=root.current;
+  let layoutWidth=0;
+  let restingHeight=0;
   const focusedComposer=()=>{
    const active=document.activeElement;
    return active instanceof HTMLTextAreaElement&&node?.contains(active)?active:null;
@@ -15,12 +17,25 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   const resize=()=>{
    const node=root.current;
    if(!node)return;
+   const typing=!!focusedComposer();
+   const width=document.documentElement.clientWidth;
+   if(isPwa&&(!restingHeight||(!typing&&width!==layoutWidth))){
+    // Measure the full-screen CSS layout before applying keyboard geometry.
+    node.style.removeProperty('--chat-resting-height');
+    node.removeAttribute('data-pwa-keyboard');
+    restingHeight=node.getBoundingClientRect().height;
+    layoutWidth=width;
+    if(getComputedStyle(node).position==='fixed'&&restingHeight>0){
+     node.style.setProperty('--chat-resting-height',restingHeight+'px');
+    }else{
+     restingHeight=0;
+    }
+   }
    const height=viewport?.height??window.innerHeight;
    const top=viewport?.offsetTop??0;
    node.style.setProperty('--chat-height',height+'px');
    node.style.setProperty('--chat-top',top+'px');
-   const typing=!!focusedComposer();
-   node.toggleAttribute('data-pwa-keyboard',isPwa&&typing&&window.innerHeight-height>100);
+   node.toggleAttribute('data-pwa-keyboard',isPwa&&typing&&restingHeight-height>100);
    if(isPwa&&!typing&&getComputedStyle(node).position==='fixed'&&window.scrollY){
     window.scrollTo({top:0,left:0,behavior:'instant'});
    }

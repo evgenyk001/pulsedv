@@ -78,11 +78,12 @@
  overflow:hidden;
  overscroll-behavior:none;
  scroll-padding:0;
+ background:var(--background);
 }
 :global(.pulse-pwa) .conversation:not(.detailsMode){
  top:0;
  bottom:auto;
- height:100dvh;
+ height:var(--chat-resting-height,100dvh);
  padding-bottom:clamp(8px,calc(var(--pulse-safe-bottom) - 14px),20px);
 }
 :global(.pulse-pwa) .conversation:not(.detailsMode)[data-pwa-keyboard]{
