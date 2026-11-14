@@ -49,6 +49,10 @@ export async function api<T=any>(path:string,options:RequestInit={},format:"json
   if(response.ok&&format==="blob")return await response.blob() as T;
   let body:any;
   try{body=await response.json()}catch(error){if(response.ok)throw error;body={}}
+  if(!response.ok&&path.startsWith('/me/journeys/')&&path.includes('/attachments?')){
+   const detail=response.status===413?'Сервер отклонил файл из-за размера':response.status<500&&body?.error?body.error:'Сервер не принял файл';
+   throw new ApiError(response.status,detail+' (HTTP '+response.status+(body?.requestId?', '+body.requestId:'')+')');
+  }
   if(!response.ok)throw new ApiError(response.status,runtime.role==='public'&&response.status>=500?'Не получилось выполнить действие. Попробуйте ещё раз.':body.error||'Не удалось выполнить запрос');
   return body;
  }catch(error){

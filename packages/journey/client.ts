@@ -33,15 +33,18 @@ async function resizeChatImage(file:File):Promise<File>{
   const image=new Image();
   image.src=url;
   await image.decode();
-  if(Math.max(image.naturalWidth,image.naturalHeight)<=4096)return file;
-  const scale=4096/Math.max(image.naturalWidth,image.naturalHeight);
+  const longEdge=Math.max(image.naturalWidth,image.naturalHeight);
+  if(file.size<=750_000&&longEdge<=4096)return file;
+  const scale=Math.min(1,2048/longEdge);
   const canvas=document.createElement('canvas');
   canvas.width=Math.round(image.naturalWidth*scale);
   canvas.height=Math.round(image.naturalHeight*scale);
-  const context=canvas.getContext('2d');
+  const context=canvas.getContext('2d',{alpha:false});
   if(!context)throw new Error('Не удалось подготовить фото');
+  context.fillStyle='#fff';
+  context.fillRect(0,0,canvas.width,canvas.height);
   context.drawImage(image,0,0,canvas.width,canvas.height);
-  const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/jpeg',.9));
+  const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,'image/jpeg',.82));
   if(!blob)throw new Error('Не удалось подготовить фото');
   return new File([blob],file.name.replace(/\.[^.]+$/,'')+'.jpg',{type:blob.type});
  }finally{URL.revokeObjectURL(url)}
@@ -56,7 +59,7 @@ export async function uploadJourneyAttachment(leadId:string,file:File,client=fal
   return {kind:image?'image':'file',name:file.name.slice(0,180)||'Файл',url:await dataUrl(file),mimeType:type,size:file.size};
  }
  const path=(client?'/me':'/control')+'/journeys/'+encodeURIComponent(leadId)+'/attachments?filename='+encodeURIComponent(file.name.slice(0,180));
- const response=await (client?visitorApi:api)<{attachment:JourneyAttachment}>(path,{method:'POST',headers:{'Content-Type':type},body:file,signal:AbortSignal.timeout(120000)});
+ const response=await (client?visitorApi:api)<{attachment:JourneyAttachment}>(path,{method:'POST',headers:{'Content-Type':type},body:await file.arrayBuffer(),signal:AbortSignal.timeout(120000)});
  return response.attachment;
 }
 export async function markJourneyRead(journey:Journey,messageIds:string[],client=false){
