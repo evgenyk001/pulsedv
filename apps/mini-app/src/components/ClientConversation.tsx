@@ -15,6 +15,7 @@ import {loadGuestChatMedia,runtime} from '../../../../packages/pulse-data/runtim
 import type {PulseProperty} from '../../../../packages/pulse-data/model';
 import {useClientJourneys} from '../helpers/useClientJourneys';
 import styles from '../pages/journey.module.css';
+import {isPwa} from '../pwa/client';
 
 export const journeyStatus=(status:string)=>({new:'Обращение принято',contacted:'На связи',qualified:'Подбираем варианты',showing:'Готовимся к показу',booking:'Бронирование',deal:'Сделка завершена',closed:'Обращение завершено',lost:'Обращение закрыто'}[status]||'Обращение принято');
 export const journeyDate=(value:string,short=false)=>new Date(value).toLocaleString('ru-RU',short?{day:'numeric',month:'short'}:{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Vladivostok'});
@@ -66,7 +67,7 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
  const [replies,setReplies]=React.useState<Record<string,string>>({});
  const [propertyId,setPropertyId]=React.useState(''),[at,setAt]=React.useState(''),[note,setNote]=React.useState('');
  const [newBelow,setNewBelow]=React.useState(false);
- const root=React.useRef<HTMLDivElement>(null),log=React.useRef<HTMLDivElement>(null),nearBottom=React.useRef(true),input=React.useRef<HTMLTextAreaElement>(null),imageInput=React.useRef<HTMLInputElement>(null),fileInput=React.useRef<HTMLInputElement>(null);
+ const root=React.useRef<HTMLDivElement>(null),log=React.useRef<HTMLDivElement>(null),nearBottom=React.useRef(true),input=React.useRef<HTMLTextAreaElement>(null),imageInput=React.useRef<HTMLInputElement>(null),fileInput=React.useRef<HTMLInputElement>(null),pwaAttachmentInput=React.useRef<HTMLInputElement>(null);
  const options=properties.filter(p=>p.id===entry.propertyId||j.collections.some(c=>c.items.some(i=>i.propertyId===p.id)));
  const property=(id:string)=>properties.find(p=>p.id===id);
  const subjectProperty=entry.propertyId?property(entry.propertyId):undefined;
@@ -142,11 +143,13 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
    </div>
    {newBelow&&<button className={styles.newMessages} onClick={scrollEnd}><ArrowDown size={16}/>К последним сообщениям</button>}
    {closed||limitReached?<div className={styles.closed}>{closed?'Обращение завершено. Переписка сохранена.':'Достигнут лимит сообщений в этом обращении.'}<Link to="/journey">К моим обращениям<ChevronRight size={14}/></Link></div>:<form className={styles.composer} onSubmit={send}>
+    {isPwa?<input ref={pwaAttachmentInput} className={styles.srOnly} type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" aria-label="Выбрать фото или PDF" onChange={e=>{chooseFile(e.target.files?.[0]);e.currentTarget.value=''}}/>:<>
     <input ref={imageInput} className={styles.srOnly} type="file" accept="image/jpeg,image/png,image/webp" aria-label="Выбрать фото" onChange={e=>{chooseFile(e.target.files?.[0]);e.currentTarget.value=''}}/>
     <input ref={fileInput} className={styles.srOnly} type="file" accept="application/pdf" aria-label="Выбрать файл" onChange={e=>{chooseFile(e.target.files?.[0]);e.currentTarget.value=''}}/>
     {attachmentOpen&&<div className={styles.attachmentMenu} role="menu"><button type="button" role="menuitem" onClick={()=>imageInput.current?.click()}><ImageIcon size={18}/>Фото</button><button type="button" role="menuitem" onClick={()=>fileInput.current?.click()}><FileText size={18}/>Файл PDF</button></div>}
+    </>}
     {pendingFile&&<div className={styles.pendingAttachment}><span className={styles.attachmentThumb}>{previewUrl?<img src={previewUrl} alt="Предпросмотр вложения"/>:<FileText size={21}/>} {uploading&&<span className={styles.uploadIndicator} role="status" aria-label="Загрузка вложения"><Loader2 size={17}/></span>}{uploadedAttachment&&<span className={styles.uploadReady}><Check size={12}/></span>}</span><span><b>{pendingFile.name}</b><small>{Math.max(1,Math.round(pendingFile.size/1024))} КБ</small></span>{!uploading&&!uploadedAttachment&&<button className={styles.retryAttachment} type="button" aria-label="Повторить загрузку вложения" onClick={()=>void chooseFile(pendingFile)}>Повторить</button>}<button type="button" disabled={busy} aria-label="Убрать вложение" onClick={clearAttachment}><X size={16}/></button></div>}
-    <button className={styles.attachButton} aria-label="Добавить вложение" type="button" aria-expanded={attachmentOpen} onClick={()=>setAttachmentOpen(v=>!v)}><Paperclip size={20}/></button>
+    <button className={styles.attachButton} aria-label="Добавить вложение" type="button" aria-expanded={isPwa?undefined:attachmentOpen} onClick={()=>{if(isPwa)pwaAttachmentInput.current?.click();else setAttachmentOpen(v=>!v)}}><Paperclip size={20}/></button>
     <label className={styles.srOnly} htmlFor="client-message">Сообщение</label><textarea ref={input} id="client-message" rows={1} placeholder="Написать сообщение…" maxLength={2000} value={draft} readOnly={busy} onChange={e=>{setDraft(e.target.value);messageId.current=crypto.randomUUID()}} onKeyDown={e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)&&!e.nativeEvent.isComposing){e.preventDefault();e.currentTarget.form?.requestSubmit()}}}/>
     <button className={styles.sendButton} aria-label="Отправить сообщение" type="submit" disabled={busy||uploading||!!pendingFile&&!uploadedAttachment||(!draft.trim()&&!pendingFile)}><ArrowUp size={21}/></button>{(busy||draft.length>1800)&&<small role="status">{busy?'Отправляем…':draft.length+' / 2000'}</small>}
    </form>}
