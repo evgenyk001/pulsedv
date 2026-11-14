@@ -7,7 +7,6 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
  useLayoutEffect(()=>{
   const viewport=window.visualViewport;
   let frame=0;
-  let settleTimer=0;
   const node=root.current;
   const focusedComposer=()=>{
    const active=document.activeElement;
@@ -22,6 +21,9 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    node.style.setProperty('--chat-top',top+'px');
    const typing=!!focusedComposer();
    node.toggleAttribute('data-pwa-keyboard',isPwa&&typing&&window.innerHeight-height>100);
+   if(isPwa&&!typing&&getComputedStyle(node).position==='fixed'&&window.scrollY){
+    window.scrollTo({top:0,left:0,behavior:'instant'});
+   }
    callback.current?.();
   };
   const updateFocus=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(resize)};
@@ -32,15 +34,7 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   const restoreAfterBlur=(event:FocusEvent)=>{
    if(!isPwa||!(event.target instanceof HTMLTextAreaElement)||!node?.contains(event.target))return;
    node.removeAttribute('data-pwa-keyboard');
-   const restore=()=>{
-    if(!node.isConnected||focusedComposer())return;
-    window.scrollTo({top:0,left:0,behavior:'instant'});
-    resize();
-   };
-   cancelAnimationFrame(frame);
-   frame=requestAnimationFrame(restore);
-   window.clearTimeout(settleTimer);
-   settleTimer=window.setTimeout(restore,350);
+   updateFocus();
   };
   resize();
   node?.addEventListener('click',dismissOnTap);
@@ -53,7 +47,6 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   return ()=>{
    cancelAnimationFrame(frame);
    document.removeEventListener('focusin',updateFocus);
-   window.clearTimeout(settleTimer);
    node?.removeEventListener('click',dismissOnTap);
    node?.removeEventListener('focusout',restoreAfterBlur);
    viewport?.removeEventListener('resize',resize);

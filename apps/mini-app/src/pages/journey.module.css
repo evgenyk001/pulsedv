@@ -73,10 +73,16 @@
 .pendingAttachment>button{flex-shrink:0}
 .pendingAttachment>.retryAttachment{width:auto;padding:0 8px;border-radius:12px;font-size:12px;white-space:nowrap}
 
+:global(html.pulse-pwa):has(.conversation:not(.detailsMode)),
+:global(html.pulse-pwa):has(.conversation:not(.detailsMode)) :global(body){
+ overflow:hidden;
+ overscroll-behavior:none;
+ scroll-padding:0;
+}
 :global(.pulse-pwa) .conversation:not(.detailsMode){
  top:0;
- bottom:0;
- height:auto;
+ bottom:auto;
+ height:100dvh;
  padding-bottom:clamp(8px,calc(var(--pulse-safe-bottom) - 14px),20px);
 }
 :global(.pulse-pwa) .conversation:not(.detailsMode)[data-pwa-keyboard]{
