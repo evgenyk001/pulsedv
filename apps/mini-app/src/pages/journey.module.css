@@ -83,6 +83,7 @@
 :global(.pulse-pwa) .conversation:not(.detailsMode){
  inset-inline:0;
  margin-inline:auto;
+ font-family:var(--font-family-base);
  transform:none;
  top:0;
  bottom:auto;
