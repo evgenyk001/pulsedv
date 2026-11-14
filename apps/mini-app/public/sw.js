@@ -21,4 +21,21 @@ self.addEventListener('push',event=>{
  let data={};try{data=event.data?.json()??{}}catch{}
  event.waitUntil(self.registration.showNotification(typeof data.title==='string'?data.title.slice(0,100):'PULSEDV.RU',{body:typeof data.body==='string'?data.body.slice(0,180):'Откройте приложение для просмотра обновления.',icon:new URL('pulse-app-192-v3.png',BASE).href,badge:new URL('pulse-app-192-v3.png',BASE).href,tag:typeof data.tag==='string'?data.tag.slice(0,150):'pulse-update',data:{url:destination(data.url)}}));
 });
-self.addEventListener('notificationclick',event=>{event.notification.close();const url=destination(event.notification.data?.url);event.waitUntil((async()=>{const tabs=await self.clients.matchAll({type:'window',includeUncontrolled:true});const existing=tabs.find(t=>new URL(t.url).origin===BASE.origin&&new URL(t.url).pathname===BASE.pathname);if(existing){await existing.focus();existing.postMessage({type:'PULSE_OPEN',url});}else await self.clients.openWindow(url)})());});
+self.addEventListener('notificationclick',event=>{
+ event.notification.close();
+ const destinationUrl=new URL(destination(event.notification.data?.url));
+ const launchUrl=new URL(BASE);
+ launchUrl.searchParams.set('pushRoute',destinationUrl.hash);
+ launchUrl.hash=destinationUrl.hash;
+ event.waitUntil((async()=>{
+  const tabs=await self.clients.matchAll({type:'window',includeUncontrolled:true});
+  const existing=tabs.find(tab=>new URL(tab.url).origin===BASE.origin&&new URL(tab.url).pathname===BASE.pathname);
+  if(existing){
+   try{
+    const navigated=await existing.navigate(launchUrl.href);
+    if(navigated){await navigated.focus();return}
+   }catch{}
+  }
+  await self.clients.openWindow(launchUrl.href);
+ })());
+});
