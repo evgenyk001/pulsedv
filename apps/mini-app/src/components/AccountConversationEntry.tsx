@@ -16,7 +16,7 @@ export function AccountConversationEntry(props:LeadSheetProps){
   if(busy)return;setBusy(true);setError(false);
   try{
    const invitation=rememberedPartnerInvite(),direct=['profile-manager','profile-contact'].includes(props.source??'');
-   const referralCode=direct?undefined:props.referralCode??invitation?.code;
+   const referralCode=direct||runtime.publicPreview?undefined:props.referralCode??invitation?.code;
    const entries=(await loadJourneys(true)).items;
    const newPurchase=props.source==='journey'&&entries.length>0;
    const active=!newPurchase&&!referralCode?entries.filter(e=>!['deal','lost','closed'].includes(e.status)&&(!props.propertyId||e.propertyId===props.propertyId||!e.propertyId)).sort((a,b)=>Number(b.propertyId===props.propertyId)-Number(a.propertyId===props.propertyId)||Date.parse(b.createdAt)-Date.parse(a.createdAt))[0]:null;

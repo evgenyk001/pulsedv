@@ -18,7 +18,13 @@ export function registerConversationRoutes(app:FastifyInstance,db:Database,confi
   if(input.referralCode&&!input.referralConsent)throw new HttpError(400,'Подтвердите рекомендацию');
   return db.transaction(async sql=>{
    await sql.query('select id from sessions where id=$1 for update',[identity.sessionId]);
-   const user=(await sql.query('select u.*,c.accepted_at as registration_consent_at,c.consent_version as registration_consent_version from app_users u join telegram_contact_consent c on c.user_id=u.id where u.id=$1 and u.phone is not null and c.accepted_at is not null',[identity.userId])).rows[0];
+   const user=(await sql.query(`select u.*,c.accepted_at as registration_consent_at,c.consent_version as registration_consent_version
+    from app_users u join lateral (
+     select * from (select accepted_at,consent_version from telegram_contact_consent where user_id=u.id and accepted_at is not null
+     union all
+     select verified_at,consent_version from phone_registrations where user_id=u.id and phone=u.phone and $2) registrations
+     order by (consent_version=$3) desc,accepted_at desc limit 1
+    ) c on true where u.id=$1 and u.phone is not null`,[identity.userId,!!identity.telegramWeb,config.CONSENT_VERSION])).rows[0];
    if(!user)throw new HttpError(403,'Подтвердите свой номер в Telegram');
    if(user.registration_consent_version!==config.CONSENT_VERSION)throw new HttpError(409,'Подтвердите обновлённые условия при входе');
    await lockBuyerIdentity(sql,user.phone,identity.userId);

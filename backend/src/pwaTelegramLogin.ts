@@ -19,7 +19,7 @@ export async function exchangeTelegramCode(config:RuntimeConfig,code:string,veri
  const response=await fetch(issuer+'/token',{
   method:'POST',redirect:'error',signal:AbortSignal.timeout(12000),
   headers:{Authorization:'Basic '+credentials},
-  body:new URLSearchParams({grant_type:'authorization_code',code,code_verifier:verifier,redirect_uri})
+  body:new URLSearchParams({grant_type:'authorization_code',client_id:config.PWA_TELEGRAM_CLIENT_ID,code,code_verifier:verifier,redirect_uri})
  });
  if(!response.ok)throw new Error('Telegram rejected the code');
  const {id_token}=z.object({id_token:z.string().max(16000)}).parse(await response.json());
@@ -28,7 +28,7 @@ export async function exchangeTelegramCode(config:RuntimeConfig,code:string,veri
   requiredClaims:['sub','iat','exp'],maxTokenAge:'10m',clockTolerance:30
  });
  // Telegram's OIDC subject and numeric Telegram user ID are distinct claims.
- const profile=z.object({id:z.number().int().positive(),given_name:z.string().optional(),family_name:z.string().optional(),preferred_username:z.string().optional(),name:z.string().optional()}).parse(payload);
+ const profile=z.object({id:z.preprocess(value=>typeof value==='string'&&/^[0-9]{1,16}$/.test(value)?Number(value):value,z.number().int().positive()),given_name:z.string().optional(),family_name:z.string().optional(),preferred_username:z.string().optional(),name:z.string().optional()}).parse(payload);
  return {id:profile.id,first_name:(profile.given_name||profile.name||'Клиент').slice(0,100),last_name:profile.family_name?.slice(0,100),username:profile.preferred_username?.slice(0,64)};
 }
 

@@ -15,8 +15,7 @@ import {PersonalDataConsentDocument} from "../pages/personal-data-consent";
 export type LeadSheetProps={children:React.ReactNode;title?:string;project?:string;propertyId?:string;source?:string;context?:Record<string,unknown>;referralCode?:string;referralName?:string};
 
 export function LeadSheet(props:LeadSheetProps){
- const account=useQuery({queryKey:['visitor-account'],queryFn:()=>visitorApi<{registered:boolean}>('/me/account'),enabled:runtime.enabled&&!runtime.publicPreview,staleTime:30000});
- if(runtime.publicPreview)return <LegacyLeadSheet {...props}/>;
+ const account=useQuery({queryKey:['visitor-account'],queryFn:()=>visitorApi<{registered:boolean}>('/me/account'),enabled:runtime.enabled,staleTime:30000});
  if(runtime.enabled&&(account.isPending||account.isError))return React.cloneElement(props.children as React.ReactElement<any>,{disabled:account.isPending,onClick:()=>void account.refetch()});
  return runtime.enabled&&account.data?.registered?<AccountConversationEntry {...props}/>:<LegacyLeadSheet {...props}/>;
 }
