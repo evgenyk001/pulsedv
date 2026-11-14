@@ -1,10 +1,10 @@
 import React from 'react';
-import {Bell,Download,LogOut,RefreshCw,WifiOff,UserRound,Check,ArrowUpRight,MessageCircle} from 'lucide-react';
+import {Bell,Download,LogOut,RefreshCw,WifiOff,UserRound,Check,ArrowUpRight,MessageCircle,Send} from 'lucide-react';
 import {SafariShare,SafariAddHome} from './InstallationIcons';
 import {useClientNotifications} from '../helpers/useClientNotifications';
 import {useQuery} from '@tanstack/react-query';
 import {GroupedMenu,MenuToggle,MenuButton,MenuInfo,MenuExternalLink} from '../components/GroupedMenu';
-import {appleDevice,standalone,install,canInstall,enablePush,disablePush,logoutPwa,pwaConfig,isPwa} from './client';
+import {appleDevice,standalone,install,canInstall,enablePush,disablePush,logoutPwa,pwaConfig,isPwa,startPwaTelegramLogin} from './client';
 import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import './pwa.css';
 export function PwaStatus(){
@@ -40,4 +40,33 @@ export function PwaAccount(){
   <MenuInfo icon={<UserRound/>} title={a.name==='Клиент'?'Покупатель PULSEDV.RU':a.name} description={a.phone+' · подтверждён'}/>
   <MenuExternalLink icon={<MessageCircle/>} title={a.telegramLinked?'Telegram подключён':'Подключить Telegram'} description={a.telegramLinked?'Открыть бота':'Войдите с тем же номером'} href={'https://t.me/'+a.botUsername+'?startapp=profile'} target="_blank" rel="noopener noreferrer"/>
  </GroupedMenu>;
+}
+
+export function PwaTelegramAccount(){
+ const config=useQuery({queryKey:['pwa-login-config'],queryFn:pwaConfig});
+ const account=useQuery({queryKey:['pwa-login-account'],queryFn:()=>visitorApi<{authenticated:boolean;name:string|null}>('/me/account'),enabled:!!config.data?.telegramLogin});
+ const [busy,setBusy]=React.useState(false);
+ const [message,setMessage]=React.useState<string>(()=>history.state?.telegramLoginMessage||'');
+ React.useEffect(()=>{
+  if(history.state?.telegramLoginMessage)history.replaceState({...history.state,telegramLoginMessage:undefined},'');
+ },[]);
+ if(!config.data?.telegramLogin&&!message)return null;
+ const authenticated=account.data?.authenticated;
+ const act=async()=>{
+  setBusy(true);setMessage('');
+  try{if(authenticated)await logoutPwa();else await startPwaTelegramLogin()}
+  catch(error){setMessage(error instanceof Error?error.message:'Попробуйте ещё раз.');setBusy(false)}
+ };
+ return <section className="pwaLoginCard" aria-label="Аккаунт PULSEDV.RU">
+  <span className="pwaLoginCard__icon"><UserRound size={22}/></span>
+  <div className="pwaLoginCard__copy">
+   <h2>{authenticated?account.data?.name||'Ваш аккаунт':'Ваш аккаунт'}</h2>
+   <p>{authenticated?'Избранное и обращения доступны в PWA и мини-аппе.':'Сохраните избранное и переписку в одном аккаунте с мини-аппом.'}</p>
+  </div>
+  {config.data?.telegramLogin&&<button type="button" disabled={busy||account.isPending} onClick={()=>void act()}>
+   {authenticated?<LogOut size={18}/>:<Send size={18}/>}
+   {busy?'Подождите…':authenticated?'Выйти':'Войти через Telegram'}
+  </button>}
+  {message&&<p className="pwaLoginCard__status" role="status">{message}</p>}
+ </section>;
 }

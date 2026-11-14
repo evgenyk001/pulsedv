@@ -1,7 +1,8 @@
+import {safeSessionStorage} from '../../../../packages/browser/storage';
 import {pwaStartRoute} from '../../../../packages/browser/pwaLinks';
 import {api,visitorApi,replaceVisitorSession} from '../../../../packages/pulse-data/runtime';
 export const isPwa=import.meta.env.VITE_APP_VARIANT==='pwa';
-export type PwaConfiguration={phoneLogin:boolean;phoneChannel:'call'|'sms';push:boolean;pushPublicKey:string};
+export type PwaConfiguration={telegramLogin?:boolean;phoneLogin:boolean;phoneChannel:'call'|'sms';push:boolean;pushPublicKey:string};
 export const pwaConfig=()=>api<PwaConfiguration>('/public/pwa');
 export function standalone(){return window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: fullscreen)').matches||(navigator as Navigator&{standalone?:boolean}).standalone===true;}
 export function appleDevice(){return /iPhone|iPad|iPod/i.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;}
@@ -10,6 +11,33 @@ let installPrompt:InstallPrompt|null=null;
 if(isPwa)window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installPrompt=event as InstallPrompt;window.dispatchEvent(new Event('pulse:install-available'))});
 export async function install(){if(!installPrompt)return false;const prompt=installPrompt;installPrompt=null;await prompt.prompt();return (await prompt.userChoice).outcome==='accepted';}
 export function canInstall(){return !!installPrompt;}
+const telegramReturnKey='pulse.telegram-login.return';
+export async function startPwaTelegramLogin(){
+ const {url}=await visitorApi<{url:string}>('/auth/pwa-telegram/start',{method:'POST',body:JSON.stringify({base:import.meta.env.BASE_URL})});
+ const target=new URL(url);
+ if(target.origin!=='https://oauth.telegram.org'||target.pathname!=='/auth')throw new Error('Не удалось открыть Telegram.');
+ safeSessionStorage.setItem(telegramReturnKey,location.hash);
+ location.assign(target.href);
+}
+
+export async function finishPwaTelegramLogin(){
+ if(!isPwa)return;
+ const url=new URL(location.href);
+ const state=url.searchParams.get('state'),code=url.searchParams.get('code'),error=url.searchParams.get('error');
+ if(!state||!code&&!error)return;
+ const previous=safeSessionStorage.getItem(telegramReturnKey);
+ safeSessionStorage.removeItem(telegramReturnKey);
+ for(const field of ['state','code','error','error_description'])url.searchParams.delete(field);
+ url.hash=previous?.startsWith('#/')?previous:'#/profile';
+ history.replaceState(history.state,'',url);
+ if(error)return 'Вход отменён. Можно продолжить как гость.';
+ try{
+  const session=await visitorApi<{sessionId:string;accessToken:string;expiresAt:string}>('/auth/pwa-telegram/finish',{method:'POST',body:JSON.stringify({state,code})});
+  replaceVisitorSession(session);
+  return 'Вход выполнен';
+ }catch(e){return e instanceof Error?e.message:'Не удалось войти через Telegram.'}
+}
+
 export async function registerPwa(){
  if(isPwa&&location.pathname===import.meta.env.BASE_URL){
   const url=new URL(location.href);

@@ -39,12 +39,20 @@ keys = json.loads(Path(sys.argv[3]).read_text())
 refs = {}
 new = {}
 old = {}
+telegram = Path('/root/pulsedv-telegram-login.json')
+telegram_env = {}
+if telegram.is_file():
+    settings = json.loads(telegram.read_text())
+    telegram_env = {key: settings[key] for key in ('PWA_TELEGRAM_CLIENT_ID', 'PWA_TELEGRAM_CLIENT_SECRET')}
+    bot_token = original['services']['api']['environment'].get('BOT_TOKEN', '')
+    if not telegram_env['PWA_TELEGRAM_CLIENT_SECRET'] or telegram_env['PWA_TELEGRAM_CLIENT_ID'] != bot_token.split(':')[0]:
+        raise SystemExit('Telegram Web Login должен использовать того же бота, что и мини-апп')
 for service in ('api', 'worker'):
     spec = original['services'][service]
     refs[service] = spec.get('image') or f"{original['name']}-{service}"
     if '@' in refs[service] or refs[service].startswith('sha256:'):
         raise SystemExit('Нужна сверка закреплённого образа ' + service)
-    new[service] = {'image': sys.argv[2], 'pull_policy': 'never', 'environment': {'PWA_CALL_LOGIN': 'false', 'PWA_SMS_LOGIN': 'false', 'WEB_PUSH_PUBLIC_KEY': keys['publicKey'], 'WEB_PUSH_PRIVATE_KEY': keys['privateKey']}}
+    new[service] = {'image': sys.argv[2], 'pull_policy': 'never', 'environment': {'PWA_CALL_LOGIN': 'false', 'PWA_SMS_LOGIN': 'false', 'WEB_PUSH_PUBLIC_KEY': keys['publicKey'], 'WEB_PUSH_PRIVATE_KEY': keys['privateKey'], **(telegram_env if service == 'api' else {})}}
     old[service] = {'image': f'pulsedv-rollback:{folder.name}-{service}', 'pull_policy': 'never'}
 for name, spec in [('candidate', new), ('rollback', old)]:
     (folder / f'{name}.json').write_text(json.dumps({'services': spec}))

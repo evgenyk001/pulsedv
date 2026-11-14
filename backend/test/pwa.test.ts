@@ -17,10 +17,10 @@ import {createApp} from '../src/app';
 import {readConfig} from '../src/config';
 import {handleBotUpdate} from '../src/telegramBot';
 import {deliverWebPush,validPushEndpoint,pushRoute} from '../src/webPush';
-async function fixture(t:TestContext){
+async function fixture(t:TestContext,telegram=false){
  const db=await testDatabase();await migrate(db);const keys=webpush.generateVAPIDKeys();
- const config=readConfig({DATABASE_URL:'unused',NODE_ENV:'test',BOT_TOKEN:'test-token',REQUIRE_TELEGRAM_PHONE:'true',PWA_SMS_LOGIN:'true',SMS_RU_API_ID:'test-provider-never-used',PHONE_OTP_SECRET:'test-secret-that-is-longer-than-32-characters',WEB_PUSH_PUBLIC_KEY:keys.publicKey,WEB_PUSH_PRIVATE_KEY:keys.privateKey});
- const sent:Array<{phone:string;code:string}>=[];const app=await createApp(db,config,{sms:async(phone,code)=>{sent.push({phone,code})}});
+ const config=readConfig({DATABASE_URL:'unused',NODE_ENV:'test',BOT_TOKEN:telegram?'98765:test-token':'test-token',PWA_TELEGRAM_CLIENT_ID:telegram?'98765':'',PWA_TELEGRAM_CLIENT_SECRET:telegram?'test-secret':'',REQUIRE_TELEGRAM_PHONE:'true',PWA_SMS_LOGIN:'true',SMS_RU_API_ID:'test-provider-never-used',PHONE_OTP_SECRET:'test-secret-that-is-longer-than-32-characters',WEB_PUSH_PUBLIC_KEY:keys.publicKey,WEB_PUSH_PRIVATE_KEY:keys.privateKey});
+ const sent:Array<{phone:string;code:string}>=[];const app=await createApp(db,config,{sms:async(phone,code)=>{sent.push({phone,code})},telegramExchange:telegram?async()=>({id:98765,first_name:'Тест'}):undefined});
  t.after(async()=>{await app.close();await db.close()});
  const origin={origin:config.PUBLIC_ORIGIN};
  const session=async()=>{const s=(await app.inject({method:'POST',url:'/api/v1/auth/session',headers:origin,payload:{}})).json();return {s,headers:{...origin,authorization:'Bearer '+s.accessToken}}};
@@ -215,4 +215,29 @@ test('PWA guests can submit an idempotent callback without opening account route
  const lead=(await db.query('select source,user_id from leads where id=$1',[first.json().id])).rows[0];
  assert.deepEqual(lead,{source:'pwa-contact',user_id:null});
  assert.equal((await db.query("select id from outbox_events where aggregate_id=$1 and topic='manager.new_lead'",[first.json().id])).rows.length,1);
+});
+
+test('PWA Telegram login joins the existing account and retains guest conversations',async t=>{
+ const f=await fixture(t,true),mini=await f.session(),guest=await f.session(),stranger=await f.session();
+ const bind=await f.app.inject({method:'POST',url:'/api/v1/auth/telegram',headers:mini.headers,payload:{initData:signed(98765,f.config.BOT_TOKEN)}});
+ assert.equal(bind.statusCode,200,bind.body);
+ const {id:userId}=(await f.db.query('select id from app_users where telegram_user_id=98765')).rows[0];
+ await f.db.query("insert into favorite_sets(owner,property_ids) values($1,array['primorskiy']) on conflict(owner) do update set property_ids=excluded.property_ids",['user:'+userId]);
+ const contact=await f.app.inject({method:'POST',url:'/api/v1/public/pwa/contact',headers:guest.headers,payload:{idempotencyKey:randomUUID(),source:'profile-manager',name:'Тест PWA',phone:'+79990006666',consent:true,consentVersion:f.config.CONSENT_VERSION}});
+ assert.equal(contact.statusCode,200,contact.body);
+ const start=await f.app.inject({method:'POST',url:'/api/v1/auth/pwa-telegram/start',headers:guest.headers,payload:{base:'/landing-cinematic/pwa-preview/'}});
+ assert.equal(start.statusCode,200,start.body);
+ const url=new URL(start.json().url);
+ assert.equal(url.origin,'https://oauth.telegram.org');
+ assert.equal(url.searchParams.get('code_challenge_method'),'S256');
+ const finish=(headers:typeof guest.headers)=>f.app.inject({method:'POST',url:'/api/v1/auth/pwa-telegram/finish',headers,payload:{state:url.searchParams.get('state'),code:'test-code'}});
+ assert.equal((await finish(stranger.headers)).statusCode,400);
+ const result=await finish(guest.headers);
+ assert.equal(result.statusCode,200,result.body);
+ assert.equal((await finish(guest.headers)).statusCode,401);
+ const headers={...guest.headers,authorization:'Bearer '+result.json().accessToken};
+ assert.equal((await f.db.query('select user_id from leads where id=$1',[contact.json().id])).rows[0].user_id,userId);
+ assert.deepEqual((await f.app.inject({url:'/api/v1/me/favorites',headers})).json().ids,['primorskiy']);
+ assert.equal((await f.app.inject({url:'/api/v1/me/journeys/'+contact.json().id,headers})).statusCode,200);
+ assert.equal((await f.app.inject({url:'/api/v1/me/partner',headers})).statusCode,403);
 });

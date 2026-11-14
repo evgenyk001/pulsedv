@@ -26,6 +26,7 @@ export async function runSecurityMaintenance(db:Database,config:RuntimeConfig){
   await sql.query("delete from antifraud_devices where last_seen_at<now()-interval '180 days'");
   await sql.query("delete from partner_security_attempts where created_at<now()-interval '90 days'");
   await sql.query("delete from partner_client_reservations where converted_referral_id is null and expires_at<now()-interval '30 days'");
+  await sql.query("delete from pwa_telegram_login where expires_at<now()");
   await sql.query("delete from phone_login_challenges where created_at<now()-interval '1 day'");
   await sql.query("delete from pwa_announcement_receipts where created_at<now()-interval '180 days'");
   await sql.query("delete from push_deliveries where delivered_at<now()-interval '30 days' or dead_at<now()-interval '30 days'");

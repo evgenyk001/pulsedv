@@ -1,13 +1,13 @@
 import {runtime as previewRuntime} from '../../../../packages/pulse-data/runtime';
 import {isPwa} from '../pwa/client';
-import {PwaPreferences,PwaAccount} from '../pwa/PwaExperience';
+import {PwaPreferences,PwaAccount,PwaTelegramAccount} from '../pwa/PwaExperience';
 import {safeLocalStorage} from '../../../../packages/browser/storage';
 import {PwaAnnouncementPreferences} from '../pwa/PwaAnnouncementPreferences';
 import {PwaSecurityPreferences} from '../pwa/PwaPartnerSecurity';
 import {PartnerSecurityPreferences} from '../components/PartnerSecurity';
 import {IconTile} from '../components/IconTile';
 import {AnnouncementPreferences} from '../components/AnnouncementPreferences';
-import {GroupedMenu,MenuLink,MenuButton,MenuInfo} from "../components/GroupedMenu";
+import {GroupedMenu,MenuLink,MenuButton} from "../components/GroupedMenu";
 import {useClientJourneys} from "../helpers/useClientJourneys";
 import React from "react";
 import { Link } from "react-router-dom";
@@ -43,6 +43,8 @@ export default function ProfilePage(){
   return <div className={styles.page}>
     <PageHeader eyebrow="Ваш PULSEDV.RU" title="Помощь с покупкой" subtitle="Избранное, подборы и связь с менеджером — в одном месте." action={<IconTile as="div" className={styles.avatar}><UserRound size={23}/></IconTile>}/>
 
+    {previewRuntime.publicPreview?<PwaTelegramAccount/>:<PwaAccount/>}
+
     <GroupedMenu label="Ваш менеджер">
       {active?<MenuLink to={"/journey?lead="+active.leadId} icon={<MessageCircle/>} title="Персональный менеджер" description={active.managerName||"Команда PULSEDV.RU"} aria-label="Открыть переписку с менеджером"/>:<LeadSheet source="profile-manager"><MenuButton icon={<MessageCircle/>} title="Персональный менеджер" description="Команда PULSEDV.RU · поможем с покупкой" aria-label="Оставить заявку менеджеру"/></LeadSheet>}
     </GroupedMenu>
@@ -65,7 +67,6 @@ export default function ProfilePage(){
         </SheetContent>
       </Sheet>
     </GroupedMenu>
-    {previewRuntime.publicPreview?<GroupedMenu title="Аккаунт"><MenuInfo icon={<ShieldCheck/>} title="Настройки после входа" description="Уведомления, анонсы и защита партнёрского кабинета доступны после подключения аккаунта."/></GroupedMenu>:<PwaAccount/>}
     <PwaPreferences/>
     {previewRuntime.publicPreview?null:isPwa?<><PwaAnnouncementPreferences/><PwaSecurityPreferences/></>:<><AnnouncementPreferences/><PartnerSecurityPreferences/></>}
     <GroupedMenu title="О приложении">

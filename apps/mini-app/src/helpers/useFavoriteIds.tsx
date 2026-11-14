@@ -10,8 +10,9 @@ function pending():Change[]{const v=read<unknown>(PENDING,[]);return Array.isArr
 function save(ids:string[]){safeLocalStorage.setItem(KEY,JSON.stringify(ids));window.dispatchEvent(new Event('pulse-favorites'))}
 let task:Promise<void>|null=null;let error='';let notice='';let authenticated=false;
 export function syncFavorites():Promise<void>{
- if(!runtime.enabled||runtime.publicPreview)return Promise.resolve();if(task)return task;
+ if(!runtime.enabled)return Promise.resolve();if(task)return task;
  task=(async()=>{try{
+  if(runtime.publicPreview&&!(await visitorApi<{authenticated:boolean}>('/me/account')).authenticated)return;
   const sessionId=await visitorSessionId();
   const batch=pending().slice(0,500),importIds=safeLocalStorage.getItem(MIGRATED)===sessionId?undefined:readIds();
   const result=await visitorApi<{ids:string[];authenticated:boolean;rejectedIds?:string[]}>('/me/favorites',batch.length||importIds?{method:'POST',body:JSON.stringify({changes:batch.map(({id,saved})=>({id,saved})),importIds})}:{});
@@ -38,7 +39,7 @@ export function useFavoriteIds(){
   const current=readIds(),removing=current.includes(propertyId);
   if(!removing&&current.length>=500){notice='В избранном можно сохранить до 500 ЖК';window.dispatchEvent(new Event('pulse-favorites'));return}
   notice='';
-  if(runtime.enabled&&!runtime.publicPreview){const changes=pending().filter(c=>c.id!==propertyId);changes.push({id:propertyId,saved:!removing,nonce:crypto.randomUUID()});safeLocalStorage.setItem(PENDING,JSON.stringify(changes));}
+  if(runtime.enabled){const changes=pending().filter(c=>c.id!==propertyId);changes.push({id:propertyId,saved:!removing,nonce:crypto.randomUUID()});safeLocalStorage.setItem(PENDING,JSON.stringify(changes));}
   save(removing?current.filter(x=>x!==propertyId):[...current,propertyId]);
   recordPulseEvent({eventType:removing?'favorite_remove':'favorite_add',entityType:'property',entityId:propertyId});
   if(runtime.enabled)void syncFavorites().then(()=>{if(!error&&pending().length)void syncFavorites()});

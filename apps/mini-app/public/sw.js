@@ -16,7 +16,7 @@ self.addEventListener('fetch',event=>{
  if(!safeAsset(url))return;
  event.respondWith((async()=>{const cached=await caches.match(request);if(cached)return cached;const response=await fetch(request);if(response.ok&&response.type==='basic'){const cache=await caches.open(CACHE);await cache.put(request,response.clone());const keys=await cache.keys();if(keys.length>100)await cache.delete(keys[0]);}return response})());
 });
-function destination(value){try{const url=new URL(value,BASE);if(url.origin===BASE.origin&&url.pathname===BASE.pathname)return url.href}catch{}return new URL('#/profile',BASE).href}
+function destination(value){try{const url=new URL(value,BASE);if(url.origin===BASE.origin){if(url.pathname===BASE.pathname)return url.href;if(BASE.pathname==='/landing-cinematic/pwa-preview/'&&url.pathname==='/app/')return new URL(url.hash||'#/profile',BASE).href}}catch{}return new URL('#/profile',BASE).href}
 self.addEventListener('push',event=>{
  let data={};try{data=event.data?.json()??{}}catch{}
  event.waitUntil(self.registration.showNotification(typeof data.title==='string'?data.title.slice(0,100):'PULSEDV.RU',{body:typeof data.body==='string'?data.body.slice(0,180):'Откройте приложение для просмотра обновления.',icon:new URL('pulse-app-192-v3.png',BASE).href,badge:new URL('pulse-app-192-v3.png',BASE).href,tag:typeof data.tag==='string'?data.tag.slice(0,150):'pulse-update',data:{url:destination(data.url)}}));

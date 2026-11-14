@@ -14,7 +14,7 @@ const key=(bytes:number)=>z.string().regex(/^[A-Za-z0-9_-]+={0,2}$/).refine(v=>B
 export function registerWebPush(app:FastifyInstance,db:Database,config:RuntimeConfig,visitor:(r:FastifyRequest)=>Promise<void>){
  const account=async(r:FastifyRequest)=>{
   await visitor(r);
-  if(r.visitor!.userId&&await registeredPhone(db,r.visitor!.userId,config.CONSENT_VERSION))return;
+  if(r.visitor!.userId&&(r.visitor!.telegramWeb||await registeredPhone(db,r.visitor!.userId,config.CONSENT_VERSION)))return;
   if(!r.visitor!.userId&&r.headers.authorization?.startsWith('Bearer ')&&(await db.query("select 1 from leads where session_id=$1 and source='pwa-contact' and user_id is null limit 1",[r.visitor!.sessionId])).rows.length)return;
   throw new HttpError(403,'Сначала отправьте заявку или войдите в аккаунт');
  };
@@ -56,7 +56,8 @@ export async function deliverWebPush(db:Database,config:RuntimeConfig,send:PushS
   const guest=row?.topic==='pwa.guest_reply';
   const eligible=row&&(guest
    ? (await db.query("select 1 from leads l join sessions s on s.id=l.session_id where l.id=$1 and s.id=$2 and s.user_id is null and l.user_id is null and l.source='pwa-contact'",[row.aggregate_id,row.session_id])).rows.length>0
-   : await registeredPhone(db,row.user_id,config.CONSENT_VERSION));
+   : await registeredPhone(db,row.user_id,config.CONSENT_VERSION)
+     || row.topic==='user.journey'&&(await db.query("select 1 from sessions where user_id=$1 and auth_provider='telegram-web' limit 1",[row.user_id])).rows.length>0);
   if(!row||Date.parse(row.event_at)<Date.now()-86400000||!eligible){
    await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;
   }

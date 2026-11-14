@@ -1,6 +1,6 @@
 import {InstallGate} from './pwa/InstallGate';
 import {PwaStatus,PwaBadge} from './pwa/PwaExperience';
-import {isPwa,registerPwa} from './pwa/client';
+import {finishPwaTelegramLogin,isPwa,registerPwa} from './pwa/client';
 import {AppBoundary} from '../../../packages/browser/AppBoundary';
 import {dismissLaunchScreen} from './helpers/launchScreen';
 import {BrandLoading} from './components/BrandLoading';
@@ -35,6 +35,7 @@ const PersonalDataConsentPage=React.lazy(()=>import('./pages/personal-data-conse
 
 configureRuntime({enabled:import.meta.env.VITE_PULSE_MODE==="api",base:import.meta.env.VITE_API_BASE_URL,role:"public",browserMode:isPwa,publicPreview:import.meta.env.VITE_PWA_PREVIEW==="true"});
 if(isPwa)document.documentElement.classList.add("pulse-pwa");
+const telegramLoginResult=finishPwaTelegramLogin();
 void registerPwa();
 
 const queryClient=new QueryClient({defaultOptions:{queries:{retry:(count,error)=>count<1&&(!(error instanceof ApiError)||error.status===0||error.status>=500),retryDelay:1000,refetchInterval:query=>isPwa&&query.queryKey[0]==="catalog"?60000:false}}});
@@ -83,4 +84,9 @@ export function App(){
   </QueryClientProvider>
 }
 
-export function mountApp(){ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><AppBoundary onError={dismissLaunchScreen}><InstallGate><RuntimeGate><App/></RuntimeGate></InstallGate></AppBoundary></React.StrictMode>);}
+export function mountApp(){
+ void telegramLoginResult.then(message=>{
+  if(message)window.history.replaceState({...window.history.state,telegramLoginMessage:message},'');
+  ReactDOM.createRoot(document.getElementById("root")!).render(<React.StrictMode><AppBoundary onError={dismissLaunchScreen}><InstallGate><RuntimeGate><App/></RuntimeGate></InstallGate></AppBoundary></React.StrictMode>);
+ });
+}

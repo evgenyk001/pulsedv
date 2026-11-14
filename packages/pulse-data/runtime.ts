@@ -32,12 +32,17 @@ function guestConversation(path:string,method:string){
  if(method==="DELETE")return /^\/me\/journeys\/[0-9a-f-]{36}\/attachments\/[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/.test(route);
  return method==="POST"&&(/^\/me\/(?:notifications\/(read|dismiss)|push\/(subscribe|unsubscribe))$/.test(route)||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/(?:read|attachments))?$/.test(route));
 }
+function previewAccountRoute(path:string,method:string){
+ const route=path.split('?')[0];
+ if(method==='GET')return route==='/me/account'||route==='/me/favorites'||route==='/me/search';
+ return method==='POST'&&['/me/account/logout','/me/favorites','/auth/pwa-telegram/start','/auth/pwa-telegram/finish'].includes(route)||method==='PUT'&&route==='/me/search';
+}
 export async function api<T=any>(path:string,options:RequestInit={},format:"json"|"blob"="json"):Promise<T>{
  if(runtime.publicPreview){
   const method=(options.method??"GET").toUpperCase();
   const publicRead=method==="GET"&&path.startsWith("/public/");
   const guestPost=method==="POST"&&(path==="/auth/session"||path==="/events"||path==="/public/pwa/contact");
-  if(!publicRead&&!guestPost&&!guestConversation(path,method))throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
+  if(!publicRead&&!guestPost&&!guestConversation(path,method)&&!previewAccountRoute(path,method))throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
  }
  const controller=new AbortController();
  const sources=[options.signal,pageRequestSignal()].filter((signal):signal is AbortSignal=>!!signal);
@@ -93,7 +98,8 @@ async function sessionApi<T=any>(path:string,options:RequestInit={},format:"json
 // All account reads/writes wait for verified identity, independently of public catalog rendering.
 export async function visitorApi<T=any>(path:string,options:RequestInit={}):Promise<T>{
  if(runtime.publicPreview){
-  if(guestConversation(path,(options.method??"GET").toUpperCase()))return sessionApi<T>(path,options);
+  const method=(options.method??"GET").toUpperCase();
+  if(guestConversation(path,method)||previewAccountRoute(path,method))return sessionApi<T>(path,options);
   throw new ApiError(403,"Этот раздел требует входа в аккаунт.");
  }
  if(runtime.enabled&&runtime.role==='public'){

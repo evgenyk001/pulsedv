@@ -4,6 +4,8 @@ const schema=z.object({
   DATABASE_URL:z.string().min(1),
   PORT:z.coerce.number().int().min(1).max(65535).default(3000),
   PUBLIC_ORIGIN:z.url().default('http://localhost:8080'),
+  PWA_TELEGRAM_CLIENT_ID:z.string().default(''),
+  PWA_TELEGRAM_CLIENT_SECRET:z.string().default(''),
   BOT_TOKEN:z.string().default(''),
   PWA_CALL_LOGIN:z.enum(['true','false']).default('false').transform(v=>v==='true'),
   ZVONOK_PUBLIC_KEY:z.string().default(''),

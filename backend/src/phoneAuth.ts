@@ -1,3 +1,4 @@
+import {telegramWebEnabled} from './pwaTelegramLogin';
 import {zvonokCallSender,type PhoneCallSender} from './phoneCall';
 import {pwaStartRoute} from '../../packages/browser/pwaLinks';
 import {randomUUID} from 'node:crypto';
@@ -26,7 +27,7 @@ export function registerPhoneAuth(app:FastifyInstance,db:Database,config:Runtime
   return {id:'/app/',name:'PULSEDV.RU',short_name:'PULSEDV.RU',lang:'ru',start_url:'/app/'+(path==='/'?'':'#'+path),scope:'/app/',display:'standalone',background_color:'#ffffff',theme_color:'#f3f5f8',icons:[{src:'/app/pulse-app-192-v3.png',sizes:'192x192',type:'image/png',purpose:'any'},{src:'/app/pulse-app-512-v3.png',sizes:'512x512',type:'image/png',purpose:'any'},{src:'/app/pulse-app-maskable-512-v3.png',sizes:'512x512',type:'image/png',purpose:'maskable'}]};
  });
  const callEnabled=()=>!!config.PWA_CALL_LOGIN&&!!config.ZVONOK_PUBLIC_KEY&&!!config.ZVONOK_CAMPAIGN_ID&&config.PHONE_OTP_SECRET.length>=32;
- app.get('/api/v1/public/pwa',async()=>({phoneLogin:callEnabled()||smsEnabled(),phoneChannel:callEnabled()||!config.PWA_SMS_LOGIN?'call':'sms',push:!!config.WEB_PUSH_PUBLIC_KEY&&!!config.WEB_PUSH_PRIVATE_KEY,pushPublicKey:config.WEB_PUSH_PUBLIC_KEY}));
+ app.get('/api/v1/public/pwa',async()=>({phoneLogin:callEnabled()||smsEnabled(),phoneChannel:callEnabled()||!config.PWA_SMS_LOGIN?'call':'sms',push:!!config.WEB_PUSH_PUBLIC_KEY&&!!config.WEB_PUSH_PRIVATE_KEY,pushPublicKey:config.WEB_PUSH_PUBLIC_KEY,...(telegramWebEnabled(config)?{telegramLogin:true}:{})}));
  for(const channel of ['sms','call'] as const){
  const enabled=channel==='call'?callEnabled:smsEnabled,digits=channel==='call'?4:6,ttl=channel==='call'?180:300,cooldown=channel==='call'?90:60;
  app.post('/api/v1/me/account/'+channel+'/request',{preHandler:visitor,config:{rateLimit:{max:6,timeWindow:'1 hour'}}},async r=>{

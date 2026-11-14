@@ -1,3 +1,4 @@
+import {registerPwaTelegramLogin,exchangeTelegramCode,type TelegramIdentity} from './pwaTelegramLogin';
 import {registerPwaPasskeys} from './pwaPasskeys';
 import type {PhoneCallSender} from './phoneCall';
 import {registerPhoneAuth,type SmsSender} from './phoneAuth';
@@ -45,12 +46,12 @@ import { registerContentRoutes } from './contentRoutes';
 import { getCatalogProperty, listCatalog } from './catalogRepository';
 
 type Member={id:string;name:string;email:string;role:'owner'|'admin'|'manager';active:boolean};
-type Visitor={sessionId:string;userId:string|null};
+type Visitor={sessionId:string;userId:string|null;telegramWeb?:boolean};
 declare module 'fastify' {interface FastifyRequest {member?:Member;visitor?:Visitor}}
 const uuid=(value:unknown)=>z.uuid().parse(value);
 const memberView=(row:any)=>({id:row.id,name:row.name,email:row.email,role:row.role,active:row.active,cities:row.cities,telegramUserId:row.telegram_user_id?.toString()??null,mfaEnabled:!!row.mfa_enabled});
 
-export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsSender;phoneCall?:PhoneCallSender}={}){
+export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsSender;phoneCall?:PhoneCallSender;telegramExchange?:typeof exchangeTelegramCode}={}){
  const app=Fastify({requestTimeout:120000,bodyLimit:1_500_000,trustProxy:config.TRUST_PROXY_HOPS?(_address:string,hop:number)=>hop<config.TRUST_PROXY_HOPS:false,logger:config.NODE_ENV!=='test'?{redact:['req.headers.authorization','req.headers.cookie','req.headers["x-partner-unlock"]','res.headers["set-cookie"]']}:false});
  await app.register(cookie);
  app.addHook('preHandler',antifraudCollector(db,config.NODE_ENV==='production'));
@@ -87,8 +88,8 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
  async function owner(request:FastifyRequest){await control(request);if(request.member!.role!=='owner')throw new HttpError(403,'Нужны права владельца');}
  async function visitor(request:FastifyRequest){
   const token=request.headers.authorization?.replace(/^Bearer /,'')||request.cookies.pulse_visitor;if(!token)throw new HttpError(401,'Сессия не создана');
-  const row=(await db.query("select s.id,s.user_id from auth_tokens t join sessions s on s.id=t.session_id where t.token_hash=$1 and t.kind='visitor' and t.expires_at>now()",[tokenHash(token)])).rows[0];
-  if(!row)throw new HttpError(401,'Сессия истекла');request.visitor={sessionId:row.id,userId:row.user_id};
+  const row=(await db.query("select s.id,s.user_id,s.auth_provider from auth_tokens t join sessions s on s.id=t.session_id where t.token_hash=$1 and t.kind='visitor' and t.expires_at>now()",[tokenHash(token)])).rows[0];
+  if(!row)throw new HttpError(401,'Сессия истекла');request.visitor={sessionId:row.id,userId:row.user_id,telegramWeb:row.auth_provider==='telegram-web'};
   const route=request.routeOptions.url||'';
   // An anonymous bearer can access its own PWA conversation. The route handlers enforce ownership.
   const guestConversation=!row.user_id&&request.headers.authorization?.startsWith('Bearer ')
@@ -98,7 +99,9 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
      ? route==='/api/v1/me/journeys/:id/attachments/:file'
      : request.method==='POST'&&/^\/api\/v1\/me\/(notifications\/(read|dismiss)|push\/(subscribe|unsubscribe)|journeys\/:id(?:\/(read|attachments))?)$/.test(route))
    &&(await db.query("select 1 from leads where session_id=$1 and source='pwa-contact' limit 1",[row.id])).rows.length>0;
-  if(config.REQUIRE_TELEGRAM_PHONE&&!guestConversation&&((route.startsWith('/api/v1/me/')&&!route.startsWith('/api/v1/me/account')&&route!=='/api/v1/me/acquisition')||route==='/api/v1/leads')&&!await registeredPhone(db,row.user_id,config.CONSENT_VERSION))throw new HttpError(403,'Подтвердите номер телефона, чтобы продолжить');
+  const telegramWebCore=row.auth_provider==='telegram-web'&&row.user_id&&
+   (/^\/api\/v1\/me\/journeys(?:\/.*)?$/.test(route)||['/api/v1/me/favorites','/api/v1/me/search','/api/v1/me/push/subscribe','/api/v1/me/push/unsubscribe'].includes(route)||route.startsWith('/api/v1/me/notifications'));
+  if(config.REQUIRE_TELEGRAM_PHONE&&!guestConversation&&!telegramWebCore&&((route.startsWith('/api/v1/me/')&&!route.startsWith('/api/v1/me/account')&&route!=='/api/v1/me/acquisition')||route==='/api/v1/leads')&&!await registeredPhone(db,row.user_id,config.CONSENT_VERSION))throw new HttpError(403,'Подтвердите номер телефона, чтобы продолжить');
   await observeVisitor(db,request,row.id);
   await db.query("update sessions set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.id]);
   if(row.user_id)await db.query("update app_users set last_seen_at=now() where id=$1 and last_seen_at<now()-interval '5 minutes'",[row.user_id]);
@@ -136,20 +139,24 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
   const user=verified.user;
   await db.transaction(async sql=>{
    await sessionLock(sql,request.visitor!.sessionId);
-   await sql.query('select id from sessions where id=$1 for update',[request.visitor!.sessionId]);
-   const current=(await sql.query('select u.id as user_id,u.telegram_user_id from sessions s left join app_users u on u.id=s.user_id where s.id=$1',[request.visitor!.sessionId])).rows[0];
+   await bindTelegram(sql,request.visitor!.sessionId,user,verified.startParam);
+  });return {ok:true};
+ });
+ async function bindTelegram(sql:Sql,sessionId:string,user:TelegramIdentity,startParam:string|null=null){
+   const current=(await sql.query('select u.id as user_id,u.telegram_user_id from sessions s left join app_users u on u.id=s.user_id where s.id=$1',[sessionId])).rows[0];
    if(current?.telegram_user_id&&String(current.telegram_user_id)!==String(user.id))throw new HttpError(409,'Эта сессия уже принадлежит другому пользователю');
    const row=(await sql.query('insert into app_users(telegram_user_id,telegram_username,first_name,last_name) values($1,$2,$3,$4) on conflict(telegram_user_id) do update set telegram_username=excluded.telegram_username,first_name=excluded.first_name,last_name=excluded.last_name,last_seen_at=now() returning id',[user.id,user.username??null,user.first_name,user.last_name??null])).rows[0];
    if(current?.user_id&&current.user_id!==row.id)throw new HttpError(409,'Эта сессия уже принадлежит другому аккаунту. Сначала выйдите из него.');
    await ensureAnnouncementSubscription(sql,row.id);
-   await mergeFavorites(sql,request.visitor!.sessionId,row.id);
-   await mergeSearch(sql,request.visitor!.sessionId,row.id);
-   await mergeNotificationReads(sql,request.visitor!.sessionId,row.id);
-   await sql.query("update sessions set user_id=$2,telegram_start_param=$3,auth_provider='telegram' where id=$1",[request.visitor!.sessionId,row.id,verified.startParam]);
-   await linkAcquisition(sql,request.visitor!.sessionId,verified.startParam);
-   for(const table of ['user_events','visitor_profiles','leads'])await sql.query(`update ${table} set user_id=$2 where session_id=$1`,[request.visitor!.sessionId,row.id]);
-  });return {ok:true};
- });
+   await mergeFavorites(sql,sessionId,row.id);
+   await mergeSearch(sql,sessionId,row.id);
+   await mergeNotificationReads(sql,sessionId,row.id);
+   await sql.query("update sessions set user_id=$2,telegram_start_param=$3,auth_provider='telegram' where id=$1",[sessionId,row.id,startParam]);
+   await linkAcquisition(sql,sessionId,startParam);
+   for(const table of ['user_events','visitor_profiles','leads'])await sql.query(`update ${table} set user_id=$2 where session_id=$1`,[sessionId,row.id]);
+   return row.id as string;
+ }
+ registerPwaTelegramLogin(app,db,config,visitor,bindTelegram,deps.telegramExchange);
  app.post('/api/v1/events',{preHandler:visitor},async request=>{
   const {events}=eventsSchema.parse(request.body);const identity=request.visitor!;
   for(const e of events)if(Date.parse(e.occurredAt)>Date.now()+60_000||Date.parse(e.occurredAt)<Date.now()-30*86400_000)throw new HttpError(400,'Событие вне допустимого временного окна');
