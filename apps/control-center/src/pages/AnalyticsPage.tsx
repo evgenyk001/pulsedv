@@ -96,6 +96,6 @@ export function AnalyticsPage(){
       </article>
     </section>
 
-    <section className="panel"><div className="sectionHeading"><div><span className="kicker">ДЕЙСТВИЯ И КОНТЕКСТ</span><h2>Журнал активности</h2></div><span className="countBadge">{paging.total||events.length}</span></div><ActivityFeed events={events} state={state}/>{runtime.enabled&&paging.hasMore&&<div className="pagedLoadMore"><span>Загружено {events.length} из {paging.total}</span><button className="secondaryAction" disabled={paging.loading} onClick={()=>void paging.loadMore()}>{paging.loading?'Загружаем…':'Показать ещё'}</button></div>}</section>
+    <section className="panel"><div className="sectionHeading"><div><span className="kicker">ДЕЙСТВИЯ И КОНТЕКСТ</span><h2>Журнал активности</h2></div><span className="countBadge">{paging.total||events.length}</span></div><ActivityFeed events={events} state={state} profiles={profiles}/>{runtime.enabled&&paging.hasMore&&<div className="pagedLoadMore"><span>Загружено {events.length} из {paging.total}</span><button className="secondaryAction" disabled={paging.loading} onClick={()=>void paging.loadMore()}>{paging.loading?'Загружаем…':'Показать ещё'}</button></div>}</section>
   </PageFrame>;
 }
