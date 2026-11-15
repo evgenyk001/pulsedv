@@ -95,7 +95,7 @@ export function PwaSecurityPreferences(){
   }
  };
  return <>
-  <MenuToggle icon={<ScanFace/>} title="Face ID или отпечаток" description={!passkeysSupported()?'Ключи доступа недоступны в этом браузере':error&&!sheet?error:undefined} label="Защитить партнёрский кабинет в PWA" checked={!!state?.enabled} disabled={busy||!state||!passkeysSupported()} onCheckedChange={toggle}/>
+  <MenuToggle className="pwaAppToggle" icon={<ScanFace/>} title="Face ID или отпечаток" description={!passkeysSupported()?'Ключи доступа недоступны в этом браузере':error&&!sheet?error:'Защита входа в партнёрский кабинет'} label="Защитить партнёрский кабинет в PWA" checked={!!state?.enabled} disabled={busy||!state||!passkeysSupported()} onCheckedChange={toggle}/>
   {runtime.publicPreview&&error.includes('подтвердите вход через Telegram')&&!sheet&&<MenuButton icon={<KeyRound/>} title="Подтвердить вход через Telegram" onClick={()=>void run(startPwaTelegramLogin)}/>}
   {!state&&!busy&&<MenuButton icon={<Plus/>} title="Повторить проверку" onClick={()=>void run(load)}/>}
  <Sheet open={sheet} onOpenChange={v=>{if(!busy)setSheet(v)}}><SheetContent side="bottom" className="pwaKeySheet"><SheetHeader><SheetTitle>Подключить ключ доступа</SheetTitle><SheetDescription>Подтвердите действие через Face ID, отпечаток или код устройства.</SheetDescription></SheetHeader>

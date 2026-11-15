@@ -36,8 +36,8 @@ export const MenuButton=React.forwardRef<HTMLButtonElement,RowContent&Omit<React
   }
 );
 
-export function MenuToggle({icon,title,description,checked,disabled,onCheckedChange,label}:RowContent&{checked:boolean;disabled?:boolean;onCheckedChange:(checked:boolean)=>void;label?:string}){
- const id=React.useId();return <div data-menu-row className={styles.row}><IconTile>{icon}</IconTile><span className={styles.copy}><span id={id} className={styles.title}>{title}</span>{description&&<span className={styles.description}>{description}</span>}</span><Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} aria-label={label||title} aria-labelledby={label?undefined:id}/></div>;
+export function MenuToggle({icon,title,description,checked,disabled,onCheckedChange,label,className}:RowContent&{checked:boolean;disabled?:boolean;onCheckedChange:(checked:boolean)=>void;label?:string;className?:string}){
+ const id=React.useId();return <div data-menu-row className={[styles.row,className].filter(Boolean).join(' ')}><IconTile>{icon}</IconTile><span className={styles.copy}><span id={id} className={styles.title}>{title}</span>{description&&<span className={styles.description}>{description}</span>}</span><Switch checked={checked} disabled={disabled} onCheckedChange={onCheckedChange} aria-label={label||title} aria-labelledby={label?undefined:id}/></div>;
 }
 export function MenuInfo(props:RowContent){return <div data-menu-row className={styles.row}><Content {...props} chevron={false}/></div>}
 export function MenuExternalLink({icon,title,description,value,...props}:RowContent&Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>,'title'|'children'>){return <a {...props} data-menu-row className={styles.row}><Content {...{icon,title,description,value}}/></a>}

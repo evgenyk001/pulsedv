@@ -191,3 +191,6 @@
   transition: width 180ms ease-out;
 }
 @media (prefers-reduced-motion: reduce) { .pwaReleaseProgressTrack > div { transition: none; } }
+
+/* Match the two settings rows when their subtitles wrap on compact screens. */
+.pwaAppToggle[data-menu-row] { min-height: 80px; }
