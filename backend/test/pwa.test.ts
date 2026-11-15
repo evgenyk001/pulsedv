@@ -72,6 +72,18 @@ test('Telegram first and PWA first both retain one canonical account and shared 
  const logout=await f.app.inject({method:'POST',url:'/api/v1/me/account/logout',headers:pwaFirst.headers,payload:{}});assert.equal(logout.statusCode,200);
  assert.equal((await f.app.inject({url:'/api/v1/me/account',headers:pwaFirst.headers})).statusCode,401);
 });
+test('Two Telegram Mini App sessions resolve to the same canonical user without losing channel identity',async t=>{
+ const f=await fixture(t),first=await f.session(),second=await f.session();
+ for(const s of [first,second]){
+  const result=await f.app.inject({method:'POST',url:'/api/v1/auth/telegram',headers:s.headers,payload:{initData:signed(98765,f.config.BOT_TOKEN)}});
+  assert.equal(result.statusCode,200,result.body);
+ }
+ const rows=(await f.db.query('select id,user_id,auth_provider from sessions where id=any($1::uuid[])',[ [first.s.sessionId,second.s.sessionId] ])).rows;
+ assert.equal(rows.length,2);
+ assert.equal(rows[0].user_id,rows[1].user_id);
+ assert.ok(rows.every((r:any)=>r.auth_provider==='telegram'));
+ assert.equal(Number((await f.db.query('select count(*) from app_users where telegram_user_id=98765')).rows[0].count),1);
+});
 test('Web Push rejects private endpoints, scopes subscriptions, isolates delivery and hides message content',async t=>{
  const f=await fixture(t),a=await f.login('+79990003333'),b=await f.login('+79990004444');
  const aId=(await f.db.query('select user_id from sessions where id=$1',[a.s.sessionId])).rows[0].user_id;
