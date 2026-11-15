@@ -16,7 +16,8 @@ export async function pwaGrantValid(sql:Sql,r:FastifyRequest,fresh=false){
 export async function requirePwaPartner(sql:Sql,r:FastifyRequest,fresh=false){
  const provider=(await sql.query('select auth_provider from sessions where id=$1',[r.visitor!.sessionId])).rows[0]?.auth_provider;
  if(!['sms','call','passkey','telegram-web'].includes(provider))return false;
- if(!await pwaGrantValid(sql,r,fresh))throw new HttpError(423,fresh?'Подтвердите действие ключом доступа':'Откройте партнёрский кабинет ключом доступа');
+ if(provider==='telegram-web'&&!fresh&&!(await sql.query('select 1 from pwa_passkeys where user_id=$1 limit 1',[r.visitor!.userId])).rows.length)return true;
+ if(!await pwaGrantValid(sql,r,fresh))throw new HttpError(423,fresh?'Подключите или подтвердите ключ доступа для операции с выплатой':'Откройте партнёрский кабинет ключом доступа');
  return true;
 }
 async function grant(sql:Sql,r:FastifyRequest,userId:string){
@@ -24,6 +25,8 @@ async function grant(sql:Sql,r:FastifyRequest,userId:string){
  await sql.query('delete from pwa_passkey_grants where user_id=$1 and (session_id=$2 or expires_at<=now())',[userId,r.visitor!.sessionId]);
  await sql.query('insert into pwa_passkey_grants(token_hash,user_id,session_id,revision) select $1,user_id,$3,revision from pwa_passkey_users where user_id=$2',[tokenHash(token),userId,r.visitor!.sessionId]);return token;
 }
+const recentlyVerified=(value:unknown)=>typeof value==='string'||value instanceof Date
+ ? Number.isFinite(new Date(value).getTime())&&new Date(value).getTime()>=Date.now()-300000 : false;
 const body=z.object({challengeId:z.uuid(),response:z.record(z.string(),z.unknown())}).strict();
 export function registerPwaPasskeys(app:FastifyInstance,db:Database,config:RuntimeConfig,visitor:(r:FastifyRequest)=>Promise<void>){
  const rpID=new URL(config.PUBLIC_ORIGIN).hostname;
@@ -36,8 +39,10 @@ export function registerPwaPasskeys(app:FastifyInstance,db:Database,config:Runti
  app.get('/api/v1/me/account/passkeys',opts,async r=>{
   const id=r.visitor!.userId!;
   const keys=(await db.query('select id,name,created_at,last_used_at from pwa_passkeys where user_id=$1 order by created_at',[id])).rows;
-  const legacy=!!(await db.query('select user_id from partner_biometric_credentials where user_id=$1 and active',[id])).rows.length;
-  return {authenticated:true,enabled:keys.length>0,legacyApprovalRequired:legacy&&!keys.length,keys:keys.map(k=>({id:k.id,name:k.name,createdAt:k.created_at,lastUsedAt:k.last_used_at}))};
+  const provider=(await db.query('select auth_provider from sessions where id=$1',[r.visitor!.sessionId])).rows[0]?.auth_provider;
+  const optional=provider==='telegram-web';
+  const legacy=!optional&&!!(await db.query('select user_id from partner_biometric_credentials where user_id=$1 and active',[id])).rows.length;
+  return {authenticated:true,optional,enabled:keys.length>0,legacyApprovalRequired:legacy&&!keys.length,keys:keys.map(k=>({id:k.id,name:k.name,createdAt:k.created_at,lastUsedAt:k.last_used_at}))};
  });
  app.post('/api/v1/me/account/passkeys/register/options',opts,async r=>{
   const input=z.object({approvalCode:z.string().regex(/^\d{8}$/).optional()}).strict().parse(r.body);
@@ -50,11 +55,11 @@ export function registerPwaPasskeys(app:FastifyInstance,db:Database,config:Runti
    else{
     const telegramWeb=session.auth_provider==='telegram-web';
     const verifiedAt=telegramWeb?session.telegram_web_verified_at:['sms','call'].includes(session.auth_provider)?session.phone_verified_at:null;
-    if(!verifiedAt||Date.parse(verifiedAt)<Date.now()-300000)throw new HttpError(428,telegramWeb
+    if(!recentlyVerified(verifiedAt))throw new HttpError(428,telegramWeb
      ?'Для подключения ключа подтвердите вход через Telegram ещё раз'
      :'Для подключения ключа заново подтвердите номер телефона');
     const legacy=(await sql.query('select revision from partner_biometric_credentials where user_id=$1 and active',[id])).rows[0];
-    if(legacy){
+    if(legacy&&!telegramWeb){
      const a=(await sql.query('select * from pwa_legacy_approvals where user_id=$1 and expires_at>now() and revision=$2 for update',[id,legacy.revision])).rows[0];
      if(!a||a.attempts>=5)return null;
      if(a.approved_session_id!==r.visitor!.sessionId){
@@ -73,14 +78,15 @@ export function registerPwaPasskeys(app:FastifyInstance,db:Database,config:Runti
  });
  app.post('/api/v1/me/account/passkeys/register/verify',opts,async r=>{
   const input=body.parse(r.body);const result=await db.transaction(async sql=>{
-   await sql.query('select id from sessions where id=$1 for update',[r.visitor!.sessionId]);
+   const session=(await sql.query('select auth_provider,telegram_web_verified_at from sessions where id=$1 for update',[r.visitor!.sessionId])).rows[0];
    const id=r.visitor!.userId!;await sql.query('select id from app_users where id=$1 for update',[id]);
    const c=(await sql.query("select * from pwa_passkey_challenges where id=$1 and session_id=$2 and user_id=$3 and kind='registration' and used_at is null and expires_at>now() for update",[input.challengeId,r.visitor!.sessionId,id])).rows[0];if(!c)return null;
    await sql.query('update pwa_passkey_challenges set used_at=now() where id=$1',[c.id]);
    const current=(await sql.query('select revision from pwa_passkey_users where user_id=$1',[id])).rows[0];
    const legacy=(await sql.query('select revision from partner_biometric_credentials where user_id=$1 and active',[id])).rows[0];
    if(current?.revision!==c.guard_revision||(legacy?.revision??null)!==c.legacy_revision)return null;
-   if(legacy&&!(await sql.query('select user_id from pwa_legacy_approvals where user_id=$1 and approved_session_id=$2 and revision=$3 and expires_at>now()',[id,r.visitor!.sessionId,legacy.revision])).rows.length&&!(await pwaGrantValid(sql,r,true)))return null;
+   const freshTelegram=session?.auth_provider==='telegram-web'&&recentlyVerified(session.telegram_web_verified_at);
+   if(legacy&&!freshTelegram&&!(await sql.query('select user_id from pwa_legacy_approvals where user_id=$1 and approved_session_id=$2 and revision=$3 and expires_at>now()',[id,r.visitor!.sessionId,legacy.revision])).rows.length&&!(await pwaGrantValid(sql,r,true)))return null;
    let v;try{v=await verifyRegistrationResponse({response:input.response as unknown as RegistrationResponseJSON,expectedChallenge:c.challenge,expectedOrigin:config.PUBLIC_ORIGIN,expectedRPID:rpID,requireUserVerification:true})}catch{return null}
    if(!v.verified)return null;const key=v.registrationInfo.credential;
    if((await sql.query('select id from pwa_passkeys where id=$1',[key.id])).rows.length)return null;

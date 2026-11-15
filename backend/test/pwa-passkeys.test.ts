@@ -90,13 +90,17 @@ test('PWA Telegram sign-in enables an existing verified account to enroll and un
  const user=(await db.query("update app_users set phone='+79995550102' where telegram_user_id=98765 returning id")).rows[0];
  await db.query("insert into phone_registrations(user_id,phone,consent_version) values($1,'+79995550102',$2)",[user.id,config.CONSENT_VERSION]);
  const cabinet=(grant?:string)=>app.inject({url:'/api/v1/me/partner',headers:{...h,...(grant?{'x-partner-unlock':grant}:{})}});
- assert.equal((await cabinet()).statusCode,423);
+ assert.equal((await cabinet()).statusCode,200,'verified Telegram users can open the cabinet before opting in');
+ const payout=await post('/me/partner/rewards/'+randomUUID()+'/change-request',{revision:1});
+ assert.equal(payout.statusCode,423,'payout actions still require fresh verification');
+ await db.query("insert into partner_biometric_credentials(user_id,device_hash,token_hash,active) values($1,'device','token',true)",[user.id]);
  const options=await post(base+'/register/options',{});
  assert.equal(options.statusCode,200,options.body);
  const key=authenticator(config.PUBLIC_ORIGIN),r=options.json();
  const registered=await post(base+'/register/verify',{challengeId:r.challengeId,response:key.registration(r.options.challenge)});
  assert.equal(registered.statusCode,200,registered.body);
  assert.equal((await cabinet(registered.json().grant)).statusCode,200);
+ assert.equal((await cabinet()).statusCode,423,'enrolled users now need their passkey');
  await post(base+'/lock',{});
  assert.equal((await cabinet(registered.json().grant)).statusCode,423);
  const visitor=await session(),login=(await post(base+'/login/options',{},visitor)).json();

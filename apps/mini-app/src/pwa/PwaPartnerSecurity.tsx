@@ -29,6 +29,7 @@ export function PwaPartnerGate({children}:{children:React.ReactNode}){
   }
   const s=await getPasskeySettings();
   setState(s);
+  if(s.optional&&!s.enabled){unlocked.current=false;setOpen(false);return}
   unlocked.current=s.enabled&&partnerIsUnlocked()&&!document.hidden;
   if(s.enabled&&!unlocked.current&&partnerIsUnlocked())void lockPartner();
   setOpen(unlocked.current);
@@ -48,7 +49,7 @@ export function PwaPartnerGate({children}:{children:React.ReactNode}){
   return()=>{unlocked.current=false;document.removeEventListener('visibilitychange',hide);window.removeEventListener('pulse:partner-locked',close);clear();if(partnerIsUnlocked()||locked.current)void lockPartner()};
  },[]);
  React.useEffect(()=>{if(!open)return;const timer=setTimeout(()=>{unlocked.current=false;setOpen(false);clear();void lockPartner()},9*60000);return()=>clearTimeout(timer)},[open]);
- if(open)return <>{children}</>;
+ if(open||state?.optional&&!state.enabled)return <>{children}</>;
  return <section className="pwaKeyGate">
   <IconTile as="div" className="pwaKeyHero"><ShieldCheck/></IconTile>
   <h1>Партнёрский кабинет</h1>
@@ -72,8 +73,9 @@ export function PwaSecurityPreferences(){
  React.useEffect(()=>{void run(load)},[]);
  const open=()=>{setError('');setRemove(null);setSheet(true)};
  return <><GroupedMenu title="Защита партнёрского кабинета" caption={!passkeysSupported()?'Ключи доступа недоступны в этом браузере.':error&&!sheet?error:undefined}>
-  <MenuToggle icon={<ScanFace/>} title="Face ID или отпечаток" description="Клиенты и выплаты под защитой" label="Защитить партнёрский кабинет в PWA" checked={!!state?.enabled} disabled={busy||!state||!passkeysSupported()} onCheckedChange={open}/>
+  <MenuToggle icon={<ScanFace/>} title="Face ID или отпечаток" description="Клиенты и выплаты под защитой" label="Защитить партнёрский кабинет в PWA" checked={!!state?.enabled} disabled={busy||!state||!passkeysSupported()} onCheckedChange={checked=>{if(checked&&state?.optional){void run(()=>enrollPasskey());return}open()}}/>
   {state?.enabled&&<MenuButton icon={<KeyRound/>} title="Устройства и ключи" value={String(state.keys.length)} onClick={open} disabled={busy}/>}
+  {runtime.publicPreview&&error.includes('подтвердите вход через Telegram')&&!sheet&&<MenuButton icon={<KeyRound/>} title="Подтвердить вход через Telegram" onClick={()=>void run(startPwaTelegramLogin)}/>}
   {!state&&!busy&&<MenuButton icon={<Plus/>} title="Повторить проверку" onClick={()=>void run(load)}/>}
  </GroupedMenu>
  <Sheet open={sheet} onOpenChange={v=>{if(!busy){setSheet(v);setRemove(null)}}}><SheetContent side="bottom" className="pwaKeySheet"><SheetHeader><SheetTitle>{remove?'Удалить ключ доступа?':state?.enabled?'Ключи доступа':'Защита кабинета'}</SheetTitle><SheetDescription>{remove?'Для следующего входа останутся другие ключи или подтверждение телефона.':'Подтвердите действие через Face ID, отпечаток или код устройства.'}</SheetDescription></SheetHeader>

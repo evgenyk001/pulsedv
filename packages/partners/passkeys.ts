@@ -2,7 +2,7 @@ import {startAuthentication,startRegistration,browserSupportsWebAuthn} from '@si
 import type {PublicKeyCredentialCreationOptionsJSON,PublicKeyCredentialRequestOptionsJSON} from '@simplewebauthn/browser';
 import {visitorApi,replaceVisitorSession} from '../pulse-data/runtime';
 import {setPartnerGrant} from './securityState';
-export type PasskeySettings={enabled:boolean;authenticated:boolean;legacyApprovalRequired:boolean;keys:{id:string;name:string;createdAt:string;lastUsedAt:string|null}[]};
+export type PasskeySettings={enabled:boolean;optional?:boolean;authenticated:boolean;legacyApprovalRequired:boolean;keys:{id:string;name:string;createdAt:string;lastUsedAt:string|null}[]};
 export const passkeysSupported=()=>typeof window!=='undefined'&&window.isSecureContext&&browserSupportsWebAuthn();
 export const getPasskeySettings=()=>visitorApi<PasskeySettings>('/me/account/passkeys');
 function friendly(error:unknown):never{if(error instanceof Error&&error.name==='NotAllowedError')throw Error('Подтверждение отменено. Попробуйте ещё раз');throw error;}
