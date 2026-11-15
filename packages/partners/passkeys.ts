@@ -11,9 +11,15 @@ export async function enrollPasskey(approvalCode?:string){
  const o=await visitorApi<{challengeId:string;options:PublicKeyCredentialCreationOptionsJSON}>('/me/account/passkeys/register/options',{method:'POST',body:JSON.stringify(approvalCode?{approvalCode}:{})});
  try{const response=await startRegistration({optionsJSON:o.options});const result=await visitorApi<{grant:string}>('/me/account/passkeys/register/verify',{method:'POST',body:JSON.stringify({challengeId:o.challengeId,response})});setPartnerGrant(result.grant)}catch(e){friendly(e)}
 }
+export class PasskeyConfirmationStopped extends Error {
+ constructor(){super('Подтверждение отменено. Попробуйте ещё раз')}
+}
 export async function authenticatePwaPartner(){
  const o=await visitorApi<{challengeId:string;options:PublicKeyCredentialRequestOptionsJSON}>('/me/account/passkeys/unlock/options',{method:'POST',body:'{}'});
- try{const response=await startAuthentication({optionsJSON:o.options});return await visitorApi<{grant:string}>('/me/account/passkeys/unlock/verify',{method:'POST',body:JSON.stringify({challengeId:o.challengeId,response})})}catch(e){return friendly(e)}
+ try{const response=await startAuthentication({optionsJSON:o.options});return await visitorApi<{grant:string}>('/me/account/passkeys/unlock/verify',{method:'POST',body:JSON.stringify({challengeId:o.challengeId,response})})}catch(e){
+  if(e instanceof Error&&e.name==='NotAllowedError')throw new PasskeyConfirmationStopped();
+  return friendly(e);
+ }
 }
 export async function loginWithPasskey(){
  const o=await visitorApi<{challengeId:string;options:PublicKeyCredentialRequestOptionsJSON}>('/me/account/passkeys/login/options',{method:'POST',body:'{}'});

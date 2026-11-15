@@ -1,8 +1,8 @@
 import React from 'react';
-import {Link} from 'react-router-dom';
+import {Link,useNavigate} from 'react-router-dom';
 import {useQueryClient} from '@tanstack/react-query';
 import {KeyRound,ShieldCheck,Plus,Trash2,ScanFace} from 'lucide-react';
-import {getPasskeySettings,enrollPasskey,removePasskey,passkeysSupported,type PasskeySettings} from '../../../../packages/partners/passkeys';
+import {getPasskeySettings,enrollPasskey,removePasskey,passkeysSupported,PasskeyConfirmationStopped,type PasskeySettings} from '../../../../packages/partners/passkeys';
 import {unlockPartner,lockPartner,partnerIsUnlocked} from '../../../../packages/partners/biometrics';
 import {ApiError,runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from '../components/Sheet';
@@ -16,6 +16,7 @@ function Setup({legacy,busy,run}:{legacy:boolean;busy:boolean;run:(fn:()=>Promis
  return <>{legacy&&<label className="pwaKeyCode">Код подключения из Telegram<Input aria-label="Код подключения PWA" value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,8))} inputMode="numeric" autoComplete="off" maxLength={8}/><small>В защищённом кабинете Telegram откройте «Подключить PWA».</small></label>}<button className="pwaKeyPrimary" disabled={busy||!passkeysSupported()||(legacy&&code.length!==8)} onClick={()=>run(()=>enrollPasskey(legacy?code:undefined))}><KeyRound size={18}/>Создать ключ доступа</button></>;
 }
 export function PwaPartnerGate({children}:{children:React.ReactNode}){
+ const navigate=useNavigate();
  const cache=useQueryClient(),[state,setState]=React.useState<PasskeySettings|null>(null),[open,setOpen]=React.useState(false),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
  const [account,setAccount]=React.useState<{authenticated:boolean;registered:boolean;botUsername:string}|null>(null);
  const [reauthenticate,setReauthenticate]=React.useState(false);
@@ -38,7 +39,11 @@ export function PwaPartnerGate({children}:{children:React.ReactNode}){
   if(locked.current)return;
   locked.current=true;setBusy(true);setError('');setReauthenticate(false);
   try{await fn();if(fn!==load&&fn!==startPwaTelegramLogin)await load()}
-  catch(e){setReauthenticate(e instanceof ApiError&&e.status===428);setError(e instanceof Error?e.message:'Повторите действие')}
+  catch(e){
+   if(e instanceof PasskeyConfirmationStopped){navigate('/profile',{replace:true});return}
+   setReauthenticate(e instanceof ApiError&&e.status===428);
+   setError(e instanceof Error?e.message:'Повторите действие');
+  }
   finally{locked.current=false;setBusy(false)}
  };
  React.useEffect(()=>{
@@ -55,7 +60,7 @@ export function PwaPartnerGate({children}:{children:React.ReactNode}){
  },[state?.enabled,open,busy]);
  React.useEffect(()=>{if(!open)return;const timer=setTimeout(()=>{unlocked.current=false;setOpen(false);clear();void lockPartner()},9*60000);return()=>clearTimeout(timer)},[open]);
  if(open||state?.optional&&!state.enabled)return <>{children}</>;
- if((!state&&busy&&!account)||(state?.enabled&&passkeysSupported()&&!error&&(!autoAttempted.current||busy))){
+ if(!error&&((!state&&(!account||account.registered))||(state?.enabled&&passkeysSupported()&&(!autoAttempted.current||busy)))){
   return <div className="screenLoadState" role="status">Подтверждаем вход…</div>;
  }
  return <section className="pwaKeyGate">
