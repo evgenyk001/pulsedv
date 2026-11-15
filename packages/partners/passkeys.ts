@@ -26,3 +26,8 @@ export async function loginWithPasskey(){
  try{const response=await startAuthentication({optionsJSON:o.options});const result=await visitorApi<{sessionId:string;accessToken:string;expiresAt:string;grant:string}>('/me/account/passkeys/login/verify',{method:'POST',body:JSON.stringify({challengeId:o.challengeId,response})});replaceVisitorSession(result);setPartnerGrant('');window.dispatchEvent(new Event('pulse:identity-ready'))}catch(e){friendly(e)}
 }
 export async function removePasskey(id:string){await visitorApi('/me/account/passkeys/remove',{method:'POST',body:JSON.stringify({id})});setPartnerGrant('');}
+
+export async function setPwaCabinetLock(enabled:boolean){
+ await visitorApi('/me/account/passkeys/cabinet-lock',{method:'POST',body:JSON.stringify({enabled})});
+ setPartnerGrant('');
+}

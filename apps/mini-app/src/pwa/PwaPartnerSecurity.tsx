@@ -1,13 +1,13 @@
 import React from 'react';
 import {Link,useNavigate} from 'react-router-dom';
 import {useQueryClient} from '@tanstack/react-query';
-import {KeyRound,ShieldCheck,Plus,Trash2,ScanFace} from 'lucide-react';
-import {getPasskeySettings,enrollPasskey,removePasskey,passkeysSupported,PasskeyConfirmationStopped,type PasskeySettings} from '../../../../packages/partners/passkeys';
+import {KeyRound,ShieldCheck,Plus,ScanFace} from 'lucide-react';
+import {getPasskeySettings,enrollPasskey,setPwaCabinetLock,passkeysSupported,PasskeyConfirmationStopped,type PasskeySettings} from '../../../../packages/partners/passkeys';
 import {unlockPartner,lockPartner,partnerIsUnlocked} from '../../../../packages/partners/biometrics';
 import {ApiError,runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import {Sheet,SheetContent,SheetHeader,SheetTitle,SheetDescription} from '../components/Sheet';
 import {Input} from '../components/Input';
-import {GroupedMenu,MenuToggle,MenuButton} from '../components/GroupedMenu';
+import {MenuToggle,MenuButton} from '../components/GroupedMenu';
 import {IconTile} from '../components/IconTile';
 import {logoutPwa,startPwaTelegramLogin} from './client';
 import './pwaPartnerSecurity.css';
@@ -79,20 +79,29 @@ export function PwaPartnerGate({children}:{children:React.ReactNode}){
  </section>;
 }
 export function PwaSecurityPreferences(){
- const [state,setState]=React.useState<PasskeySettings|null>(null),[busy,setBusy]=React.useState(false),[error,setError]=React.useState(''),[remove,setRemove]=React.useState<string|null>(null),[sheet,setSheet]=React.useState(false);
+ const [state,setState]=React.useState<PasskeySettings|null>(null),[busy,setBusy]=React.useState(false),[error,setError]=React.useState(''),[sheet,setSheet]=React.useState(false);
  const lock=React.useRef(false);
  const load=async()=>setState(await getPasskeySettings());
  const run=async(fn:()=>Promise<unknown>)=>{if(lock.current)return;lock.current=true;setBusy(true);setError('');try{await fn();await load()}catch(e){setError(e instanceof Error?e.message:'Повторите действие')}finally{lock.current=false;setBusy(false)}};
  React.useEffect(()=>{void run(load)},[]);
- const open=()=>{setError('');setRemove(null);setSheet(true)};
+ const toggle=(checked:boolean)=>{
+  if(!state)return;
+  if(state.keys.length){
+   void run(async()=>{if(!checked)await unlockPartner();await setPwaCabinetLock(checked)});
+  }else if(checked&&state.optional){
+   void run(()=>enrollPasskey());
+  }else if(checked){
+   setError('');setSheet(true);
+  }
+ };
  return <>
-  <MenuToggle icon={<ScanFace/>} title="Face ID или отпечаток" description={!passkeysSupported()?'Ключи доступа недоступны в этом браузере':error&&!sheet?error:undefined} label="Защитить партнёрский кабинет в PWA" checked={!!state?.enabled} disabled={busy||!state||!passkeysSupported()} onCheckedChange={checked=>{if(checked&&state?.optional){void run(()=>enrollPasskey());return}open()}}/>
+  <MenuToggle icon={<ScanFace/>} title="Face ID или отпечаток" description={!passkeysSupported()?'Ключи доступа недоступны в этом браузере':error&&!sheet?error:undefined} label="Защитить партнёрский кабинет в PWA" checked={!!state?.enabled} disabled={busy||!state||!passkeysSupported()} onCheckedChange={toggle}/>
   {runtime.publicPreview&&error.includes('подтвердите вход через Telegram')&&!sheet&&<MenuButton icon={<KeyRound/>} title="Подтвердить вход через Telegram" onClick={()=>void run(startPwaTelegramLogin)}/>}
   {!state&&!busy&&<MenuButton icon={<Plus/>} title="Повторить проверку" onClick={()=>void run(load)}/>}
- <Sheet open={sheet} onOpenChange={v=>{if(!busy){setSheet(v);setRemove(null)}}}><SheetContent side="bottom" className="pwaKeySheet"><SheetHeader><SheetTitle>{remove?'Удалить ключ доступа?':state?.enabled?'Ключи доступа':'Защита кабинета'}</SheetTitle><SheetDescription>{remove?'Для следующего входа останутся другие ключи или подтверждение телефона.':'Подтвердите действие через Face ID, отпечаток или код устройства.'}</SheetDescription></SheetHeader>
+ <Sheet open={sheet} onOpenChange={v=>{if(!busy)setSheet(v)}}><SheetContent side="bottom" className="pwaKeySheet"><SheetHeader><SheetTitle>Подключить ключ доступа</SheetTitle><SheetDescription>Подтвердите действие через Face ID, отпечаток или код устройства.</SheetDescription></SheetHeader>
   {error&&<p role="alert" className="pwaKeyError">{error}</p>}
   {error.includes('подтвердите номер')&&<button className="pwaKeyPrimary" onClick={()=>void (runtime.publicPreview?run(startPwaTelegramLogin):logoutPwa())}>{runtime.publicPreview?'Подтвердить вход через Telegram':'Подтвердить номер'}</button>}
   {runtime.publicPreview&&error.includes('подтвердите вход через Telegram')&&<button className="pwaKeyPrimary" onClick={()=>void run(startPwaTelegramLogin)}>Подтвердить вход через Telegram</button>}
-  {remove?<div className="pwaKeySheetActions"><button className="pwaKeyPrimary" disabled={busy} onClick={()=>void run(async()=>{await unlockPartner();await removePasskey(remove);setRemove(null)})}>{busy?'Подтверждаем…':'Удалить ключ'}</button><button className="pwaKeySecondary" disabled={busy} onClick={()=>setRemove(null)}>Отмена</button></div>:state?.enabled?<><GroupedMenu>{state.keys.map((k,i)=><MenuButton key={k.id} icon={<KeyRound/>} title={'Ключ доступа '+(i+1)} description={'Добавлен '+new Date(k.createdAt).toLocaleDateString('ru-RU')} disabled={busy} onClick={()=>setRemove(k.id)}/>)}</GroupedMenu><button className="pwaKeyPrimary" disabled={busy||state.keys.length>=5} onClick={()=>void run(async()=>{await unlockPartner();await enrollPasskey()})}><Plus size={18}/>Добавить ключ</button></>:<Setup legacy={!!state?.legacyApprovalRequired} busy={busy} run={fn=>void run(async()=>{await fn();setSheet(false)})}/>}
+  <Setup legacy={!!state?.legacyApprovalRequired} busy={busy} run={fn=>void run(async()=>{await fn();setSheet(false)})}/>
  </SheetContent></Sheet></>;
 }

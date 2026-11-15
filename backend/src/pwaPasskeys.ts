@@ -16,7 +16,12 @@ export async function pwaGrantValid(sql:Sql,r:FastifyRequest,fresh=false){
 export async function requirePwaPartner(sql:Sql,r:FastifyRequest,fresh=false){
  const provider=(await sql.query('select auth_provider from sessions where id=$1',[r.visitor!.sessionId])).rows[0]?.auth_provider;
  if(!['sms','call','passkey','telegram-web'].includes(provider))return false;
- if(provider==='telegram-web'&&!fresh&&!(await sql.query('select 1 from pwa_passkeys where user_id=$1 limit 1',[r.visitor!.userId])).rows.length)return true;
+ if(!fresh){
+  const preference=(await sql.query(`select u.cabinet_lock_enabled,
+   exists(select 1 from pwa_passkeys k where k.user_id=u.user_id) as has_key
+   from pwa_passkey_users u where u.user_id=$1`,[r.visitor!.userId])).rows[0];
+  if(preference?.cabinet_lock_enabled===false||(provider==='telegram-web'&&!preference?.has_key))return true;
+ }
  if(!await pwaGrantValid(sql,r,fresh))throw new HttpError(423,fresh?'Подключите или подтвердите ключ доступа для операции с выплатой':'Откройте партнёрский кабинет ключом доступа');
  return true;
 }
@@ -40,9 +45,25 @@ export function registerPwaPasskeys(app:FastifyInstance,db:Database,config:Runti
   const id=r.visitor!.userId!;
   const keys=(await db.query('select id,name,created_at,last_used_at from pwa_passkeys where user_id=$1 order by created_at',[id])).rows;
   const provider=(await db.query('select auth_provider from sessions where id=$1',[r.visitor!.sessionId])).rows[0]?.auth_provider;
-  const optional=provider==='telegram-web';
+  const preference=(await db.query('select cabinet_lock_enabled from pwa_passkey_users where user_id=$1',[id])).rows[0];
+  const optional=provider==='telegram-web'||preference?.cabinet_lock_enabled===false;
   const legacy=!optional&&!!(await db.query('select user_id from partner_biometric_credentials where user_id=$1 and active',[id])).rows.length;
-  return {authenticated:true,optional,enabled:keys.length>0,legacyApprovalRequired:legacy&&!keys.length,keys:keys.map(k=>({id:k.id,name:k.name,createdAt:k.created_at,lastUsedAt:k.last_used_at}))};
+  return {authenticated:true,optional,enabled:keys.length>0&&preference?.cabinet_lock_enabled!==false,legacyApprovalRequired:legacy&&!keys.length,keys:keys.map(k=>({id:k.id,name:k.name,createdAt:k.created_at,lastUsedAt:k.last_used_at}))};
+ });
+ app.post('/api/v1/me/account/passkeys/cabinet-lock',opts,async r=>{
+  const {enabled}=z.object({enabled:z.boolean()}).strict().parse(r.body);
+  const id=r.visitor!.userId!;
+  return db.transaction(async sql=>{
+   await sql.query('select id from app_users where id=$1 for update',[id]);
+   const preference=(await sql.query(`select u.cabinet_lock_enabled from pwa_passkey_users u where u.user_id=$1
+    and exists(select 1 from pwa_passkeys k where k.user_id=u.user_id)`,[id])).rows[0];
+   if(!preference)throw new HttpError(409,'Сначала подключите ключ доступа');
+   if(preference.cabinet_lock_enabled===enabled)return {enabled};
+   if(!enabled&&!await pwaGrantValid(sql,r,true))throw new HttpError(423,'Подтвердите отключение ключом доступа');
+   await sql.query('update pwa_passkey_users set cabinet_lock_enabled=$2,revision=gen_random_uuid() where user_id=$1',[id,enabled]);
+   await sql.query('delete from pwa_passkey_grants where user_id=$1',[id]);
+   return {enabled};
+  });
  });
  app.post('/api/v1/me/account/passkeys/register/options',opts,async r=>{
   const input=z.object({approvalCode:z.string().regex(/^\d{8}$/).optional()}).strict().parse(r.body);
