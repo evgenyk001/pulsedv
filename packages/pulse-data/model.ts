@@ -89,6 +89,7 @@ export type PulseLead={
 };
 
 export type PulseVisitorProfile={
+  sessionIds?:string[];
   client?:{firstName:string|null;lastName:string|null;phone:string|null;telegramId:string|null;username:string|null}|null;
   id:string; sessionId:string; userId:string|null; score:number; priority:LeadPriority;
   scoreReasons:LeadScoreReason[]; topPropertyId:string|null; city:string|null;

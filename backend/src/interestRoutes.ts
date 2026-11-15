@@ -16,7 +16,7 @@ export async function registerInterestRoutes(app:FastifyInstance,db:Database,con
   const values:unknown[]=[session.id,session.user_id];
   if(scoped)values.push(member.id);
   const rows=(await db.query(`select e.id,e.session_id,e.user_id,e.event_type,e.entity_type,e.entity_id,e.metadata,e.occurred_at as created_at
-   from user_events e where (e.session_id=$1 or ($2::uuid is not null and e.user_id=$2))
+   from user_events e where (e.session_id=$1 or ($2::uuid is not null and (e.user_id=$2 or (e.user_id is null and e.session_id in(select id from sessions where user_id=$2)))))
    and e.occurred_at>=now()-interval '30 days' and e.occurred_at<=now()
    ${scoped?'and exists(select 1 from leads l where l.session_id=e.session_id and l.manager_id=$3)':''}
    order by e.occurred_at desc,e.id limit 5001`,values)).rows;

@@ -7,5 +7,5 @@ export function clientName(profile:PulseVisitorProfile){
 }
 export function clientSearch(profile:PulseVisitorProfile){
  const c=profile.client;
- return [profile.sessionId,profile.userId,c?.firstName,c?.lastName,c?.phone,c?.telegramId,c?.username].filter(Boolean).join(' ');
+ return [profile.sessionId,...(profile.sessionIds??[]),profile.userId,c?.firstName,c?.lastName,c?.phone,c?.telegramId,c?.username].filter(Boolean).join(' ');
 }
