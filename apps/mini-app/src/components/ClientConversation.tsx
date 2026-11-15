@@ -1,4 +1,3 @@
-import {createPortal} from 'react-dom';
 import {useChatViewport} from '../helpers/useChatViewport';
 import {safeLocalStorage,safeSessionStorage} from '../../../../packages/browser/storage';
 import {LoadRecovery} from './LoadRecovery';
@@ -119,7 +118,7 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
  const minDateTime=vladivostokInputNow();
  const invalidShowingTime=!!at&&!isFutureVladivostokInput(at);
  const limitReached=false;
- const conversation=<div className={`${styles.conversation} ${tab==='chat'?'':styles.detailsMode}`} ref={root}>
+ const conversation=<div className={`${styles.conversation} ${tab==='chat'?'':styles.detailsMode}`} data-pwa-chat-in-flow={isPwa&&tab==='chat'?true:undefined} ref={root}>
   <header className={styles.chatHeader}><BackLink compact to="/journey" aria-label="Все мои обращения"/><span className={styles.avatar}><MessageCircle size={21}/></span><div><h1>{(entry.managerHasReplied??history.messages.some(m=>m.author==='manager'))?(publicManagerName&&!/владелец|админ|owner/i.test(publicManagerName)?publicManagerName:'Специалист PULSEDV.RU'):'Команда PULSEDV.RU'}</h1><small>{history.messages.some(m=>m.author==='manager')?'На связи по вашему обращению':'Поможем с выбором недвижимости'}</small></div></header>
   {!closed&&history.messages.some(m=>m.author==='client')&&!(entry.managerHasReplied??history.messages.some(m=>m.author==='manager'))&&<p className={styles.waitingReply} role="status">Сообщение получено. Свободный специалист команды ответит здесь.</p>}
   <div className={styles.subject}><span>{subject||'Обсуждение квартиры'}</span><small>{journeyStatus(entry.status)}</small></div>
@@ -164,6 +163,6 @@ export function ClientConversation({entry,properties,query,catalogError,onRetryC
    </>}
   </section>}
  </div>;
- return isPwa&&tab==='chat'?createPortal(conversation,document.body):conversation;
+ return conversation;
 }
 function ArrowRightIcon(){return <ChevronRight size={17}/>}
