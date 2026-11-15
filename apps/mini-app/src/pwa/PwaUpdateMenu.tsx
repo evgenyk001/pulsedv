@@ -39,20 +39,27 @@ function waitForWorker(worker:ServiceWorker){
 
 function activateWorker(container:ServiceWorkerContainer,worker:ServiceWorker){
  return new Promise<void>((resolve,reject)=>{
-  const previous=container.controller;
-  const timer=window.setTimeout(()=>{
+  const wasActive=worker===container.controller;
+  const channel=new MessageChannel();
+  let accepted=false;
+  const timer=window.setTimeout(()=>finish(new Error('Activation timed out')),15000);
+  const finish=(error?:Error)=>{
+   window.clearTimeout(timer);
+   channel.port1.close();
    container.removeEventListener('controllerchange',check);
-   reject(new Error('Activation timed out'));
-  },15000);
+   if(error)reject(error);
+   else resolve();
+  };
   const check=()=>{
-   if(container.controller&&container.controller!==previous){
-    window.clearTimeout(timer);
-    container.removeEventListener('controllerchange',check);
-    resolve();
-   }
+   if(accepted&&(wasActive||container.controller===worker))finish();
   };
   container.addEventListener('controllerchange',check);
-  worker.postMessage({type:'PULSE_ACTIVATE'});
+  channel.port1.onmessage=event=>{
+   if(event.data!==true){finish(new Error('Activation rejected'));return}
+   accepted=true;
+   check();
+  };
+  worker.postMessage({type:'PULSE_ACTIVATE'},[channel.port2]);
  });
 }
 
@@ -80,9 +87,10 @@ export function PwaUpdateMenu(){
    if(registration){
     await registration.update();
     if(registration.installing)await waitForWorker(registration.installing);
-    if(registration.waiting){
+    const worker=registration.waiting??registration.active;
+    if(worker){
      setStage('activate');
-     await activateWorker(container,registration.waiting);
+     await activateWorker(container,worker);
     }
    }
    setStage('restart');

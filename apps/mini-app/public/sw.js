@@ -1,16 +1,51 @@
-/* Public static assets only. No API, media, personal data, session tokens or HTML snapshots. */
+/* Cache the public app shell and its static assets. API and session data stay on the network. */
 const CACHE_PREFIX='pulse-pwa-'+self.location.pathname+'-';
 const CACHE=CACHE_PREFIX+'__BUILD__';
 const BASE=new URL('./',self.location.href);
+const SHELL=new URL('index.html',BASE).href;
+const POINTER=new URL('__selected_shell__',BASE).href;
+const STATE=CACHE_PREFIX+'selection';
+const selected=async()=> (await (await caches.open(STATE)).match(POINTER))?.text();
+const select=async()=> (await caches.open(STATE)).put(POINTER,new Response(CACHE));
 const safeAsset=url=>url.origin===BASE.origin&&url.pathname.startsWith(BASE.pathname+'assets/')&&/\.(?:js|css|woff2?)$/.test(url.pathname);
-self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll([new URL('offline.html',BASE).href,new URL('offline.js',BASE).href,new URL('pulse-app-192-v3.png',BASE).href]))));
-self.addEventListener('activate',event=>event.waitUntil((async()=>{const names=(await caches.keys()).filter(n=>n.startsWith(CACHE_PREFIX));for(const name of names.slice(0,-2))await caches.delete(name);await self.clients.claim()})()));
-self.addEventListener('message',event=>{if(event.data?.type==='PULSE_ACTIVATE')void self.skipWaiting()});
+self.addEventListener('install',event=>event.waitUntil((async()=>{
+ const shell=await fetch(SHELL,{cache:'no-store'});
+ if(!shell.ok||!(await shell.clone().text()).includes('name="pulse-build" content="'+CACHE.slice(CACHE_PREFIX.length)+'"')){
+  throw new Error('App shell and worker versions differ');
+ }
+ const cache=await caches.open(CACHE);
+ const assets=__SHELL_ASSETS__;
+ await cache.addAll(['offline.html','offline.js','pulse-app-192-v3.png',...assets].map(file=>new Request(new URL(file,BASE),{cache:'reload'})));
+ await cache.put(SHELL,shell);
+})()));
+self.addEventListener('activate',event=>event.waitUntil((async()=>{
+ let keep=await selected();
+ if(!keep){await select();keep=CACHE}
+ const names=await caches.keys();
+ await Promise.all(names.filter(name=>name.startsWith(CACHE_PREFIX)&&![STATE,CACHE,keep].includes(name)).map(name=>caches.delete(name)));
+ await self.clients.claim();
+})()));
+self.addEventListener('message',event=>{
+ if(event.data?.type!=='PULSE_ACTIVATE')return;
+ event.waitUntil((async()=>{
+  try{
+   const shell=await (await caches.open(CACHE)).match(SHELL);
+   if(!shell)throw new Error('App shell unavailable');
+   await select();
+   await self.skipWaiting();
+   event.ports[0]?.postMessage(true);
+  }catch{event.ports[0]?.postMessage(false)}
+ })());
+});
 self.addEventListener('fetch',event=>{
  const request=event.request,url=new URL(request.url);
  if(request.method!=='GET'||url.origin!==BASE.origin||!url.pathname.startsWith(BASE.pathname))return;
  if(request.mode==='navigate'){
-  event.respondWith(fetch(request).catch(()=>caches.match(new URL('offline.html',BASE).href)));return;
+  event.respondWith((async()=>{
+   const chosen=await selected();
+   const shell=chosen&&await (await caches.open(chosen)).match(SHELL);
+   return shell||fetch(request).catch(()=>caches.match(new URL('offline.html',BASE).href));
+  })());return;
  }
  if(['offline.js','pulse-app-192-v3.png'].some(file=>url.href===new URL(file,BASE).href)){event.respondWith(caches.match(request).then(cached=>cached||fetch(request)));return;}
  if(!safeAsset(url))return;
