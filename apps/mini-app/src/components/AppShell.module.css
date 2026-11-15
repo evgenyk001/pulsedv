@@ -5,3 +5,12 @@
 .propertyFrame{animation:none;transform:none}
 
 .contextBack{display:flex;align-items:center;gap:10px;margin-bottom:14px;color:var(--muted-foreground);font-size:12px}
+
+:global(.pulse-pwa) .viewport:has([data-pwa-chat-in-flow]){
+ min-height:0;
+ overflow-x:clip;
+}
+:global(.pulse-pwa) .shell:has(> .chatRoute > [data-pwa-chat-in-flow]){
+ min-height:0;
+ padding:0;
+}
