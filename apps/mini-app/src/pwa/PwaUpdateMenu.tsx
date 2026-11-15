@@ -1,4 +1,5 @@
 import React from 'react';
+import {useLocation} from 'react-router-dom';
 import {useQuery} from '@tanstack/react-query';
 import {Check, ChevronRight, Download, RefreshCw, X} from 'lucide-react';
 import {Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger} from '../components/Sheet';
@@ -74,6 +75,10 @@ export function PwaUpdateMenu(){
  const [stage,setStage]=React.useState<'prepare'|'activate'|'restart'|null>(null);
  const [error,setError]=React.useState(false);
  const [open,setOpen]=React.useState(false);
+ const {search}=useLocation();
+ React.useEffect(()=>{
+  if(/^[a-f0-9]{16}$/.test(new URLSearchParams(search).get('update')??''))setOpen(true);
+ },[search]);
  const [progress,setProgress]=React.useState(0);
  const sheet=React.useRef<HTMLDivElement>(null);
  const latest=useQuery({

@@ -90,4 +90,20 @@ while IFS= read -r asset; do
   cmp "$target/${asset#/landing-cinematic/pwa-preview/}" "$work/response"
 done < <(cat "$target/.preview-check-assets"; echo)
 rm "$target/.preview-check-assets"
+read -r version build < <(python3 - "$target/app-release.json" <<'PYTHON'
+import json, re, sys
+with open(sys.argv[1]) as source:
+    release = json.load(source)
+assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+', release['version'])
+assert re.fullmatch(r'[a-f0-9]{16}', release['build'])
+print(release['version'], release['build'])
+PYTHON
+)
+if ! docker compose exec -T db psql -XqAt -v ON_ERROR_STOP=1 -U pulse -d pulse \
+  -v version="$version" -v build="$build" <<'SQL'
+select pulse_queue_public_push('release', :'build', jsonb_build_object('version', :'version', 'build', :'build'));
+SQL
+then
+  echo 'PWA опубликована. Пуш не поставлен в очередь. Обновите PWA API и повторите выкладку этой сборки.' >&2
+fi
 echo "PWA Preview готов: $url"

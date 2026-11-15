@@ -30,7 +30,7 @@ function guestConversation(path:string,method:string){
  const route=path.split('?')[0];
  if(method==="GET")return /^\/journey-media\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/.test(route)||/^\/legacy-journey-media\/[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/.test(route)||route==="/me/notifications"||route==="/me/journeys"||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/messages)?$/.test(route);
  if(method==="DELETE")return /^\/me\/journeys\/[0-9a-f-]{36}\/attachments\/[0-9a-f-]{36}\.(jpg|png|webp|pdf)$/.test(route);
- return method==="POST"&&(/^\/me\/(?:notifications\/(read|dismiss)|push\/(subscribe|unsubscribe))$/.test(route)||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/(?:read|attachments))?$/.test(route));
+ return method==="POST"&&(/^\/me\/(?:notifications\/(read|dismiss)|push\/(subscribe|unsubscribe|preferences))$/.test(route)||/^\/me\/journeys\/[0-9a-f-]{36}(?:\/(?:read|attachments))?$/.test(route));
 }
 function previewAccountRoute(path:string,method:string){
  const route=path.split('?')[0];

@@ -77,8 +77,13 @@ export async function enablePush(){
  if(!registration?.active)throw Error('Приложение ещё готовится. Перезапустите его с иконки и повторите.');
  const subscription=await registration.pushManager.getSubscription()??await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes(config.pushPublicKey)});
  const json=subscription.toJSON();
- try{const result=await visitorApi<{id:string}>('/me/push/subscribe',{method:'POST',body:JSON.stringify({endpoint:json.endpoint,keys:json.keys})});try{localStorage.setItem(PUSH_ID,result.id)}catch{}}
+ try{const result=await visitorApi<{id:string}>('/me/push/subscribe',{method:'POST',body:JSON.stringify({endpoint:json.endpoint,keys:json.keys,appScope:import.meta.env.VITE_PWA_PREVIEW==='true'?'preview':'app'})});try{localStorage.setItem(PUSH_ID,result.id)}catch{}}
  catch(e){await subscription.unsubscribe();throw e}
+}
+export async function catalogPushPreferences(catalogNews?:boolean){
+ const id=localStorage.getItem(PUSH_ID)??(import.meta.env.VITE_PWA_PREVIEW==='true'?null:localStorage.getItem(LEGACY_PUSH_ID));
+ if(!id)throw Error('Переподключите уведомления на этом устройстве');
+ return visitorApi<{catalogNews:boolean}>('/me/push/preferences',{method:'POST',body:JSON.stringify({id,catalogNews})});
 }
 export async function disablePush(){
  let id:string|null=null;try{id=localStorage.getItem(PUSH_ID)??(import.meta.env.VITE_PWA_PREVIEW==='true'?null:localStorage.getItem(LEGACY_PUSH_ID))}catch{}

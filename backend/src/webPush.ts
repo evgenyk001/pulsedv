@@ -20,7 +20,7 @@ export function registerWebPush(app:FastifyInstance,db:Database,config:RuntimeCo
  };
  app.post('/api/v1/me/push/subscribe',{preHandler:account,config:{rateLimit:{max:12,timeWindow:'1 minute'}}},async r=>{
   if(!config.WEB_PUSH_PUBLIC_KEY||!config.WEB_PUSH_PRIVATE_KEY)throw new HttpError(503,'Push-уведомления ещё не настроены');
-  const p=z.object({endpoint:z.string().max(3000).refine(validPushEndpoint,'Сервис уведомлений не поддерживается'),keys:z.object({p256dh:key(65),auth:key(16)}).strict()}).strict().parse(r.body);
+  const p=z.object({endpoint:z.string().max(3000).refine(validPushEndpoint,'Сервис уведомлений не поддерживается'),keys:z.object({p256dh:key(65),auth:key(16)}).strict(),appScope:z.enum(['preview','app']).default('preview')}).strict().parse(r.body);
   if(Buffer.from(p.keys.p256dh,'base64url')[0]!==4)throw new HttpError(400,'Некорректный ключ устройства');
   return db.transaction(async sql=>{
    const {userId,sessionId}=r.visitor!;
@@ -29,10 +29,20 @@ export function registerWebPush(app:FastifyInstance,db:Database,config:RuntimeCo
    const existing=(await sql.query('select id,user_id,session_id from push_subscriptions where endpoint=$1 for update',[p.endpoint])).rows[0];
    if(existing&&(existing.user_id!==userId||existing.session_id!==guestId))throw new HttpError(409,'Переподключите уведомления на этом устройстве');
    if(!existing&&Number((await sql.query('select count(*) from push_subscriptions where user_id=$1 or session_id=$2',[userId,guestId])).rows[0].count)>=10)throw new HttpError(409,'Подключено слишком много устройств');
-   const row=(await sql.query('insert into push_subscriptions(user_id,endpoint,p256dh,auth,session_id) values($1,$2,$3,$4,$5) on conflict(endpoint) do update set enabled=true,p256dh=excluded.p256dh,auth=excluded.auth,updated_at=now() where push_subscriptions.user_id is not distinct from excluded.user_id and push_subscriptions.session_id is not distinct from excluded.session_id returning id',[userId,p.endpoint,p.keys.p256dh,p.keys.auth,guestId])).rows[0];
+   const row=(await sql.query('insert into push_subscriptions(user_id,endpoint,p256dh,auth,session_id,app_scope) values($1,$2,$3,$4,$5,$6) on conflict(endpoint) do update set enabled=true,p256dh=excluded.p256dh,auth=excluded.auth,app_scope=excluded.app_scope,updated_at=now() where push_subscriptions.user_id is not distinct from excluded.user_id and push_subscriptions.session_id is not distinct from excluded.session_id returning id',[userId,p.endpoint,p.keys.p256dh,p.keys.auth,guestId,p.appScope])).rows[0];
    if(!row)throw new HttpError(409,'Переподключите уведомления на этом устройстве');
    return {id:row.id};
   });
+ });
+ app.post('/api/v1/me/push/preferences',{preHandler:account,config:{rateLimit:{max:30,timeWindow:'1 minute'}}},async r=>{
+  const p=z.object({id:z.uuid(),catalogNews:z.boolean().optional()}).strict().parse(r.body);
+  const owner=[p.id,r.visitor!.userId,r.visitor!.userId?null:r.visitor!.sessionId];
+  const where=' where id=$1 and enabled and (user_id=$2 or session_id=$3)';
+  const result=p.catalogNews===undefined
+   ? await db.query('select catalog_news from push_subscriptions'+where,owner)
+   : await db.query('update push_subscriptions set catalog_news=$4'+where+' returning catalog_news',[...owner,p.catalogNews]);
+  if(!result.rows[0])throw new HttpError(404,'Переподключите уведомления на этом устройстве');
+  return {catalogNews:result.rows[0].catalog_news};
  });
  app.post('/api/v1/me/push/unsubscribe',{preHandler:account},async r=>{
   const p=z.object({id:z.uuid()}).strict().parse(r.body);
@@ -52,12 +62,13 @@ export async function deliverWebPush(db:Database,config:RuntimeConfig,send:PushS
  update push_deliveries p set locked_until=now()+interval '120 seconds',lock_token=$1,attempts=attempts+1 from picked where p.id=picked.id returning p.*`,[lease])).rows;
  let processed=0;
  for(const d of rows){
-  const row=(await db.query(`select s.*,o.topic,o.payload,o.available_at as event_at,o.aggregate_id from push_subscriptions s join outbox_events o on o.id=$2 where s.id=$1 and s.enabled and (s.user_id::text=o.payload->>'userId' or (o.topic='pwa.guest_reply' and s.session_id::text=o.payload->>'sessionId'))`,[d.subscription_id,d.event_id])).rows[0];
+  const row=(await db.query(`select s.*,o.topic,o.payload,o.available_at as event_at,o.aggregate_id from push_subscriptions s join outbox_events o on o.id=$2 where s.id=$1 and s.enabled and (o.topic in ('pwa.catalog','pwa.release') or s.user_id::text=o.payload->>'userId' or (o.topic='pwa.guest_reply' and s.session_id::text=o.payload->>'sessionId'))`,[d.subscription_id,d.event_id])).rows[0];
   const guest=row?.topic==='pwa.guest_reply';
-  const eligible=row&&(guest
+  const publicPush=row?.topic==='pwa.catalog'||row?.topic==='pwa.release'&&row.app_scope==='preview';
+  const eligible=row&&(publicPush|| (guest
    ? (await db.query("select 1 from leads l join sessions s on s.id=l.session_id where l.id=$1 and s.id=$2 and s.user_id is null and l.user_id is null and l.source='pwa-contact'",[row.aggregate_id,row.session_id])).rows.length>0
    : await registeredPhone(db,row.user_id,config.CONSENT_VERSION)
-     || row.topic==='user.journey'&&(await db.query("select 1 from sessions where user_id=$1 and auth_provider='telegram-web' limit 1",[row.user_id])).rows.length>0);
+     || row.topic==='user.journey'&&(await db.query("select 1 from sessions where user_id=$1 and auth_provider='telegram-web' limit 1",[row.user_id])).rows.length>0));
   if(!row||Date.parse(row.event_at)<Date.now()-86400000||!eligible){
    await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;
   }
@@ -83,13 +94,25 @@ export async function deliverWebPush(db:Database,config:RuntimeConfig,send:PushS
   if(row.topic==='user.giveaway'&&!(await db.query('select id from giveaway_entries where id::text=$1 and user_id=$2 and status=$3',[row.payload.entryId,row.user_id,row.payload.status])).rows.length){
    await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;
   }
+  const property=row.topic==='pwa.catalog'&&row.catalog_news
+   ? (await db.query("select id,name,city from catalog_properties where id=$1 and status='published'",[row.payload.propertyId])).rows[0]
+   : null;
+  if(row.topic==='pwa.catalog'&&!property){
+   await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;
+  }
   try{
    // Private conversation text, phone numbers and security codes never appear on a lock screen.
    const tab=guest&&['collections','showings'].includes(row.payload.tab)?row.payload.tab:null;
-   const title=tab==='collections'?'Новая подборка квартир':tab==='showings'?'Обновление по показу':row.topic==='user.broadcast_pwa'?'Новый анонс PULSEDV.RU':row.topic==='user.partner'?'Обновление в партнёрском кабинете':row.topic==='user.giveaway'?'Обновление по розыгрышу':row.topic==='user.search_updates'?'Обновление по вашему поиску':row.topic==='user.showing_reminder'?'Напоминание о показе':'Сообщение от PULSEDV.RU';
+   const title=property?'Новый ЖК в каталоге':row.topic==='pwa.release'?'Обновление PULSEDV.RU':tab==='collections'?'Новая подборка квартир':tab==='showings'?'Обновление по показу':row.topic==='user.broadcast_pwa'?'Новый анонс PULSEDV.RU':row.topic==='user.partner'?'Обновление в партнёрском кабинете':row.topic==='user.giveaway'?'Обновление по розыгрышу':row.topic==='user.search_updates'?'Обновление по вашему поиску':row.topic==='user.showing_reminder'?'Напоминание о показе':'Сообщение от PULSEDV.RU';
    const guestRoute='#/journey?lead='+row.aggregate_id+(tab?'&tab='+tab:'');
    const guestUrl='/landing-cinematic/pwa-preview/?pushRoute='+encodeURIComponent(guestRoute)+guestRoute;
-   await send({endpoint:row.endpoint,keys:{p256dh:row.p256dh,auth:row.auth}},JSON.stringify({title,body:'Откройте приложение, чтобы посмотреть подробности.',url:guest?guestUrl:pushRoute(row.payload.deepLink,config.PUBLIC_ORIGIN),tag:'pulse-'+d.event_id}),{TTL:3600,timeout:8000,vapidDetails:{subject:config.WEB_PUSH_SUBJECT,publicKey:config.WEB_PUSH_PUBLIC_KEY,privateKey:config.WEB_PUSH_PRIVATE_KEY}});
+   const body=property?[property.name,property.city].filter(Boolean).join(' · ').slice(0,160)
+    :row.topic==='pwa.release'?'Версия '+row.payload.version+' доступна. Нажмите, чтобы открыть экран обновления.'
+    :'Откройте приложение, чтобы посмотреть подробности.';
+   const url=property?'/app/#/property/'+encodeURIComponent(property.id)
+    :row.topic==='pwa.release'?'/app/#/profile?update='+encodeURIComponent(row.payload.build)
+    :guest?guestUrl:pushRoute(row.payload.deepLink,config.PUBLIC_ORIGIN);
+   await send({endpoint:row.endpoint,keys:{p256dh:row.p256dh,auth:row.auth}},JSON.stringify({title,body,url,tag:'pulse-'+d.event_id}),{TTL:3600,timeout:8000,vapidDetails:{subject:config.WEB_PUSH_SUBJECT,publicKey:config.WEB_PUSH_PUBLIC_KEY,privateKey:config.WEB_PUSH_PRIVATE_KEY}});
    await db.query('update push_deliveries set delivered_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);processed++;
   }catch(e){
    const status=(e as any)?.statusCode;

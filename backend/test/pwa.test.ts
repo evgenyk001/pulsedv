@@ -248,3 +248,41 @@ test('PWA Telegram login joins the existing account and retains guest conversati
  assert.equal(message.statusCode,200,message.body);
  assert.equal(message.json().id,contact.json().id);
 });
+
+test('Public PWA pushes respect device preferences and deduplicate publications and releases',async t=>{
+ const f=await fixture(t),a=await f.login('+79990002233'),b=await f.login('+79990002244');
+ const keys={p256dh:Buffer.concat([Buffer.from([4]),Buffer.alloc(64,1)]).toString('base64url'),auth:Buffer.alloc(16,2).toString('base64url')};
+ const subscribe=(headers:typeof a.headers,device:string,appScope:'preview'|'app')=>f.app.inject({
+  method:'POST',url:'/api/v1/me/push/subscribe',headers,payload:{endpoint:'https://fcm.googleapis.com/fcm/send/'+device,keys,appScope},
+ });
+ const preview=await subscribe(a.headers,'preview','preview'),app=await subscribe(b.headers,'app','app');
+ assert.equal(preview.statusCode,200,preview.body);
+ assert.equal(app.statusCode,200,app.body);
+ const id=preview.json().id;
+ const preference=(headers:typeof a.headers,catalogNews?:boolean)=>f.app.inject({
+  method:'POST',url:'/api/v1/me/push/preferences',headers,payload:{id,catalogNews},
+ });
+ assert.deepEqual((await preference(a.headers)).json(),{catalogNews:false});
+ assert.equal((await preference(b.headers,true)).statusCode,404);
+ assert.deepEqual((await preference(a.headers,true)).json(),{catalogNews:true});
+
+ const project={...structuredClone(DEFAULT_STATE.properties[0]),id:'new-project',name:'Новый квартал',status:'draft' as const};
+ await upsertCatalogProperty(f.db,project);
+ assert.equal((await f.db.query("select * from outbox_events where topic='pwa.catalog'")).rows.length,0);
+ await upsertCatalogProperty(f.db,{...project,status:'published'});
+ await upsertCatalogProperty(f.db,{...project,status:'draft'});
+ await upsertCatalogProperty(f.db,{...project,status:'published'});
+ const release={version:'1.0.9',build:'0123456789abcdef'};
+ const queue=()=>f.db.query("select pulse_queue_public_push('release',$1,$2::jsonb) as queued",[release.build,JSON.stringify(release)]);
+ assert.equal((await queue()).rows[0].queued,1);
+ assert.equal((await queue()).rows[0].queued,0);
+
+ const sent:Record<string,string>[]=[];
+ await deliverWebPush(f.db,f.config,async(sub,payload)=>{sent.push({endpoint:sub.endpoint,...JSON.parse(payload)})});
+ assert.deepEqual(sent.map(item=>item.url).sort(),['/app/#/profile?update='+release.build,'/app/#/property/new-project']);
+ assert.ok(sent.every(item=>item.endpoint.endsWith('/preview')));
+
+ await upsertCatalogProperty(f.db,{...project,id:'another-project',status:'published'});
+ await preference(a.headers,false);
+ assert.equal((await deliverWebPush(f.db,f.config,async()=>{assert.fail('Opt-out must cancel queued catalog pushes')})).processed,0);
+});
