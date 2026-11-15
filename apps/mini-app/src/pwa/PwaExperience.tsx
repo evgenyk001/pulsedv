@@ -23,7 +23,13 @@ export function PwaStatus(){
  if(!isPwa||online)return null;
  return <aside className="pwaStatus" role="status"><WifiOff size={18}/><span>Нет интернета. Действия не отправляются.</span></aside>;
 }
+function usePwaTelegramAccount(){
+ const config=useQuery({queryKey:['pwa-login-config'],queryFn:pwaConfig,enabled:isPwa&&runtime.publicPreview});
+ const account=useQuery({queryKey:['pwa-login-account'],queryFn:()=>visitorApi<{authenticated:boolean;registered:boolean;name:string|null}>('/me/account'),enabled:!!config.data?.telegramLogin});
+ return {config,account};
+}
 export function PwaPreferences(){
+ const {account}=usePwaTelegramAccount();
  const [enabled,setEnabled]=React.useState(false),[supported,setSupported]=React.useState(false),[ready,setReady]=React.useState(false),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
  React.useEffect(()=>{if(!isPwa)return;setSupported('PushManager' in window&&'Notification' in window);void pwaConfig().then(c=>setReady(c.push),()=>{});void navigator.serviceWorker?.getRegistration(import.meta.env.BASE_URL).then(async r=>setEnabled(!!await r?.pushManager.getSubscription())).catch(()=>{})},[]);
  if(!isPwa)return null;
@@ -31,6 +37,7 @@ export function PwaPreferences(){
  const logout=async()=>{setBusy(true);setError('');try{await logoutPwa()}catch{setError('Не удалось выйти. Проверьте интернет и повторите.');setBusy(false)}};
  return <GroupedMenu title="Приложение" caption={error||undefined}>
   <MenuToggle icon={<Bell/>} title="Системные уведомления" description={!supported?'Доступны в установленном приложении':!ready?'Пока недоступны':'Сообщения, показы, новые ЖК и обновления'} checked={enabled} disabled={busy||!supported||(!ready&&!enabled)} onCheckedChange={()=>void toggle()}/>
+  {(!runtime.publicPreview||account.data?.authenticated&&account.data.registered)&&<PwaSecurityPreferences/>}
   {!standalone()&&<MenuButton icon={<Download/>} title="Добавить на главный экран" description={appleDevice()?'Поделиться → На экран «Домой»':'Установка приложения'} onClick={()=>{if(canInstall())void install().catch(()=>setError('Откройте меню браузера и выберите установку'));else setError(appleDevice()?'В Safari нажмите «Поделиться» → «На экран Домой»':'В меню браузера выберите «Установить приложение»')}}/>}
   {!runtime.publicPreview&&<MenuButton icon={<LogOut/>} title="Выйти из аккаунта" disabled={busy} onClick={()=>void logout()}/>}{error&&<span className="sr-only" role="alert">{error}</span>}
  </GroupedMenu>;
@@ -53,8 +60,7 @@ export function PwaAccount(){
 
 export function PwaTelegramAccount(){
  const cache=useQueryClient();
- const config=useQuery({queryKey:['pwa-login-config'],queryFn:pwaConfig});
- const account=useQuery({queryKey:['pwa-login-account'],queryFn:()=>visitorApi<{authenticated:boolean;registered:boolean;name:string|null}>('/me/account'),enabled:!!config.data?.telegramLogin});
+ const {config,account}=usePwaTelegramAccount();
  const [busy,setBusy]=React.useState(false);
  const [message,setMessage]=React.useState<string>(()=>history.state?.telegramLoginMessage||'');
  React.useEffect(()=>{
@@ -73,7 +79,7 @@ export function PwaTelegramAccount(){
   catch(error){setMessage(error instanceof Error?error.message:'Не удалось войти с ключом.')}
   finally{setBusy(false)}
  };
- return <><section className="pwaLoginCard" aria-label="Аккаунт PULSEDV.RU">
+ return <section className="pwaLoginCard" aria-label="Аккаунт PULSEDV.RU">
   <span className="pwaLoginCard__icon"><UserRound size={22}/></span>
   <div className="pwaLoginCard__copy">
    <h2>{authenticated?account.data?.name||'Ваш аккаунт':'Ваш аккаунт'}</h2>
@@ -85,5 +91,5 @@ export function PwaTelegramAccount(){
   </button>}
   {!authenticated&&!account.isPending&&passkeysSupported()&&<button type="button" disabled={busy} onClick={()=>void byKey()}><KeyRound size={18}/>Войти с ключом доступа</button>}
   {message&&<p className="pwaLoginCard__status" role="status">{message}</p>}
- </section>{authenticated&&account.data?.registered&&<PwaSecurityPreferences/>}</>;
+ </section>;
 }

@@ -85,11 +85,10 @@ export function PwaSecurityPreferences(){
  const run=async(fn:()=>Promise<unknown>)=>{if(lock.current)return;lock.current=true;setBusy(true);setError('');try{await fn();await load()}catch(e){setError(e instanceof Error?e.message:'Повторите действие')}finally{lock.current=false;setBusy(false)}};
  React.useEffect(()=>{void run(load)},[]);
  const open=()=>{setError('');setRemove(null);setSheet(true)};
- return <><GroupedMenu title="Защита партнёрского кабинета" caption={!passkeysSupported()?'Ключи доступа недоступны в этом браузере.':error&&!sheet?error:undefined}>
-  <MenuToggle icon={<ScanFace/>} title="Face ID или отпечаток" description="Клиенты и выплаты под защитой" label="Защитить партнёрский кабинет в PWA" checked={!!state?.enabled} disabled={busy||!state||!passkeysSupported()} onCheckedChange={checked=>{if(checked&&state?.optional){void run(()=>enrollPasskey());return}open()}}/>
+ return <>
+  <MenuToggle icon={<ScanFace/>} title="Face ID или отпечаток" description={!passkeysSupported()?'Ключи доступа недоступны в этом браузере':error&&!sheet?error:undefined} label="Защитить партнёрский кабинет в PWA" checked={!!state?.enabled} disabled={busy||!state||!passkeysSupported()} onCheckedChange={checked=>{if(checked&&state?.optional){void run(()=>enrollPasskey());return}open()}}/>
   {runtime.publicPreview&&error.includes('подтвердите вход через Telegram')&&!sheet&&<MenuButton icon={<KeyRound/>} title="Подтвердить вход через Telegram" onClick={()=>void run(startPwaTelegramLogin)}/>}
   {!state&&!busy&&<MenuButton icon={<Plus/>} title="Повторить проверку" onClick={()=>void run(load)}/>}
- </GroupedMenu>
  <Sheet open={sheet} onOpenChange={v=>{if(!busy){setSheet(v);setRemove(null)}}}><SheetContent side="bottom" className="pwaKeySheet"><SheetHeader><SheetTitle>{remove?'Удалить ключ доступа?':state?.enabled?'Ключи доступа':'Защита кабинета'}</SheetTitle><SheetDescription>{remove?'Для следующего входа останутся другие ключи или подтверждение телефона.':'Подтвердите действие через Face ID, отпечаток или код устройства.'}</SheetDescription></SheetHeader>
   {error&&<p role="alert" className="pwaKeyError">{error}</p>}
   {error.includes('подтвердите номер')&&<button className="pwaKeyPrimary" onClick={()=>void (runtime.publicPreview?run(startPwaTelegramLogin):logoutPwa())}>{runtime.publicPreview?'Подтвердить вход через Telegram':'Подтвердить номер'}</button>}

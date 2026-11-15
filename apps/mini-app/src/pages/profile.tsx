@@ -4,7 +4,6 @@ import {isPwa} from '../pwa/client';
 import {PwaPreferences,PwaAccount,PwaTelegramAccount} from '../pwa/PwaExperience';
 import {safeLocalStorage} from '../../../../packages/browser/storage';
 import {PwaAnnouncementPreferences} from '../pwa/PwaAnnouncementPreferences';
-import {PwaSecurityPreferences} from '../pwa/PwaPartnerSecurity';
 import {PartnerSecurityPreferences} from '../components/PartnerSecurity';
 import {IconTile} from '../components/IconTile';
 import {AnnouncementPreferences} from '../components/AnnouncementPreferences';
@@ -69,7 +68,7 @@ export default function ProfilePage(){
       </Sheet>
     </GroupedMenu>
     <PwaPreferences/>
-    {previewRuntime.publicPreview?null:isPwa?<><PwaAnnouncementPreferences/><PwaSecurityPreferences/></>:<><AnnouncementPreferences/><PartnerSecurityPreferences/></>}
+    {previewRuntime.publicPreview?null:isPwa?<PwaAnnouncementPreferences/>:<><AnnouncementPreferences/><PartnerSecurityPreferences/></>}
     <GroupedMenu title="О приложении">
       <MenuLink to="/privacy" icon={<ShieldCheck/>} title="Персональные данные"/>
       <Sheet>
