@@ -15,7 +15,7 @@ export async function pwaGrantValid(sql:Sql,r:FastifyRequest,fresh=false){
 }
 export async function requirePwaPartner(sql:Sql,r:FastifyRequest,fresh=false){
  const provider=(await sql.query('select auth_provider from sessions where id=$1',[r.visitor!.sessionId])).rows[0]?.auth_provider;
- if(provider!=='sms'&&provider!=='call'&&provider!=='passkey')return false;
+ if(!['sms','call','passkey','telegram-web'].includes(provider))return false;
  if(!await pwaGrantValid(sql,r,fresh))throw new HttpError(423,fresh?'Подтвердите действие ключом доступа':'Откройте партнёрский кабинет ключом доступа');
  return true;
 }
@@ -48,7 +48,11 @@ export function registerPwaPasskeys(app:FastifyInstance,db:Database,config:Runti
    if(keys.length>=5)throw new HttpError(409,'Можно подключить до пяти ключей');
    if(keys.length){if(!await pwaGrantValid(sql,r,true))throw new HttpError(423,'Сначала подтвердите действующий ключ доступа');}
    else{
-    if(!['sms','call'].includes(session.auth_provider)||!session.phone_verified_at||Date.parse(session.phone_verified_at)<Date.now()-300000)throw new HttpError(428,'Для подключения ключа заново подтвердите номер телефона');
+    const telegramWeb=session.auth_provider==='telegram-web';
+    const verifiedAt=telegramWeb?session.telegram_web_verified_at:['sms','call'].includes(session.auth_provider)?session.phone_verified_at:null;
+    if(!verifiedAt||Date.parse(verifiedAt)<Date.now()-300000)throw new HttpError(428,telegramWeb
+     ?'Для подключения ключа подтвердите вход через Telegram ещё раз'
+     :'Для подключения ключа заново подтвердите номер телефона');
     const legacy=(await sql.query('select revision from partner_biometric_credentials where user_id=$1 and active',[id])).rows[0];
     if(legacy){
      const a=(await sql.query('select * from pwa_legacy_approvals where user_id=$1 and expires_at>now() and revision=$2 for update',[id,legacy.revision])).rows[0];
@@ -110,11 +114,12 @@ export function registerPwaPasskeys(app:FastifyInstance,db:Database,config:Runti
     if(kind==='unlock')return {grant:await grant(sql,r,key.user_id)};
     await mergeFavorites(sql,r.visitor!.sessionId,key.user_id);await mergeSearch(sql,r.visitor!.sessionId,key.user_id);await mergeNotificationReads(sql,r.visitor!.sessionId,key.user_id);
     await sql.query("update sessions set user_id=$2,auth_provider='passkey' where id=$1",[r.visitor!.sessionId,key.user_id]);
+    await sql.query('update push_subscriptions set session_id=null,user_id=$2 where session_id=$1',[r.visitor!.sessionId,key.user_id]);
     for(const table of ['user_events','visitor_profiles','leads'])await sql.query(`update ${table} set user_id=$2 where session_id=$1`,[r.visitor!.sessionId,key.user_id]);
     await sql.query("delete from auth_tokens where session_id=$1 and kind='visitor'",[r.visitor!.sessionId]);const token=await issueToken(sql,'visitor',r.visitor!.sessionId);
     return {grant:await grant(sql,r,key.user_id),sessionId:r.visitor!.sessionId,accessToken:token.token,expiresAt:token.expiresAt};
    });
-   if(!result)throw new HttpError(400,'Ключ не подтверждён. Повторите вход или используйте SMS');
+   if(!result)throw new HttpError(400,'Ключ не подтверждён. Повторите вход или войдите другим способом');
    if('accessToken' in result)reply.setCookie('pulse_visitor',result.accessToken!,{httpOnly:true,secure:config.NODE_ENV==='production',sameSite:'strict',path:'/api/v1',maxAge:30*86400});return result;
   });
  }

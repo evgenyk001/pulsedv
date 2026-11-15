@@ -62,7 +62,7 @@ export function registerPwaTelegramLogin(app:FastifyInstance,db:Database,config:
    const active=token&&(await sql.query("select 1 from auth_tokens where kind='visitor' and session_id=$1 and token_hash=$2 and expires_at>now()",[sessionId,tokenHash(token)])).rows.length;
    if(!active)throw new HttpError(401,'Сессия истекла. Начните вход заново.');
    const userId=await bind(sql,sessionId,user);
-   await sql.query("update sessions set auth_provider='telegram-web' where id=$1",[sessionId]);
+   await sql.query("update sessions set auth_provider='telegram-web',telegram_web_verified_at=now() where id=$1",[sessionId]);
    await sql.query('update push_subscriptions set session_id=null,user_id=$2 where session_id=$1',[sessionId,userId]);
    await sql.query("delete from auth_tokens where session_id=$1 and kind='visitor'",[sessionId]);
    const auth=await issueToken(sql,'visitor',sessionId);

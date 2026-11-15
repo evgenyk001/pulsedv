@@ -1,11 +1,13 @@
 import React from 'react';
-import {Bell,Download,LogOut,WifiOff,UserRound,MessageCircle,Send} from 'lucide-react';
+import {Bell,Download,LogOut,WifiOff,UserRound,MessageCircle,Send,KeyRound} from 'lucide-react';
 import {SafariShare,SafariAddHome} from './InstallationIcons';
 import {useClientNotifications} from '../helpers/useClientNotifications';
-import {useQuery} from '@tanstack/react-query';
+import {useQuery,useQueryClient} from '@tanstack/react-query';
 import {GroupedMenu,MenuToggle,MenuButton,MenuInfo,MenuExternalLink} from '../components/GroupedMenu';
 import {appleDevice,standalone,install,canInstall,enablePush,disablePush,logoutPwa,pwaConfig,isPwa,startPwaTelegramLogin} from './client';
 import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
+import {loginWithPasskey,passkeysSupported} from '../../../../packages/partners/passkeys';
+import {PwaSecurityPreferences} from './PwaPartnerSecurity';
 import './pwa.css';
 export function PwaStatus(){
  const [online,setOnline]=React.useState(navigator.onLine);
@@ -50,8 +52,9 @@ export function PwaAccount(){
 }
 
 export function PwaTelegramAccount(){
+ const cache=useQueryClient();
  const config=useQuery({queryKey:['pwa-login-config'],queryFn:pwaConfig});
- const account=useQuery({queryKey:['pwa-login-account'],queryFn:()=>visitorApi<{authenticated:boolean;name:string|null}>('/me/account'),enabled:!!config.data?.telegramLogin});
+ const account=useQuery({queryKey:['pwa-login-account'],queryFn:()=>visitorApi<{authenticated:boolean;registered:boolean;name:string|null}>('/me/account'),enabled:!!config.data?.telegramLogin});
  const [busy,setBusy]=React.useState(false);
  const [message,setMessage]=React.useState<string>(()=>history.state?.telegramLoginMessage||'');
  React.useEffect(()=>{
@@ -64,7 +67,13 @@ export function PwaTelegramAccount(){
   try{if(authenticated)await logoutPwa();else await startPwaTelegramLogin()}
   catch(error){setMessage(error instanceof Error?error.message:'Попробуйте ещё раз.');setBusy(false)}
  };
- return <section className="pwaLoginCard" aria-label="Аккаунт PULSEDV.RU">
+ const byKey=async()=>{
+  setBusy(true);setMessage('');
+  try{await loginWithPasskey();await cache.invalidateQueries({queryKey:['pwa-login-account']})}
+  catch(error){setMessage(error instanceof Error?error.message:'Не удалось войти с ключом.')}
+  finally{setBusy(false)}
+ };
+ return <><section className="pwaLoginCard" aria-label="Аккаунт PULSEDV.RU">
   <span className="pwaLoginCard__icon"><UserRound size={22}/></span>
   <div className="pwaLoginCard__copy">
    <h2>{authenticated?account.data?.name||'Ваш аккаунт':'Ваш аккаунт'}</h2>
@@ -74,6 +83,7 @@ export function PwaTelegramAccount(){
    {authenticated?<LogOut size={18}/>:<Send size={18}/>}
    {busy?'Подождите…':authenticated?'Выйти':'Войти через Telegram'}
   </button>}
+  {!authenticated&&!account.isPending&&passkeysSupported()&&<button type="button" disabled={busy} onClick={()=>void byKey()}><KeyRound size={18}/>Войти с ключом доступа</button>}
   {message&&<p className="pwaLoginCard__status" role="status">{message}</p>}
- </section>;
+ </section>{authenticated&&account.data?.registered&&<PwaSecurityPreferences/>}</>;
 }

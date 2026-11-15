@@ -67,3 +67,44 @@ test('PWA passkeys enforce signature, origin, user verification, session binding
  assert.equal((await post(base+'/register/options',{})).statusCode,428,'first enrollment requires recent SMS');
 
 });
+
+test('PWA Telegram sign-in enables an existing verified account to enroll and unlock with a passkey',async t=>{
+ const db=await testDatabase();await migrate(db);
+ const config=readConfig({DATABASE_URL:'unused',NODE_ENV:'test',BOT_TOKEN:'98765:test-token',PWA_TELEGRAM_CLIENT_ID:'98765',PWA_TELEGRAM_CLIENT_SECRET:'test-secret',REQUIRE_TELEGRAM_PHONE:'true'});
+ const app=await createApp(db,config,{telegramExchange:async()=>({id:98765,first_name:'Партнёр'})});
+ t.after(async()=>{await app.close();await db.close()});
+ const origin={origin:config.PUBLIC_ORIGIN};
+ const session=async()=>{
+  const response=await app.inject({method:'POST',url:'/api/v1/auth/session',headers:origin,payload:{}});
+  return {...origin,authorization:'Bearer '+response.json().accessToken};
+ };
+ const h=await session();
+ const post=(path:string,payload:object,headers=h)=>app.inject({method:'POST',url:'/api/v1'+path,headers,payload});
+ const start=await post('/auth/pwa-telegram/start',{base:'/landing-cinematic/pwa-preview/'});
+ const state=new URL(start.json().url).searchParams.get('state');
+ const result=await post('/auth/pwa-telegram/finish',{state,code:'test-code'});
+ assert.equal(result.statusCode,200,result.body);
+ h.authorization='Bearer '+result.json().accessToken;
+ const base='/me/account/passkeys';
+ assert.equal((await post(base+'/register/options',{})).statusCode,403,'Telegram sign-in alone does not verify a phone');
+ const user=(await db.query("update app_users set phone='+79995550102' where telegram_user_id=98765 returning id")).rows[0];
+ await db.query("insert into phone_registrations(user_id,phone,consent_version) values($1,'+79995550102',$2)",[user.id,config.CONSENT_VERSION]);
+ const cabinet=(grant?:string)=>app.inject({url:'/api/v1/me/partner',headers:{...h,...(grant?{'x-partner-unlock':grant}:{})}});
+ assert.equal((await cabinet()).statusCode,423);
+ const options=await post(base+'/register/options',{});
+ assert.equal(options.statusCode,200,options.body);
+ const key=authenticator(config.PUBLIC_ORIGIN),r=options.json();
+ const registered=await post(base+'/register/verify',{challengeId:r.challengeId,response:key.registration(r.options.challenge)});
+ assert.equal(registered.statusCode,200,registered.body);
+ assert.equal((await cabinet(registered.json().grant)).statusCode,200);
+ await post(base+'/lock',{});
+ assert.equal((await cabinet(registered.json().grant)).statusCode,423);
+ const visitor=await session(),login=(await post(base+'/login/options',{},visitor)).json();
+ const signed=await post(base+'/login/verify',{challengeId:login.challengeId,response:key.assertion(login.options.challenge)},visitor);
+ assert.equal(signed.statusCode,200,signed.body);
+ const account=await app.inject({url:'/api/v1/me/account',headers:{...origin,authorization:'Bearer '+signed.json().accessToken}});
+ assert.equal(account.json().name,'Партнёр');
+ await db.query('delete from pwa_passkeys where user_id=$1',[user.id]);
+ await db.query("update sessions set telegram_web_verified_at=now()-interval '6 minutes' where id=$1",[result.json().sessionId]);
+ assert.equal((await post(base+'/register/options',{})).statusCode,428,'stale Telegram login cannot enroll a first passkey');
+});

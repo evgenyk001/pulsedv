@@ -34,7 +34,10 @@ function guestConversation(path:string,method:string){
 }
 function previewAccountRoute(path:string,method:string){
  const route=path.split('?')[0];
- if(method==='GET')return route==='/me/account'||route==='/me/favorites'||route==='/me/search';
+ if(method==='GET')return route==='/me/account'||route==='/me/favorites'||route==='/me/search'||
+  route==='/me/account/passkeys'||route==='/me/partner'||/^\/me\/partner\/referrals\/[^/]+$/.test(route);
+ if(method==='POST'&&(/^\/me\/account\/passkeys\/(?:(?:register|login|unlock)\/(?:options|verify)|lock|remove)$/.test(route)||
+  /^\/me\/partner\/(?:join|terms|invitations|reservations|rewards\/[^/]+\/(?:request|change-request))$/.test(route)))return true;
  return method==='POST'&&['/me/account/logout','/me/conversations/start','/me/favorites','/auth/pwa-telegram/start','/auth/pwa-telegram/finish'].includes(route)||method==='PUT'&&route==='/me/search';
 }
 export async function api<T=any>(path:string,options:RequestInit={},format:"json"|"blob"="json"):Promise<T>{
