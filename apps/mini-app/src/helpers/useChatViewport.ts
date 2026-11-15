@@ -12,6 +12,7 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   let recoveryFrame=0;
   let heightBeforeFocus=0;
   const node=root.current;
+  const inFlow=node?.hasAttribute('data-pwa-chat-in-flow');
   let report:HTMLOutputElement|null=null;
   let headingTaps=0;
   let lastHeadingTap=0;
@@ -51,6 +52,14 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    // viewport. Its offset positions the chat; it does not reduce its height.
    const visibleHeight=typing?height:Math.min(height,window.innerHeight);
    if(!typing)unfocusedHeight=visibleHeight;
+   if(inFlow){
+    const keyboardOpen=typing&&unfocusedHeight-visibleHeight>100;
+    node.toggleAttribute('data-pwa-keyboard',keyboardOpen);
+    if(keyboardOpen)node.style.setProperty('--chat-height',visibleHeight+'px');
+    else node.style.removeProperty('--chat-height');
+    callback.current?.();
+    return;
+   }
    node.style.setProperty('--chat-height',(isPwa?visibleHeight:height)+'px');
    node.style.setProperty('--chat-top',(isPwa&&!typing?0:top)+'px');
    node.toggleAttribute('data-pwa-keyboard',isPwa&&typing&&unfocusedHeight-visibleHeight>100);
@@ -84,7 +93,7 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
     cancelAnimationFrame(settledFrame);
     settledFrame=requestAnimationFrame(()=>{
      resize();
-     if(!focusedComposer()&&node.isConnected&&getComputedStyle(node).position==='fixed'&&
+     if(!inFlow&&!focusedComposer()&&node.isConnected&&getComputedStyle(node).position==='fixed'&&
         heightBeforeFocus-unfocusedHeight>24){
       // Release the document scroll lock briefly, as when leaving the chat.
       node.setAttribute('data-pwa-viewport-recovery','');
