@@ -9,6 +9,8 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   let frame=0;
   let settledFrame=0;
   let settleTimer=0;
+  let recoveryFrame=0;
+  let heightBeforeFocus=0;
   const node=root.current;
   let report:HTMLOutputElement|null=null;
   let headingTaps=0;
@@ -57,6 +59,10 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    }
    callback.current?.();
   };
+  const onFocus=(event:FocusEvent)=>{
+   if(isPwa&&event.target===focusedComposer())heightBeforeFocus=unfocusedHeight;
+   updateFocus();
+  };
   const updateFocus=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(resize)};
   const dismissOnTap=(event:MouseEvent)=>{
    if(!isPwa||!(event.target instanceof Element)||event.target.closest('button,a,input,textarea,label,select,[role="button"]'))return;
@@ -76,14 +82,28 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    window.clearTimeout(settleTimer);
    settleTimer=window.setTimeout(()=>{
     cancelAnimationFrame(settledFrame);
-    settledFrame=requestAnimationFrame(()=>{resize();sample("После закрытия")});
+    settledFrame=requestAnimationFrame(()=>{
+     resize();
+     if(!focusedComposer()&&node.isConnected&&getComputedStyle(node).position==='fixed'&&
+        heightBeforeFocus-unfocusedHeight>24){
+      // Release the document scroll lock briefly, as when leaving the chat.
+      node.setAttribute('data-pwa-viewport-recovery','');
+      recoveryFrame=requestAnimationFrame(()=>{
+       recoveryFrame=requestAnimationFrame(()=>{
+        node.removeAttribute('data-pwa-viewport-recovery');
+        resize();
+        sample('После восстановления');
+       });
+      });
+     }else sample('После закрытия');
+    });
    },400);
   };
   resize();
 
   node?.addEventListener('click',dismissOnTap);
   node?.addEventListener('focusout',restoreAfterBlur);
-  document.addEventListener('focusin',updateFocus);
+  document.addEventListener('focusin',onFocus);
 
   window.addEventListener('scroll',resize);
   viewport?.addEventListener('resize',resize);
@@ -91,10 +111,12 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   window.addEventListener('resize',resize);
   return ()=>{
    report?.remove();
+   cancelAnimationFrame(recoveryFrame);
+   node?.removeAttribute('data-pwa-viewport-recovery');
    cancelAnimationFrame(frame);
    cancelAnimationFrame(settledFrame);
    window.clearTimeout(settleTimer);
-   document.removeEventListener('focusin',updateFocus);
+   document.removeEventListener('focusin',onFocus);
    node?.removeEventListener('click',dismissOnTap);
    node?.removeEventListener('focusout',restoreAfterBlur);
    window.removeEventListener('scroll',resize);
