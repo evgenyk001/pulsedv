@@ -55,8 +55,13 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    if(inFlow){
     const keyboardOpen=typing&&unfocusedHeight-visibleHeight>100;
     node.toggleAttribute('data-pwa-keyboard',keyboardOpen);
-    if(keyboardOpen)node.style.setProperty('--chat-height',visibleHeight+'px');
-    else node.style.removeProperty('--chat-height');
+    if(keyboardOpen){
+     node.style.setProperty('--chat-height',visibleHeight+'px');
+     node.style.setProperty('--chat-top',top+'px');
+    }else{
+     node.style.removeProperty('--chat-height');
+     node.style.removeProperty('--chat-top');
+    }
     callback.current?.();
     return;
    }
