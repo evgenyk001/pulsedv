@@ -1,8 +1,8 @@
 import {safeSessionStorage} from '../../../../packages/browser/storage';
 import {pwaStartRoute} from '../../../../packages/browser/pwaLinks';
-import {api,visitorApi,replaceVisitorSession} from '../../../../packages/pulse-data/runtime';
+import {ApiError,api,visitorApi,replaceVisitorSession} from '../../../../packages/pulse-data/runtime';
 export const isPwa=import.meta.env.VITE_APP_VARIANT==='pwa';
-export type PwaConfiguration={telegramLogin?:boolean;phoneLogin:boolean;phoneChannel:'call'|'sms';push:boolean;pushPublicKey:string};
+export type PwaConfiguration={telegramLogin?:boolean;phoneLogin:boolean;phoneChannel:'call'|'sms';push:boolean;pushPublicKey:string;systemPushCatalog?:boolean};
 export const pwaConfig=()=>api<PwaConfiguration>('/public/pwa');
 export function standalone(){return window.matchMedia('(display-mode: standalone)').matches||window.matchMedia('(display-mode: fullscreen)').matches||(navigator as Navigator&{standalone?:boolean}).standalone===true;}
 export function appleDevice(){return /iPhone|iPad|iPod/i.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;}
@@ -75,10 +75,21 @@ export async function enablePush(){
  const config=await pwaConfig();if(!config.push)throw Error('Уведомления пока не подключены. Попробуйте позже.');
  const registration=await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL);
  if(!registration?.active)throw Error('Приложение ещё готовится. Перезапустите его с иконки и повторите.');
- const subscription=await registration.pushManager.getSubscription()??await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes(config.pushPublicKey)});
- const json=subscription.toJSON();
- try{const result=await visitorApi<{id:string}>('/me/push/subscribe',{method:'POST',body:JSON.stringify({endpoint:json.endpoint,keys:json.keys,appScope:import.meta.env.VITE_PWA_PREVIEW==='true'?'preview':'app'})});try{localStorage.setItem(PUSH_ID,result.id)}catch{}}
- catch(e){await subscription.unsubscribe();throw e}
+ const existing=await registration.pushManager.getSubscription();
+ const subscription=existing??await registration.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:bytes(config.pushPublicKey)});
+ const {endpoint,keys}=subscription.toJSON();
+ // Preview uses the server's default scope. Older APIs accept only endpoint and keys.
+ const scope=import.meta.env.VITE_PWA_PREVIEW!=='true'&&config.systemPushCatalog?{appScope:'app'}:{};
+ try{
+  const result=await visitorApi<{id:string}>('/me/push/subscribe',{method:'POST',body:JSON.stringify({endpoint,keys,...scope})});
+  try{localStorage.setItem(PUSH_ID,result.id)}catch{}
+ }catch(error){
+  if(!existing)await subscription.unsubscribe().catch(()=>{});
+  if(error instanceof ApiError&&[400,404].includes(error.status)){
+   throw new Error('Не удалось подключить уведомления. Попробуйте ещё раз.');
+  }
+  throw error;
+ }
 }
 export async function disablePush(){
  let id:string|null=null;try{id=localStorage.getItem(PUSH_ID)??(import.meta.env.VITE_PWA_PREVIEW==='true'?null:localStorage.getItem(LEGACY_PUSH_ID))}catch{}
