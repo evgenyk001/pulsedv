@@ -79,7 +79,7 @@ url=https://pulsedv.ru/landing-cinematic/pwa-preview/
 get() { curl -fsS --retry 3 --max-time 15 --resolve pulsedv.ru:443:127.0.0.1 "$1" -o "$work/response"; }
 get https://pulsedv.ru/api/v1/public/state
 get https://pulsedv.ru/api/v1/public/catalog
-for file in index.html manifest.webmanifest sw.js release.txt; do
+for file in index.html manifest.webmanifest sw.js app-release.json release.txt; do
   path="$file"
   if [[ "$file" == index.html ]]; then path=''; fi
   get "$url$path"
