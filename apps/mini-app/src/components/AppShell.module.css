@@ -14,3 +14,14 @@
  min-height:0;
  padding:0;
 }
+
+/* Start on the launch canvas color so iOS's status area meets the page without a seam. */
+:global(.pulse-pwa) .viewport {
+  background: linear-gradient(
+    180deg,
+    var(--background) 0,
+    color-mix(in srgb, var(--background) 45%, var(--card)) 112px,
+    var(--background) max(270px, 28%),
+    var(--background) 100%
+  );
+}
