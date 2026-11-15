@@ -60,10 +60,12 @@ export function PwaUpdateMenu(){
  const [build]=React.useState(()=>document.querySelector<HTMLMetaElement>('meta[name="pulse-build"]')?.content);
  const [stage,setStage]=React.useState<'prepare'|'activate'|'restart'|null>(null);
  const [error,setError]=React.useState(false);
+ const [open,setOpen]=React.useState(false);
  const latest=useQuery({
   queryKey:['pwa-release',import.meta.env.BASE_URL],
   queryFn:({signal})=>fetchRelease(signal),
   retry:false,
+  refetchInterval:open&&!stage?15000:false,
  });
  const next=build&&latest.data?.build!==build?latest.data:undefined;
  const shown=next??release;
@@ -93,7 +95,7 @@ export function PwaUpdateMenu(){
 
  const description=next?'Версия '+shown.version:latest.isFetching?'Проверяем обновления…':latest.isError?'Не удалось проверить обновления.':'У вас самая свежая версия';
 
- return <Sheet>
+ return <Sheet open={open} onOpenChange={setOpen}>
   <SheetTrigger asChild>
    <button type="button" className="pwaReleaseRow" onClick={()=>void latest.refetch()}>
     <span className="pwaReleaseRowIcon" aria-hidden="true"><RefreshCw size={17}/></span>
