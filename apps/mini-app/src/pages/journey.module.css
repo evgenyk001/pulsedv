@@ -103,6 +103,15 @@
  inset:auto;
  width:100%;
 }
+/* The keyboard can pan the visible viewport independently of the page. */
+:global(.pulse-pwa) .conversation[data-pwa-chat-in-flow][data-pwa-keyboard]{
+ position:fixed;
+ inset:var(--chat-top,0px) 0 auto;
+ width:min(100%,var(--content-max));
+}
+:global(html.pulse-pwa):has(.conversation[data-pwa-chat-in-flow]){
+ scroll-padding-bottom:0;
+}
 :global(.pulse-pwa) .firstComposer>.srOnly{position:absolute}
 
 
