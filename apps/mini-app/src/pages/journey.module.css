@@ -73,8 +73,8 @@
 .pendingAttachment>button{flex-shrink:0}
 .pendingAttachment>.retryAttachment{width:auto;padding:0 8px;border-radius:12px;font-size:12px;white-space:nowrap}
 
-:global(html.pulse-pwa):has(.conversation:not(.detailsMode, [data-pwa-viewport-recovery])),
-:global(html.pulse-pwa):has(.conversation:not(.detailsMode, [data-pwa-viewport-recovery])) :global(body){
+:global(html.pulse-pwa):has(.conversation:not(.detailsMode, [data-pwa-viewport-recovery], [data-pwa-chat-in-flow])),
+:global(html.pulse-pwa):has(.conversation:not(.detailsMode, [data-pwa-viewport-recovery], [data-pwa-chat-in-flow])) :global(body){
  overflow:hidden;
  overscroll-behavior:none;
  scroll-padding:0;
@@ -96,6 +96,12 @@
 :global(.pulse-pwa) .conversation:not(.detailsMode)[data-pwa-keyboard]{
  padding-top:8px;
  padding-bottom:6px;
+}
+/* The PWA thread participates in document layout. Only its messages scroll. */
+:global(.pulse-pwa) .conversation[data-pwa-chat-in-flow]{
+ position:relative;
+ inset:auto;
+ width:100%;
 }
 :global(.pulse-pwa) .firstComposer>.srOnly{position:absolute}
 
