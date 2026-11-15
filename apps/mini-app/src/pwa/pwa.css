@@ -81,7 +81,7 @@
   cursor: pointer;
 }
 .pwaReleaseRow:active { background: var(--muted); }
-.pwaReleaseRow:focus-visible,.pwaReleaseClose:focus-visible,.pwaReleaseAction:focus-visible {
+.pwaReleaseRow:focus-visible,.pwaReleaseClose:focus-visible,.pwaReleasePanel .pwaButton:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
@@ -172,31 +172,22 @@
 .pwaReleaseNotes ul { margin: 0; padding-inline-start: 17px; color: var(--muted-foreground); font-size: 13px; line-height: 1.5; }
 .pwaReleaseNotes li + li { margin-top: 5px; }
 .pwaReleaseError { margin: 0; color: var(--primary); font-size: 13px; }
-.pwaReleaseAction {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 9px;
-  min-height: 47px;
-  border: 0;
-  border-radius: 14px;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
+.pwaReleaseClose:disabled { opacity: .5; cursor: default; }
+.pwaReleaseProgress {
+  display: grid;
+  gap: 10px;
+  min-height: 52px;
+  align-content: center;
+  color: var(--muted-foreground);
+  font-size: 13px;
 }
-.pwaReleaseAction:active { filter: brightness(.92); }
-.pwaReleaseProgress { display: grid; gap: 8px; color: var(--muted-foreground); font-size: 13px; }
-.pwaReleaseProgress > span { height: 5px; overflow: hidden; background: var(--muted); border-radius: 999px; }
-.pwaReleaseProgress > span::before {
-  content: "";
-  display: block;
+.pwaReleaseProgressLabel { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.pwaReleaseProgressLabel strong { color: var(--foreground); font-variant-numeric: tabular-nums; }
+.pwaReleaseProgressTrack { height: 6px; overflow: hidden; background: var(--muted); border-radius: var(--app-radius-pill); }
+.pwaReleaseProgressTrack > div {
   height: 100%;
-  width: 38%;
   border-radius: inherit;
   background: var(--primary);
-  animation: pwaReleaseProgress 1.2s ease-in-out infinite alternate;
+  transition: width 180ms ease-out;
 }
-@keyframes pwaReleaseProgress { from { transform: translateX(0); } to { transform: translateX(163%); } }
-@media (prefers-reduced-motion: reduce) { .pwaReleaseProgress > span::before { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .pwaReleaseProgressTrack > div { transition: none; } }
