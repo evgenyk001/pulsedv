@@ -99,11 +99,4 @@ assert re.fullmatch(r'[a-f0-9]{16}', release['build'])
 print(release['version'], release['build'])
 PYTHON
 )
-if ! docker compose exec -T db psql -XqAt -v ON_ERROR_STOP=1 -U pulse -d pulse \
-  -v version="$version" -v build="$build" <<'SQL'
-select pulse_queue_public_push('release', :'build', jsonb_build_object('version', :'version', 'build', :'build'));
-SQL
-then
-  echo 'PWA опубликована. Пуш не поставлен в очередь. Обновите PWA API и повторите выкладку этой сборки.' >&2
-fi
-echo "PWA Preview готов: $url"
+echo "PWA Preview $version ($build) готов: $url"
