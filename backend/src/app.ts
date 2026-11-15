@@ -140,10 +140,10 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
   const user=verified.user;
   await db.transaction(async sql=>{
    await sessionLock(sql,request.visitor!.sessionId);
-   await bindTelegram(sql,request.visitor!.sessionId,user,verified.startParam);
+   await bindTelegram(sql,request.visitor!.sessionId,user,verified.startParam,'telegram');
   });return {ok:true};
  });
- async function bindTelegram(sql:Sql,sessionId:string,user:TelegramIdentity,startParam:string|null=null){
+ async function bindTelegram(sql:Sql,sessionId:string,user:TelegramIdentity,startParam:string|null=null,provider:'telegram'|'telegram-web'='telegram-web'){
    const current=(await sql.query('select u.id as user_id,u.telegram_user_id from sessions s left join app_users u on u.id=s.user_id where s.id=$1',[sessionId])).rows[0];
    if(current?.telegram_user_id&&String(current.telegram_user_id)!==String(user.id))throw new HttpError(409,'Эта сессия уже принадлежит другому пользователю');
    const row=(await sql.query('insert into app_users(telegram_user_id,telegram_username,first_name,last_name) values($1,$2,$3,$4) on conflict(telegram_user_id) do update set telegram_username=excluded.telegram_username,first_name=excluded.first_name,last_name=excluded.last_name,last_seen_at=now() returning id',[user.id,user.username??null,user.first_name,user.last_name??null])).rows[0];
@@ -152,7 +152,7 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
    await mergeFavorites(sql,sessionId,row.id);
    await mergeSearch(sql,sessionId,row.id);
    await mergeNotificationReads(sql,sessionId,row.id);
-   await sql.query("update sessions set user_id=$2,telegram_start_param=$3,auth_provider='telegram' where id=$1",[sessionId,row.id,startParam]);
+   await sql.query('update sessions set user_id=$2,telegram_start_param=$3,auth_provider=$4 where id=$1',[sessionId,row.id,startParam,provider]);
    await linkAcquisition(sql,sessionId,startParam);
    for(const table of ['user_events','visitor_profiles','leads'])await sql.query(`update ${table} set user_id=$2 where session_id=$1`,[sessionId,row.id]);
    return row.id as string;
