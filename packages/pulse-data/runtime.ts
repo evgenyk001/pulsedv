@@ -232,14 +232,14 @@ export async function updateRemote(kind:'leads'|'tasks',id:string,patch:Record<s
 }
 export async function createRemoteLead(payload:Record<string,unknown>){const send=runtime.publicPreview?sessionApi:visitorApi;return send(runtime.publicPreview?'/public/pwa/contact':'/leads',{method:'POST',body:JSON.stringify({...payload,consent:true,consentVersion:runtime.consentVersion})});}
 
-type QueuedEvent={idempotencyKey:string;eventType:string;entityType:string|null;entityId:string|null;metadata:Record<string,unknown>;occurredAt:string};
+type QueuedEvent={idempotencyKey:string;channel?:'pwa';eventType:string;entityType:string|null;entityId:string|null;metadata:Record<string,unknown>;occurredAt:string};
 const QUEUE='pulse.dv.api.events.v1';
 let queue:QueuedEvent[]=[];let loaded=false;let flushing=false;let retry=0;let timer:ReturnType<typeof setTimeout>|undefined;
 const persist=()=>{try{safeLocalStorage.setItem(QUEUE,JSON.stringify(queue.slice(-500)));}catch{}};
 export function enqueueEvent(input:{eventType:string;entityType?:string|null;entityId?:string|null;metadata?:Record<string,unknown>}){
  if(!isPublicEvent(input.eventType))return;
  if(!loaded){loaded=true;try{const saved=JSON.parse(safeLocalStorage.getItem(QUEUE)||'[]');queue=Array.isArray(saved)?saved.filter(x=>Date.parse(x.occurredAt)>Date.now()-7*86400_000).slice(-400):[];}catch{}}
- queue.push({idempotencyKey:crypto.randomUUID(),eventType:input.eventType,entityType:input.entityType??null,entityId:input.entityId??null,metadata:input.metadata??{},occurredAt:new Date().toISOString()});
+ queue.push({idempotencyKey:crypto.randomUUID(),...(runtime.browserMode?{channel:'pwa' as const}:{}),eventType:input.eventType,entityType:input.entityType??null,entityId:input.entityId??null,metadata:input.metadata??{},occurredAt:new Date().toISOString()});
  queue=queue.slice(-500);persist();schedule(800);
 }
 function schedule(ms:number){if(timer)return;timer=setTimeout(()=>{timer=undefined;void flushEvents();},ms);}

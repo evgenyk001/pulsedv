@@ -27,6 +27,7 @@
 .controlJourneyHeader>div{min-width:0}
 .controlJourneyHeader span{font-size:9px;letter-spacing:.14em;font-weight:780;color:var(--pc-muted)}
 .controlJourneyHeader h2{margin:5px 0 4px;font-size:20px;line-height:1.15;letter-spacing:-.035em;color:var(--pc-text)}
+.controlJourneyActivity{display:block;margin-top:5px}
 .controlJourneyHeader small{font-size:10px;color:var(--pc-muted)}
 .controlJourneyIcon{
   display:grid;place-items:center;width:38px;height:38px;flex:none;

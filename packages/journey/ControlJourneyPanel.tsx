@@ -46,6 +46,8 @@ export function ControlJourneyPanel({leadId,properties,Select='select'}:{leadId:
  const sendMessage=async()=>{if(!j||(!message.trim()&&!pendingFile)||busy||uploading)return;let attachment:JourneyAttachment|undefined;if(pendingFile){setUploading(true);try{attachment=await uploadJourneyAttachment(leadId,pendingFile,false)}catch(e){setError(e instanceof Error?e.message:'Не удалось загрузить вложение');setUploading(false);return}setUploading(false)}if(await run({type:'message',id:pendingMessageId.current,text:message.trim(),attachment})){pendingMessageId.current=crypto.randomUUID();setMessage('');clearAttachment()}};
  if(loading)return <section className="controlJourney" aria-label="Подборки и показы"><div className="controlJourneyLoading">Загружаем переписку…</div></section>;
  if(!entry||!j)return <section className="controlJourney" aria-label="Подборки и показы"><div className="controlJourneyEmpty">Обращение пока не создано.</div></section>;
+ const activity=entry.lastClientActivity;
+ const activitySource=activity?.channel==='pwa'?'PWA':activity?.channel==='miniApp'?'Мини-апп Telegram':'Канал неизвестен';
  const closed=['deal','closed','lost'].includes(entry.status);
  const property=(id:string)=>properties.find(p=>p.id===id);
  const options=properties.filter(p=>p.status==='published');
@@ -54,7 +56,7 @@ export function ControlJourneyPanel({leadId,properties,Select='select'}:{leadId:
  const invalidShowingTime=!!time&&!isFutureVladivostokInput(time);
  const invalidDue=!!due&&!isFutureVladivostokInput(due);
  return <section className="controlJourney" aria-label="Подборки и показы">
-  <header className="controlJourneyHeader"><div><span>КЛИЕНТСКОЕ ОБРАЩЕНИЕ</span><h2>{subject||'Помощь с покупкой'}</h2><small>{entry.managerName?'Ответственный: '+entry.managerName:'Менеджер не назначен'}</small></div><button className="controlJourneyIcon" aria-label="Обновить обращение" disabled={busy||loading} onClick={()=>void reload()}><RefreshCw size={18}/></button></header>
+  <header className="controlJourneyHeader"><div><span>КЛИЕНТСКОЕ ОБРАЩЕНИЕ</span><h2>{subject||'Помощь с покупкой'}</h2><small>{entry.managerName?'Ответственный: '+entry.managerName:'Менеджер не назначен'}</small>{activity&&<small className="controlJourneyActivity">Последняя активность · {activitySource} · {when(activity.at)} (Владивосток)</small>}</div><button className="controlJourneyIcon" aria-label="Обновить обращение" disabled={busy||loading} onClick={()=>void reload()}><RefreshCw size={18}/></button></header>
   <nav className="controlJourneyTabs" role="tablist" aria-label="Работа с обращением">{[
    {id:'chat' as const,label:'Переписка',Icon:MessageCircle,count:0},
    {id:'collections' as const,label:'Подборки',Icon:Sparkles,count:j.collections.length},

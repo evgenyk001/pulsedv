@@ -8,6 +8,7 @@ import {registerPropertyShareRoutes} from './propertyShareRoutes';
 import {registerGiveawayRoutes} from './giveawayRoutes';
 import {registerConversationRoutes} from './conversationRoutes';
 import {ensureAnnouncementSubscription} from './announcementSubscriptions';
+import {summarizeClientChannels} from './clientChannels';
 import {controlProfileCount,controlProfileSelect} from './controlProfiles';
 import {registerAccountRoutes,registeredPhone} from './accountRoutes';
 import {registerPartnerBiometricRoutes} from './partnerBiometrics';
@@ -162,7 +163,7 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
   for(const e of events)if(Date.parse(e.occurredAt)>Date.now()+60_000||Date.parse(e.occurredAt)<Date.now()-30*86400_000)throw new HttpError(400,'Событие вне допустимого временного окна');
   return db.transaction(async sql=>{
    await sessionLock(sql,identity.sessionId);
-   const result=await ingestEventBatch(leadRepository(sql),events.map(e=>({...e,sessionId:identity.sessionId,userId:identity.userId,entityType:e.entityType??null,entityId:e.entityId??null,metadata:safeMetadata(e.metadata),createdAt:e.occurredAt})));
+   const result=await ingestEventBatch(leadRepository(sql),events.map(e=>({...e,sessionId:identity.sessionId,userId:identity.userId,entityType:e.entityType??null,entityId:e.entityId??null,metadata:{...safeMetadata(e.metadata),...(e.channel?{clientChannel:e.channel}:{})},createdAt:e.occurredAt})));
    if(result.accepted>0)await enqueueInterestChange(sql,identity.sessionId,config.PUBLIC_ORIGIN);
    return result;
   });
@@ -416,7 +417,7 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
   const eventWhere=scoped?'where session_id in(select session_id from leads where manager_id=$1)':'';
   const leadWhere=scoped?'where manager_id=$1':'';
   const profileWhere=scoped?'where session_id in(select session_id from leads where manager_id=$1)':'';
-  const [eventsRow,leadsRow,profilesRow]=await Promise.all([
+  const [eventsRow,leadsRow,profilesRow,channels]=await Promise.all([
    db.query(`select
     count(distinct session_id)::int as sessions,
     count(*) filter(where event_type='property_view')::int as property_view,
@@ -437,9 +438,10 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
     count(*) filter(where priority='hot')::int as hot,
     count(*) filter(where priority='urgent')::int as urgent
     from visitor_profiles ${profileWhere}`,values),
+   summarizeClientChannels(db,scoped?m.id:undefined),
   ]);
   const e=eventsRow.rows[0]||{},l=leadsRow.rows[0]||{},p=profilesRow.rows[0]||{};
-  return {sessions:Number(e.sessions||0),leadSessions:Number(l.sessions||0),leadsTotal:Number(l.total||0),eventCounts:{property_view:Number(e.property_view||0),favorite_add:Number(e.favorite_add||0),select_submit:Number(e.select_submit||0),lead_form_open:Number(e.lead_form_open||0),mortgage_calculated:Number(e.mortgage_calculated||0),mortgage_program:Number(e.mortgage_program||0)},uniqueSessions:{property_view:Number(e.property_view_sessions||0),favorite_add:Number(e.favorite_add_sessions||0),select_submit:Number(e.select_submit_sessions||0),lead_form_open:Number(e.lead_form_open_sessions||0)},priorities:{cold:Number(p.cold||0),warm:Number(p.warm||0),hot:Number(p.hot||0),urgent:Number(p.urgent||0)}};
+  return {channels,sessions:Number(e.sessions||0),leadSessions:Number(l.sessions||0),leadsTotal:Number(l.total||0),eventCounts:{property_view:Number(e.property_view||0),favorite_add:Number(e.favorite_add||0),select_submit:Number(e.select_submit||0),lead_form_open:Number(e.lead_form_open||0),mortgage_calculated:Number(e.mortgage_calculated||0),mortgage_program:Number(e.mortgage_program||0)},uniqueSessions:{property_view:Number(e.property_view_sessions||0),favorite_add:Number(e.favorite_add_sessions||0),select_submit:Number(e.select_submit_sessions||0),lead_form_open:Number(e.lead_form_open_sessions||0)},priorities:{cold:Number(p.cold||0),warm:Number(p.warm||0),hot:Number(p.hot||0),urgent:Number(p.urgent||0)}};
  });
 
  app.get('/api/v1/control/snapshot',{preHandler:control},async request=>{

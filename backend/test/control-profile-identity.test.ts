@@ -17,7 +17,13 @@ test('Control client paths resolve current account contacts and preserve manager
   await db.query('insert into sessions(id,user_id) values($1,$2),($3,null),($4,$2)',[session,user.id,anonymous,pwa]);
   // A pre-existing profile can have no user_id while its session is already linked.
   await db.query('insert into visitor_profiles(session_id,score,event_count) values($1,25,1),($2,0,0),($3,10,1)',[session,anonymous,pwa]);
-  await db.query("insert into user_events(idempotency_key,session_id,event_type,occurred_at) values($1,$2,'property_view',now()),($3,$4,'favorite_add',now())",[randomUUID(),session,randomUUID(),pwa]);
+  await db.query("insert into user_events(idempotency_key,session_id,event_type,occurred_at) values($1,$2,'property_view',now()-interval '3 minutes'),($3,$4,'favorite_add',now()-interval '3 minutes')",[randomUUID(),session,randomUUID(),pwa]);
+  await db.query("update sessions set auth_provider='telegram' where id=$1",[session]);
+  await db.query("update sessions set auth_provider='telegram-web' where id=$1",[pwa]);
+  await db.query(`insert into user_events(idempotency_key,session_id,event_type,occurred_at,metadata)
+   values($1,$2,'page_view',now()-interval '2 minutes','{}'),
+   ($3,$4,'page_view',now()-interval '1 minute','{"clientChannel":"pwa"}'),
+   ($5,$4,'page_view',now()-interval '30 seconds','{"clientChannel":"pwa"}')`,[randomUUID(),session,randomUUID(),pwa,randomUUID()]);
   const cookies:Record<string,Record<string,string>>={};let managerId='';
   for(const role of ['owner','manager']){
    const member=(await db.query('insert into team_members(name,email,password_hash,role) values($1,$2,$3,$4) returning id',[role,role+'@test.ru',await hashPassword('long-test-password'),role])).rows[0];
@@ -56,9 +62,18 @@ test('Control client paths resolve current account contacts and preserve manager
   }
   const history=(role:string,id:string)=>app.inject({url:'/api/v1/control/interest/'+id,cookies:cookies[role]});
   const all=await history('owner',session);assert.equal(all.statusCode,200,all.body);
-  assert.deepEqual(all.json().events.map((e:any)=>e.sessionId).sort(),[session,pwa].sort());
+  assert.deepEqual([...new Set(all.json().events.map((e:any)=>e.sessionId))].sort(),[session,pwa].sort());
   const assigned=await history('manager',session);assert.equal(assigned.statusCode,200,assigned.body);
-  assert.deepEqual(assigned.json().events.map((e:any)=>e.sessionId),[session]);
+  assert.deepEqual([...new Set(assigned.json().events.map((e:any)=>e.sessionId))],[session]);
   assert.equal((await history('manager',pwa)).statusCode,404);
+  const summary=await app.inject({url:'/api/v1/control/analytics-summary',cookies:cookies.owner});
+  assert.equal(summary.statusCode,200,summary.body);
+  assert.deepEqual(summary.json().channels,{miniApp:1,pwa:1,unknown:0},'repeated PWA page views count once');
+  const scopedSummary=await app.inject({url:'/api/v1/control/analytics-summary',cookies:cookies.manager});
+  assert.deepEqual(scopedSummary.json().channels,{miniApp:1,pwa:0,unknown:0});
+  const lead=(await db.query('select id from leads where session_id=$1',[session])).rows[0];
+  const chat=await app.inject({url:'/api/v1/control/journeys/'+lead.id,cookies:cookies.manager});
+  assert.equal(chat.statusCode,200,chat.body);
+  assert.equal(chat.json().entry.lastClientActivity.channel,'pwa','chat reflects the latest activity of the linked account');
  }finally{await app.close();await db.close()}
 });

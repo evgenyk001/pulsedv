@@ -9,6 +9,7 @@ import { ActivityFeed } from "../components/ActivityFeed";
 import { api, runtime } from "../../../../packages/pulse-data/runtime";
 
 type Summary={
+  channels?:{pwa:number;miniApp:number;unknown:number};
   sessions:number;leadSessions:number;leadsTotal:number;
   eventCounts:Record<string,number>;uniqueSessions:Record<string,number>;
   priorities:{cold:number;warm:number;hot:number;urgent:number};
@@ -63,6 +64,15 @@ export function AnalyticsPage(){
       <article><span>Сессии с заявкой</span><strong>{loading&&!remote?'—':conversion+'%'}</strong><small>{leadSessions} из {sessions} технических сессий</small></article>
     </section>
 
+    {remote?.channels&&<section className="panel" aria-label="Посетители по каналам">
+      <h2>Посетители по каналам</h2>
+      <p className="workspaceHint">За последние 30 дней. Вошедшие считаются по аккаунту, гости — по сессии. Один аккаунт может быть в обоих каналах.</p>
+      <div className="metrics">
+        <article><span>PWA</span><strong>{remote.channels.pwa}</strong></article>
+        <article><span>Мини-апп Telegram</span><strong>{remote.channels.miniApp}</strong></article>
+        <article><span>Канал не определён</span><strong>{remote.channels.unknown}</strong></article>
+      </div>
+    </section>}
     <TrafficPanel/><FinancePanel/><LossReasonsPanel/><AcquisitionPanel/>
     <section className="panel">
       <div className="kicker">ОХВАТ ДЕЙСТВИЙ</div>

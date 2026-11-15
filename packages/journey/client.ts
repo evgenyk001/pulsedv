@@ -2,7 +2,7 @@ import {safeLocalStorage,safeSessionStorage} from '../browser/storage';
 import {api,visitorApi,runtime} from '../pulse-data/runtime';
 import {listPulseLeads,recordPulseEvent} from '../pulse-data';
 import {applyJourney,clientJourney,emptyJourney,type Journey,type JourneyAttachment,type JourneyCommand,type Verification} from './model';
-export type JourneyEntry={leadId:string;leadName?:string;status:string;propertyId:string|null;createdAt:string;managerName?:string|null;managerHasReplied?:boolean;pinnedAt?:string|null;hiddenAt?:string|null;journey:Journey};
+export type JourneyEntry={leadId:string;leadName?:string;status:string;propertyId:string|null;createdAt:string;managerName?:string|null;lastClientActivity?:{channel:'pwa'|'miniApp'|'unknown';at:string}|null;managerHasReplied?:boolean;pinnedAt?:string|null;hiddenAt?:string|null;journey:Journey};
 const KEY='pulse.dv.journeys.v1';
 function read():Record<string,Journey>{try{return JSON.parse(safeLocalStorage.getItem(KEY)||'{}')}catch{return {}}}
 export async function loadJourneys(client=false):Promise<{items:JourneyEntry[];limited:boolean}>{

@@ -1,3 +1,4 @@
+import {lastClientActivity} from './clientChannels';
 import {favoriteOwner} from './favoriteRoutes';
 import {safeLeadContext} from './validation';
 import {messagePage,withMessages} from './journeyMessages';
@@ -153,7 +154,7 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
   });
   app.get(prefix+'/journeys/:id',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);
-   return db.transaction(async sql=>{const lead=await leadAccess(sql,r,leadId,client,false);const row=(await sql.query('select document from client_journeys where lead_id=$1',[leadId])).rows[0];const journey:Journey=await withMessages(sql,row?.document||emptyJourney(leadId));const managerName=lead.manager_id?(await sql.query('select '+(client?'public_name':'name')+' as name from team_members where id=$1 and active=true',[lead.manager_id])).rows[0]?.name||null:null;return {entry:{leadId,leadName:lead.name,status:lead.status,propertyId:lead.property_id,createdAt:lead.created_at,managerName,journey:client?clientJourney(journey):journey}};});
+   return db.transaction(async sql=>{const lead=await leadAccess(sql,r,leadId,client,false);const row=(await sql.query('select document from client_journeys where lead_id=$1',[leadId])).rows[0];const journey:Journey=await withMessages(sql,row?.document||emptyJourney(leadId));const managerName=lead.manager_id?(await sql.query('select '+(client?'public_name':'name')+' as name from team_members where id=$1 and active=true',[lead.manager_id])).rows[0]?.name||null:null;return {entry:{leadId,leadName:lead.name,status:lead.status,propertyId:lead.property_id,createdAt:lead.created_at,managerName,...(client?{}:{lastClientActivity:await lastClientActivity(sql,lead.session_id,lead.user_id)}),journey:client?clientJourney(journey):journey}};});
   });
   app.post(prefix+'/journeys/:id',{preHandler:auth},async r=>{
    const leadId=id.parse((r.params as any).id);const input=z.object({revision:z.number().int().nonnegative(),command:journeyCommand}).strict().parse(r.body);
