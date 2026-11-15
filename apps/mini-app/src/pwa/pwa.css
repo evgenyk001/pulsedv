@@ -63,3 +63,17 @@
 .pwaLoginCard button:disabled{opacity:.65}
 .pwaLoginCard button:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
 .pwaLoginCard .pwaLoginCard__status{grid-column:1/-1;margin:0}
+
+.pwaReleaseRow{width:100%;min-height:46px;display:flex;align-items:center;gap:8px;text-align:left;padding:8px 12px;border:0;background:transparent;color:var(--muted-foreground);font:inherit;font-size:12px;cursor:pointer}
+.pwaReleaseVersion{margin-inline-start:auto;font-variant-numeric:tabular-nums}
+.pwaReleaseRow strong{display:flex;align-items:center;gap:5px;color:var(--primary);font-weight:600}
+.pwaReleaseRow i{width:5px;height:5px;border-radius:50%;background:currentColor}
+.pwaReleaseSheet>img{display:block;border-radius:16px;margin:0 0 12px}
+.pwaReleaseSheet>ul{padding-inline-start:20px;margin:12px 0 22px;color:var(--muted-foreground);font-size:14px;line-height:1.55}
+.pwaReleaseSheet li+li{margin-top:6px}
+.pwaReleaseSheet>p{font-size:13px;color:var(--primary)}
+.pwaReleaseProgress{display:grid;gap:9px;color:var(--muted-foreground);font-size:13px;margin:14px 0}
+.pwaReleaseProgress>span{height:5px;overflow:hidden;background:var(--muted);border-radius:999px}
+.pwaReleaseProgress>span::before{content:"";display:block;height:100%;width:38%;border-radius:inherit;background:var(--primary);animation:pwaReleaseProgress 1.2s ease-in-out infinite alternate}
+@keyframes pwaReleaseProgress{from{transform:translateX(0)}to{transform:translateX(163%)}}
+@media(prefers-reduced-motion:reduce){.pwaReleaseProgress>span::before{animation:none}}
