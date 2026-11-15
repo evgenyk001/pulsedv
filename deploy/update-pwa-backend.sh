@@ -110,6 +110,8 @@ with open(sys.argv[1]) as response:
     config = json.load(response)
     if config.get('push') is not True:
         raise SystemExit('Web Push не настроен')
+    if config.get('systemPushCatalog') is not True:
+        raise SystemExit('Новый API системных уведомлений не отвечает')
     if config.get('phoneLogin') is not False:
         raise SystemExit('Ожидалось, что вход по телефону выключен')
 PY

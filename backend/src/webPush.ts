@@ -34,16 +34,6 @@ export function registerWebPush(app:FastifyInstance,db:Database,config:RuntimeCo
    return {id:row.id};
   });
  });
- app.post('/api/v1/me/push/preferences',{preHandler:account,config:{rateLimit:{max:30,timeWindow:'1 minute'}}},async r=>{
-  const p=z.object({id:z.uuid(),catalogNews:z.boolean().optional()}).strict().parse(r.body);
-  const owner=[p.id,r.visitor!.userId,r.visitor!.userId?null:r.visitor!.sessionId];
-  const where=' where id=$1 and enabled and (user_id=$2 or session_id=$3)';
-  const result=p.catalogNews===undefined
-   ? await db.query('select catalog_news from push_subscriptions'+where,owner)
-   : await db.query('update push_subscriptions set catalog_news=$4'+where+' returning catalog_news',[...owner,p.catalogNews]);
-  if(!result.rows[0])throw new HttpError(404,'Переподключите уведомления на этом устройстве');
-  return {catalogNews:result.rows[0].catalog_news};
- });
  app.post('/api/v1/me/push/unsubscribe',{preHandler:account},async r=>{
   const p=z.object({id:z.uuid()}).strict().parse(r.body);
   await db.query('delete from push_subscriptions where id=$1 and (user_id=$2 or session_id=$3)',[p.id,r.visitor!.userId,r.visitor!.userId?null:r.visitor!.sessionId]);return {ok:true};
@@ -94,7 +84,7 @@ export async function deliverWebPush(db:Database,config:RuntimeConfig,send:PushS
   if(row.topic==='user.giveaway'&&!(await db.query('select id from giveaway_entries where id::text=$1 and user_id=$2 and status=$3',[row.payload.entryId,row.user_id,row.payload.status])).rows.length){
    await db.query('update push_deliveries set dead_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);continue;
   }
-  const property=row.topic==='pwa.catalog'&&row.catalog_news
+  const property=row.topic==='pwa.catalog'
    ? (await db.query("select id,name,city from catalog_properties where id=$1 and status='published'",[row.payload.propertyId])).rows[0]
    : null;
   if(row.topic==='pwa.catalog'&&!property){

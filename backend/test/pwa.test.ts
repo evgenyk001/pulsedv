@@ -119,11 +119,11 @@ test('PWA saved search notifications are independently consented and cancellatio
  const settings={criteria:{q:'',city:'Все',rooms:'Все',min:0,max:30000000,delivery:'Любой',sea:false,purchaseMode:'any'},watchFavorites:false,telegram:false,push:true};
  const put=()=>f.app.inject({method:'PUT',url:'/api/v1/me/search',headers:a.headers,payload:settings});assert.equal((await put()).statusCode,200);
  const p={...structuredClone(DEFAULT_STATE.properties[0]),id:'pwa-search',status:'published' as const};await upsertCatalogProperty(f.db,p);await scanSearchProfiles(f.db,f.config.PUBLIC_ORIGIN);
- assert.equal(Number((await f.db.query('select count(*) from push_deliveries')).rows[0].count),1);
- let sent=0;await deliverWebPush(f.db,f.config,async()=>{sent++});assert.equal(sent,1,'push does not require Telegram subscription or Telegram account');
+ assert.equal(Number((await f.db.query("select count(*) from push_deliveries d join outbox_events o on o.id=d.event_id where o.topic='user.search_updates'")).rows[0].count),1);
+ let sent=0;await deliverWebPush(f.db,f.config,async(_device,payload)=>{if(JSON.parse(payload).title==='Обновление по вашему поиску')sent++});assert.equal(sent,1,'push does not require Telegram subscription or Telegram account');
  await upsertCatalogProperty(f.db,{...p,id:'pwa-search-second',floorplans:[]});await scanSearchProfiles(f.db,f.config.PUBLIC_ORIGIN,new Date(Date.now()+3700000));
- assert.equal(Number((await f.db.query('select count(*) from push_deliveries where delivered_at is null and dead_at is null')).rows[0].count),1,'a second digest is queued before revocation');
- settings.push=false;assert.equal((await put()).statusCode,200);await deliverWebPush(f.db,f.config,async()=>{sent++});assert.equal(sent,1,'revoked search consent blocks pending delivery');
+ assert.equal(Number((await f.db.query("select count(*) from push_deliveries d join outbox_events o on o.id=d.event_id where o.topic='user.search_updates' and d.delivered_at is null and d.dead_at is null")).rows[0].count),1,'a second digest is queued before revocation');
+ settings.push=false;assert.equal((await put()).statusCode,200);await deliverWebPush(f.db,f.config,async(_device,payload)=>{if(JSON.parse(payload).title==='Обновление по вашему поиску')sent++});assert.equal(sent,1,'revoked search consent blocks pending delivery');
 });
 
 test('PWA guests can submit an idempotent callback without opening account routes',async t=>{
@@ -249,7 +249,7 @@ test('PWA Telegram login joins the existing account and retains guest conversati
  assert.equal(message.json().id,contact.json().id);
 });
 
-test('Public PWA pushes respect device preferences and deduplicate publications and releases',async t=>{
+test('Public PWA pushes use existing system subscriptions and deduplicate publications and releases',async t=>{
  const f=await fixture(t),a=await f.login('+79990002233'),b=await f.login('+79990002244');
  const keys={p256dh:Buffer.concat([Buffer.from([4]),Buffer.alloc(64,1)]).toString('base64url'),auth:Buffer.alloc(16,2).toString('base64url')};
  const subscribe=(headers:typeof a.headers,device:string,appScope:'preview'|'app')=>f.app.inject({
@@ -258,14 +258,6 @@ test('Public PWA pushes respect device preferences and deduplicate publications 
  const preview=await subscribe(a.headers,'preview','preview'),app=await subscribe(b.headers,'app','app');
  assert.equal(preview.statusCode,200,preview.body);
  assert.equal(app.statusCode,200,app.body);
- const id=preview.json().id;
- const preference=(headers:typeof a.headers,catalogNews?:boolean)=>f.app.inject({
-  method:'POST',url:'/api/v1/me/push/preferences',headers,payload:{id,catalogNews},
- });
- assert.deepEqual((await preference(a.headers)).json(),{catalogNews:false});
- assert.equal((await preference(b.headers,true)).statusCode,404);
- assert.deepEqual((await preference(a.headers,true)).json(),{catalogNews:true});
-
  const project={...structuredClone(DEFAULT_STATE.properties[0]),id:'new-project',name:'Новый квартал',status:'draft' as const};
  await upsertCatalogProperty(f.db,project);
  assert.equal((await f.db.query("select * from outbox_events where topic='pwa.catalog'")).rows.length,0);
@@ -279,10 +271,18 @@ test('Public PWA pushes respect device preferences and deduplicate publications 
 
  const sent:Record<string,string>[]=[];
  await deliverWebPush(f.db,f.config,async(sub,payload)=>{sent.push({endpoint:sub.endpoint,...JSON.parse(payload)})});
- assert.deepEqual(sent.map(item=>item.url).sort(),['/app/#/profile?update='+release.build,'/app/#/property/new-project']);
- assert.ok(sent.every(item=>item.endpoint.endsWith('/preview')));
+ assert.deepEqual(sent.map(item=>[item.endpoint.split('/').at(-1),item.url]).sort(),[
+  ['app','/app/#/property/new-project'],
+  ['preview','/app/#/profile?update='+release.build],
+  ['preview','/app/#/property/new-project'],
+ ]);
 
  await upsertCatalogProperty(f.db,{...project,id:'another-project',status:'published'});
- await preference(a.headers,false);
- assert.equal((await deliverWebPush(f.db,f.config,async()=>{assert.fail('Opt-out must cancel queued catalog pushes')})).processed,0);
+ const unsubscribe=(headers:typeof a.headers,id:string)=>f.app.inject({
+  method:'POST',url:'/api/v1/me/push/unsubscribe',headers,payload:{id},
+ });
+ await unsubscribe(a.headers,preview.json().id);
+ await unsubscribe(b.headers,app.json().id);
+ const afterOptOut=await deliverWebPush(f.db,f.config,async()=>{assert.fail('Unsubscribed devices must not receive queued pushes')});
+ assert.equal(afterOptOut.processed,0);
 });

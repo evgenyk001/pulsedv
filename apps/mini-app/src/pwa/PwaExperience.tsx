@@ -1,10 +1,10 @@
 import React from 'react';
-import {Bell,Building2,Download,LogOut,WifiOff,UserRound,MessageCircle,Send} from 'lucide-react';
+import {Bell,Download,LogOut,WifiOff,UserRound,MessageCircle,Send} from 'lucide-react';
 import {SafariShare,SafariAddHome} from './InstallationIcons';
 import {useClientNotifications} from '../helpers/useClientNotifications';
-import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query';
+import {useQuery} from '@tanstack/react-query';
 import {GroupedMenu,MenuToggle,MenuButton,MenuInfo,MenuExternalLink} from '../components/GroupedMenu';
-import {appleDevice,standalone,install,canInstall,enablePush,catalogPushPreferences,disablePush,logoutPwa,pwaConfig,isPwa,startPwaTelegramLogin} from './client';
+import {appleDevice,standalone,install,canInstall,enablePush,disablePush,logoutPwa,pwaConfig,isPwa,startPwaTelegramLogin} from './client';
 import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import './pwa.css';
 export function PwaStatus(){
@@ -21,18 +21,6 @@ export function PwaStatus(){
  if(!isPwa||online)return null;
  return <aside className="pwaStatus" role="status"><WifiOff size={18}/><span>Нет интернета. Действия не отправляются.</span></aside>;
 }
-function CatalogPushPreference(){
- const cache=useQueryClient();
- const key=['pwa-catalog-push'];
- const query=useQuery({queryKey:key,queryFn:()=>catalogPushPreferences(),retry:false});
- const update=useMutation({mutationFn:(value:boolean)=>catalogPushPreferences(value),onSuccess:data=>cache.setQueryData(key,data)});
- const error=update.error||query.error;
- return <>
-  <MenuToggle icon={<Building2/>} title="Новые жилые комплексы" description="Когда ЖК публикуется в каталоге"
-   checked={query.data?.catalogNews??false} disabled={!query.data||update.isPending} onCheckedChange={value=>update.mutate(value)}/>
-  {error&&<MenuInfo icon={<Bell/>} title="Настройка уведомлений недоступна" description={error.message}/>}
- </>;
-}
 export function PwaPreferences(){
  const [enabled,setEnabled]=React.useState(false),[supported,setSupported]=React.useState(false),[ready,setReady]=React.useState(false),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
  React.useEffect(()=>{if(!isPwa)return;setSupported('PushManager' in window&&'Notification' in window);void pwaConfig().then(c=>setReady(c.push),()=>{});void navigator.serviceWorker?.getRegistration(import.meta.env.BASE_URL).then(async r=>setEnabled(!!await r?.pushManager.getSubscription())).catch(()=>{})},[]);
@@ -40,8 +28,7 @@ export function PwaPreferences(){
  const toggle=async()=>{if(busy)return;setBusy(true);setError('');try{if(enabled)await disablePush();else await enablePush();setEnabled(!enabled)}catch(e){setError(e instanceof Error?e.message:'Не удалось изменить уведомления')}finally{setBusy(false)}};
  const logout=async()=>{setBusy(true);setError('');try{await logoutPwa()}catch{setError('Не удалось выйти. Проверьте интернет и повторите.');setBusy(false)}};
  return <GroupedMenu title="Приложение" caption={error||undefined}>
-  <MenuToggle icon={<Bell/>} title="Системные уведомления" description={!supported?'Доступны в установленном приложении':!ready?'Пока недоступны':'Сообщения, показы и обновления приложения'} checked={enabled} disabled={busy||!supported||(!ready&&!enabled)} onCheckedChange={()=>void toggle()}/>
-  {enabled&&<CatalogPushPreference/>}
+  <MenuToggle icon={<Bell/>} title="Системные уведомления" description={!supported?'Доступны в установленном приложении':!ready?'Пока недоступны':'Сообщения, показы, новые ЖК и обновления'} checked={enabled} disabled={busy||!supported||(!ready&&!enabled)} onCheckedChange={()=>void toggle()}/>
   {!standalone()&&<MenuButton icon={<Download/>} title="Добавить на главный экран" description={appleDevice()?'Поделиться → На экран «Домой»':'Установка приложения'} onClick={()=>{if(canInstall())void install().catch(()=>setError('Откройте меню браузера и выберите установку'));else setError(appleDevice()?'В Safari нажмите «Поделиться» → «На экран Домой»':'В меню браузера выберите «Установить приложение»')}}/>}
   {!runtime.publicPreview&&<MenuButton icon={<LogOut/>} title="Выйти из аккаунта" disabled={busy} onClick={()=>void logout()}/>}{error&&<span className="sr-only" role="alert">{error}</span>}
  </GroupedMenu>;
