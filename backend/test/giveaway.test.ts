@@ -33,6 +33,16 @@ test('Giveaway gates admission, freezes rules, binds own deal and creates one ti
   const stale=await app.inject({url:'/api/v1/me/giveaway',method:'POST',headers,payload:{version:settings.version-1,acceptedRules:true}});assert.equal(stale.statusCode,409);
   const first=await post();assert.equal(first.statusCode,200,first.body);const entry=first.json().entry;assert.equal(entry.status,'pending');assert.equal(entry.ticket,null);
   assert.equal((await post()).json().entry.id,entry.id);
+  const webSession=randomUUID();await db.query("insert into sessions(id,user_id,auth_provider) values($1,$2,'telegram-web')",[webSession,user]);
+  const webToken=await issueToken(db,'visitor',webSession);
+  const webHeaders={...origin,authorization:'Bearer '+webToken.token};
+  const webView=await app.inject({url:'/api/v1/me/giveaway',headers:webHeaders});
+  assert.equal(webView.statusCode,200,webView.body);
+  assert.equal(webView.json().entry.id,entry.id);
+  const webApply=await app.inject({url:'/api/v1/me/giveaway',method:'POST',headers:webHeaders,payload:{version:settings.version,acceptedRules:true}});
+  assert.equal(webApply.statusCode,200,webApply.body);
+  assert.equal(webApply.json().entry.id,entry.id);
+  assert.equal((await app.inject('/api/v1/public/giveaway')).json().entry,null);
   // Equivalent instants with different ISO offsets must not look like changed terms.
   const unchanged=await control('','PUT',{...settings,startsAt:new Date(settings.startsAt).toISOString(),title:'Новый заголовок'});
   assert.equal(unchanged.statusCode,200,unchanged.body);settings=unchanged.json().settings;
