@@ -88,9 +88,18 @@ test('Web Push rejects private endpoints, scopes subscriptions, isolates deliver
  await f.db.query("insert into outbox_events(topic,aggregate_type,payload) values('user.partner_security_code','user',$1::jsonb)",[JSON.stringify({userId:aId,code:'123456'})]);
  assert.equal(Number((await f.db.query('select count(*) from push_deliveries')).rows[0].count),1,'security codes never become push notifications');
  const payloads:string[]=[];assert.equal((await deliverWebPush(f.db,f.config,async(_s,p)=>{payloads.push(p)})).processed,1);
- assert.ok(!payloads[0].includes(secret));assert.ok(JSON.parse(payloads[0]).url.startsWith('/app/#/journey'));
+ assert.ok(!payloads[0].includes(secret));
+ assert.ok(JSON.parse(payloads[0]).url.startsWith('/app/#/journey'));
+ assert.equal(JSON.parse(payloads[0]).title,'Новое сообщение от менеджера');
  assert.equal(pushRoute('https://attacker.test/',f.config.PUBLIC_ORIGIN),'/app/#/profile');
  assert.equal(Number((await f.db.query('select count(*) from outbox_events where processed_at is null')).rows[0].count),2,'Telegram queue remains independent');
+ for(const [tab,pushKind,title] of [['collections',undefined,'Новая подборка квартир'],['showings','confirmed','Показ подтверждён']]){
+  await f.db.query("insert into outbox_events(topic,aggregate_type,payload) values('user.journey','lead',$1::jsonb)",[JSON.stringify({userId:aId,pushKind,deepLink:'/app/#/journey?lead='+randomUUID()+'&tab='+tab})]);
+  await deliverWebPush(f.db,f.config,async(_s,p)=>{payloads.push(p)});
+  const push=JSON.parse(payloads.at(-1)!);
+  assert.equal(push.title,title);
+  assert.ok(push.url.endsWith('&tab='+tab));
+ }
  await f.db.query("insert into outbox_events(topic,aggregate_type,payload) values('user.journey','lead',$1::jsonb)",[JSON.stringify({userId:aId})]);
  await deliverWebPush(f.db,f.config,async()=>{throw Object.assign(new Error('gone'),{statusCode:410})});
  assert.equal(Number((await f.db.query('select count(*) from push_subscriptions')).rows[0].count),0);

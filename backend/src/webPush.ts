@@ -44,6 +44,15 @@ export function pushRoute(link:unknown,origin:string){
   if(u.pathname==='/pulsedv/mini-app/'||u.pathname==='/app/')return '/app/'+(u.hash||'#/profile');
  }catch{}return '/app/#/profile';
 }
+const journeyPushCopy={
+ message:{title:'Новое сообщение от менеджера',body:'Откройте переписку, чтобы прочитать ответ.'},
+ collection:{title:'Новая подборка квартир',body:'Менеджер подготовил для вас варианты. Нажмите, чтобы посмотреть подборку.'},
+ showing:{title:'Обновление по показу',body:'Менеджер обновил информацию о показе.'},
+ confirmed:{title:'Показ подтверждён',body:'Откройте «Показы», чтобы посмотреть время и детали.'},
+ cancelled:{title:'Показ отменён',body:'Откройте «Показы», чтобы посмотреть детали.'},
+ rescheduled:{title:'Показ перенесён',body:'Новое время доступно во вкладке «Показы».'},
+} as const;
+
 export type PushSend=(sub:webpush.PushSubscription,payload:string,options:webpush.RequestOptions)=>Promise<unknown>;
 export async function deliverWebPush(db:Database,config:RuntimeConfig,send:PushSend=webpush.sendNotification){
  if(!config.WEB_PUSH_PUBLIC_KEY||!config.WEB_PUSH_PRIVATE_KEY)return {processed:0};
@@ -93,15 +102,24 @@ export async function deliverWebPush(db:Database,config:RuntimeConfig,send:PushS
   try{
    // Private conversation text, phone numbers and security codes never appear on a lock screen.
    const tab=guest&&['collections','showings'].includes(row.payload.tab)?row.payload.tab:null;
-   const title=property?'Новый ЖК в каталоге':row.topic==='pwa.release'?'Обновление PULSEDV.RU':tab==='collections'?'Новая подборка квартир':tab==='showings'?'Обновление по показу':row.topic==='user.broadcast_pwa'?'Новый анонс PULSEDV.RU':row.topic==='user.partner'?'Обновление в партнёрском кабинете':row.topic==='user.giveaway'?'Обновление по розыгрышу':row.topic==='user.search_updates'?'Обновление по вашему поиску':row.topic==='user.showing_reminder'?'Напоминание о показе':'Сообщение от PULSEDV.RU';
+   const route=pushRoute(row.payload.deepLink,config.PUBLIC_ORIGIN);
+   const routeTab=new URLSearchParams(route.split('?')[1]).get('tab');
+   const kind=row.payload.pushKind;
+   const journeyCopy=guest||row.topic==='user.journey'
+    ? typeof kind==='string'&&Object.hasOwn(journeyPushCopy,kind)
+      ? journeyPushCopy[kind as keyof typeof journeyPushCopy]
+      : tab==='collections'||routeTab==='collections'?journeyPushCopy.collection
+      : tab==='showings'||routeTab==='showings'?journeyPushCopy.showing:journeyPushCopy.message
+    : undefined;
+   const title=journeyCopy?.title??(property?'Новый ЖК в каталоге':row.topic==='pwa.release'?'Обновление PULSEDV.RU':row.topic==='user.broadcast_pwa'?'Новый анонс PULSEDV.RU':row.topic==='user.partner'?'Обновление в партнёрском кабинете':row.topic==='user.giveaway'?'Обновление по розыгрышу':row.topic==='user.search_updates'?'Обновление по вашему поиску':row.topic==='user.showing_reminder'?'Напоминание о показе':'Сообщение от PULSEDV.RU');
    const guestRoute='#/journey?lead='+row.aggregate_id+(tab?'&tab='+tab:'');
    const guestUrl='/landing-cinematic/pwa-preview/?pushRoute='+encodeURIComponent(guestRoute)+guestRoute;
-   const body=property?[property.name,property.city].filter(Boolean).join(' · ').slice(0,160)
+   const body=journeyCopy?.body??(property?[property.name,property.city].filter(Boolean).join(' · ').slice(0,160)
     :row.topic==='pwa.release'?'Версия '+row.payload.version+' доступна. Нажмите, чтобы открыть экран обновления.'
-    :'Откройте приложение, чтобы посмотреть подробности.';
+    :'Откройте приложение, чтобы посмотреть подробности.');
    const url=property?'/app/#/property/'+encodeURIComponent(property.id)
     :row.topic==='pwa.release'?'/app/#/profile?update='+encodeURIComponent(row.payload.build)
-    :guest?guestUrl:pushRoute(row.payload.deepLink,config.PUBLIC_ORIGIN);
+    :guest?guestUrl:route;
    await send({endpoint:row.endpoint,keys:{p256dh:row.p256dh,auth:row.auth}},JSON.stringify({title,body,url,tag:'pulse-'+d.event_id}),{TTL:3600,timeout:8000,vapidDetails:{subject:config.WEB_PUSH_SUBJECT,publicKey:config.WEB_PUSH_PUBLIC_KEY,privateKey:config.WEB_PUSH_PRIVATE_KEY}});
    await db.query('update push_deliveries set delivered_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);processed++;
   }catch(e){
