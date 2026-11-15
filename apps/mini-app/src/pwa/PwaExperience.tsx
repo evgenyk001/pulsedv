@@ -1,5 +1,5 @@
 import React from 'react';
-import {Bell,Download,LogOut,RefreshCw,WifiOff,UserRound,Check,ArrowUpRight,MessageCircle,Send} from 'lucide-react';
+import {Bell,Download,LogOut,WifiOff,UserRound,MessageCircle,Send} from 'lucide-react';
 import {SafariShare,SafariAddHome} from './InstallationIcons';
 import {useClientNotifications} from '../helpers/useClientNotifications';
 import {useQuery} from '@tanstack/react-query';
@@ -8,11 +8,18 @@ import {appleDevice,standalone,install,canInstall,enablePush,disablePush,logoutP
 import {runtime,visitorApi} from '../../../../packages/pulse-data/runtime';
 import './pwa.css';
 export function PwaStatus(){
- const [online,setOnline]=React.useState(navigator.onLine),[update,setUpdate]=React.useState(false),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
- React.useEffect(()=>{const on=()=>setOnline(navigator.onLine),up=()=>setUpdate(true);window.addEventListener('online',on);window.addEventListener('offline',on);window.addEventListener('pulse:pwa-update',up);return()=>{window.removeEventListener('online',on);window.removeEventListener('offline',on);window.removeEventListener('pulse:pwa-update',up)}},[]);
- const apply=async()=>{setBusy(true);try{const r=await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL);if(!r?.waiting){location.reload();return;}navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload(),{once:true});r.waiting.postMessage({type:'PULSE_ACTIVATE'})}catch{setError('Не удалось обновить. Попробуйте позже.');setBusy(false)}};
- if(!isPwa||online&&!update)return null;
- return <aside className="pwaStatus" role="status">{!online?<><WifiOff size={18}/><span>Нет интернета. Действия не отправляются.</span></>:<><RefreshCw size={18}/><span>{error||'Доступна новая версия. Сохраните ввод перед обновлением.'}</span><button disabled={busy} onClick={()=>void apply()}>{busy?'Обновляем…':'Обновить'}</button></>}</aside>;
+ const [online,setOnline]=React.useState(navigator.onLine);
+ React.useEffect(()=>{
+  const sync=()=>setOnline(navigator.onLine);
+  window.addEventListener('online',sync);
+  window.addEventListener('offline',sync);
+  return()=>{
+   window.removeEventListener('online',sync);
+   window.removeEventListener('offline',sync);
+  };
+ },[]);
+ if(!isPwa||online)return null;
+ return <aside className="pwaStatus" role="status"><WifiOff size={18}/><span>Нет интернета. Действия не отправляются.</span></aside>;
 }
 export function PwaPreferences(){
  const [enabled,setEnabled]=React.useState(false),[supported,setSupported]=React.useState(false),[ready,setReady]=React.useState(false),[busy,setBusy]=React.useState(false),[error,setError]=React.useState('');
