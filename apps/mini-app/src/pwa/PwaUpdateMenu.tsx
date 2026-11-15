@@ -1,8 +1,9 @@
 import React from 'react';
 import {useQuery} from '@tanstack/react-query';
-import {ChevronRight, Download, RefreshCw} from 'lucide-react';
-import {Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger} from '../components/Sheet';
+import {Check, ChevronRight, Download, RefreshCw, X} from 'lucide-react';
+import {Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger} from '../components/Sheet';
 import release from './release.json';
+import mark from './release-mark.svg';
 import './pwa.css';
 
 type Release = typeof release & {build:string};
@@ -90,26 +91,44 @@ export function PwaUpdateMenu(){
   }
  };
 
+ const description=next?'Версия '+shown.version:latest.isFetching?'Проверяем обновления…':latest.isError?'Не удалось проверить обновления.':'У вас самая свежая версия';
+
  return <Sheet>
   <SheetTrigger asChild>
    <button type="button" className="pwaReleaseRow" onClick={()=>void latest.refetch()}>
-    <span>Версия приложения{next&&<strong><i aria-hidden="true"/>Доступно обновление</strong>}</span>
+    <span className="pwaReleaseRowIcon" aria-hidden="true"><RefreshCw size={17}/></span>
+    <span className="pwaReleaseLabel">
+     Версия приложения
+     {next&&<strong>Доступно обновление</strong>}
+    </span>
     <span className="pwaReleaseVersion">{release.version}</span>
-    <ChevronRight size={15} aria-hidden="true"/>
+    <ChevronRight className="pwaReleaseChevron" size={16} aria-hidden="true"/>
    </button>
   </SheetTrigger>
   <SheetContent side="bottom" className="pwaReleaseSheet">
-   <img src={import.meta.env.BASE_URL+'pulse-app-192-v3.png'} alt="" width="58" height="58"/>
-   <SheetHeader>
-    <SheetTitle>{next?'Обновление PULSEDV.RU':'Версия приложения'}</SheetTitle>
-    <SheetDescription>{next?'Версия '+shown.version:latest.isFetching?'Проверяем обновления…':latest.isError?'Не удалось проверить обновления.':'У вас самая свежая версия'}</SheetDescription>
-   </SheetHeader>
-   {next&&shown.notes.length>0&&<ul>{shown.notes.map((note,index)=><li key={index}>{note}</li>)}</ul>}
-   {status&&<div className="pwaReleaseProgress" role="status"><span aria-hidden="true"/>{status}</div>}
-   {error&&<p role="alert">Не удалось применить обновление. Попробуйте ещё раз.</p>}
-   {!stage&&(next
-    ? <button type="button" className="pwaButton" onClick={()=>void apply()}><Download size={18}/>Обновить</button>
-    : latest.isError&&<button type="button" className="pwaTextButton" disabled={latest.isFetching} onClick={()=>void latest.refetch()}><RefreshCw size={15}/>Повторить проверку</button>)}
+   <div className="pwaReleasePanel">
+    <SheetHeader className="pwaReleaseHeader">
+     <div className="pwaReleaseHeading">
+      <span className="pwaReleaseMark" aria-hidden="true"><img src={mark} alt="" width="35" height="36"/></span>
+      <SheetTitle className="pwaReleaseTitle">{next?'Обновление приложения':'Версия приложения'}</SheetTitle>
+      <SheetClose className="pwaReleaseClose" aria-label="Закрыть"><X size={17}/></SheetClose>
+     </div>
+     <div className="pwaReleaseSummary" data-update={Boolean(next)}>
+      {!next&&!latest.isError&&!latest.isFetching&&<Check size={17} aria-hidden="true"/>}
+      <SheetDescription className="pwaReleaseDescription" aria-live="polite">{description}</SheetDescription>
+      {!next&&<span className="pwaReleaseVersion">{release.version}</span>}
+     </div>
+    </SheetHeader>
+    {next&&shown.notes.length>0&&<section className="pwaReleaseNotes">
+     <h3>Что нового</h3>
+     <ul>{shown.notes.map((note,index)=><li key={index}>{note}</li>)}</ul>
+    </section>}
+    {status&&<div className="pwaReleaseProgress" role="status"><span aria-hidden="true"/>{status}</div>}
+    {error&&<p className="pwaReleaseError" role="alert">Не удалось применить обновление. Попробуйте ещё раз.</p>}
+    {!stage&&(next
+     ? <button type="button" className="pwaReleaseAction" onClick={()=>void apply()}><Download size={18} aria-hidden="true"/>Обновить</button>
+     : latest.isError&&<button type="button" className="pwaTextButton" disabled={latest.isFetching} onClick={()=>void latest.refetch()}><RefreshCw size={15} aria-hidden="true"/>Повторить проверку</button>)}
+   </div>
   </SheetContent>
  </Sheet>;
 }
