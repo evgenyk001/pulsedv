@@ -1,3 +1,4 @@
+import {PwaUpdateMenu} from '../pwa/PwaUpdateMenu';
 import {runtime as previewRuntime} from '../../../../packages/pulse-data/runtime';
 import {isPwa} from '../pwa/client';
 import {PwaPreferences,PwaAccount,PwaTelegramAccount} from '../pwa/PwaExperience';
@@ -87,5 +88,6 @@ export default function ProfilePage(){
     </GroupedMenu>
 
     <GroupedMenu label="Связь с командой"><LeadSheet title="Связаться с агентством" source="profile-contact"><MenuButton icon={<Phone/>} title="Связаться с PULSEDV.RU"/></LeadSheet></GroupedMenu>
+    {isPwa&&<PwaUpdateMenu/>}
   </div>
 }
