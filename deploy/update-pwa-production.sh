@@ -15,11 +15,34 @@ container=$(docker compose ps -q web)
 test -n "$container"
 previous="pulsedv-pwa-production-base:${work##*/}"
 candidate="pulsedv-pwa-production-release:${work##*/}"
-live_config=$(docker exec "$container" cat /etc/caddy/Caddyfile)
-if [[ "$live_config" != *'handle_path /app/*'* ]]; then
-  echo 'На действующем web нет маршрута /app/. Требуется проверить конфигурацию Caddy на VPS.' >&2
-  exit 1
-fi
+docker exec "$container" cat /etc/caddy/Caddyfile > "$work/Caddyfile.previous"
+python3 - "$work/Caddyfile.previous" "$work/build/Caddyfile" <<'PY'
+import re, sys
+from pathlib import Path
+
+original, destination = map(Path, sys.argv[1:])
+config = original.read_text()
+route = re.compile(r'(?m)^[ \t]*handle_path[ \t]+/app/\*[ \t]*\{')
+if not route.search(config):
+    headers = list(re.finditer(
+        r'(?m)^(?:\{\$SITE_DOMAIN(?::[^}\n]+)?\}|(?:https://)?pulsedv\.ru)[ \t]+\{[ \t]*(?:#.*)?$',
+        config,
+    ))
+    if len(headers) != 1:
+        raise SystemExit('Не удалось однозначно найти блок pulsedv.ru в живом Caddyfile.')
+    end = headers[0].end()
+    app = """
+	redir /app /app/ 308
+	handle_path /app/* {
+		root * /srv/pwa
+		@productionPwaEntry path / /index.html /sw.js /manifest.webmanifest /app-release.json /offline.html /offline.js
+		header @productionPwaEntry Cache-Control "no-store"
+		file_server
+	}
+"""
+    config = config[:end] + '\n' + app + config[end:]
+destination.write_text(config)
+PY
 docker image tag "$(docker inspect --format '{{.Image}}' "$container")" "$previous"
 cat > "$work/build/Dockerfile" <<'DOCKER'
 ARG LIVE_WEB
@@ -37,6 +60,7 @@ ENV VITE_APP_VARIANT=pwa VITE_PWA_PREVIEW=false VITE_PULSE_MODE=api VITE_API_BAS
 RUN npm run build -w apps/mini-app
 FROM ${LIVE_WEB}
 COPY --from=build /app/dist/pwa/ /srv/pwa/
+COPY Caddyfile /etc/caddy/Caddyfile
 DOCKER
 docker build --build-arg "LIVE_WEB=$previous" -t "$candidate" "$work/build"
 python3 - "$work" "$previous" "$candidate" <<'PY'
@@ -66,6 +90,7 @@ cleanup(){
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' HUP TERM
+compose_release candidate run --rm -T --no-deps --entrypoint cat web /etc/caddy/Caddyfile | cmp "$work/build/Caddyfile" -
 compose_release candidate run --rm -T --no-deps --entrypoint caddy web validate --config /etc/caddy/Caddyfile --adapter caddyfile
 activated=1
 compose_release candidate up -d --force-recreate --no-deps --no-build --wait --wait-timeout 180 web
