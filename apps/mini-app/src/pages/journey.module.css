@@ -109,6 +109,12 @@
  inset:var(--chat-top,0px) 0 auto;
  width:min(100%,var(--content-max));
 }
+/* Installed iOS can move the document while focusing the composer. */
+:global(.pulse-pwa) .conversation[data-pwa-chat-in-flow][data-pwa-keyboard-in-flow]{
+ position:relative;
+ inset:var(--chat-top,0px) auto auto;
+ width:100%;
+}
 :global(html.pulse-pwa):has(.conversation[data-pwa-chat-in-flow]){
  scroll-padding-bottom:0;
 }

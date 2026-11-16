@@ -18,6 +18,7 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   const preserveRestingHeight=inFlow&&isPwa&&appleDevice()&&standalone();
   let viewportWidth=window.innerWidth;
   let keyboardWasVisible=false;
+  let keyboardTop=0;
   let report:HTMLOutputElement|null=null;
   let headingTaps=0;
   let lastHeadingTap=0;
@@ -75,10 +76,18 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
      if(shortfall<=0)keyboardWasVisible=false;
     }
     node.toggleAttribute('data-pwa-keyboard',keyboardOpen);
+    node.toggleAttribute('data-pwa-keyboard-in-flow',keyboardOpen&&!!preserveRestingHeight);
     if(keyboardOpen){
      node.style.setProperty('--chat-height',visibleHeight+'px');
-     node.style.setProperty('--chat-top',top+'px');
+     if(preserveRestingHeight){
+      // iOS may scroll the document during focus as well as pan the visual
+      // viewport. Anchor the chat in document coordinates to include both.
+      const documentTop=node.getBoundingClientRect().top+window.scrollY-keyboardTop;
+      keyboardTop=(viewport?.pageTop??(window.scrollY+top))-documentTop;
+     }else keyboardTop=top;
+     node.style.setProperty('--chat-top',keyboardTop+'px');
     }else{
+     keyboardTop=0;
      if(restoreHeight)node.style.setProperty('--chat-height',heightBeforeFocus+'px');
      else node.style.removeProperty('--chat-height');
      node.style.removeProperty('--chat-top');
@@ -152,6 +161,7 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    cancelAnimationFrame(recoveryFrame);
    node?.removeAttribute('data-pwa-viewport-recovery');
    node?.removeAttribute('data-pwa-keyboard');
+   node?.removeAttribute('data-pwa-keyboard-in-flow');
    node?.style.removeProperty('--chat-height');
    node?.style.removeProperty('--chat-top');
    cancelAnimationFrame(frame);
