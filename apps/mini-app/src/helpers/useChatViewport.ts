@@ -1,5 +1,7 @@
 import {useLayoutEffect,useRef,type RefObject} from 'react';
-import {isPwa} from '../pwa/client';
+import {appleDevice,isPwa,standalone} from '../pwa/client';
+
+const keyboardHeightThreshold=100;
 
 export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()=>void,view?:string){
  const callback=useRef(onResize);
@@ -13,6 +15,9 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
   let heightBeforeFocus=0;
   const node=root.current;
   const inFlow=node?.hasAttribute('data-pwa-chat-in-flow');
+  const preserveRestingHeight=inFlow&&isPwa&&appleDevice()&&standalone();
+  let viewportWidth=window.innerWidth;
+  let keyboardWasVisible=false;
   let report:HTMLOutputElement|null=null;
   let headingTaps=0;
   let lastHeadingTap=0;
@@ -34,7 +39,7 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    const topElement=document.elementFromPoint(x,y);
    const hit=topElement===field?'поле':topElement?topElement.tagName+':'+(topElement.classList.item(0)??''):'вне видимой области';
    const px=Math.round;
-   samples.push(label+': поле '+px(rect.top)+'–'+px(rect.bottom)+'; экран '+px(viewport?.offsetTop??0)+'+'+px(viewport?.height??innerHeight)+'; окно '+innerHeight+'; прокрутка '+px(scrollY)+'; сверху '+hit);
+   samples.push(label+': поле '+px(rect.top)+'–'+px(rect.bottom)+'; экран '+px(viewport?.offsetTop??0)+'+'+px(viewport?.height??innerHeight)+'; окно '+innerHeight+'; чат '+px(node.getBoundingClientRect().height)+'; прокрутка '+px(scrollY)+'; сверху '+hit);
    report.textContent=samples.slice(-4).join('\n');
   };
   let unfocusedHeight=0;
@@ -51,30 +56,49 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    // With the keyboard open, the visual viewport can be panned inside the layout
    // viewport. Its offset positions the chat; it does not reduce its height.
    const visibleHeight=typing?height:Math.min(height,window.innerHeight);
-   if(!typing)unfocusedHeight=visibleHeight;
+   if(window.innerWidth!==viewportWidth){
+    viewportWidth=window.innerWidth;
+    heightBeforeFocus=0;
+    unfocusedHeight=window.innerHeight;
+    keyboardWasVisible=false;
+   }
    if(inFlow){
-    const keyboardOpen=typing&&unfocusedHeight-visibleHeight>100;
+    const keyboardOpen=typing&&unfocusedHeight-visibleHeight>keyboardHeightThreshold;
+    if(keyboardOpen)keyboardWasVisible=true;
+    // In installed iOS PWAs both viewport measurements can stay shorter after
+    // dismissal. Keep the pre-keyboard height for this small residual shrink.
+    const shortfall=heightBeforeFocus-visibleHeight;
+    const restoreHeight=preserveRestingHeight&&keyboardWasVisible&&!keyboardOpen&&
+     (viewport?.scale??1)===1&&shortfall>0&&shortfall<=keyboardHeightThreshold;
+    if(!typing&&!restoreHeight){
+     unfocusedHeight=visibleHeight;
+     if(shortfall<=0)keyboardWasVisible=false;
+    }
     node.toggleAttribute('data-pwa-keyboard',keyboardOpen);
     if(keyboardOpen){
      node.style.setProperty('--chat-height',visibleHeight+'px');
      node.style.setProperty('--chat-top',top+'px');
     }else{
-     node.style.removeProperty('--chat-height');
+     if(restoreHeight)node.style.setProperty('--chat-height',heightBeforeFocus+'px');
+     else node.style.removeProperty('--chat-height');
      node.style.removeProperty('--chat-top');
     }
     callback.current?.();
     return;
    }
+   if(!typing)unfocusedHeight=visibleHeight;
    node.style.setProperty('--chat-height',(isPwa?visibleHeight:height)+'px');
    node.style.setProperty('--chat-top',(isPwa&&!typing?0:top)+'px');
-   node.toggleAttribute('data-pwa-keyboard',isPwa&&typing&&unfocusedHeight-visibleHeight>100);
+   node.toggleAttribute('data-pwa-keyboard',isPwa&&typing&&unfocusedHeight-visibleHeight>keyboardHeightThreshold);
    if(isPwa&&!typing&&getComputedStyle(node).position==='fixed'&&window.scrollY){
     window.scrollTo({top:0,left:0,behavior:'instant'});
    }
    callback.current?.();
   };
   const onFocus=(event:FocusEvent)=>{
-   if(isPwa&&event.target===focusedComposer())heightBeforeFocus=unfocusedHeight;
+   if(isPwa&&event.target===focusedComposer()&&!keyboardWasVisible){
+    heightBeforeFocus=unfocusedHeight;
+   }
    updateFocus();
   };
   const updateFocus=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(resize)};
@@ -127,6 +151,9 @@ export function useChatViewport(root:RefObject<HTMLDivElement|null>,onResize?:()
    report?.remove();
    cancelAnimationFrame(recoveryFrame);
    node?.removeAttribute('data-pwa-viewport-recovery');
+   node?.removeAttribute('data-pwa-keyboard');
+   node?.style.removeProperty('--chat-height');
+   node?.style.removeProperty('--chat-top');
    cancelAnimationFrame(frame);
    cancelAnimationFrame(settledFrame);
    window.clearTimeout(settleTimer);
