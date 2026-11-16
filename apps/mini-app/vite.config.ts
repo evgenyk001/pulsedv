@@ -13,8 +13,7 @@ const pwaOutput=preview?'../../dist/pwa-preview':'../../dist/pwa';
 export default defineConfig({plugins:[react(),{name:'pwa-build',transformIndexHtml(html){
  if(preview)html=html.replace('/src/bootstrap.tsx','/src/pwa/preview.tsx');
  if(!pwa)return html;
- html=html.replace(/<script id="pulse-telegram-sdk"[\s\S]*?<\/script>/,'').replace(',maximum-scale=1,user-scalable=no','');
- return html.replace('</head>', '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/></head>');
+ return html.replace(/<script id="pulse-telegram-sdk"[\s\S]*?<\/script>/,'').replace(',maximum-scale=1,user-scalable=no','');
 },writeBundle(options,bundle){if(!pwa)return;const root=fileURLToPath(new URL(pwaOutput+'/',import.meta.url));const indexPath=root+'index.html';
 const html=readFileSync(indexPath,'utf8');
 const worker=readFileSync(fileURLToPath(new URL('./public/sw.js',import.meta.url)),'utf8');
