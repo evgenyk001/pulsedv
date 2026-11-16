@@ -7,6 +7,8 @@ const POINTER=new URL('__selected_shell__',BASE).href;
 const STATE=CACHE_PREFIX+'selection';
 const selected=async()=> (await (await caches.open(STATE)).match(POINTER))?.text();
 const select=async()=> (await caches.open(STATE)).put(POINTER,new Response(CACHE));
+const blockedShell=CACHE_PREFIX+'b1fb883477a29f4f';
+const needsRecovery=chosen=>BASE.pathname==='/app/'&&chosen===blockedShell;
 const safeAsset=url=>url.origin===BASE.origin&&url.pathname.startsWith(BASE.pathname+'assets/')&&/\.(?:js|css|woff2?)$/.test(url.pathname);
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const shell=await fetch(SHELL,{cache:'no-store'});
@@ -17,10 +19,12 @@ self.addEventListener('install',event=>event.waitUntil((async()=>{
  const assets=__SHELL_ASSETS__;
  await cache.addAll(['offline.html','offline.js','pulse-app-192-v3.png',...assets].map(file=>new Request(new URL(file,BASE),{cache:'reload'})));
  await cache.put(SHELL,shell);
+ // Recover installations blocked by the first production shell's phone gate.
+ if(needsRecovery(await selected()))await self.skipWaiting();
 })()));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
  let keep=await selected();
- if(!keep){await select();keep=CACHE}
+ if(!keep||needsRecovery(keep)){await select();keep=CACHE}
  const names=await caches.keys();
  await Promise.all(names.filter(name=>name.startsWith(CACHE_PREFIX)&&![STATE,CACHE,keep].includes(name)).map(name=>caches.delete(name)));
  await self.clients.claim();
