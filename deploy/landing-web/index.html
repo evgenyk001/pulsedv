@@ -21,6 +21,15 @@
 <link rel="preload" as="image" href="assets/phone-home.webp?v=motion-4" fetchpriority="high">
 <link rel="preload" as="image" href="assets/phone-catalog.webp?v=motion-4" fetchpriority="high">
 <link rel="icon" href="assets/pulse-mark-180-v2.png"><link rel="stylesheet" href="style.css?v=icon-strokes-1"><link rel="stylesheet" href="city.css?v=icon-align-1">
+<style>
+@media (min-width:960px) and (hover:hover) and (pointer:fine) {
+ .entry-choice .entry-tooltip {width:min(308px, 33vw);padding:14px 16px}
+ .entry-qr {display:grid;grid-template-columns:132px minmax(0,1fr);align-items:center;gap:12px}
+ .entry-qr img {display:block;width:132px;height:132px;border-radius:5px}
+ .entry-qr strong {margin-bottom:5px;line-height:1.35}
+ .entry-qr p {margin:0;line-height:1.45;color:#e1e2e8}
+}
+</style>
 </head>
 <body>
 <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -60,12 +69,12 @@
 
 <div class="entry-options">
 <div class="entry-choice">
-<a class="entry-button entry-pwa" role="link" aria-disabled="true" tabindex="0" aria-describedby="tip-pwa"><svg class="button-phone" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M12 6v8m-3-3 3 3 3-3M10 18h4"/></svg><span class="entry-copy"><strong>Установить приложение</strong><small>Скоро · без VPN</small></span></a>
-<div class="entry-tooltip" role="tooltip" id="tip-pwa"><strong>Веб-приложение (PWA)</strong><p>Полноценное приложение, которое добавляется на главный экран вашего телефона как отдельная иконка. Не нужно скачивать из App Store.</p><p>Плюсы: открывается в один клик, работает без VPN и не требует установки из магазина приложений.</p></div>
+<a class="entry-button entry-pwa" href="https://pulsedv.ru/app/" aria-describedby="tip-pwa"><svg class="button-phone" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M12 6v8m-3-3 3 3 3-3M10 18h4"/></svg><span class="entry-copy"><strong>Установить приложение</strong><small>На главный экран</small></span></a>
+<div class="entry-tooltip" role="tooltip" id="tip-pwa"><div class="entry-qr"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIQAAACEAQAAAAB5P74KAAAA5ElEQVR42u2WMXIFMQhDH39+L26w9z/W3kCcQCn2N0mRwpQJDTaFBgmjcYXvMS9+xh+vVFVPzXNY4Cjhkholx/28gdLnUtoyHWqnz/tJpt1b5WMEbeJjnAoF+pBDnmNeAYqUsuPV0NLo7qljHBIrcQKGxMe8WgXBXKZ9ziu3HLr70fsYZ3p6wHnGdqyPlEhBjjf6cJc8bSgf60OixCIKlk77IZFMMCAd86p8UoPbG5+vqvbcz8NmpY8iWdH5vF5ANcMwRffW+e1G9tYPKXRrrr0fhqsur/ar6rPzNxtf/f8n/FL5AqjcfHPuD1yLAAAAAElFTkSuQmCC" width="132" height="132" alt=""><div><strong>PULSE на главном экране</strong><p>Наведите камеру телефона на QR-код</p></div></div></div>
 </div>
 <div class="entry-choice">
 <a class="entry-button entry-telegram" href="https://t.me/pulsedvbot?startapp" aria-describedby="tip-telegram"><svg class="button-tg" aria-hidden="true"><use href="#tg"/></svg><span class="entry-copy"><strong>Открыть в Telegram</strong><small>Внутри мессенджера</small></span></a>
-<div class="entry-tooltip" role="tooltip" id="tip-telegram"><strong>Telegram Mini App</strong><p>Приложение открывается прямо внутри мессенджера Telegram. Никаких паролей — мгновенный вход через ваш аккаунт. Сюда же будут приходить уведомления от менеджера.</p><p>Важно: требуется доступ к Telegram.</p></div>
+<div class="entry-tooltip" role="tooltip" id="tip-telegram"><div class="entry-qr"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJQAAACUAQAAAABdRz15AAABFElEQVR42u2WsXEFQQhDH56fiw6u/7KuA1GBHJydfI8jNvyKdgg0IARshXfMF3/xif0bq6qeHnqoql7zKUF03VcrWeb3AkrMWIUoHeB7UIE+palo1akexTTG1cRLvgoF+h0NkFfzQR5Y8s/by3p7pgtuZWatH4mlYGGBo11+FdoNE57+hrV+ViwRhbDU7wXNXaBURuM26/wIkY32/SUxFsQkAq35sJIgTPDefxI15TGQA/6LiCMn2fvvBY1LjJpbmv1+sfGMZ7ieBbisV+Zxc0Da+yVJkAOK2OtXINPyRWPt600EdqLA3n9UY3QNU0ofuUftfu5m+QhfGhMb9f7+hh5moCejdX5TxWVdgNd+rs9/chX7BkWAz87E15Y9AAAAAElFTkSuQmCC" width="132" height="132" alt=""><div><strong>PULSE в Telegram</strong><p>Наведите камеру телефона на QR-код</p></div></div></div>
 </div>
 </div>
 <div class="social-proof">
