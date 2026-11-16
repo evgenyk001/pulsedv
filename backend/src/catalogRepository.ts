@@ -199,7 +199,22 @@ export async function catalogMeta(sql:Sql,status:"published"|"all"="published"){
   };
 }
 
+async function publishedCatalogSnapshot(sql:Sql,id:string){
+  const result=await sql.query(`select jsonb_build_array(
+    p.price_from,p.delivery,p.project_details->'availableApartments',p.project_details->'commissioningDate',
+    coalesce((select jsonb_agg(plan.data order by plan.data) from (
+      select jsonb_build_array(f.building_id,f.section_label,f.room_label,
+        f.area_from,f.area_to,f.price_from,f.price_to,f.is_exact,f.finish_type,
+        coalesce((select jsonb_agg(offer.value order by offer.value)
+          from jsonb_array_elements(f.finish_options) offer(value)),'[]'::jsonb)) data
+      from catalog_property_floorplans f where f.property_id=p.id
+    ) plan),'[]'::jsonb)
+  )::text as snapshot from catalog_properties p where p.id=$1 and p.status='published'`,[id]);
+  return result.rows[0]?.snapshot as string|undefined;
+}
+
 export async function upsertCatalogProperty(sql:Sql,p:CatalogProperty){
+  const before=p.status==='published'?await publishedCatalogSnapshot(sql,p.id):undefined;
   const buildingIds=new Set((p.projectDetails?.buildings??[]).map(b=>b.id));
   for(const plan of p.floorplans)if(plan.buildingId&&!buildingIds.has(plan.buildingId))throw Object.assign(new Error('Планировка ссылается на отсутствующий корпус'),{statusCode:400});
   await sql.query(`insert into catalog_properties(
@@ -246,6 +261,12 @@ export async function upsertCatalogProperty(sql:Sql,p:CatalogProperty){
       doc.id||randomUUID(),p.id,doc.kind,doc.name,doc.url,doc.mimeType,doc.sizeBytes,doc.sortOrder??index
     ]);
   }
+  if(before!==undefined&&before!==await publishedCatalogSnapshot(sql,p.id)){
+    // Reuse the public catalog subscription and coalesce repeated edits in a 15-minute window.
+    await sql.query(`select pulse_queue_public_push('catalog',
+      'update:v1:' || $1::text || ':' || floor(extract(epoch from now())/900)::text,
+      jsonb_build_object('propertyId',$1::text,'change','update'))`,[p.id]);
+  }
 }
 
 export async function removeCatalogProperty(sql:Sql,id:string){
@@ -285,3 +306,4 @@ export async function adminCatalogSummary(sql:Sql){
   }
   return {counts,cities:Array.from(cities.values()).sort((a,b)=>a.city.localeCompare(b.city,'ru'))};
 }
+
