@@ -63,8 +63,9 @@ export async function deliverWebPush(db:Database,config:RuntimeConfig,send:PushS
  const deliveries=await Promise.allSettled(rows.map(async d=>{
   const row=(await db.query(`select s.*,o.topic,o.payload,o.available_at as event_at,o.aggregate_id from push_subscriptions s join outbox_events o on o.id=$2 where s.id=$1 and s.enabled and (o.topic in ('pwa.catalog','pwa.release') or s.user_id::text=o.payload->>'userId' or (o.topic='pwa.guest_reply' and s.session_id::text=o.payload->>'sessionId'))`,[d.subscription_id,d.event_id])).rows[0];
   const guest=row?.topic==='pwa.guest_reply';
-  const publicPush=row?.topic==='pwa.catalog'||row?.topic==='pwa.release'&&row.app_scope==='preview';
-  const eligible=row&&(publicPush|| (guest
+  const eligible=row&&(row.topic==='pwa.release'
+   ? row.app_scope===(row.payload.appScope??'preview')
+   : row.topic==='pwa.catalog'|| (guest
    ? (await db.query("select 1 from leads l join sessions s on s.id=l.session_id where l.id=$1 and s.id=$2 and s.user_id is null and l.user_id is null and l.source='pwa-contact'",[row.aggregate_id,row.session_id])).rows.length>0
    : await registeredPhone(db,row.user_id,config.CONSENT_VERSION)
      || row.topic==='user.journey'&&(await db.query("select 1 from sessions where user_id=$1 and auth_provider='telegram-web' limit 1",[row.user_id])).rows.length>0));
