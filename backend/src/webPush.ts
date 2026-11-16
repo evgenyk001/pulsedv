@@ -120,7 +120,7 @@ export async function deliverWebPush(db:Database,config:RuntimeConfig,send:PushS
    const url=property?'/app/#/property/'+encodeURIComponent(property.id)
     :row.topic==='pwa.release'?'/app/#/profile?update='+encodeURIComponent(row.payload.build)
     :guest?guestUrl:route;
-   await send({endpoint:row.endpoint,keys:{p256dh:row.p256dh,auth:row.auth}},JSON.stringify({title,body,url,tag:'pulse-'+d.event_id}),{TTL:3600,timeout:8000,vapidDetails:{subject:config.WEB_PUSH_SUBJECT,publicKey:config.WEB_PUSH_PUBLIC_KEY,privateKey:config.WEB_PUSH_PRIVATE_KEY}});
+   await send({endpoint:row.endpoint,keys:{p256dh:row.p256dh,auth:row.auth}},JSON.stringify({title,body,url,tag:'pulse-'+d.event_id}),{TTL:3600,timeout:8000,urgency:row.topic==='pwa.release'?'high':'normal',vapidDetails:{subject:config.WEB_PUSH_SUBJECT,publicKey:config.WEB_PUSH_PUBLIC_KEY,privateKey:config.WEB_PUSH_PRIVATE_KEY}});
    await db.query('update push_deliveries set delivered_at=now(),locked_until=null where id=$1 and lock_token=$2',[d.id,lease]);processed++;
   }catch(e){
    const status=(e as any)?.statusCode;
