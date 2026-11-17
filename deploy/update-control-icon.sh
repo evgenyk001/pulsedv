@@ -15,7 +15,7 @@ candidate="pulsedv-control-icon-release:${work##*.}"
 docker image tag "$(docker inspect --format '{{.Image}}' "$container")" "$previous"
 docker compose config --format json > "$work/compose.json"
 mkdir -p "$work/build/static"
-for file in pulse-control.ico pulse-control-32.png pulse-control-180.png; do
+for file in pulse-control-color.ico pulse-control-color-32.png pulse-control-color-180.png; do
   git show "$release:apps/control-center/public/$file" > "$work/build/static/$file"
 done
 docker exec "$container" cat /srv/control-center/index.html > "$work/previous.html"
@@ -25,10 +25,10 @@ from pathlib import Path
 
 folder = Path(sys.argv[1])
 html = (folder / 'previous.html').read_text()
-for old, new in [('pulse-mark-v2.ico', 'pulse-control.ico'),
-                 ('pulse-mark-32-v2.png', 'pulse-control-32.png'),
-                 ('pulse-mark-180-v2.png', 'pulse-control-180.png')]:
-    pattern = r'(<link\b[^>]*\bhref="/pulsedv/control-center/)' + re.escape(old) + r'(")'
+for old, new in [('pulse-mark-v2.ico', 'pulse-control-color.ico'),
+                 ('pulse-mark-32-v2.png', 'pulse-control-color-32.png'),
+                 ('pulse-mark-180-v2.png', 'pulse-control-color-180.png')]:
+    pattern = r'(<link\b[^>]*\bhref="/pulsedv/control-center/)' + r'(?:' + re.escape(old) + '|' + re.escape(new.replace('-color', '')) + ')' + r'(")'
     html, count = re.subn(pattern, lambda match: match[1] + new + match[2], html)
     if not count and f'href="/pulsedv/control-center/{new}"' not in html:
         raise SystemExit(f'Не найдена ожидаемая ссылка на иконку {old}.')
@@ -65,7 +65,7 @@ trap 'exit 130' INT
 trap 'exit 143' HUP TERM
 activated=1
 compose_release candidate up -d --force-recreate --no-deps --no-build --wait --wait-timeout 180 web
-for file in index.html pulse-control.ico pulse-control-32.png pulse-control-180.png; do
+for file in index.html pulse-control-color.ico pulse-control-color-32.png pulse-control-color-180.png; do
   url="/pulsedv/control-center/$file"
   if [[ "$file" == index.html ]]; then url=/pulsedv/control-center/; fi
   curl -fsS --retry 4 --retry-all-errors --max-time 15 --resolve pulsedv.ru:443:127.0.0.1 "https://pulsedv.ru$url" -o "$work/served"
