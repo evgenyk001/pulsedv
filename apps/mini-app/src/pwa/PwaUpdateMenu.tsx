@@ -38,7 +38,7 @@ function waitForWorker(worker:ServiceWorker){
  });
 }
 
-function activateWorker(container:ServiceWorkerContainer,worker:ServiceWorker){
+function activateWorker(container:ServiceWorkerContainer,worker:ServiceWorker,expectedBuild:string){
  return new Promise<void>((resolve,reject)=>{
   const wasActive=worker===container.controller;
   const channel=new MessageChannel();
@@ -56,11 +56,12 @@ function activateWorker(container:ServiceWorkerContainer,worker:ServiceWorker){
   };
   container.addEventListener('controllerchange',check);
   channel.port1.onmessage=event=>{
-   if(event.data!==true){finish(new Error('Activation rejected'));return}
+   if(event.data!==expectedBuild){finish(new Error('Activation rejected'));return}
    accepted=true;
    check();
   };
-  worker.postMessage({type:'PULSE_ACTIVATE'},[channel.port2]);
+  try{worker.postMessage({type:'PULSE_ACTIVATE',build:expectedBuild},[channel.port2])}
+  catch{finish(new Error('Activation request failed'))}
  });
 }
 
@@ -102,7 +103,7 @@ export function PwaUpdateMenu(){
  },[phase]);
 
  const apply=async()=>{
-  if(stage)return;
+  if(stage||!next)return;
   setError(false);
   setProgress(0);
   setStage('prepare');
@@ -119,7 +120,7 @@ export function PwaUpdateMenu(){
    if(!worker)throw new Error('Update worker unavailable');
    setStage('activate');
    await Promise.all([
-    activateWorker(container,worker),
+    activateWorker(container,worker,next.build),
     new Promise(resolve=>window.setTimeout(resolve,500)),
    ]);
    setStage('restart');

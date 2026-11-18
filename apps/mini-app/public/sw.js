@@ -1,6 +1,7 @@
 /* Cache the public app shell and its static assets. API and session data stay on the network. */
 const CACHE_PREFIX='pulse-pwa-'+self.location.pathname+'-';
-const CACHE=CACHE_PREFIX+'__BUILD__';
+const BUILD='__BUILD__';
+const CACHE=CACHE_PREFIX+BUILD;
 const BASE=new URL('./',self.location.href);
 const SHELL=new URL('index.html',BASE).href;
 const POINTER=new URL('__selected_shell__',BASE).href;
@@ -12,7 +13,7 @@ const needsRecovery=chosen=>BASE.pathname==='/app/'&&chosen===blockedShell;
 const safeAsset=url=>url.origin===BASE.origin&&url.pathname.startsWith(BASE.pathname+'assets/')&&/\.(?:js|css|woff2?)$/.test(url.pathname);
 self.addEventListener('install',event=>event.waitUntil((async()=>{
  const shell=await fetch(SHELL,{cache:'no-store'});
- if(!shell.ok||!(await shell.clone().text()).includes('name="pulse-build" content="'+CACHE.slice(CACHE_PREFIX.length)+'"')){
+ if(!shell.ok||!(await shell.clone().text()).includes('name="pulse-build" content="'+BUILD+'"')){
   throw new Error('App shell and worker versions differ');
  }
  const cache=await caches.open(CACHE);
@@ -33,11 +34,16 @@ self.addEventListener('message',event=>{
  if(event.data?.type!=='PULSE_ACTIVATE')return;
  event.waitUntil((async()=>{
   try{
+   const requestedBuild=event.data.build;
+   if(requestedBuild!==undefined&&requestedBuild!==BUILD){
+    event.ports[0]?.postMessage(false);
+    return;
+   }
    const shell=await (await caches.open(CACHE)).match(SHELL);
    if(!shell)throw new Error('App shell unavailable');
    await select();
    await self.skipWaiting();
-   event.ports[0]?.postMessage(true);
+   event.ports[0]?.postMessage(requestedBuild===undefined?true:BUILD);
   }catch{event.ports[0]?.postMessage(false)}
  })());
 });
