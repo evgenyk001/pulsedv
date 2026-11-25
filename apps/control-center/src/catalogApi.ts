@@ -23,11 +23,11 @@ export async function getAdminProperty(id:string){
 }
 
 export async function createAdminProperty(property:PulseProperty){
-  return (await api<{property:PulseProperty}>("/control/catalog",{method:"POST",body:JSON.stringify(property)})).property;
+  return (await api<{property:PulseProperty}>("/control/catalog",{method:"POST",body:JSON.stringify({...property,apartmentFeed:undefined})})).property;
 }
 
 export async function saveAdminProperty(property:PulseProperty){
-  return (await api<{property:PulseProperty}>("/control/catalog/"+encodeURIComponent(property.id),{method:"PUT",body:JSON.stringify(property)})).property;
+  return (await api<{property:PulseProperty}>("/control/catalog/"+encodeURIComponent(property.id),{method:"PUT",body:JSON.stringify({...property,apartmentFeed:undefined})})).property;
 }
 
 export type AdminCatalogImportProperty=Omit<PulseProperty,'projectDetails'>&{projectDetails?:Partial<NonNullable<PulseProperty['projectDetails']>>};

@@ -15,6 +15,7 @@ export type ProjectBuilding={
 };
 export type ProjectDetails={buildings?:ProjectBuilding[];masterplanUrl?:string|null;constructionType?:string|null;ceilingHeight?:number|null;parkingType?:'underground'|'multilevel'|'surface'|'mixed'|null;commissioningDate:string|null;totalApartments:number|null;availableApartments:number|null;pricePerSqmFromRub?:number|null;startingApartmentArea?:number|null;priceInputMode?:'total'|'per_sqm';finishes?:ApartmentFinish[];parkingSpaces?:number|null;floorsFrom?:number|null;floorsTo?:number|null;areaFrom?:number|null;areaTo?:number|null};
 
+export type ApartmentLocation={building?:string|null;entrance?:string|null;number?:string|null;floor?:number|null;floorsTotal?:number|null};
 export type PulseProperty={
   projectDetails?:ProjectDetails;
   freshness?:CatalogFreshness;
@@ -25,7 +26,8 @@ export type PulseProperty={
   tags:string[]; coverImageUrl:string|null; sortOrder:number;
   images:{id?:string;url:string;alt:string;sortOrder:number}[];
   features:{id?:string;label:string;icon:string;sortOrder:number}[];
-  floorplans:{buildingId?:string|null;sectionLabel?:string|null;id?:string;roomLabel:string;areaFrom:number|null;areaTo:number|null;priceFrom:number|null;priceTo?:number|null;isExact?:boolean;imageUrl:string|null;finishType?:ApartmentFinish|null;finishOptions?:{finishType:ApartmentFinish;priceFrom:number|null;priceTo?:number|null}[];sortOrder:number}[];
+  apartmentFeed?:{checkedAt:string;successfulAt:string|null;error:string|null;changes:{added:number;updated:number;hidden:number}|null;available:number;plans:PulseProperty["floorplans"]};
+  floorplans:{apartment?:ApartmentLocation;buildingId?:string|null;sectionLabel?:string|null;id?:string;roomLabel:string;areaFrom:number|null;areaTo:number|null;priceFrom:number|null;priceTo?:number|null;isExact?:boolean;imageUrl:string|null;finishType?:ApartmentFinish|null;finishOptions?:{finishType:ApartmentFinish;priceFrom:number|null;priceTo?:number|null}[];sortOrder:number}[];
   documents?:{id?:string;kind:"presentation"|"document";name:string;url:string;mimeType:string|null;sizeBytes:number|null;sortOrder:number}[];
 };
 

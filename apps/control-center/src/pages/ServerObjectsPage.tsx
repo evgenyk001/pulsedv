@@ -465,7 +465,23 @@ export function ServerObjectsPage(){
         </div>
       </section></fieldset>},
         {id:'buildings',label:'Корпуса',count:p.projectDetails?.buildings?.length??0,content:<fieldset className="recordFieldset" disabled={busy}><ProjectStructureEditor property={p} onChange={patch} onValidityChange={setStructureValid}/></fieldset>},
-        {id:'plans',label:'Планировки',count:p.floorplans.length,content:<fieldset className="recordFieldset" disabled={busy}><FloorplansEditor key={p.id} property={p} onChange={floorplans=>patch({floorplans})} onUpload={(file,id)=>void uploadFloorplan(file,id)} onRemoveImage={id=>void removeMedia(id,"floorplan")} disabled={busy}/></fieldset>},
+        {id:'plans',label:'Планировки',count:p.floorplans.length,content:<fieldset className="recordFieldset" disabled={busy}>{p.apartmentFeed&&<details className="catalogFeedPanel">
+          <summary>Фид застройщика · {p.apartmentFeed.available} в продаже</summary>
+          <p role="status">{p.apartmentFeed.error??(p.apartmentFeed.successfulAt
+            ?'Обновлено '+new Date(p.apartmentFeed.successfulAt).toLocaleString('ru-RU',{timeZone:'Asia/Vladivostok'})
+            :'Ожидается первая синхронизация')}</p>
+          {p.apartmentFeed.changes&&<p>Добавлено {p.apartmentFeed.changes.added} · Обновлено {p.apartmentFeed.changes.updated} · Скрыто {p.apartmentFeed.changes.hidden}</p>}
+          {p.apartmentFeed.plans.length>0&&<div className="catalogFeedTable" role="region" aria-label="Квартиры из фида" tabIndex={0}><table>
+            <thead><tr><th>Корпус</th><th>Подъезд</th><th>Квартира</th><th>Этаж</th><th>Площадь</th><th>Цена</th></tr></thead>
+            <tbody>{p.apartmentFeed.plans.map(plan=><tr key={plan.id}>
+              <td>{plan.apartment?.building}</td><td>{plan.apartment?.entrance}</td><td>№ {plan.apartment?.number}</td>
+              <td>{plan.apartment?.floor} / {plan.apartment?.floorsTotal}</td><td>{plan.areaFrom} м²</td>
+              <td>{plan.priceFrom==null?'—':Math.round(plan.priceFrom*1_000_000).toLocaleString('ru-RU')+' ₽'}</td>
+            </tr>)}</tbody>
+          </table></div>}
+          {p.apartmentFeed.successfulAt&&<p>В витрине отображаются квартиры из фида. Ниже сохранены ручные планировки.</p>}
+        </details>}
+        <FloorplansEditor key={p.id} property={p} onChange={floorplans=>patch({floorplans})} onUpload={(file,id)=>void uploadFloorplan(file,id)} onRemoveImage={id=>void removeMedia(id,"floorplan")} disabled={busy}/></fieldset>},
         {id:'photos',label:'Фото',count:p.images.length,content:<fieldset className="recordFieldset" disabled={busy}><section className="catalogEditorSection">
         <div className="catalogEditorSectionHead"><span><Images size={16}/></span><div><b>Фото объекта</b><small>Обложка + галерея для страницы ЖК</small></div></div>
         <div className="mediaUploader">

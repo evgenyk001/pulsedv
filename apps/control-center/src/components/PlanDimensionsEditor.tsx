@@ -36,6 +36,15 @@ export function PlanDimensionsEditor({plan,onChange}:{plan:Plan;onChange:(next:P
   }}/></label>}
   {!exact&&numberField('priceTo','Цена до, ₽')}
   <label className="controlField"><span>Изображение · URL</span><input value={plan.imageUrl??''} onChange={e=>onChange({...plan,imageUrl:e.target.value||null})}/></label>
+  {exact&&<>
+   {([['building','Корпус / блок'],['entrance','Подъезд'],['number','Номер квартиры'],['floor','Этаж'],['floorsTotal','Этажей в корпусе']] as const).map(([key,label])=>{
+    const numeric=key==='floor'||key==='floorsTotal';
+    return <label className="controlField" key={key}><span>{label}</span><input type={numeric?'number':'text'} min={key==='floorsTotal'?1:undefined} maxLength={numeric?undefined:120} step={numeric?1:undefined} value={plan.apartment?.[key]??''} onChange={event=>{
+     const value=event.target.value;
+     onChange({...plan,apartment:{...plan.apartment,[key]:value===''?null:numeric?Number(value):value}});
+    }}/></label>;
+   })}
+  </>}
   <small style={{gridColumn:'1/-1'}}>{exact?'Одна планировка: своё изображение, точная площадь и цена. Другую планировку добавьте отдельной карточкой.':'Группа вариантов: укажите границы площади и цены. Если верхняя цена неизвестна, оставьте её пустой.'}</small>
  </div>;
 }

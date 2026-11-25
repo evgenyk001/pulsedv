@@ -20,6 +20,7 @@ export type CatalogListOptions={
   ids?:string[];
   view?:CatalogView;
   needsReview?:boolean;
+  editing?:boolean;
 };
 
 type CatalogDocument={id?:string;kind:"presentation"|"document";name:string;url:string;mimeType:string|null;sizeBytes:number|null;sortOrder:number};
@@ -52,12 +53,17 @@ const normalizeBase=(row:any):CatalogProperty=>({
   documents:[],
 });
 
-async function hydrate(sql:Sql,items:CatalogProperty[],view:CatalogView){
+const inventoryJoin = " left join catalog_feed_inventory fi on p.id=fi.property_id";
+const effectivePrice = "coalesce(fi.min_price,p.price_from)";
+const effectiveDetails = "case when fi.property_id is null then p.project_details else p.project_details || jsonb_build_object('availableApartments',fi.available,'pricePerSqmFromRub',null,'startingApartmentArea',null) end";
+
+async function hydrate(sql:Sql,items:CatalogProperty[],view:CatalogView,editing=false){
+  const plansTable=editing?"catalog_property_floorplans":"catalog_public_floorplans";
   if(!items.length)return items;
   const ids=items.map(item=>item.id);
   if(view==='card'){
     const prices=await sql.query(`select property_id,round(min(price_from*1000000/area_from)) as price
-      from catalog_property_floorplans where property_id=any($1::text[]) and area_from>0 and area_to=area_from
+      from ${plansTable} where property_id=any($1::text[]) and area_from>0 and area_to=area_from
       and price_from>0 and (is_exact=true or price_to=price_from) group by property_id`,[ids]);
     for(const row of prices.rows){const item=items.find(p=>p.id===row.property_id)!;
       if(!((item.projectDetails?.pricePerSqmFromRub??0)>0))item.projectDetails={commissioningDate:null,totalApartments:null,availableApartments:null,...item.projectDetails,pricePerSqmFromRub:Number(row.price)};
@@ -68,14 +74,14 @@ async function hydrate(sql:Sql,items:CatalogProperty[],view:CatalogView){
 
   const [features,floorplans]=await Promise.all([
     sql.query("select id,property_id,label,icon,sort_order from catalog_property_features where property_id=any($1::text[]) order by property_id,sort_order,id",[ids]),
-    sql.query("select id,property_id,building_id,section_label,room_label,area_from,area_to,price_from,price_to,is_exact,image_url,finish_type,finish_options,sort_order from catalog_property_floorplans where property_id=any($1::text[]) order by property_id,sort_order,id",[ids]),
+    sql.query(`select id,property_id,building_id,section_label,room_label,area_from,area_to,price_from,price_to,is_exact,image_url,finish_type,finish_options,sort_order,apartment from ${plansTable} where property_id=any($1::text[]) order by property_id,sort_order,id`,[ids]),
   ]);
   for(const row of features.rows){
     byId.get(row.property_id)?.features.push({id:row.id,label:row.label,icon:row.icon,sortOrder:Number(row.sort_order)});
   }
   for(const row of floorplans.rows){
     byId.get(row.property_id)?.floorplans.push({
-      id:row.id,buildingId:row.building_id??null,sectionLabel:row.section_label??null,roomLabel:row.room_label,areaFrom:n(row.area_from),areaTo:n(row.area_to),
+      id:row.id,...(row.apartment?{apartment:row.apartment}:{}),buildingId:row.building_id??null,sectionLabel:row.section_label??null,roomLabel:row.room_label,areaFrom:n(row.area_from),areaTo:n(row.area_to),
       priceFrom:n(row.price_from),...(row.price_to!=null?{priceTo:n(row.price_to)}:{}),...(row.is_exact?{isExact:true}:{}),imageUrl:view==="full"?row.image_url:null,
        finishType:row.finish_type??null,finishOptions:Array.isArray(row.finish_options)?row.finish_options:[],sortOrder:Number(row.sort_order),
     });
@@ -136,36 +142,51 @@ export async function listCatalog(sql:Sql,options:CatalogListOptions={}){
       if(rooms==="Студия")planConditions.push("fp.room_label ilike '%студ%'");
       else planConditions.push("coalesce(substring(fp.room_label from '[0-9]+')::int,0)"+(/^\d+\+$/.test(rooms)?">="+add(parseInt(rooms)):"="+add(Number(rooms)||-1)));
     }
-    const baseConditions=["not exists(select 1 from catalog_property_floorplans fp0 where fp0.property_id=p.id)"];
+    const baseConditions=["not exists(select 1 from catalog_public_floorplans fp0 where fp0.property_id=p.id)"];
     if(buildingDate)baseConditions.push("not ("+hasBuildings+")");
-    if(minM!==undefined){const v=add(minM);planConditions.push("coalesce(fp.price_to,fp.price_from)>="+v);baseConditions.push("p.price_from>="+v);}
-    if(maxM!==undefined){const v=add(maxM);planConditions.push("fp.price_from<="+v);baseConditions.push("p.price_from<="+v);}
-    const plans="exists(select 1 from catalog_property_floorplans fp where "+planConditions.join(" and ")+")";
+    if(minM!==undefined){const v=add(minM);planConditions.push("coalesce(fp.price_to,fp.price_from)>="+v);baseConditions.push(effectivePrice+">="+v);}
+    if(maxM!==undefined){const v=add(maxM);planConditions.push("fp.price_from<="+v);baseConditions.push(effectivePrice+"<="+v);}
+    const plans="exists(select 1 from catalog_public_floorplans fp where "+planConditions.join(" and ")+")";
     where.push(specific?plans:"("+plans+" or ("+baseConditions.join(" and ")+"))");
   }
 
   const clause=where.length?" where "+where.join(" and "):"";
-  const order=options.sort==="priceAsc"?"p.price_from asc,p.sort_order asc,p.id asc":
-    options.sort==="priceDesc"?"p.price_from desc,p.sort_order asc,p.id asc":
+  const order=options.sort==="priceAsc"?effectivePrice+" asc,p.sort_order asc,p.id asc":
+    options.sort==="priceDesc"?effectivePrice+" desc,p.sort_order asc,p.id asc":
     "p.sort_order asc,p.id asc";
 
-  const totalResult=await sql.query("select count(*)::int as total from catalog_properties p"+clause,values);
+  const totalResult=await sql.query("select count(*)::int as total from catalog_properties p"+inventoryJoin+clause,values);
   const total=Number(totalResult.rows[0]?.total??0);
   const listValues=[...values,limit,(page-1)*limit];
   const view=options.view??"card";
-  const columns=view==="full"?"p.*":`p.id,p.revision,p.freshness,p.project_details,p.name,p.city,p.district,p.address,p.latitude,p.longitude,p.price_from,p.delivery,p.class_name,p.status,p.description,p.developer_name,p.tags,p.cover_image_url,p.sort_order`;
+  let columns=view==="full"?"p.*":`p.id,p.revision,p.freshness,p.project_details,p.name,p.city,p.district,p.address,p.latitude,p.longitude,p.price_from,p.delivery,p.class_name,p.status,p.description,p.developer_name,p.tags,p.cover_image_url,p.sort_order`;
+  if(!options.editing)columns+=`,${effectivePrice} as price_from,${effectiveDetails} as project_details`;
   const rows=(await sql.query(
-    "select "+columns+" from catalog_properties p"+clause+" order by "+order+" limit $"+(values.length+1)+" offset $"+(values.length+2),
+    "select "+columns+" from catalog_properties p"+inventoryJoin+clause+" order by "+order+" limit $"+(values.length+1)+" offset $"+(values.length+2),
     listValues
   )).rows;
-  const items=await hydrate(sql,rows.map(normalizeBase),view);
+  const items=await hydrate(sql,rows.map(normalizeBase),view,options.editing);
   return {items,page,limit,total,hasMore:page*limit<total};
 }
 
 export async function getCatalogProperty(sql:Sql,id:string,status:"published"|"any"="published"){
-  const row=(await sql.query("select * from catalog_properties where id=$1"+(status==="published"?" and status='published'":""),[id])).rows[0];
+  const editing=status==="any";
+  const row=(await sql.query(editing?"select p.* from catalog_properties p where p.id=$1":
+    `select p.*,${effectivePrice} as price_from,${effectiveDetails} as project_details
+      from catalog_properties p${inventoryJoin} where p.id=$1 and p.status='published'`,[id])).rows[0];
   if(!row)return null;
-  return (await hydrate(sql,[normalizeBase(row)],"full"))[0];
+  const [property]=await hydrate(sql,[normalizeBase(row)],"full",editing);
+  if(editing){
+    const state=(await sql.query(`select s.checked_at,s.successful_at,s.error,s.changes,coalesce(fi.available,0) as available
+      from catalog_feed_state s left join catalog_feed_inventory fi using(property_id) where s.property_id=$1`,[id])).rows[0];
+    if(state){
+      const plans=state.successful_at ? (await hydrate(sql,[normalizeBase(row)],"full"))[0].floorplans : [];
+      property.apartmentFeed={checkedAt:new Date(state.checked_at).toISOString(),
+        successfulAt:state.successful_at?new Date(state.successful_at).toISOString():null,
+        error:state.error,changes:state.changes,available:state.available,plans};
+    }
+  }
+  return property;
 }
 
 export async function catalogMeta(sql:Sql,status:"published"|"all"="published"){
@@ -175,7 +196,7 @@ export async function catalogMeta(sql:Sql,status:"published"|"all"="published"){
     coalesce(min(price),0) as min_price,
     coalesce(max(price),0) as max_price
     from (
-      select price_from as price from catalog_properties ${propertyWhere}
+      select ${effectivePrice} as price from catalog_properties p${inventoryJoin} where true ${joinedStatus}
       union all
       select fp.price_from as price from catalog_property_floorplans fp
       join catalog_properties p on p.id=fp.property_id
@@ -187,7 +208,7 @@ export async function catalogMeta(sql:Sql,status:"published"|"all"="published"){
     ) prices`)).rows[0];
   const countRow=(await sql.query(`select count(*)::int as total from catalog_properties ${propertyWhere}`)).rows[0];
   const cities=(await sql.query(`select city,count(*)::int as count from catalog_properties ${propertyWhere} group by city order by city`)).rows;
-  const labels=(await sql.query(`select distinct fp.room_label from catalog_property_floorplans fp join catalog_properties p on p.id=fp.property_id where true ${joinedStatus}`)).rows;
+  const labels=(await sql.query(`select distinct fp.room_label from catalog_public_floorplans fp join catalog_properties p on p.id=fp.property_id where true ${joinedStatus}`)).rows;
   const deliveries=(await sql.query(`select delivery,project_details from catalog_properties ${propertyWhere}`)).rows;
   return{
     ...catalogFacets(labels.map(item=>String(item.room_label)),deliveries.flatMap(item=>projectDeliveries({delivery:String(item.delivery),projectDetails:item.project_details}))),
@@ -250,8 +271,8 @@ export async function upsertCatalogProperty(sql:Sql,p:CatalogProperty){
     const effectivePlanPrice=plan.finishOptions?.length?(offerPrices.length?Math.min(...offerPrices):null):plan.priceFrom;
     const upperPrices=(plan.finishOptions??[]).flatMap(offer=>offer.priceFrom!==null?[offer.priceTo??offer.priceFrom]:[]);
     const effectivePlanUpper=plan.finishOptions?.length?(upperPrices.length&&plan.finishOptions.every(offer=>offer.priceFrom!==null&&offer.priceTo!=null)?Math.max(...upperPrices):null):plan.priceTo??null;
-    await sql.query("insert into catalog_property_floorplans(id,property_id,room_label,area_from,area_to,price_from,image_url,finish_type,finish_options,sort_order,price_to,is_exact,building_id,section_label) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)",[
-      plan.id||randomUUID(),p.id,plan.roomLabel,plan.areaFrom,plan.areaTo,effectivePlanPrice,plan.imageUrl,plan.finishType??null,JSON.stringify(plan.finishOptions??[]),plan.sortOrder??index,effectivePlanUpper,plan.isExact??false,buildingIds.has(plan.buildingId??previousLinks.get(plan.id)?.building_id)?(plan.buildingId===undefined?previousLinks.get(plan.id)?.building_id:plan.buildingId):null,plan.sectionLabel===undefined?(previousLinks.get(plan.id)?.section_label??null):plan.sectionLabel
+    await sql.query("insert into catalog_property_floorplans(id,property_id,room_label,area_from,area_to,price_from,image_url,finish_type,finish_options,sort_order,price_to,is_exact,building_id,section_label,apartment) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)",[
+      plan.id||randomUUID(),p.id,plan.roomLabel,plan.areaFrom,plan.areaTo,effectivePlanPrice,plan.imageUrl,plan.finishType??null,JSON.stringify(plan.finishOptions??[]),plan.sortOrder??index,effectivePlanUpper,plan.isExact??false,buildingIds.has(plan.buildingId??previousLinks.get(plan.id)?.building_id)?(plan.buildingId===undefined?previousLinks.get(plan.id)?.building_id:plan.buildingId):null,plan.sectionLabel===undefined?(previousLinks.get(plan.id)?.section_label??null):plan.sectionLabel,plan.apartment?JSON.stringify(plan.apartment):null
     ]);
   }
 

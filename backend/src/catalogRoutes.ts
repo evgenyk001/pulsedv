@@ -102,7 +102,7 @@ export async function registerCatalogRoutes(
     const query=querySchema.extend({status:z.enum(["draft","published","archived","all"]).default("all"),needsReview:z.literal("1").optional()}).parse(request.query);
     const ids=query.ids?query.ids.split(",").map(x=>x.trim()).filter(Boolean).slice(0,500):undefined;
     return listCatalog(db,{
-      needsReview:!!query.needsReview,status:query.status,page:query.page,limit:query.limit,q:query.q,city:query.city,delivery:query.delivery,
+      editing:true,needsReview:!!query.needsReview,status:query.status,page:query.page,limit:query.limit,q:query.q,city:query.city,delivery:query.delivery,
       rooms:query.rooms,sea:!!query.sea,min:query.min,max:query.max,sort:query.sort,ids,view:query.view,
     });
   });

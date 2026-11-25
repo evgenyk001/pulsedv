@@ -1,4 +1,5 @@
 import {deliverWebPush} from './webPush';
+import {parseFeedConfig,syncApartmentFeed} from './catalogFeed';
 import {runTelegramBot} from './telegramBot';
 import {refreshStoredScores} from './refreshScores';
 import {scanSearchProfiles} from './searchRoutes';
@@ -12,6 +13,16 @@ import { outboxRepository } from './outboxRepository';
 import { runSecurityMaintenance } from './maintenance';
 const config=readConfig();const db=postgresDatabase(config.DATABASE_URL);const abort=new AbortController();let nextMaintenance=0,nextReminders=0,nextSearch=0,nextDelivery=0,searchCursor='';
 process.on('SIGTERM',()=>abort.abort());process.on('SIGINT',()=>abort.abort());
+const feeds=process.env.PLAN7_APARTMENT_FEEDS_ENABLED==="true"?parseFeedConfig(process.env.PLAN7_APARTMENT_FEEDS??"[]"):[];
+const feedLoop=(async()=>{
+ while(feeds.length&&!abort.signal.aborted){
+  for(const feed of feeds){
+   if(abort.signal.aborted)break;
+   try{await syncApartmentFeed(db,feed,true);}catch{console.error("Apartment feed failed",feed.propertyId);}
+  }
+  await setTimeout(3600_000,undefined,{signal:abort.signal}).catch(()=>{});
+ }
+})();
 const bot=runTelegramBot(db,config,abort.signal);
 try{
  while(!abort.signal.aborted){
@@ -27,4 +38,4 @@ try{
   }catch{console.error('Notification batch failed; will retry');}
   await setTimeout(5000,undefined,{signal:abort.signal}).catch(()=>{});
  }
-}finally{abort.abort();await bot;await db.close();}
+}finally{abort.abort();await Promise.all([bot,feedLoop]);await db.close();}
