@@ -175,3 +175,28 @@
 .unitFacts div { background: transparent; padding: 3px 0; }
 .unitMortgage { width: 100%; border: 0; cursor: pointer; }
 .unitMortgageSecondary { margin-top: 6px; background: transparent; color: var(--primary); }
+
+.apartmentScreen {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  padding: calc(14px + var(--pulse-safe-top, 0px)) max(18px, var(--pulse-safe-right, 0px)) calc(26px + var(--pulse-safe-bottom, 0px)) max(18px, var(--pulse-safe-left, 0px));
+  border-radius: 0;
+  overflow-y: auto;
+  background: var(--background);
+}
+.apartmentScreen > button[aria-label="Закрыть"] {
+  top: calc(10px + var(--pulse-safe-top, 0px));
+  right: max(14px, var(--pulse-safe-right, 0px));
+  width: 44px;
+  height: 44px;
+  z-index: 1;
+  background: var(--app-card);
+}
+.apartmentScreen > :not(button[aria-label="Закрыть"]) { width: 100%; max-width: 560px; margin-inline: auto; }
+.apartmentScreen .unitHeading { padding: 12px 52px 6px 0; }
+.apartmentScreen .unitBack { text-align: left; }
+.apartmentScreen .unitSheetImage { height: clamp(205px, 42dvh, 430px); }
+.apartmentScreen .unitFacts { gap: 12px 21px; margin-block: 16px; }
+.apartmentScreen .unitMortgage { min-height: 52px; }
