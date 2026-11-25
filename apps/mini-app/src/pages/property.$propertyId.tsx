@@ -31,6 +31,7 @@ import {
   WalletCards, FileText
 } from "lucide-react";
 import {Sheet,SheetTrigger,SheetContent,SheetHeader,SheetTitle,SheetDescription} from "../components/Sheet";
+import verifiedPlanImages from "../helpers/verifiedPlanImages.json";
 import {usePlanImageFingerprints} from "../helpers/usePlanImageFingerprints";
 import { LeadSheet } from "../components/LeadSheet";
 import { usePropertyDetail } from "../helpers/useCatalog";
@@ -47,10 +48,15 @@ const atriumDrawingAliases:Readonly<Record<string,string>>={
   '52514':'52513',
   '52528':'52527',
 };
-const floorplanDrawingKey=(propertyId:string,imageUrl:string)=>{
+const matchingPlanImages:Readonly<Record<string,Readonly<Record<string,string>>>>=verifiedPlanImages;
+const floorplanDrawingKey=(propertyId:string,sourceUrl:string)=>{
+  const imageUrl=matchingPlanImages[propertyId]?.[sourceUrl]??sourceUrl;
   const drawingId=imageUrl.match(/^https:\/\/plan7\.ru\/img\/img\/cat_pla\/(\d+)\/pla\//)?.[1];
   if(propertyId==='e3231579-f782-405a-9c55-ce8af766682e'&&drawingId&&atriumDrawingAliases[drawingId])return 'plan7:'+atriumDrawingAliases[drawingId];
-  return drawingId?'plan7:'+drawingId:imageUrl;
+  if(drawingId)return 'plan7:'+drawingId;
+  const domclickAsset=imageUrl.match(/^https:\/\/img\.dmclk\.ru\/[^/]+\/vitrina\/[^/]+\/[^/]+\/([a-f0-9]+)\.(?:jpe?g|webp|png)(?:\?|$)/i)?.[1];
+  if(domclickAsset)return 'domclick:'+domclickAsset;
+  return imageUrl.startsWith('https://storage.yandexcloud.net/domoplaner/')?imageUrl.replace(/\?v=\d+$/,''):imageUrl;
 };
 
 const featureIcon=(name:string)=>{
@@ -300,9 +306,8 @@ export default function PropertyPage(){
                       </span>
                     </button>
                   </SheetTrigger>
-                  <SheetContent key={apartment?"apartment":"group"} side={apartment?"right":"bottom"} className={apartment?styles.apartmentScreen:styles.unitSheet}>
+                  <SheetContent key={apartment?"apartment":"group"} side={apartment?"right":"bottom"} onCloseButton={apartment&&units.length>1?()=>setChosenApartment(null):undefined} className={apartment?styles.apartmentScreen:styles.unitSheet}>
                     {apartment?<>
-                      {units.length>1&&<button type="button" className={styles.unitBack} onClick={()=>setChosenApartment(null)}>← Все варианты</button>}
                       <SheetHeader className={styles.unitHeading}>
                         <SheetTitle>{location?.number?'Квартира № '+location.number:'Планировка'}</SheetTitle>
                         <SheetDescription>{p.name} · {apartment.roomLabel==='Студия'?'Студия':apartment.roomLabel+' комн.'} · {areaLabel}</SheetDescription>

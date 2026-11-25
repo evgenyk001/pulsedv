@@ -35,6 +35,7 @@ SheetOverlay.displayName = SheetPrimitive.Overlay.displayName
 
 interface SheetContentProps
   extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> {
+  onCloseButton?: () => void;
   side?: "top" | "bottom" | "left" | "right";
 }
 
@@ -43,7 +44,7 @@ const idleDrag=()=>({pointerId:-1,startX:0,startY:0,lastY:0,lastT:0,velocity:0,o
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({side="right",className,children,style,onPointerDown,onPointerMove,onPointerUp,onPointerCancel,onLostPointerCapture,onOpenAutoFocus,onAnimationEnd,...props},forwardedRef)=>{
+>(({side="right",onCloseButton,className,children,style,onPointerDown,onPointerMove,onPointerUp,onPointerCancel,onLostPointerCapture,onOpenAutoFocus,onAnimationEnd,...props},forwardedRef)=>{
   const open=React.useContext(SheetOpenContext)
   // Owners often clear the selected record/form at the same time as open.
   // Keep the last committed view until the exit has finished, so the moving
@@ -198,7 +199,7 @@ const SheetContent = React.forwardRef<
     >
       {side==="bottom"&&<div className={styles.grabZone} data-sheet-handle="" aria-hidden="true"><span className={styles.grabber}/></div>}
       {side==='bottom'&&!open?lastOpenChildren.current:children}
-      <SheetPrimitive.Close ref={closeRef} aria-label="Закрыть" className={styles.close}>
+      <SheetPrimitive.Close ref={closeRef} aria-label="Закрыть" className={styles.close} onClick={onCloseButton?event=>{event.preventDefault();onCloseButton()}:undefined}>
         <X className={styles.closeIcon} />
       </SheetPrimitive.Close>
     </SheetPrimitive.Content>
