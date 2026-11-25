@@ -16,6 +16,13 @@ for service in api worker; do
   test -n "$container"
   docker image tag "$(docker inspect --format '{{.Image}}' "$container")" "pulsedv-rollback:${backup##*/}-$service"
 done
+docker compose exec -T worker node -e '
+const result = {};
+for (const key of ["PLAN7_APARTMENT_FEEDS_ENABLED","PLAN7_APARTMENT_FEEDS"]) {
+  if (process.env[key] !== undefined) result[key] = process.env[key];
+}
+process.stdout.write(JSON.stringify(result));
+' > "$backup/worker-feeds.json"
 image="pulsedv-release:${backup##*/}"
 docker build -t "$image" -f "$backup/build/deploy/Dockerfile.api" "$backup/build"
 keys=/root/pulsedv-web-push.json
@@ -54,6 +61,10 @@ for service in ('api', 'worker'):
         raise SystemExit('Нужна сверка закреплённого образа ' + service)
     new[service] = {'image': sys.argv[2], 'pull_policy': 'never', 'environment': {'PWA_CALL_LOGIN': 'false', 'PWA_SMS_LOGIN': 'false', 'WEB_PUSH_PUBLIC_KEY': keys['publicKey'], 'WEB_PUSH_PRIVATE_KEY': keys['privateKey'], **(telegram_env if service == 'api' else {})}}
     old[service] = {'image': f'pulsedv-rollback:{folder.name}-{service}', 'pull_policy': 'never'}
+worker_feeds = json.loads((folder / 'worker-feeds.json').read_text())
+worker_feeds = {key: value.replace('$', '$$') for key, value in worker_feeds.items()}
+new['worker']['environment'].update(worker_feeds)
+old['worker']['environment'] = worker_feeds
 for name, spec in [('candidate', new), ('rollback', old)]:
     (folder / f'{name}.json').write_text(json.dumps({'services': spec}))
 (folder / 'image-refs').write_text('\n'.join(dict.fromkeys(refs.values()))+'\n')

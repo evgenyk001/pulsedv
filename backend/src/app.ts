@@ -98,7 +98,9 @@ export async function createApp(db:Database,config:RuntimeConfig,deps:{sms?:SmsS
     ? /^\/api\/v1\/me\/(notifications|journeys(?:\/:id(?:\/messages)?)?)$/.test(route)
     : request.method==='DELETE'
      ? route==='/api/v1/me/journeys/:id/attachments/:file'
-     : request.method==='POST'&&/^\/api\/v1\/me\/(notifications\/(read|dismiss)|push\/(subscribe|unsubscribe)|journeys\/:id(?:\/(read|attachments))?)$/.test(route))
+     : request.method==='PATCH'
+      ? route==='/api/v1/me/journeys/:id/preferences'
+      : request.method==='POST'&&/^\/api\/v1\/me\/(notifications\/(read|dismiss)|push\/(subscribe|unsubscribe)|journeys\/:id(?:\/(read|attachments))?)$/.test(route))
    &&(await db.query("select 1 from leads where session_id=$1 and source='pwa-contact' limit 1",[row.id])).rows.length>0;
   const telegramWebCore=row.auth_provider==='telegram-web'&&row.user_id&&
    (/^\/api\/v1\/me\/journeys(?:\/.*)?$/.test(route)||['/api/v1/me/favorites','/api/v1/me/search','/api/v1/me/push/subscribe','/api/v1/me/push/unsubscribe'].includes(route)||route.startsWith('/api/v1/me/notifications'));

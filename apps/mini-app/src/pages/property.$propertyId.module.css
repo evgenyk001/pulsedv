@@ -212,3 +212,13 @@
 .apartmentScreen .unitDetailPrice { margin-bottom: 14px; }
 .apartmentScreen > .unitSheetImage { height: clamp(220px, 40dvh, 460px); flex: 1 1 auto; }
 .apartmentScreen > .unitActions { margin-top: auto; padding-top: 18px; }
+
+.unitSheet {
+  left: 0;
+  right: 0;
+  bottom: var(--sheet-viewport-bottom, 0px);
+  max-width: none;
+  padding-inline: max(var(--app-sheet-inline), var(--pulse-safe-left, 0px), var(--pulse-safe-right, 0px));
+  padding-bottom: calc(var(--app-sheet-bottom) + max(0px, calc(var(--pulse-safe-bottom, 0px) - var(--sheet-viewport-bottom, 0px))));
+  border-radius: var(--app-radius-sheet) var(--app-radius-sheet) 0 0 !important;
+}

@@ -147,6 +147,13 @@ test('PWA guests can submit an idempotent callback without opening account route
  assert.equal(retry.statusCode,200,retry.body);
  assert.deepEqual(retry.json(),{ok:true,id:first.json().id,duplicate:true});
  assert.equal((await app.inject({method:'POST',url:'/api/v1/leads',payload,headers})).statusCode,403);
+ const preferenceUrl='/api/v1/me/journeys/'+first.json().id+'/preferences';
+ const pinned=await app.inject({method:'PATCH',url:preferenceUrl,headers,payload:{pinned:true}});
+ assert.equal(pinned.statusCode,200,pinned.body);assert.ok(pinned.json().pinnedAt);
+ const hidden=await app.inject({method:'PATCH',url:preferenceUrl,headers,payload:{hidden:true}});
+ assert.equal(hidden.statusCode,200,hidden.body);assert.ok(hidden.json().hiddenAt);
+ const listing=await app.inject({url:'/api/v1/me/journeys',headers});
+ assert.ok(listing.json().items.find((item:any)=>item.leadId===first.json().id)?.hiddenAt);
  const campaign=await app.inject('/api/v1/public/giveaway');
  assert.equal(campaign.statusCode,200,campaign.body);
  assert.equal(campaign.json().entry,null);

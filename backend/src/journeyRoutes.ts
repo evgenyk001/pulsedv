@@ -134,7 +134,7 @@ export async function registerJourneyRoutes(app:FastifyInstance,db:Database,cont
    const leadId=id.parse((r.params as any).id);
    const input=z.object({pinned:z.boolean().optional(),hidden:z.boolean().optional()}).strict().refine(v=>v.pinned!==undefined||v.hidden!==undefined).parse(r.body);
    return db.transaction(async sql=>{
-    await leadAccess(sql,r,leadId,true,true);const {owner}=await favoriteOwner(sql,r.visitor!.sessionId);
+    const {owner}=await favoriteOwner(sql,r.visitor!.sessionId);await leadAccess(sql,r,leadId,true,true);
     const row=(await sql.query(`insert into client_journey_preferences(owner,lead_id,pinned_at,hidden_at) values($1,$2,case when $3::boolean then now() end,case when $4::boolean then now() end)
      on conflict(owner,lead_id) do update set pinned_at=case when $3::boolean is null then client_journey_preferences.pinned_at when $3 then coalesce(client_journey_preferences.pinned_at,now()) else null end,hidden_at=case when $4::boolean is null then client_journey_preferences.hidden_at when $4 then now() else null end returning pinned_at,hidden_at`,[owner,leadId,input.pinned??null,input.hidden??null])).rows[0];
     return {pinnedAt:row.pinned_at,hiddenAt:row.hidden_at};
