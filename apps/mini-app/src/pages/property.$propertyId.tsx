@@ -73,6 +73,7 @@ export default function PropertyPage(){
   const control=usePulseControlState();
   const savedScenario=React.useMemo(()=>readMortgageScenario(safeLocalStorage),[]);
   const {toggle,isFavorite}=useFavoriteIds();
+  const [chosenApartment,setChosenApartment]=React.useState<string|null>(null);
   const [photoIndex,setPhotoIndex]=React.useState(0);
   const selectionKey=location.key+':'+propertyId;
   const [selectedRoom,setSelectedRoom]=React.useState(()=>propertySelections.get(selectionKey)?.room??"");
@@ -91,7 +92,7 @@ export default function PropertyPage(){
   const selectFinish=(finish:ApartmentFinish|null)=>{setPlanLimit(6);setSelectedFinish(finish);rememberSelection({room:selectedRoom,finish,building:selectedBuilding})};
   React.useLayoutEffect(()=>{
     const saved=propertySelections.get(selectionKey);
-    setPlanLimit(saved?.planLimit??6);setSelectedBuilding(saved?.building??"");setPhotoIndex(0);setSelectedRoom(saved?.room??"");setSelectedFinish(saved?.finish??null);setShareNotice("");
+    setPlanLimit(saved?.planLimit??6);setSelectedBuilding(saved?.building??"");setChosenApartment(null);setPhotoIndex(0);setSelectedRoom(saved?.room??"");setSelectedFinish(saved?.finish??null);setShareNotice("");
   },[selectionKey]);
 
   React.useEffect(()=>{
@@ -141,7 +142,7 @@ export default function PropertyPage(){
   visiblePlans.forEach((plan,index)=>{
     const hasUnit=plan.apartment?.number||plan.apartment?.floor!=null;
     const key=hasUnit&&plan.imageUrl&&plan.areaFrom!=null&&plan.areaFrom===plan.areaTo
-      ?JSON.stringify([plan.imageUrl,plan.areaFrom,normalizeRoomLabel(plan.roomLabel)])
+      ?JSON.stringify([plan.imageUrl.match(/^https:\/\/plan7\.ru\/img\/img\/cat_pla\/(\d+)\/pla\//)?.[1] ?? plan.imageUrl,plan.areaFrom,normalizeRoomLabel(plan.roomLabel)])
       :String(index);
     const group=planGroups.get(key);
     if(group)group.push(plan);
@@ -258,11 +259,14 @@ export default function PropertyPage(){
               const planPrice=priceForPlan(plan);
               if(!plan.apartment)return <TrackedFloorplan property={p} plan={plan} className={styles.planCard} key={plan.id||index}><FloorplanViewer property={p} plan={plan} preferredFinish={selectedFinish} tile/></TrackedFloorplan>;
               const units=[plan,...otherUnits];
+              const apartment=chosenApartment===null?undefined:units.find((unit,index)=>(unit.id??String(index))===chosenApartment);
+              const location=apartment?.apartment;
+              const unitFinish=apartment?.finishType??selectedFinish;
               const unitCount=counted(units.length,'квартира','квартиры','квартир');
               const area=plan.areaFrom==null?'Площадь уточняется':plan.areaFrom.toLocaleString('ru-RU')+' м²';
               const groupPrice=units.length>1&&planPrice!==null?propertyPriceLabel(planPrice):planPriceLabel(plan,selectedFinish);
               return <TrackedFloorplan property={p} plan={plan} className={styles.planCard+" "+styles.unitCard} key={plan.id||index}>
-                <Sheet>
+                <Sheet onOpenChange={open=>{if(!open)setChosenApartment(null)}}>
                   <SheetTrigger asChild>
                     <button type="button" className={styles.unitTile} aria-label={area+', '+groupPrice+', '+unitCount}>
                       <span className={styles.unitPreview}>{plan.imageUrl&&<img src={plan.imageUrl} alt="" loading="lazy" decoding="async"/>}</span>
@@ -274,24 +278,41 @@ export default function PropertyPage(){
                     </button>
                   </SheetTrigger>
                   <SheetContent side="bottom" className={styles.unitSheet}>
+                    {apartment?<>
+                      <button type="button" className={styles.unitBack} onClick={()=>setChosenApartment(null)}>← Все квартиры</button>
+                      <SheetHeader>
+                        <SheetTitle>{location?.number?'Квартира № '+location.number:'Квартира'}</SheetTitle>
+                        <SheetDescription>{p.name} · {apartment.roomLabel==='Студия'?'Студия':apartment.roomLabel+' комн.'} · {area}</SheetDescription>
+                      </SheetHeader>
+                      {apartment.imageUrl&&<img className={styles.unitSheetImage} src={apartment.imageUrl} alt="Планировка квартиры"/>}
+                      <strong className={styles.unitDetailPrice}>{planPriceLabel(apartment,selectedFinish)}</strong>
+                      <dl className={styles.unitFacts}>
+                        {location?.building&&<div><dt>Корпус</dt><dd>{location.building}</dd></div>}
+                        {location?.entrance&&<div><dt>Подъезд</dt><dd>{location.entrance}</dd></div>}
+                        {location?.floor!=null&&<div><dt>Этаж</dt><dd>{location.floor}{location.floorsTotal!=null?' из '+location.floorsTotal:''}</dd></div>}
+                        {unitFinish&&<div><dt>Отделка</dt><dd>{apartmentFinishLabel(unitFinish)}</dd></div>}
+                      </dl>
+                      {priceForPlan(apartment)!==null&&<Link className={styles.unitMortgage} to={propertyMortgageLink(p,apartment,selectedFinish)}>Рассчитать ипотеку <ChevronRight size={16}/></Link>}
+                    </>:<>
                     <SheetHeader>
                       <SheetTitle>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'} · {area}</SheetTitle>
                       <SheetDescription>{groupPrice} · {unitCount} в продаже</SheetDescription>
                     </SheetHeader>
-                    {plan.imageUrl&&<FloorplanViewer property={p} plan={plan} preferredFinish={selectedFinish}/>}
+                    {plan.imageUrl&&<img className={styles.unitSheetImage} src={plan.imageUrl} alt="Планировка"/>}
                     <ul className={styles.unitList}>
                       {units.map((unit,unitIndex)=>{
                         const location=unit.apartment;
                         const floor=location?.floor==null?null:location.floor+' этаж'+(location.floorsTotal==null?'':' из '+location.floorsTotal);
-                        return <li key={unit.id??unitIndex}>
+                        return <li key={unit.id??unitIndex}><button type="button" onClick={()=>setChosenApartment(unit.id??String(unitIndex))}>
                           <div>
                             <strong>{location?.number?'Квартира № '+location.number:'Квартира'}</strong>
                             <small>{[floor,location?.building,location?.entrance].filter(Boolean).join(' · ')}</small>
                           </div>
-                          {priceForPlan(unit)!==null?<Link to={propertyMortgageLink(p,unit,selectedFinish)} aria-label={'Рассчитать ипотеку: '+planPriceLabel(unit,selectedFinish)}>{planPriceLabel(unit,selectedFinish)} <ChevronRight size={14}/></Link>:<b>{planPriceLabel(unit,selectedFinish)}</b>}
-                        </li>;
+                          <b>{planPriceLabel(unit,selectedFinish)} <ChevronRight size={14}/></b>
+                        </button></li>;
                       })}
                     </ul>
+                    </>}
                   </SheetContent>
                 </Sheet>
               </TrackedFloorplan>;
