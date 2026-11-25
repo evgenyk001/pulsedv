@@ -17,7 +17,6 @@ import { PropertyFreshness } from '../components/PropertyFreshness';
 import React from "react";
 
 import {propertyReturn} from "../helpers/navigationMemory";
-import {FloorplanViewer} from "../components/FloorplanViewer";
 import {APARTMENT_FINISHES,canonicalApartmentFinish,planFinishOffers,planPriceForFinish,planStartingPrice,apartmentFinishLabel} from "../../../../packages/domain/propertyFinish";
 import type {ApartmentFinish} from "../../../../packages/pulse-data/model";
 import {PropertyGallery} from "../components/PropertyGallery";
@@ -38,11 +37,18 @@ import { useFavoriteIds } from "../helpers/useFavoriteIds";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./property.$propertyId.module.css";
 
-// The Atrium feed uses three drawing IDs for this apartment layout.
-const atriumEquivalentDrawings=new Set(['52610','52612','52614']);
+// Reviewed equivalent drawings in the Atrium feed, scoped by project and area.
+const atriumDrawingAliases:Readonly<Record<string,string>>={
+  '52572':'52564',
+  '52610':'52614',
+  '52612':'52614',
+  '52611':'52608',
+  '52514':'52513',
+  '52528':'52527',
+};
 const floorplanDrawingKey=(propertyId:string,imageUrl:string)=>{
   const drawingId=imageUrl.match(/^https:\/\/plan7\.ru\/img\/img\/cat_pla\/(\d+)\/pla\//)?.[1];
-  if(propertyId==='e3231579-f782-405a-9c55-ce8af766682e'&&drawingId&&atriumEquivalentDrawings.has(drawingId))return 'plan7:52614';
+  if(propertyId==='e3231579-f782-405a-9c55-ce8af766682e'&&drawingId&&atriumDrawingAliases[drawingId])return 'plan7:'+atriumDrawingAliases[drawingId];
   return drawingId?'plan7:'+drawingId:imageUrl;
 };
 
@@ -265,45 +271,51 @@ export default function PropertyPage(){
           {planGroups.size?<div className={styles.planRail}>
             {[...planGroups.values()].slice(0,planLimit).map(([plan,...otherUnits],index)=>{
               const planPrice=priceForPlan(plan);
-              if(!plan.apartment)return <TrackedFloorplan property={p} plan={plan} className={styles.planCard} key={plan.id||index}><FloorplanViewer property={p} plan={plan} preferredFinish={selectedFinish} tile/></TrackedFloorplan>;
               const units=[plan,...otherUnits];
-              const apartment=chosenApartment===null?undefined:units.find((unit,index)=>(unit.id??String(index))===chosenApartment);
+              const apartment=units.length===1?plan:units.find((unit,index)=>(unit.id??String(index))===chosenApartment);
               const location=apartment?.apartment;
-              const unitFinish=apartment?.finishType??selectedFinish;
+              const unitOffer=apartment?planFinishOffers(apartment).find(offer=>offer.priceFrom===priceForPlan(apartment)):undefined;
+              const unitFinish=selectedFinish??apartment?.finishType??unitOffer?.finishType;
+              const unitBuilding=location?.building??buildingName(p,apartment?.buildingId);
+              const unitPrice=apartment?priceForPlan(apartment):null;
               const unitCount=counted(units.length,'квартира','квартиры','квартир');
-              const area=plan.areaFrom==null?'Площадь уточняется':plan.areaFrom.toLocaleString('ru-RU')+' м²';
+              const area=dimensionRange(plan.areaFrom,plan.areaTo);
+              const areaLabel=area?area+' м²':'Площадь уточняется';
               const groupPrice=units.length>1&&planPrice!==null?propertyPriceLabel(planPrice):planPriceLabel(plan,selectedFinish);
               return <TrackedFloorplan property={p} plan={plan} className={styles.planCard+" "+styles.unitCard} key={plan.id||index}>
                 <Sheet onOpenChange={open=>{if(!open)setChosenApartment(null)}}>
                   <SheetTrigger asChild>
-                    <button type="button" className={styles.unitTile} aria-label={area+', '+groupPrice+', '+unitCount}>
+                    <button type="button" className={styles.unitTile} aria-label={areaLabel+', '+groupPrice+(plan.apartment?', '+unitCount:'')}>
                       <span className={styles.unitPreview}>{plan.imageUrl&&<img src={plan.imageUrl} alt="" loading="lazy" decoding="async"/>}</span>
                       <span className={styles.unitTileCopy}>
-                        <strong>{area}</strong>
+                        <strong>{areaLabel}</strong>
                         <b>{groupPrice}</b>
-                        <span>{unitCount} <ChevronRight size={14}/></span>
+                        <span>{plan.apartment?unitCount:'Смотреть планировку'} <ChevronRight size={14}/></span>
                       </span>
                     </button>
                   </SheetTrigger>
                   <SheetContent side="bottom" className={styles.unitSheet}>
                     {apartment?<>
-                      <button type="button" className={styles.unitBack} onClick={()=>setChosenApartment(null)}>← Все квартиры</button>
-                      <SheetHeader>
-                        <SheetTitle>{location?.number?'Квартира № '+location.number:'Квартира'}</SheetTitle>
-                        <SheetDescription>{p.name} · {apartment.roomLabel==='Студия'?'Студия':apartment.roomLabel+' комн.'} · {area}</SheetDescription>
+                      {units.length>1&&<button type="button" className={styles.unitBack} onClick={()=>setChosenApartment(null)}>← Все квартиры</button>}
+                      <SheetHeader className={styles.unitHeading}>
+                        <SheetTitle>{location?.number?'Квартира № '+location.number:'Планировка'}</SheetTitle>
+                        <SheetDescription>{p.name} · {apartment.roomLabel==='Студия'?'Студия':apartment.roomLabel+' комн.'} · {areaLabel}</SheetDescription>
                       </SheetHeader>
-                      {apartment.imageUrl&&<img className={styles.unitSheetImage} src={apartment.imageUrl} alt="Планировка квартиры"/>}
                       <strong className={styles.unitDetailPrice}>{planPriceLabel(apartment,selectedFinish)}</strong>
-                      <dl className={styles.unitFacts}>
-                        {location?.building&&<div><dt>Корпус</dt><dd>{location.building}</dd></div>}
-                        {location?.entrance&&<div><dt>Подъезд</dt><dd>{location.entrance}</dd></div>}
+                      {apartment.imageUrl&&<img className={styles.unitSheetImage} src={apartment.imageUrl} alt="Планировка квартиры"/>}
+                      {(unitBuilding||location?.entrance||location?.floor!=null||apartment.sectionLabel||unitFinish)&&<dl className={styles.unitFacts}>
+                        {unitBuilding&&<div><dt>Корпус</dt><dd>{unitBuilding}</dd></div>}
+                        {location?.entrance?<div><dt>Подъезд</dt><dd>{location.entrance.replace(/^подъезд\s+/i,"")}</dd></div>:apartment.sectionLabel&&<div><dt>Секция</dt><dd>{apartment.sectionLabel}</dd></div>}
                         {location?.floor!=null&&<div><dt>Этаж</dt><dd>{location.floor}{location.floorsTotal!=null?' из '+location.floorsTotal:''}</dd></div>}
                         {unitFinish&&<div><dt>Отделка</dt><dd>{apartmentFinishLabel(unitFinish)}</dd></div>}
-                      </dl>
-                      {priceForPlan(apartment)!==null&&<Link className={styles.unitMortgage} to={propertyMortgageLink(p,apartment,selectedFinish)}>Рассчитать ипотеку <ChevronRight size={16}/></Link>}
+                      </dl>}
+                      <LeadSheet title={location?.number?'Квартира № '+location.number:'Интересует эта планировка'} project={p.name} propertyId={p.id} source="floorplan" context={{floorplanId:apartment.id,buildingId:apartment.buildingId,buildingName:unitBuilding,section:apartment.sectionLabel,rooms:apartment.roomLabel,areaFrom:apartment.areaFrom,areaTo:apartment.areaTo,finishType:unitFinish,price:unitPrice===null?null:propertyPriceRub(unitPrice)}}>
+                        <button type="button" className={styles.unitMortgage}>Уточнить наличие <ChevronRight size={16}/></button>
+                      </LeadSheet>
+                      {unitPrice!==null&&<Link className={styles.unitMortgage+" "+styles.unitMortgageSecondary} to={propertyMortgageLink(p,apartment,selectedFinish)}>Рассчитать ипотеку <ChevronRight size={16}/></Link>}
                     </>:<>
-                    <SheetHeader>
-                      <SheetTitle>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'} · {area}</SheetTitle>
+                    <SheetHeader className={styles.unitHeading}>
+                      <SheetTitle>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'} · {areaLabel}</SheetTitle>
                       <SheetDescription>{groupPrice} · {unitCount} в продаже</SheetDescription>
                     </SheetHeader>
                     {plan.imageUrl&&<img className={styles.unitSheetImage} src={plan.imageUrl} alt="Планировка"/>}
