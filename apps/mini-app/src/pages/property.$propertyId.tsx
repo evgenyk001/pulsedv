@@ -49,8 +49,9 @@ const atriumDrawingAliases:Readonly<Record<string,string>>={
   '52528':'52527',
 };
 const matchingPlanImages:Readonly<Record<string,Readonly<Record<string,string>>>>=verifiedPlanImages;
-const floorplanDrawingKey=(propertyId:string,sourceUrl:string)=>{
-  const imageUrl=matchingPlanImages[propertyId]?.[sourceUrl]??sourceUrl;
+const verifiedDrawing=(propertyId:string,area:number,imageUrl:string)=>
+  matchingPlanImages[propertyId]?.[area+'|'+imageUrl]??matchingPlanImages[propertyId]?.[imageUrl];
+const floorplanDrawingKey=(propertyId:string,imageUrl:string)=>{
   const drawingId=imageUrl.match(/^https:\/\/plan7\.ru\/img\/img\/cat_pla\/(\d+)\/pla\//)?.[1];
   if(propertyId==='e3231579-f782-405a-9c55-ce8af766682e'&&drawingId&&atriumDrawingAliases[drawingId])return 'plan7:'+atriumDrawingAliases[drawingId];
   if(drawingId)return 'plan7:'+drawingId;
@@ -164,7 +165,7 @@ export default function PropertyPage(){
   const planGroups=new Map<string,typeof visiblePlans>();
   visiblePlans.forEach((plan,index)=>{
     const key=plan.imageUrl&&plan.areaFrom!=null&&plan.areaFrom===plan.areaTo
-      ?JSON.stringify([drawingFingerprints?.get(plan.imageUrl)??floorplanDrawingKey(p.id,plan.imageUrl),plan.areaFrom,normalizeRoomLabel(plan.roomLabel)])
+      ?JSON.stringify([verifiedDrawing(p.id,plan.areaFrom,plan.imageUrl)??drawingFingerprints?.get(plan.imageUrl)??floorplanDrawingKey(p.id,plan.imageUrl),plan.areaFrom,normalizeRoomLabel(plan.roomLabel)])
       :String(index);
     const group=planGroups.get(key);
     if(group)group.push(plan);
@@ -320,10 +321,12 @@ export default function PropertyPage(){
                         {location?.floor!=null&&<div><dt>Этаж</dt><dd>{location.floor}{location.floorsTotal!=null?' из '+location.floorsTotal:''}</dd></div>}
                         {unitFinish&&<div><dt>Отделка</dt><dd>{apartmentFinishLabel(unitFinish)}</dd></div>}
                       </dl>}
+                      <div className={styles.unitActions}>
                       <LeadSheet title={location?.number?'Квартира № '+location.number:'Интересует эта планировка'} project={p.name} propertyId={p.id} source="floorplan" context={{floorplanId:apartment.id,buildingId:apartment.buildingId,buildingName:unitBuilding,section:apartment.sectionLabel,rooms:apartment.roomLabel,areaFrom:apartment.areaFrom,areaTo:apartment.areaTo,finishType:unitFinish,price:unitPrice===null?null:propertyPriceRub(unitPrice)}}>
                         <button type="button" className={styles.unitMortgage}>Уточнить наличие <ChevronRight size={16}/></button>
                       </LeadSheet>
                       {unitPrice!==null&&<Link className={styles.unitMortgage+" "+styles.unitMortgageSecondary} to={propertyMortgageLink(p,apartment,selectedFinish)}>Рассчитать ипотеку <ChevronRight size={16}/></Link>}
+                      </div>
                     </>:<>
                     <SheetHeader className={styles.unitHeading}>
                       <SheetTitle>{plan.roomLabel==='Студия'?'Студия':plan.roomLabel+' комн.'} · {areaLabel}</SheetTitle>

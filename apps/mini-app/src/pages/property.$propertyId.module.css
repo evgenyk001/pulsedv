@@ -207,3 +207,8 @@
 }
 .apartmentScreen > .unitFacts { margin-block: 20px; }
 .apartmentScreen > .unitMortgageSecondary { margin-bottom: 2px; }
+
+.apartmentScreen { padding-top: calc(clamp(26px, 5dvh, 54px) + var(--pulse-safe-top, 0px)); }
+.apartmentScreen .unitDetailPrice { margin-bottom: 14px; }
+.apartmentScreen > .unitSheetImage { height: clamp(220px, 40dvh, 460px); flex: 1 1 auto; }
+.apartmentScreen > .unitActions { margin-top: auto; padding-top: 18px; }
