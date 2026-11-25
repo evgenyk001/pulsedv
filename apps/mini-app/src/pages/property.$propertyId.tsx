@@ -38,6 +38,14 @@ import { useFavoriteIds } from "../helpers/useFavoriteIds";
 import { recordPulseEvent } from "../../../../packages/pulse-data";
 import styles from "./property.$propertyId.module.css";
 
+// The Atrium feed uses three drawing IDs for this apartment layout.
+const atriumEquivalentDrawings=new Set(['52610','52612','52614']);
+const floorplanDrawingKey=(propertyId:string,imageUrl:string)=>{
+  const drawingId=imageUrl.match(/^https:\/\/plan7\.ru\/img\/img\/cat_pla\/(\d+)\/pla\//)?.[1];
+  if(propertyId==='e3231579-f782-405a-9c55-ce8af766682e'&&drawingId&&atriumEquivalentDrawings.has(drawingId))return 'plan7:52614';
+  return drawingId?'plan7:'+drawingId:imageUrl;
+};
+
 const featureIcon=(name:string)=>{
   if(name==="waves")return Waves;
   if(name==="trees")return Trees;
@@ -142,7 +150,7 @@ export default function PropertyPage(){
   visiblePlans.forEach((plan,index)=>{
     const hasUnit=plan.apartment?.number||plan.apartment?.floor!=null;
     const key=hasUnit&&plan.imageUrl&&plan.areaFrom!=null&&plan.areaFrom===plan.areaTo
-      ?JSON.stringify([plan.imageUrl.match(/^https:\/\/plan7\.ru\/img\/img\/cat_pla\/(\d+)\/pla\//)?.[1] ?? plan.imageUrl,plan.areaFrom,normalizeRoomLabel(plan.roomLabel)])
+      ?JSON.stringify([floorplanDrawingKey(p.id,plan.imageUrl),plan.areaFrom,normalizeRoomLabel(plan.roomLabel)])
       :String(index);
     const group=planGroups.get(key);
     if(group)group.push(plan);
