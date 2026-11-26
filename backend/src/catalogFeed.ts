@@ -109,7 +109,7 @@ export function parseProfitbaseFeed(xml:string,config:FeedConfig,city:string,gen
   const validImage=(url:string)=>{
     try{
       const image=new URL(url);
-      return image.origin===new URL(config.url).origin && /^\/uploads\/layout\//.test(image.pathname);
+      return image.origin===new URL(config.url).origin && /^\/uploads\/preset\//.test(image.pathname);
     }catch{return false;}
   };
   parser.on('doctype',()=>{throw new Error('DTD запрещён');});
