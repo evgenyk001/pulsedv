@@ -5,10 +5,13 @@ export function usePlanImageFingerprints(plans:readonly PropertyFloorplan[]|unde
   const candidates=useMemo(()=>{
     const buckets=new Map<string,Set<string>>();
     for(const plan of plans??[]){
-      if(!plan.imageUrl?.startsWith('/media/')||plan.areaFrom==null||plan.areaFrom!==plan.areaTo)continue;
+      const imageUrl=plan.imageUrl;
+      const comparableImage=imageUrl?.startsWith('/media/') ||
+        /^https:\/\/pb[0-9]+\.profitbase\.ru\/uploads\/preset\//.test(imageUrl??'');
+      if(!imageUrl||!comparableImage||plan.areaFrom==null||plan.areaFrom!==plan.areaTo)continue;
       const key=JSON.stringify([plan.roomLabel,plan.areaFrom]);
       const urls=buckets.get(key)??new Set<string>();
-      urls.add(plan.imageUrl);
+      urls.add(imageUrl);
       buckets.set(key,urls);
     }
     return [...new Set([...buckets.values()].filter(urls=>urls.size>1).flatMap(urls=>[...urls]))];
