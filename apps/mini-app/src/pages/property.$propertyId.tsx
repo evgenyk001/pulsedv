@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import {Sheet,SheetTrigger,SheetContent,SheetHeader,SheetTitle,SheetDescription} from "../components/Sheet";
 import verifiedPlanImages from "../helpers/verifiedPlanImages.json";
+import {useGloraxPlans} from '../helpers/useGloraxPlans';
 import {usePlanImageFingerprints} from "../helpers/usePlanImageFingerprints";
 import { LeadSheet } from "../components/LeadSheet";
 import { usePropertyDetail } from "../helpers/useCatalog";
@@ -96,6 +97,7 @@ export default function PropertyPage(){
   const savedScenario=React.useMemo(()=>readMortgageScenario(safeLocalStorage),[]);
   const {toggle,isFavorite}=useFavoriteIds();
   const [planOpen,setPlanOpen]=React.useState(false);
+  const gloraxPlans=useGloraxPlans(propertyId,planOpen);
   const drawingFingerprints=usePlanImageFingerprints(p?.floorplans,planOpen);
   const [chosenApartment,setChosenApartment]=React.useState<string|null>(null);
   const [photoIndex,setPhotoIndex]=React.useState(0);
@@ -165,7 +167,7 @@ export default function PropertyPage(){
   const planGroups=new Map<string,typeof visiblePlans>();
   visiblePlans.forEach((plan,index)=>{
     const key=plan.imageUrl&&plan.areaFrom!=null&&plan.areaFrom===plan.areaTo
-      ?JSON.stringify([verifiedDrawing(p.id,plan.areaFrom,plan.imageUrl)??drawingFingerprints?.get(plan.imageUrl)??floorplanDrawingKey(p.id,plan.imageUrl),plan.areaFrom,normalizeRoomLabel(plan.roomLabel)])
+      ?JSON.stringify([verifiedDrawing(p.id,plan.areaFrom,plan.imageUrl)??gloraxPlans?.[plan.imageUrl]?.drawing??drawingFingerprints?.get(plan.imageUrl)??floorplanDrawingKey(p.id,plan.imageUrl),plan.areaFrom,normalizeRoomLabel(plan.roomLabel)])
       :String(index);
     const group=planGroups.get(key);
     if(group)group.push(plan);
@@ -299,7 +301,10 @@ export default function PropertyPage(){
                 <Sheet onOpenChange={open=>{setPlanOpen(open);if(!open)setChosenApartment(null)}}>
                   <SheetTrigger asChild>
                     <button type="button" className={styles.unitTile} aria-label={areaLabel+', '+groupPrice+(showCount?', '+unitCount:'')}>
-                      <span className={styles.unitPreview}>{plan.imageUrl&&<img src={plan.imageUrl} alt="" loading="lazy" decoding="async"/>}</span>
+                      <span className={styles.unitPreview}>{plan.imageUrl&&<img src={gloraxPlans?.[plan.imageUrl]?.preview??plan.imageUrl} alt="" loading={gloraxPlans?.[plan.imageUrl]?.preview&&index<2?'eager':'lazy'} decoding="async" onError={event=>{
+                        const image=event.currentTarget;
+                        if(image.getAttribute('src')!==plan.imageUrl && plan.imageUrl)image.src=plan.imageUrl;
+                      }}/>}</span>
                       <span className={styles.unitTileCopy}>
                         <strong>{areaLabel}</strong>
                         <b>{groupPrice}</b>

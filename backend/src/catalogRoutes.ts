@@ -1,6 +1,7 @@
+import { gloraxPlanProjects } from '../../packages/domain/gloraxPlans';
 import sharp from 'sharp';
 import {validateMedia} from './mediaValidation';
-import { mkdir, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -96,6 +97,19 @@ export async function registerCatalogRoutes(
     if(!property)return reply.code(404).send({error:"Объект не найден"});
     const {freshness,...publicProperty}=property;
     return {property:publicProperty};
+  });
+
+  app.get('/api/v1/public/catalog/:id/glorax-plans', async (request, reply) => {
+    const { id } = z.object({ id: z.enum(gloraxPlanProjects) }).parse(request.params);
+    const { rows } = await db.query("select 1 from catalog_properties where id=$1 and status='published'", [id]);
+    if (!rows.length) return reply.code(404).send({ error: 'Объект не найден' });
+    try {
+      const manifest = await readFile(join(config.MEDIA_ROOT, 'private', 'glorax-plans', id + '.json'), 'utf8');
+      return reply.header('Cache-Control', 'public, max-age=60').type('application/json').send(manifest);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+      return reply.header('Cache-Control', 'no-store').send({});
+    }
   });
 
   app.get("/api/v1/control/catalog",{preHandler:editor},async request=>{
