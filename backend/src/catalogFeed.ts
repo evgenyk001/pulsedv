@@ -3,10 +3,12 @@ import {SaxesParser} from 'saxes';
 import {z} from 'zod';
 import type {Database} from './database';
 
+const gloraxUrl = z.string().regex(/^https:\/\/crm-feed\.glorax\.com\/ExportToService\.svc\/ExportToAgent\/[a-f0-9-]{36}$/i);
 const feedConfig = z.array(z.object({
   propertyId:z.string().min(1).max(120),
   projectName:z.string().min(1),
-  url:z.string().regex(/^https:\/\/(?:plan7\.ru\/storage\/cat_feeds\/farpost\/[0-9]+\/save\.xml|pb[0-9]+\.profitbase\.ru\/export\/domclick\/[a-f0-9]{32}\?scheme=https)$/),
+  url:z.union([gloraxUrl,z.string().regex(/^https:\/\/(?:plan7\.ru\/storage\/cat_feeds\/farpost\/[0-9]+\/save\.xml|pb[0-9]+\.profitbase\.ru\/export\/domclick\/[a-f0-9]{32}\?scheme=https)$/)]),
+  glorax:z.array(z.object({url:gloraxUrl,building:z.string().trim().min(1).max(120)})).min(1).max(30).optional(),
   profitbase:z.object({
     complexId:z.string().regex(/^\d+$/),
     buildings:z.array(z.object({
@@ -17,7 +19,9 @@ const feedConfig = z.array(z.object({
     })).min(1).refine(ranges=>ranges.every((range,index)=>
       range.from<=range.to && ranges.every((other,j)=>j===index || range.to<other.from || other.to<range.from))),
   }).optional(),
-}).refine(item=>Boolean(item.profitbase)===(!item.url.startsWith('https://plan7.ru/')))).max(100).refine(items=>new Set(items.map(item=>item.propertyId)).size===items.length);
+}).refine(item=>Boolean(item.profitbase)===item.url.includes('.profitbase.ru/') &&
+  (gloraxUrl.safeParse(item.url).success ? Boolean(item.glorax?.some(source=>source.url===item.url) &&
+    new Set(item.glorax.map(source=>source.url)).size===item.glorax.length) : !item.glorax))).max(100).refine(items=>new Set(items.map(item=>item.propertyId)).size===items.length);
 export type FeedConfig = z.infer<typeof feedConfig>[number];
 export const parseFeedConfig = (value:string) => feedConfig.parse(JSON.parse(value));
 
@@ -166,6 +170,75 @@ export function parseProfitbaseFeed(xml:string,config:FeedConfig,city:string,gen
   return {generation,apartments};
 }
 
+export function parseGloraxFeed(xml:string,projectName:string,city:string,building:string) {
+  const parser=new SaxesParser({xmlns:true});
+  const path:string[]=[];
+  const ids=new Set<string>();
+  const apartments:FeedApartment[]=[];
+  let data:Record<string,string>={};
+  let generation='';
+  let value='';
+  let externalId='';
+  let image='';
+  parser.on('doctype',()=>{throw new Error('DTD запрещён');});
+  parser.on('opentag',tag=>{
+    if(tag.uri!==namespace || (!path.length && tag.local!=='realty-feed'))throw new Error('Неизвестный формат GloraX');
+    path.push(tag.local);
+    value='';
+    if(path.length===2 && tag.local==='offer'){
+      externalId=z.guid().parse(tag.attributes['internal-id']?.value);
+      data={};
+      image='';
+    }
+  });
+  parser.on('text',text=>{value+=text;});
+  parser.on('cdata',text=>{value+=text;});
+  parser.on('closetag',tag=>{
+    const content=value.trim();
+    if(path.length===2 && tag.local==='generation-date')generation=content;
+    if(path[1]==='offer' && path.length>2){
+      const key=path.slice(2).join('/');
+      if(key!=='image')data[key]=content;
+      else if(!image && /^https:\/\/crmftp\.glorax\.com\/[^?#]+\/[^/?#]+\.png$/i.test(content))image=content;
+    }
+    if(path.length===2 && tag.local==='offer'){
+      if(ids.has(externalId)||data['building-name']!==projectName||data['location/locality-name']!==city||
+        data.type!=='продажа'||data.category!=='квартира')throw new Error('Неверный проект или дубли в фиде GloraX');
+      ids.add(externalId);
+      if(data['status/value']==='Свободно' && data['status/code']==='4'){
+        if(data['price/currency']!=='RUB')throw new Error('Неизвестная валюта GloraX');
+        const rooms=z.string().regex(/^\d+$/).parse(data.rooms);
+        const floor=z.coerce.number().int().parse(field.parse(data.floor));
+        const floorsTotal=z.coerce.number().int().positive().parse(field.parse(data['floors-total']));
+        if(floor>floorsTotal)throw new Error('Некорректный этаж GloraX');
+        apartments.push({
+          id:'feed-'+createHash('sha256').update('glorax:'+externalId).digest('hex').slice(0,32),
+          externalId,roomLabel:data.studio==='1'||rooms==='0'?'Студия':rooms,
+          area:positive.parse(data['area/value']?.replace(',','.')),
+          price:positive.parse(data['price/value']?.replace(',','.'))/1_000_000,
+          image,
+          apartment:{building,entrance:null,number:field.parse(data['location/apartment']),floor,floorsTotal},
+        });
+      }
+    }
+    path.pop();
+    value='';
+  });
+  parser.write(xml).close();
+  return {generation:z.iso.datetime({offset:true}).parse(generation),apartments};
+}
+
+async function loadGloraxFeed(config:FeedConfig,city:string){
+  const parts=await Promise.all(config.glorax!.map(async source=>
+    parseGloraxFeed(await download(source.url),config.projectName,city,source.building)));
+  const apartments=parts.flatMap(part=>part.apartments);
+  if(!apartments.length||new Set(apartments.map(lot=>lot.id)).size!==apartments.length){
+    throw new Error('Пустой проект или дубли между корпусами GloraX');
+  }
+  const generation=parts.map(part=>new Date(part.generation).toISOString()).sort()[0];
+  return {generation,apartments};
+}
+
 async function download(url:string) {
   const response=await fetch(url,{redirect:'error',signal:AbortSignal.timeout(15_000)});
   if(!response.ok || !response.body) throw new Error('Фид недоступен');
@@ -191,10 +264,11 @@ export async function syncApartmentFeed(db:Database,config:FeedConfig,apply=fals
   if(!property)throw new Error('Карточка проекта не найдена');
   try{
     const requestedAt=new Date().toISOString();
-    const xml=await download(config.url);
-    const snapshot=config.profitbase
-      ? parseProfitbaseFeed(xml,config,property.city,requestedAt)
-      : parseApartmentFeed(xml,config.projectName,property.city);
+    const snapshot=config.glorax
+      ? await loadGloraxFeed(config,property.city)
+      : config.profitbase
+        ? parseProfitbaseFeed(await download(config.url),config,property.city,requestedAt)
+        : parseApartmentFeed(await download(config.url),config.projectName,property.city);
     return await db.transaction(async sql=>{
       const current=(await sql.query('select city from catalog_properties where id=$1 for update',[config.propertyId])).rows[0];
       if(!current || current.city!==property.city)throw new Error('Карточка проекта изменилась');
