@@ -6,8 +6,18 @@ import type {Database} from './database';
 const feedConfig = z.array(z.object({
   propertyId:z.string().min(1).max(120),
   projectName:z.string().min(1),
-  url:z.string().regex(/^https:\/\/plan7\.ru\/storage\/cat_feeds\/farpost\/[0-9]+\/save\.xml$/),
-})).max(100).refine(items=>new Set(items.map(item=>item.propertyId)).size===items.length);
+  url:z.string().regex(/^https:\/\/(?:plan7\.ru\/storage\/cat_feeds\/farpost\/[0-9]+\/save\.xml|pb[0-9]+\.profitbase\.ru\/export\/domclick\/[a-f0-9]{32}\?scheme=https)$/),
+  profitbase:z.object({
+    complexId:z.string().regex(/^\d+$/),
+    buildings:z.array(z.object({
+      name:z.string().trim().min(1).max(120),
+      from:z.number().int().positive(),
+      to:z.number().int().positive(),
+      floors:z.number().int().positive(),
+    })).min(1).refine(ranges=>ranges.every((range,index)=>
+      range.from<=range.to && ranges.every((other,j)=>j===index || range.to<other.from || other.to<range.from))),
+  }).optional(),
+}).refine(item=>Boolean(item.profitbase)===(!item.url.startsWith('https://plan7.ru/')))).max(100).refine(items=>new Set(items.map(item=>item.propertyId)).size===items.length);
 export type FeedConfig = z.infer<typeof feedConfig>[number];
 export const parseFeedConfig = (value:string) => feedConfig.parse(JSON.parse(value));
 
@@ -80,6 +90,82 @@ export function parseApartmentFeed(xml:string,projectName:string,city:string) {
   return {generation:date,apartments};
 }
 
+export function parseProfitbaseFeed(xml:string,config:FeedConfig,city:string,generation:string) {
+  if(!config.profitbase)throw new Error('Отсутствуют настройки Profitbase');
+  const settings=config.profitbase;
+  const parser=new SaxesParser({xmlns:true});
+  const path:string[]=[];
+  const apartments:FeedApartment[]=[];
+  const ids=new Set<string>();
+  const numbers=new Set<string>();
+  let complexCount=0;
+  let complexId='';
+  let name='';
+  let address='';
+  let value='';
+  let fields:Record<string,string>={};
+  let plan='';
+  const flatPath='complexes/complex/buildings/building/flats/flat';
+  const validImage=(url:string)=>{
+    try{
+      const image=new URL(url);
+      return image.origin===new URL(config.url).origin && /^\/uploads\/layout\//.test(image.pathname);
+    }catch{return false;}
+  };
+  parser.on('doctype',()=>{throw new Error('DTD запрещён');});
+  parser.on('opentag',tag=>{
+    if(tag.uri || (!path.length && tag.local!=='complexes'))throw new Error('Неизвестный формат XML Profitbase');
+    path.push(tag.local);
+    const key=path.join('/');
+    value='';
+    if(key==='complexes/complex')complexCount++;
+    if(key===flatPath){
+      fields={};
+      plan='';
+    }
+  });
+  parser.on('text',text=>{value+=text;});
+  parser.on('cdata',text=>{value+=text;});
+  parser.on('closetag',()=>{
+    const key=path.join('/');
+    const content=value.trim();
+    if(key==='complexes/complex/id')complexId=content;
+    if(key==='complexes/complex/name')name=content;
+    if(key==='complexes/complex/address')address=content;
+    if(key===flatPath+'/plans/plan' && !plan && validImage(content))plan=content;
+    if(path.length===7 && key.startsWith(flatPath+'/'))fields[path[6]]=content;
+    if(key===flatPath){
+      const externalId=z.string().regex(/^\d+$/).parse(fields.flat_id);
+      const number=z.string().regex(/^[1-9]\d*$/).parse(fields.apartment);
+      const floor=z.coerce.number().int().positive().parse(field.parse(fields.floor));
+      const rooms=z.string().regex(/^\d+$/).parse(fields.room);
+      const building=settings.buildings.find(range=>+number>=range.from && +number<=range.to);
+      if(!building || floor>building.floors || !plan || ids.has(externalId) || numbers.has(number)){
+        throw new Error('Некорректный лот или диапазон корпуса Profitbase');
+      }
+      ids.add(externalId);
+      numbers.add(number);
+      apartments.push({
+        id:'feed-'+createHash('sha256').update('profitbase:'+externalId).digest('hex').slice(0,32),
+        externalId,
+        roomLabel:rooms==='0'?'Студия':rooms,
+        area:positive.parse(fields.area),
+        price:positive.parse(fields.price)/1_000_000,
+        image:plan,
+        apartment:{building:building.name,entrance:null,number,floor,floorsTotal:building.floors},
+      });
+    }
+    path.pop();
+    value='';
+  });
+  parser.write(xml).close();
+  if(complexCount!==1 || complexId!==settings.complexId || name!==config.projectName ||
+     !address.split(',').some(part=>part.trim()===city) || !apartments.length){
+    throw new Error('Пустой фид или данные другого проекта Profitbase');
+  }
+  return {generation,apartments};
+}
+
 async function download(url:string) {
   const response=await fetch(url,{redirect:'error',signal:AbortSignal.timeout(15_000)});
   if(!response.ok || !response.body) throw new Error('Фид недоступен');
@@ -104,7 +190,11 @@ export async function syncApartmentFeed(db:Database,config:FeedConfig,apply=fals
   const property=(await db.query('select city from catalog_properties where id=$1',scope.slice(0,1))).rows[0];
   if(!property)throw new Error('Карточка проекта не найдена');
   try{
-    const snapshot=parseApartmentFeed(await download(config.url),config.projectName,property.city);
+    const requestedAt=new Date().toISOString();
+    const xml=await download(config.url);
+    const snapshot=config.profitbase
+      ? parseProfitbaseFeed(xml,config,property.city,requestedAt)
+      : parseApartmentFeed(xml,config.projectName,property.city);
     return await db.transaction(async sql=>{
       const current=(await sql.query('select city from catalog_properties where id=$1 for update',[config.propertyId])).rows[0];
       if(!current || current.city!==property.city)throw new Error('Карточка проекта изменилась');
