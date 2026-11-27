@@ -1,3 +1,4 @@
+import {cacheDomoplanerPlans, domoplanerUrl, parseDomoplanerFeed} from './domoplanerFeed';
 import {createHash} from 'node:crypto';
 import {SaxesParser} from 'saxes';
 import {z} from 'zod';
@@ -7,7 +8,8 @@ const gloraxUrl = z.string().regex(/^https:\/\/crm-feed\.glorax\.com\/ExportToSe
 const feedConfig = z.array(z.object({
   propertyId:z.string().min(1).max(120),
   projectName:z.string().min(1),
-  url:z.union([gloraxUrl,z.string().regex(/^https:\/\/(?:plan7\.ru\/storage\/cat_feeds\/farpost\/[0-9]+\/save\.xml|pb[0-9]+\.profitbase\.ru\/export\/domclick\/[a-f0-9]{32}\?scheme=https)$/)]),
+  url:z.union([gloraxUrl,domoplanerUrl,z.string().regex(/^https:\/\/(?:plan7\.ru\/storage\/cat_feeds\/farpost\/[0-9]+\/save\.xml|pb[0-9]+\.profitbase\.ru\/export\/domclick\/[a-f0-9]{32}\?scheme=https)$/)]),
+  domoplaner:z.object({complexId:z.string().regex(/^\d+$/),firstImageIsPlan:z.boolean().optional()}).optional(),
   glorax:z.array(z.object({url:gloraxUrl,building:z.string().trim().min(1).max(120)})).min(1).max(30).optional(),
   profitbase:z.object({
     complexId:z.string().regex(/^\d+$/),
@@ -19,7 +21,7 @@ const feedConfig = z.array(z.object({
     })).min(1).refine(ranges=>ranges.every((range,index)=>
       range.from<=range.to && ranges.every((other,j)=>j===index || range.to<other.from || other.to<range.from))),
   }).optional(),
-}).refine(item=>Boolean(item.profitbase)===item.url.includes('.profitbase.ru/') &&
+}).refine(item=>Boolean(item.domoplaner)===domoplanerUrl.safeParse(item.url).success && Boolean(item.profitbase)===item.url.includes('.profitbase.ru/') &&
   (gloraxUrl.safeParse(item.url).success ? Boolean(item.glorax?.some(source=>source.url===item.url) &&
     new Set(item.glorax.map(source=>source.url)).size===item.glorax.length) : !item.glorax))).max(100).refine(items=>new Set(items.map(item=>item.propertyId)).size===items.length);
 export type FeedConfig = z.infer<typeof feedConfig>[number];
@@ -258,13 +260,23 @@ async function download(url:string) {
   }finally{await reader.cancel();}
 }
 
+export async function readDomoplanerSnapshot(config:FeedConfig, city:string, apply=false){
+  if(!config.domoplaner)throw new Error('Отсутствуют настройки Domoplaner');
+  const generation=new Date().toISOString();
+  const snapshot=parseDomoplanerFeed(await download(config.url),{...config,domoplaner:config.domoplaner},city,generation);
+  if(apply)snapshot.apartments=await cacheDomoplanerPlans(snapshot.apartments,process.env.MEDIA_ROOT??'/data/media');
+  return snapshot;
+}
+
 export async function syncApartmentFeed(db:Database,config:FeedConfig,apply=false){
   const scope=[config.propertyId,config.url];
   const property=(await db.query('select city from catalog_properties where id=$1',scope.slice(0,1))).rows[0];
   if(!property)throw new Error('Карточка проекта не найдена');
   try{
     const requestedAt=new Date().toISOString();
-    const snapshot=config.glorax
+    const snapshot=config.domoplaner
+      ? await readDomoplanerSnapshot(config,property.city,apply)
+      : config.glorax
       ? await loadGloraxFeed(config,property.city)
       : config.profitbase
         ? parseProfitbaseFeed(await download(config.url),config,property.city,requestedAt)
