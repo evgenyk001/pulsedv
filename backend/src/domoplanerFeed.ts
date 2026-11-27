@@ -21,7 +21,7 @@ const finishTypes = new Map([
 
 type DomoplanerConfig = {projectName: string; domoplaner: {complexId: string; firstImageIsPlan?: boolean}};
 type DomoplanerApartment = {
-  id: string; externalId: string; roomLabel: string; area: number; price: number; image: string;
+  id: string; externalId: string; roomLabel: string; area: number; price: number; image: string; drawingCandidates?: string[];
   apartment: {building: string; entrance: null; number: string; floor: number; floorsTotal: number; finishType: string | null};
 };
 type Fields = Record<string, string>;
@@ -100,11 +100,14 @@ export function parseDomoplanerFeed(xml: string, config: DomoplanerConfig, city:
       const second = plans[1];
       const drawing = !config.domoplaner.firstImageIsPlan && second?.includes('/flats/') && !gallery.has(second)
         ? second : first;
-      const image = drawing?.includes('/flats/') && imageUrl.test(drawing) && !gallery.has(drawing) ? drawing : '';
+      const isApartmentMedia = (url: string | undefined): url is string =>
+        Boolean(url && url.includes('/flats/') && imageUrl.test(url) && !gallery.has(url));
+      const drawingCandidates = project.id === '120013' ? plans.slice(0, 2).filter(isApartmentMedia) : undefined;
+      const image = isApartmentMedia(drawing) ? drawing : '';
       apartments.push({
         id: 'feed-' + sha('domoplaner:' + project.id + ':' + externalId).slice(0, 32),
         externalId, roomLabel: rooms === '0' ? 'Студия' : rooms,
-        area: positive.parse(lot.area), price: positive.parse(lot.price) / 1_000_000, image,
+        area: positive.parse(lot.area), price: positive.parse(lot.price) / 1_000_000, image, drawingCandidates,
         apartment: {building: name, entrance: null, number, floor, floorsTotal: floors,
           finishType: finishTypes.get(lot.renovation as Parameters<typeof finishTypes.get>[0]) ?? null},
       });
@@ -121,6 +124,34 @@ export function parseDomoplanerFeed(xml: string, config: DomoplanerConfig, city:
   });
   if (!apartments.length || !apartments.some(lot => lot.image)) throw new Error('Domoplaner: пустая выгрузка');
   return {generation, apartments, project, projectBuildings, images};
+}
+
+// The clean Greenwood drawings are printed on white sheets. Photos and the
+// developer's green advertising cards appear in the same XML image list.
+async function isGreenwoodDrawing(file: string) {
+  const {data, info: {width, height}} = await sharp(file)
+    .removeAlpha().toColourspace('srgb').resize(96, 96, {fit: 'fill'}).raw()
+    .toBuffer({resolveWithObject: true});
+  let white = 0;
+  let ink = 0;
+  let border = 0;
+  let whiteBorder = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const offset = (y * width + x) * 3;
+      const low = Math.min(data[offset], data[offset + 1], data[offset + 2]);
+      const high = Math.max(data[offset], data[offset + 1], data[offset + 2]);
+      const isWhite = low >= 242;
+      if (isWhite) white++;
+      if (low < 208 && high - low < 25) ink++;
+      if (x < 4 || x >= width - 4 || y < 4 || y >= height - 4) {
+        border++;
+        if (isWhite) whiteBorder++;
+      }
+    }
+  }
+  const pixels = width * height;
+  return white / pixels >= 0.58 && whiteBorder / border >= 0.90 && ink / pixels >= 0.005;
 }
 
 async function normalizeImage(url: string, root: string, cache: string) {
@@ -165,14 +196,23 @@ export async function cacheDomoplanerPlans(apartments: DomoplanerApartment[], me
   const cache = join(mediaRoot, 'private', 'domoplaner-plans');
   await mkdir(root, {recursive: true});
   await mkdir(cache, {recursive: true, mode: 0o700});
-  const urls = [...new Set(apartments.map(lot => lot.image).filter(Boolean))].values();
+  const urls = [...new Set(apartments.flatMap(lot => lot.drawingCandidates ?? [lot.image]).filter(Boolean))].values();
   const local = new Map<string, string>();
+  const drawingsOnly = apartments.some(lot => lot.drawingCandidates);
   async function consume() {
     for (const url of urls) {
-      try { local.set(url, await normalizeImage(url, root, cache)); }
-      catch { /* Retain the verified upstream URL and retry on the next sync. */ }
+      try {
+        const path = await normalizeImage(url, root, cache);
+        if (!drawingsOnly || await isGreenwoodDrawing(join(root, path.split('/').at(-1)!))) local.set(url, path);
+      } catch { /* Retry unavailable images on the next sync. */ }
     }
   }
   await Promise.all(Array.from({length: 8}, consume));
-  return apartments.map(lot => ({...lot, image: local.get(lot.image) ?? lot.image}));
+  return apartments.map(lot => {
+    const {drawingCandidates, ...apartment} = lot;
+    const image = drawingCandidates
+      ? (drawingCandidates.map(url => local.get(url)).find(Boolean) ?? '')
+      : (local.get(lot.image) ?? lot.image);
+    return {...apartment, image};
+  });
 }
